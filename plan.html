@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>İÜ Yoklama Planı</title>
+<style>
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --text:#1b2330; --muted:#586376; --border:#dde2ea;
+  --accent:#1d5cbd; --accent-bg:#e7effc;
+  --ok:#17703d; --ok-bg:#e4f4ea; --warn:#80540a; --warn-bg:#fff2d3; --bad:#a32a2a; --bad-bg:#fce8e8;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#11151b; --surface:#19202a; --text:#e5e9ef; --muted:#9aa6b8; --border:#2b3442;
+    --accent:#86b4ff; --accent-bg:#1b2a44;
+    --ok:#74d69f; --ok-bg:#15301f; --warn:#f0c35f; --warn-bg:#35290d; --bad:#ff9d9d; --bad-bg:#3a1b1b;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:880px;margin:0 auto;padding:0 16px 64px}
+header{padding:40px 0 20px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 8px}
+.lead{font-size:1.1rem;color:var(--muted);margin:0 0 6px}
+.meta{font-size:.85rem;color:var(--muted);margin:0}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--border);margin:0 -16px;padding:0 16px;overflow-x:auto;white-space:nowrap}
+nav a{display:inline-block;padding:12px 10px;color:var(--muted);text-decoration:none;font-size:.9rem}
+nav a:hover,nav a:focus-visible{color:var(--accent)}
+section{padding-top:36px}
+h2{font-size:1.45rem;margin:0 0 14px}
+h3{font-size:1.05rem;margin:22px 0 8px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:4px 0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.phases{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.phases .card h3{margin:6px 0 6px}
+.phases .card p{margin:0;color:var(--muted);font-size:.95rem}
+.tag{display:inline-block;font-size:.75rem;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--accent-bg);color:var(--accent)}
+.tag.ok{background:var(--ok-bg);color:var(--ok)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.tag.bad{background:var(--bad-bg);color:var(--bad)}
+.tag.mute{background:var(--border);color:var(--muted)}
+.rows{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:2px 18px}
+.row{display:grid;grid-template-columns:190px 1fr;gap:4px 18px;padding:12px 0;border-bottom:1px solid var(--border)}
+.row:last-child{border-bottom:0}
+.row .k{font-weight:600}
+.callout{border-left:4px solid var(--accent);background:var(--accent-bg);border-radius:0 10px 10px 0;padding:14px 18px;margin:16px 0}
+.callout h3{margin:0 0 8px}
+.callout ul{margin:0}
+.callout.warn{border-color:var(--warn);background:var(--warn-bg)}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cols3 .card{padding:14px 16px}
+.cols3 h3{margin:0 0 8px;font-size:1rem}
+.cols3 ul{padding-left:18px;margin:0;font-size:.95rem}
+details{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:12px 0;padding:0 18px}
+summary{cursor:pointer;padding:13px 0;font-weight:600}
+details[open] summary{border-bottom:1px solid var(--border);margin-bottom:12px}
+details>*:last-child{margin-bottom:16px}
+code{font:.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--border);padding:1px 6px;border-radius:5px}
+.formula{display:block;padding:10px 14px;margin:8px 0 12px}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:.9rem}
+@media (max-width:720px){
+  h1{font-size:1.65rem}
+  .phases,.cols3{grid-template-columns:1fr}
+  .row{grid-template-columns:1fr;gap:2px}
+}
+@media print{
+  nav{display:none}
+  body{background:#fff}
+  details{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>İÜ Yoklama</h1>
+  <p class="lead">Telefonla çalışan, internetsiz de yoklama alabilen ders yoklama uygulaması.</p>
+  <p class="meta">Plan ve kararlar · Son güncelleme 4 Ekim 2026 · Sürüm 2 (baştan yazıldı)</p>
+</header>
+
+<nav aria-label="Bölümler">
+  <a href="#tek-bakista">Tek bakışta</a>
+  <a href="#kararlar">Kararlar</a>
+  <a href="#gun">Yoklama günü</a>
+  <a href="#asama23">Aşama 2 ve 3</a>
+  <a href="#hile">Hile ve sınırlar</a>
+  <a href="#devam">Devamsızlık</a>
+  <a href="#hoca">Hoca tarafı</a>
+  <a href="#dagitim">Dağıtım</a>
+  <a href="#teknoloji">Teknoloji</a>
+  <a href="#hedefler">Hedefler</a>
+  <a href="#acik">Açık noktalar</a>
+  <a href="#sozluk">Sözlük</a>
+</nav>
+
+<!-- 1 -->
+<section id="tek-bakista">
+  <h2>Tek bakışta</h2>
+  <ul>
+    <li><strong>Ne yapar:</strong> Öğrenci ders saatinde telefonundan yoklamasını verir. Kayıt telefonda saklanır, internet bulununca sunucuya gider.</li>
+    <li><strong>Kim kullanır:</strong> Öğrenci ve hoca aynı telefon uygulamasını kullanır (öğrenci modu, hoca modu). Hoca ayrıca her tarayıcıda açılan web panelinden liste ve raporları yönetir.</li>
+    <li><strong>Temel kural:</strong> Yoklama anında telefonda internet olmayabilir. Çıta: kâğıt imzadan iyi ve basit.</li>
+    <li><strong>AKSİS:</strong> Otomatik bağlantı yok. Hoca "AKSİS özeti" ekranına bakıp değerleri elle girer.</li>
+    <li><strong>Dağıtım:</strong> Android için GitHub'daki APK, iPhone için TestFlight bağlantısı.</li>
+  </ul>
+
+  <div class="phases">
+    <div class="card">
+      <span class="tag ok">Şimdi</span>
+      <h3>Aşama 1 · Temel sistem</h3>
+      <p>QR yok. Ders saatinde sayaç kendiliğinden açılır, öğrenci yoklamasını verir. Saat değiştirmek işe yaramaz.</p>
+    </div>
+    <div class="card">
+      <span class="tag mute">Sonra</span>
+      <h3>Aşama 2 · QR</h3>
+      <p>Hoca telefonundan QR gösterir. QR'ı okutan öğrencinin sınıfta olduğu doğrulanır.</p>
+    </div>
+    <div class="card">
+      <span class="tag mute">Sonra</span>
+      <h3>Aşama 3 · Konum</h3>
+      <p>Bluetooth ile sınıfta, GPS ile bina civarında olma kontrolü. Hocanın telefonu referanstır.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="kararlar">
+  <h2>Kararlar</h2>
+  <div class="rows">
+    <div class="row"><div class="k">Öğrenci girişi</div><div>Öğrenci numarası ve okuldaki kayıtlı isim, hocanın yüklediği listeyle eşleşir (Türkçe harf duyarlı). E-posta ve TC kimlik numarası kullanılmaz. Eşleşmezse hoca onaylar.</div></div>
+    <div class="row"><div class="k">İlk kayıt güvenliği</div><div>Aynı numarayı iki kişi isterse hoca onayına düşer. İlk kayıtlar hocanın ekranında "yeni kayıtlar" olarak çıkar, hoca sınıftakilerle toplu teyit eder. Gerekirse hocanın verdiği tek kullanımlık kayıt koduna geçilir.</div></div>
+    <div class="row"><div class="k">Hoca girişi</div><div>Kurumsal e-posta ve 6 haneli kod (deneme sayısı sınırlı, kısa ömürlü). Hoca hesabını bölüm yöneticisi onaylar.</div></div>
+    <div class="row"><div class="k">Roller</div><div>Bölüm yöneticisi, hoca, ortak hoca (asistan dahil).</div></div>
+    <div class="row"><div class="k">Cihaz</div><div>Her hesap tek telefona bağlı. Telefon kaybı ya da değişimi yüz yüze, kimlik görülerek hoca onayıyla yapılır. Çıkış yapılırsa yeniden giriş cihaz değişimi sayılır. Gönderilmemiş kayıt varken çıkış ve hesap silme yapılamaz.</div></div>
+    <div class="row"><div class="k">Yoklama penceresi</div><div>Ders saatinde kendiliğinden açılır, hocanın önceden belirlediği süre kadar sürer, sayaç bitince kapanır (örnek: 09:00–09:15).</div></div>
+    <div class="row"><div class="k">Hoca ayarlamazsa</div><div>Öğrenci dersin saat aralığında istediği zaman yoklamasını verir, sayaç yine çalışır. Bu kayıtlar "kendi beyanı" olur ve hoca toplu onaylar.</div></div>
+    <div class="row"><div class="k">Ders yapıldı mı</div><div>Hoca sonradan "ders yapıldı" onayı verir. Onaylanmayan günün kayıtları sayılmaz. Programda olmayan (telafi) dersi hoca kendisi başlatır.</div></div>
+    <div class="row"><div class="k">Saat</div><div>Telefonun saatine güvenilmez. İnternetteyken alınan gerçek saat ve telefonun iç sayacı kullanılır (<a href="#gun">Yoklama günü</a>).</div></div>
+    <div class="row"><div class="k">Gönderme</div><div>İnternet bulunur bulunmaz otomatik. Okutma anında internet varsa hemen. Gönderilemeyen kayıt için günlük hatırlatma. En geç 7 gün; sonra gelen geçerli kayıt kabul edilir ve "sonradan değişenler" listesine düşer.</div></div>
+    <div class="row"><div class="k">Şüpheli kayıt</div><div>"İncelemede" kalır, hoca onaylayana kadar sayılmaz. Sorular dönem sonunda yığılmasın diye her gece aşamalı sorulur.</div></div>
+    <div class="row"><div class="k">Kafa sayısı</div><div>Hoca ders sonunda sınıftaki sayıyı girer. Kayıt sayısı bunu 3 kişiden ve %5'ten fazla aşarsa ders işaretlenir.</div></div>
+    <div class="row"><div class="k">Geç gelen</div><div>Yoklama açıkken gelen "var" sayılır.</div></div>
+    <div class="row"><div class="k">Devam şartı</div><div>Teori en az %70, uygulama en az %80; ayrı hesaplanır. Devam nota katılmaz.</div></div>
+    <div class="row"><div class="k">Bildirim</div><div>Yalnız telefonda yerel bildirim (hak uyarısı, gönderilmemiş kayıt). Push sonra.</div></div>
+    <div class="row"><div class="k">Hesap kuralları</div><div>Hak hesabı, uyarı seviyeleri, saat ve işaretleme kuralları tek ortak kod paketinde yazılır. Telefon, sunucu ve panel aynı kuralı aynı testlerle kullanır.</div></div>
+    <div class="row"><div class="k">Ölçüm</div><div>Uygulama kendi olay kaydını tutar: gönderme oranı, saati doğrulanamayan oran, işaretli oran. Üçüncü taraf analitik yok.</div></div>
+    <div class="row"><div class="k">Takvim</div><div>Genel İÜ takvimi: dönem, tatil, iptal, telafi.</div></div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="gun">
+  <h2>Yoklama günü <span class="tag ok">Aşama 1</span></h2>
+
+  <h3>Önceden, internet varken</h3>
+  <ol>
+    <li>Hoca öğrenci listesini yükler (Excel ya da CSV). Dersin programını ve yoklama süresini ayarlar.</li>
+    <li>Öğrenci numara ve isimle kayıt olur, telefonu hesabına bağlanır. Dersleri, saatleri ve yerleri telefona iner. Telefon gerçek saati alıp saklar.</li>
+  </ol>
+
+  <h3>Derste, internet olmasa da</h3>
+  <ol start="3">
+    <li>Ders saati gelince yoklama kendiliğinden açılır ve sayaç başlar.</li>
+    <li>Öğrenci "Yoklamamı ver"e basar. Telefon kaydı kendi gizli anahtarıyla imzalar ve saklar. Öğrenci "Alındı" makbuzunu görür.</li>
+    <li>Süre dolunca düğme kapanır. Hoca isterse yoklamayı elle erken kapatabilir.</li>
+    <li>Hoca kafa sayısını girer (hedef: ders başına en çok 2 dakika).</li>
+  </ol>
+
+  <h3>Sonra, internet bulunca</h3>
+  <ol start="7">
+    <li>Telefon kaydı gönderir. Sunucu kontrol eder: geçerli kayıt "var" olur, şüpheli kayıt "incelemede" kalır.</li>
+    <li>Hoca "ders yapıldı" onayını verir, kendi beyanı kayıtlarını toplu onaylar, şüphelileri inceler.</li>
+  </ol>
+
+  <div class="callout">
+    <h3>Saati değiştirmek neden işe yaramaz?</h3>
+    <ul>
+      <li>Telefon internetteyken sunucudan gerçek saati alıp saklar.</li>
+      <li>Yoklama anında gerçek saat şöyle hesaplanır: <strong>saklanan gerçek saat + telefonun açıldığından beri geçen süre</strong>. Bu iç sayaç ayarlardan değiştirilemez.</li>
+      <li>Yoklama penceresi ve sayaç, telefonun saatine değil bu hesaplanan saate göre çalışır.</li>
+      <li>Kayıtla birlikte hem hesaplanan saat hem telefonun saati gönderilir. Uyuşmazsa kayıt işaretlenir.</li>
+      <li>Uygulama her açıldığında ve ağ değiştiğinde saati yeniler.</li>
+    </ul>
+  </div>
+  <div class="callout warn">
+    <p><strong>Tek zayıf nokta: yeniden başlatma.</strong> Telefon yeniden başlayınca iç sayaç sıfırlanır. İnternetsizken yeniden başlatıp yoklama veren öğrencinin kaydı "saat doğrulanamadı" olur. Bunlardan her öğrenci için her derste dönem başına en çok 2 tanesi otomatik kabul edilir, fazlası hocanın incelemesine düşer.</p>
+  </div>
+
+  <h3>Kayıt etiketleri</h3>
+  <div class="rows">
+    <div class="row"><div class="k"><span class="tag mute">QR'sız</span></div><div>Aşama 1'deki her kayıt. Sınıfta olduğu henüz doğrulanmamıştır.</div></div>
+    <div class="row"><div class="k"><span class="tag warn">Kendi beyanı</span></div><div>Hoca yoklamayı ayarlamadan öğrencinin kendi verdiği kayıt. Hoca onayı ister.</div></div>
+    <div class="row"><div class="k"><span class="tag warn">İncelemede</span></div><div>Şüpheli kayıt. Hoca onaylayana kadar sayılmaz.</div></div>
+    <div class="row"><div class="k"><span class="tag warn">Saat doğrulanamadı</span></div><div>Yeniden başlatma yüzünden saat hesaplanamadı. Yukarıdaki 2'lik sınır geçerli.</div></div>
+    <div class="row"><div class="k"><span class="tag ok">Doğrulanmış</span></div><div>QR ile alınan kayıt (Aşama 2'den itibaren).</div></div>
+  </div>
+
+  <details>
+    <summary>Kenar durumlar</summary>
+    <ul>
+      <li><strong>Öğrenci hiç göndermiyor:</strong> Devamsız görünür. İmzalı makbuzunu QR olarak gösterirse hoca panelde okutup düzeltir. Gösteremezse düzeltme "beyana dayalı" sebep koduyla yapılır.</li>
+      <li><strong>Telefonu yok ya da şarjı bitik:</strong> Hoca öğrenciyi elle ekler.</li>
+      <li><strong>Telefon göndermeden kayboldu:</strong> Kayıt kaybolur. Hoca "beyana dayalı" kodla düzeltir.</li>
+      <li><strong>Ders yapılmadı ya da hoca gelmedi:</strong> Hoca onay vermez, o günün kayıtları sayılmaz.</li>
+      <li><strong>Program değişti (iptal, telafi):</strong> Değişiklik internet varken telefona iner. İnternetsizken eski program geçerlidir, son karar sunucuda verilir.</li>
+      <li><strong>Hoca süreyi ders içinde değiştirdi:</strong> Telefonlar bunu internetsizken öğrenemez. Kayıtlar beklemede kalır, internet gelince sunucu hocanın son ayarına göre karar verir.</li>
+      <li><strong>İki hoca aynı dersi açtı ya da yoklama yeniden başlatıldı:</strong> Kayıtlar tek oturumda birleşir.</li>
+      <li><strong>Cihaz değişimi sırasında eski telefonda bekleyen kayıt:</strong> Onayla birlikte karara bağlanır.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- 4 -->
+<section id="asama23">
+  <h2>Aşama 2 ve 3</h2>
+
+  <h3>Aşama 2 · QR <span class="tag mute">Sonra</span></h3>
+  <ul>
+    <li>Hocanın telefonu 5 saniyede bir değişen QR gösterir. Sürekli açık kalması gerekmez, kısa süre yeterli.</li>
+    <li>QR'ı okutan kayıt "doğrulanmış" olur. QR'sız kayıtlar ayrı kalır, hoca isterse onaylar.</li>
+    <li>QR internetsiz üretilir. Hocanın telefonu internetteyken önümüzdeki 5 günün gizli anahtarlarını indirir. Anahtar hocanın cihazına özeldir. Sunucu sahte ya da eski QR'ı ayırt eder.</li>
+    <li>QR okutamayan öğrenci için kısa yedek kod vardır. Hoca öğrenciyi elle de ekleyebilir.</li>
+    <li>Projeksiyona yansıtırken yalnız QR'ı gösteren "sunum modu" kullanılır, öğrenci listesi görünmez. Hoca kendi adaptörünü getirir.</li>
+    <li>Büyük salonlarda arka sıralar için 2x yakınlaştırma gerekir. En büyük derslikte denenecek.</li>
+    <li>Hocanın telefonunun saati yanlışsa ders işaretlenir.</li>
+    <li>QR okuyucu değiştirilebilir bir parça olarak yazılır. Önce hazır çözümle ilerlenir.</li>
+  </ul>
+
+  <h3>Aşama 3 · Konum <span class="tag mute">Sonra</span></h3>
+  <ul>
+    <li><strong>Bluetooth:</strong> Hocanın telefonu yakınlık işareti yayar. İnternet gerekmez. Öğrencinin telefonu işareti yalnız sınıftayken görür. "Sınıfta mı" sorusunu bu belirler.</li>
+    <li><strong>GPS:</strong> "Bina civarında mı" sorusuna cevap verir. Referans hocanın telefonunun konumudur. Derslik verisine binaların koordinatları eklenir.</li>
+    <li>Sahte konum uygulamaları tespit edilir. VPN konumu değiştirmez, internet adresini değiştirir. Kökü açılmış telefonlar bu kontrolü aşabilir, bu yüzden tam güvenli değildir.</li>
+    <li>GPS kapalı alanda zayıftır (onlarca metre sapabilir, bodrumda hiç çalışmayabilir). Bu yüzden tek başına kullanılmaz.</li>
+  </ul>
+</section>
+
+<!-- 5 -->
+<section id="hile">
+  <h2>Hile ve sınırlar</h2>
+  <p>Kâğıt imzada bu hilelerin çoğunun karşılığı da var. Hedef kâğıttan iyi olmak.</p>
+  <div class="cols3">
+    <div class="card">
+      <h3><span class="tag ok">Engellenir</span></h3>
+      <ul>
+        <li>Telefonun saatini değiştirmek (yeniden başlatma hariç, o işaretlenir)</li>
+        <li>Başka telefona bağlı hesabı kullanmak</li>
+        <li>Başka dersin kaydını göndermek (sunucu reddeder)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="tag warn">İşaretlenir ya da sınırlanır</span></h3>
+      <ul>
+        <li>Başkasının numarasıyla kayıt olmak: hoca teyidi</li>
+        <li>Evden / sınıf dışından basmak (Aşama 1): kendi beyanı ve kafa sayısı. QR ve Bluetooth gelince kapanır</li>
+        <li>QR'ı mesajla iletmek (Aşama 2): gecikmeyle işaretlenir, eşik 8–10 sn, denemeyle ayarlanır</li>
+        <li>Yedek kodu iletmek: öğrenci başına dönem başına 2</li>
+        <li>Kafa sayısını aşan kayıtlar: ders işaretlenir</li>
+        <li>Çalınan hoca anahtarı: cihaza özel ve 5 gün geçerli</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="tag bad">Önlenemez</span></h3>
+      <ul>
+        <li>Canlı aktarım (görüntülü arama)</li>
+        <li>Arkadaşının telefonunu derse getirmek</li>
+        <li>Android'de ikinci profil (Güvenli Klasör)</li>
+        <li>Değiştirilmiş uygulama, emülatör, root</li>
+        <li>Okutup dersten çıkmak (blok derslerde daha ağır)</li>
+      </ul>
+    </div>
+  </div>
+  <p style="margin-top:14px"><strong>Otomatik kabul kuralı:</strong> Saati doğrulanamayan ve yedek kodla alınan kayıtlardan her öğrenci için her derste dönem başına en çok 2 tanesi otomatik kabul edilir. Fazlası incelemeye düşer. QR okuyamayan öğrenciyi hoca tarafsız bir sebep koduyla elle ekler.</p>
+  <p><strong>Deneme sınırı:</strong> E-posta kodu ve yedek kod için yanlış denemeler sunucuda sayılır ve sınırlanır.</p>
+</section>
+
+<!-- 6 -->
+<section id="devam">
+  <h2>Devamsızlık hesabı</h2>
+  <ul>
+    <li>Sayım <strong>ders saati</strong> bazında, <strong>yapılan dersler</strong> üzerindendir. Teori ve uygulama ayrı hesaplanır.</li>
+    <li><strong>Görevli (Md.35):</strong> Belge numarasıyla "Görevli" durumu girilir. O saatler "var" sayılır.</li>
+    <li><strong>Muaf:</strong> Devamdan muaf tekrar alan öğrenciyi hoca işaretler.</li>
+    <li><strong>Rapor ve izin:</strong> Ayrı kategori yok. Hoca "belgeli düzeltme" koduyla belge numarasını girer. Sağlık bilgisi uygulamada tutulmaz.</li>
+    <li><strong>Ekle-bırak:</strong> Sonradan eklenen öğrencinin önceki haftaları sayılmaz. Hoca değiştirebilir.</li>
+    <li><strong>Elle düzeltme:</strong> Sebep kodu ve belge numarası girilir, serbest metin yok. Kim ve ne zaman yaptığı kaydedilir.</li>
+    <li><strong>Dönem sonu:</strong> Kayıtlar kilitlenir. Kilitten sonra gelen geçerli kayıt saklanır ve gösterilir. Sayım yalnız denetim kaydı bırakan bir düzeltmeyle değişir. Ders silinmez, arşivlenir.</li>
+    <li><strong>AKSİS özeti:</strong> Öğrenciler liste sırasıyla yer alır. Teori ve uygulama için ayrı sütunlarda toplam, yüzde ve DEVAMLI/DEVAMSIZ bulunur. Sonucu değiştirebilecek açık bir işaret varsa "KARAR BEKLİYOR" yazar ve dışa aktarma "geçici" kalır.</li>
+  </ul>
+
+  <h3>Uyarı seviyeleri</h3>
+  <p>Öğrenciye uyarı yalnız seviye değişince gider:</p>
+  <ol>
+    <li>Hakkının yarısını kullandın.</li>
+    <li>1 ders saati hakkın kaldı.</li>
+    <li>Hakkın kalmadı.</li>
+    <li>Hakkını aştın. Kesin durum AKSİS'te ilan edilir.</li>
+  </ol>
+
+  <details>
+    <summary>Hak formülü ve test notları</summary>
+    <p>Devamsızlık hakkı yalnız tam sayıyla hesaplanır:</p>
+    <p class="card formula"><code>hak = T − (T × p + 99) div 100</code></p>
+    <ul>
+      <li><strong>T:</strong> yapılan ders saatlerinin toplamı. <strong>p:</strong> 70 (teori) ya da 80 (uygulama). <strong>div:</strong> kalansız tam sayı bölmesi.</li>
+      <li>Ondalıklı hesap (<code>floor(T × (1 − p/100))</code>) %80'de T'nin 1–199 arasındaki 39 değerinde yanlış sonuç verir. Örnek: T=15 için doğru hak 3, ondalıklı hesap 2 bulur. %70'te hata çıkmaz. Bu hesap için regresyon testi zorunlu.</li>
+      <li>Dönem ortasında seviye, yapılan ve kalan planlı saatlerin toplamı üzerinden hesaplanır. Dönem sonu tahmini değişince seviye geri gitmez. Düzeltme yapılırsa seviye yeniden hesaplanır ve öğrenciye bildirilir. Yalnız yapılan saatle hesaplansaydı, ilk hafta kaçıran öğrenci hemen "hakkını aştın" uyarısı alırdı.</li>
+      <li>Küçük haklarda seviyeler çakışır: %80'de T=3 için hak 0, T=5 için hak 1. Hak 1 ya da 2 iken 1. ve 2. seviye aynı anda tetiklenebilir. Bunun için ayrı bir test tablosu yazılır.</li>
+      <li>Klinik bölümlerde devam anabilim dalı bazında hesaplanır.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- 7 -->
+<section id="hoca">
+  <h2>Hoca tarafı</h2>
+
+  <h3>Telefon uygulaması (hoca modu)</h3>
+  <ul>
+    <li>Yoklama süresini ayarlar, yoklamayı erken kapatır.</li>
+    <li>Kafa sayısını girer, "ders yapıldı" onayı verir.</li>
+    <li>Kendi beyanı ve yeni kayıtları toplu onaylar, şüpheli kayıtları inceler.</li>
+    <li>Telefonu olmayan öğrenciyi elle ekler.</li>
+    <li>Öğrencinin cihaz değişimini, kimliği görüp yüz yüze onaylar.</li>
+    <li>Aşama 2'de QR, Aşama 3'te Bluetooth işareti yayar.</li>
+  </ul>
+
+  <h3>Web paneli (her tarayıcıda, internet gerektirir)</h3>
+  <ul>
+    <li>Ders ve program: oluşturma, düzenleme, gün, saat, derslik. Oturumlar programdan otomatik üretilir.</li>
+    <li>Öğrenci listesini yükleme, listeden öğrenci ekleme ve çıkarma.</li>
+    <li>Raporlar: ders, öğrenci ve tarih aralığı. Excel olarak indirilir, PDF tarayıcıdan yazdırılır.</li>
+    <li>Düzeltmeler, onay listeleri, AKSİS özeti.</li>
+    <li>Birlikte işlenen şubeler tek yoklamada birleşir ve tek kafa sayısı girilir.</li>
+  </ul>
+
+  <h3>Liste yükleme kuralları</h3>
+  <ul>
+    <li>Öğrenci numarası metin olarak tutulur (9–10 hane, başı 0 olabilir).</li>
+    <li>Dosya türü içeriğinden tanınır. Karakter kodlaması önce UTF-8, olmazsa Türkçe (cp1254) denenir. Başlık satırı Türkçe harf duyarlı bulunur.</li>
+    <li>Değişiklikler uygulanmadan önce hocaya gösterilir. Listeden çıkarılan öğrenci silinmez, pasif olur; böylece yanlış dosya kayıt kaybettirmez.</li>
+    <li>İndirilen CSV/Excel'de <code>=</code>, <code>+</code>, <code>-</code>, <code>@</code> ile başlayan hücreler kaçışlanır. Durum işareti olarak V/Y kullanılır.</li>
+  </ul>
+
+  <h3>Erişilebilirlik</h3>
+  <p>Ekran okuyucu desteği, yazı boyutu ve kontrast ayarları. QR okuyamayan öğrenciyi hoca elle ekler.</p>
+</section>
+
+<!-- 8 -->
+<section id="dagitim">
+  <h2>Dağıtım ve güncelleme</h2>
+  <div class="rows">
+    <div class="row"><div class="k">Android</div><div>Depodaki GitHub Releases sayfasından APK indirilir ve tek dokunuşla kurulur. Telefonda "bilinmeyen kaynaktan kurulum" izninin açılması gerekir.</div></div>
+    <div class="row"><div class="k">iPhone</div><div>GitHub'dan tek tıkla kurulum mümkün değil, çünkü Apple imzasız uygulamayı çalıştırmaz. Yol: README'ye TestFlight bağlantısı koymak. Apple geliştirici hesabı gerekir (yılda 99 USD), her sürüm 90 gün geçerlidir.</div></div>
+    <div class="row"><div class="k">Ücretsiz iPhone yolu</div><div>AltStore / SideStore mümkün ama kurulum 7 günde bitiyor ve her öğrencinin yenilemesi gerekiyor. Pratik değil.</div></div>
+    <div class="row"><div class="k">Güncelleme kontrolü</div><div>Uygulama açılışta, günde en çok bir kez GitHub'daki son sürüm bilgisine bakar. Yeni sürüm varsa "Yeni sürüm var" uyarısı ve bağlantı gösterir (Android'de APK, iPhone'da TestFlight). Eski sürüm uyarısı, telefonda bekleyen kayıtların gönderilmesini hiçbir zaman engellemez.</div></div>
+    <div class="row"><div class="k">Desteklenen sürümler</div><div>En düşük iOS ve Android sürümü belirlenecek. Eski ve düşük modelli telefonlarda kamera yakınlaştırması bulanık kalabilir, birkaç farklı telefonda denenecek.</div></div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section id="teknoloji">
+  <h2>Teknoloji</h2>
+  <p>Tek kod, iki sürüm: Android ve iPhone. Her yerde tek dil (TypeScript), tek depo.</p>
+  <details>
+    <summary>Teknik seçimler (geliştirici için)</summary>
+    <ul>
+      <li><strong>Telefon:</strong> Expo (React Native). Yerel veritabanı: expo-sqlite ve drizzle.</li>
+      <li><strong>Web paneli:</strong> React ve Vite. Yoklama telefonda yapıldığı için panelin çevrimdışı çalışması gerekmez.</li>
+      <li><strong>Sunucu:</strong> Fastify ve PostgreSQL, Docker Compose ile. Geliştirme sahte veriyle sürer.</li>
+      <li><strong>Hoca girişi:</strong> Better Auth (e-posta kodu, roller).</li>
+      <li><strong>İmza:</strong> P-256. Gizli anahtar telefonun güvenli deposunda durur, yedeğe girmez. iPhone'da yalnız bu cihazda kalacak şekilde saklanır.</li>
+      <li><strong>Saat:</strong> iPhone ve Android için küçük bir yerel modül iç sayacı okur. Bütün kontroller UTC ile yapılır, ekranda İstanbul saati görünür.</li>
+      <li><strong>Excel:</strong> Okuma için SheetJS (kendi sitesinden; npm'deki xlsx paketi kullanılmaz). Yazma için write-excel-file. PDF tarayıcıdan yazdırılır.</li>
+      <li><strong>QR (Aşama 2):</strong> Base45 ile kısa yük, sürüm 3-M QR, 5 saniyelik zaman dilimi. Okuma önce expo-camera ile.</li>
+      <li><strong>Bağımlılıklar:</strong> Sürümler sabitlenir. Yeni Expo sürümüne hemen geçilmez.</li>
+      <li><strong>Test:</strong> Saat hesabı, hak hesabı, otomatik kabul ve işaretleme kuralları tablo testleriyle ve sahte saat/sahte yeniden başlatma simülasyonuyla sınanır.</li>
+    </ul>
+    <p><strong>Neden bunlar değil:</strong> Flutter (mobil ve web ayrı dil, ortak kod yok), öğrenci için web uygulaması (iPhone'da iç sayaç ve arka plan görevi yok), sabit PIN (öğrenci gruplarında anında dolaşır), yüz/parmak izi, Wi-Fi kontrolü, NFC (iPhone'da Türkiye'de kullanılamıyor).</p>
+  </details>
+</section>
+
+<!-- 10 -->
+<section id="hedefler">
+  <h2>Hedefler</h2>
+  <div class="rows">
+    <div class="row"><div class="k">Yoklama hızı</div><div>100 kişilik sınıfta katılımın %90'a ulaşması en çok 120 sn (ortanca).</div></div>
+    <div class="row"><div class="k">Hocanın işi</div><div>Ders başına en çok 2 dakika.</div></div>
+    <div class="row"><div class="k">Gönderme</div><div>Kayıtların en az %95'i 24 saat içinde sunucuda.</div></div>
+    <div class="row"><div class="k">Saati doğrulanamayan</div><div>Kayıtların en çok %2'si (Android ve iPhone ayrı ölçülür).</div></div>
+    <div class="row"><div class="k">İşaretlenmeden kabul</div><div>En az %98. Kafa sayısıyla fark en çok %5.</div></div>
+    <div class="row"><div class="k">Haksız devamsız</div><div>0. Hesabın elle hesaplananla uyuşmazlığı da 0.</div></div>
+    <div class="row"><div class="k">Kayıt kaybı</div><div>0. Makbuzu olup sunucuda bulunmayan kayıt çıkmamalı.</div></div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="acik">
+  <h2>Açık noktalar</h2>
+  <ol>
+    <li><strong>Varsayılan yoklama süresi:</strong> 10 mu, 15 dakika mı? (Hoca değiştirebilir.)</li>
+    <li><strong>AKSİS:</strong> İlandan sonra düzeltme yapılabiliyor mu? Yapılabiliyorsa dönem sonu sıkışması sorun olmaz.</li>
+    <li><strong>Gerçek bir AKSİS liste örneği</strong> (isimler maskeli): sütun başlıkları ve e-posta sütunu olup olmadığı.</li>
+    <li><strong>Uygulama (lab) dersleri:</strong> Oturumları kim yürütüyor (hoca mı asistan mı)? Blok derslerde ikinci okutma gerekli mi?</li>
+    <li><strong>Hoca açmadığında "kendi beyanı":</strong> Toplu onay yeterli mi, kafa sayısı eşiği de gerekli mi?</li>
+    <li><strong>Tek kullanımlık kayıt kodu</strong> baştan mı gelsin, yoksa önce hoca teyidiyle mi başlansın?</li>
+    <li><strong>Birlikte işlenen şubeler</strong> var mı?</li>
+    <li><strong>iPhone için Apple geliştirici hesabı</strong> (yılda 99 USD) kabul mü?</li>
+    <li><strong>En düşük desteklenen iOS ve Android sürümü</strong> ve öğrencilerin telefon dağılımı.</li>
+  </ol>
+
+  <div class="callout warn">
+    <h3>Birleştirirken yaptığım varsayımlar (onayınız gerekiyor)</h3>
+    <ul>
+      <li>Tek telefon uygulaması, içinde öğrenci modu ve hoca modu (iki ayrı uygulama değil).</li>
+      <li>Web paneli internet gerektirir. Yoklamanın tamamı telefonda.</li>
+      <li>Kafa sayısı Aşama 1'de de var, çünkü sınıfta olmayı doğrulayan başka bir şey henüz yok.</li>
+      <li>Tek kod iki sürüm: Android ve iPhone aynı kod tabanından çıkar.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 12 -->
+<section id="sozluk">
+  <h2>Sözlük</h2>
+  <details>
+    <summary>Kısa sözlük</summary>
+    <ul>
+      <li><strong>Sayaç:</strong> Yoklama penceresinin kalan süresini gösteren geri sayım.</li>
+      <li><strong>İç sayaç:</strong> Telefonun açıldığından beri geçen süreyi sayan, ayarlardan değiştirilemeyen saat.</li>
+      <li><strong>Gönderme:</strong> Telefondaki kaydın sunucuya iletilmesi (teknik adı senkron).</li>
+      <li><strong>Makbuz:</strong> Öğrencinin kaydı aldığını gösteren, telefonun imzaladığı belge.</li>
+      <li><strong>Kafa sayısı:</strong> Hocanın sınıfta saydığı öğrenci sayısı.</li>
+      <li><strong>Kendi beyanı:</strong> Hoca yoklamayı ayarlamadan öğrencinin kendi verdiği kayıt.</li>
+      <li><strong>İncelemede:</strong> Şüpheli bulunup hocanın onayını bekleyen kayıt.</li>
+      <li><strong>Ortak hoca:</strong> Dersi birlikte yürüten hoca ya da asistan.</li>
+      <li><strong>QR'sız:</strong> QR ile doğrulanmamış kayıt (Aşama 1'in tüm kayıtları).</li>
+    </ul>
+  </details>
+</section>
+
+<footer>
+  <p><strong>Sürüm notu:</strong> Bu sürümde zamanlama, KVKK, sponsor ve MVP bölümleri çıkarıldı. Plan, son görüşmelerdeki kararlara göre baştan yazıldı: üç aşama, giriş değişikliği (e-posta yalnız hocada), saat ve sayaç mantığı, GitHub dağıtımı. Eski dokümandaki sürüm tarihleri ve kaynak karşılaştırmaları bilinçli olarak alınmadı.</p>
+</footer>
+
+</div>
+<script>
+  // Yazdırırken tüm açılır bölümleri aç.
+  window.addEventListener('beforeprint', function(){
+    document.querySelectorAll('details').forEach(function(d){ d.open = true; });
+  });
+</script>
+</body>
+</html>
