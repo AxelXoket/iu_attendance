@@ -63,6 +63,8 @@ code{font:.9em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:v
 footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:.9rem}
 .src li{font-size:.92rem;margin:6px 0}
 #sozluk{padding-top:24px}
+pre{background:var(--surface-2);border:1px solid var(--border);padding:12px 14px;overflow-x:auto;margin:8px 0 14px}
+pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
 @media (max-width:720px){
   h1{font-size:1.65rem}
   .phases,.cols3{grid-template-columns:1fr}
@@ -94,7 +96,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);color
   <a href="#devam">Devamsızlık</a>
   <a href="#hoca">Hoca ve yönetici</a>
   <a href="#dagitim">Dağıtım</a>
-  <a href="#teknoloji">Teknoloji</a>
+  <a href="#teknoloji">Teknolojiler</a>
   <a href="#baslangic">Başlangıç</a>
   <a href="#hedefler">Hedefler</a>
   <a href="#acik">Açık noktalar</a>
@@ -110,6 +112,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);color
     <li><strong>Temel kural:</strong> Yoklama anında telefonda internet olmayabilir. Çıta: kâğıt imzadan iyi ve basit.</li>
     <li><strong>AKSİS:</strong> Otomatik bağlantı yok. Hoca "AKSİS özeti" ekranına bakıp değerleri elle girer.</li>
     <li><strong>Dağıtım:</strong> Android için GitHub'daki APK, iPhone için TestFlight bağlantısı.</li>
+    <li><strong>Geliştirme:</strong> Önce sunucu ve davranış testleri, sonra telefon ve panel.</li>
   </ul>
 
   <div class="phases">
@@ -144,7 +147,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);color
     <div class="row"><div class="k">İlk kayıt teyidi</div><div>Öğrencinin derslerinden herhangi birinin hocası bir kez, toplu olarak teyit eder. Aynı numarayı iki kişi isterse hoca karar verir. Teyide kadar öğrenci yoklama verebilir, kayıtları beklemede kalır. Gerekirse hocanın verdiği tek kullanımlık kayıt koduna geçilir.</div></div>
     <div class="row"><div class="k">Öğrenci girişi</div><div>Yalnız ilk kayıtta. Sonra şifre ya da giriş yok, telefona bağlı gizli anahtar yeter.</div></div>
     <div class="row"><div class="k">Öğrenci telefonu</div><div>Her öğrenci hesabı tek telefona bağlı. Telefon değişimi ya da kaybı yüz yüze, kimlik görülerek hoca onayıyla yapılır. Çıkış yapmak ya da Android'de uygulamayı silip yeniden kurmak cihaz değişimi sayılır. Gönderilmemiş kayıt varken çıkış ve hesap silme yapılamaz.</div></div>
-    <div class="row"><div class="k">Geliştirme modu</div><div>Geliştirirken e-posta kodu ekranda görünür. Yayın sürümünde bu ayar kapalıdır.</div></div>
+    <div class="row"><div class="k">Geliştirme e-postası</div><div>Geliştirirken e-postalar gerçek adrese gitmez, yerel bir test posta kutusunda (Mailpit) toplanır. Böylece yayın sürümüne özel bir "kodu göster" ayarı gerekmez.</div></div>
   </div>
 
   <h3>Yoklama <span class="tag ok">Aşama 1</span></h3>
@@ -399,62 +402,156 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);color
 
 <!-- Teknoloji -->
 <section id="teknoloji">
-  <h2>Teknoloji</h2>
-  <p>Tek kod, iki sürüm (Android ve iPhone). Her yerde TypeScript, tek depo.</p>
+  <h2>Kullanılacak teknolojiler</h2>
+  <p>Seçim ölçütü: yıllarca bakımı kolay, yaygın, iyi belgelenmiş, az parçalı ve büyümeye hazır olmak. Her yerde TypeScript, tek depo. Sürümler kilit dosyasıyla sabitlenir; büyük sürüm geçişleri bilerek ve testler yeşilken yapılır.</p>
+
+  <h3>Temel</h3>
   <div class="rows">
-    <div class="row"><div class="k">Telefon</div><div>Expo SDK 57 (React Native 0.86). Yerel veritabanı: expo-sqlite ve drizzle. SDK 58 henüz beta; yeni sürüme hemen geçilmez, sürümler sabitlenir.</div></div>
-    <div class="row"><div class="k">Web paneli</div><div>React ve Vite. Yoklama telefonda yapıldığı için panelin internetsiz çalışması gerekmez.</div></div>
-    <div class="row"><div class="k">Sunucu</div><div>Fastify ve PostgreSQL, Docker Compose ile. Geliştirme sahte veriyle sürer.</div></div>
-    <div class="row"><div class="k">Hoca girişi</div><div>Better Auth, e-posta kodu eklentisi (6 hane, 5 dakika, 3 deneme) ve roller.</div></div>
-    <div class="row"><div class="k">Öğrenci kimliği</div><div>Telefona bağlı P-256 anahtarı. İmza @noble/curves ile atılır; rastgele sayı expo-crypto'dan gelir. Anahtar expo-secure-store'da "yalnız bu cihaz" ayarıyla saklanır, çünkü varsayılan ayar yedekten yeni telefona taşınabiliyor.</div></div>
-    <div class="row"><div class="k">İç sayaç</div><div>Küçük bir yerel modül: Android'de <code>elapsedRealtime</code>, iPhone'da <code>mach_continuous_time</code>. İkisi de uykuda işler ve yeniden başlatmada sıfırlanır. Expo'nun hazır çalışma süresi fonksiyonu Android'de uykuyu saymadığı için kullanılmaz. Bütün kontroller UTC ile yapılır, ekranda İstanbul saati görünür.</div></div>
-    <div class="row"><div class="k">Geliştirme derlemesi</div><div>Yerel modül olduğu için hazır Expo Go uygulaması yetmez, kendi geliştirme derlemesi kullanılır.</div></div>
-    <div class="row"><div class="k">Arka plan</div><div>expo-background-task. Çalışması garanti değildir; gönderme asıl olarak uygulama açılınca yapılır.</div></div>
-    <div class="row"><div class="k">Excel</div><div>Okuma için SheetJS (kendi sitesinden; npm'deki xlsx paketi kullanılmaz), yazma için write-excel-file. PDF tarayıcıdan yazdırılır.</div></div>
-    <div class="row"><div class="k">QR (Aşama 2)</div><div>Base45 ile kısa yük, sürüm 3-M QR, 5 saniyelik zaman dilimi. Okuma expo-camera ile; okuyucu değiştirilebilir bir parça olarak yazılır.</div></div>
-    <div class="row"><div class="k">Konum (Aşama 3)</div><div>Konum için expo-location (Android'de sahte konum bilgisi hazır geliyor, iPhone için küçük yerel kod gerekir). Bluetooth kütüphanesi Aşama 3'te seçilir.</div></div>
-    <div class="row"><div class="k">Test</div><div>Saat hesabı, hak hesabı, otomatik kabul ve işaretleme kuralları tablo testleriyle ve sahte saat / sahte yeniden başlatma simülasyonuyla sınanır.</div></div>
+    <div class="row"><div class="k">Dil</div><div>TypeScript 6, sıkı modda. Ayarlar TypeScript 7 ile uyumlu tutulur. 7.0 çok hızlı ama araçların kullandığı programlama arayüzünü henüz içermiyor; bu arayüz 7.1 ile gelince geçerim.</div></div>
+    <div class="row"><div class="k">Çalışma ortamı</div><div>Node.js'in uzun destekli (LTS) sürümü, şu an 24. Node 26 LTS olunca ona geçilir. LTS dışı sürüm kullanılmaz.</div></div>
+    <div class="row"><div class="k">Paket yöneticisi</div><div>pnpm, sürümü depoda sabit. Node 25'ten itibaren corepack gelmediği için CI ve Docker'da pnpm ayrıca kurulur.</div></div>
+    <div class="row"><div class="k">Depo düzeni</div><div>pnpm çalışma alanları ve Turborepo (görev sırası ve önbellek). Expo bu düzeni kendiliğinden tanır.</div></div>
+    <div class="row"><div class="k">Kod kalitesi</div><div>Biome 2: biçimlendirme ve kural denetimi tek araçta. TypeScript derleyicisine bağlı olmadığı için TypeScript 7 geçişini engellemez.</div></div>
   </div>
+
+  <h3>Sunucu <span class="tag ok">İlk yazılacak</span></h3>
+  <div class="rows">
+    <div class="row"><div class="k">Çatı</div><div>Fastify 5. Her modül ayrı bir eklenti. Fastify 6 henüz alfa; kararlı olunca geçilir.</div></div>
+    <div class="row"><div class="k">Mimari</div><div>Modüllere ayrılmış tek uygulama: kimlik, dersler, listeler, oturumlar, yoklama, düzeltmeler, raporlar, yönetim. Modüller birbirinin tablolarına doğrudan dokunmaz, birbirinin servisini çağırır. Gerekirse bir modül sonradan ayrı servise çıkarılabilir.</div></div>
+    <div class="row"><div class="k">Kurallar</div><div><code>packages/core</code> içinde saf fonksiyonlar; veritabanı ve saat dışarıdan verilir. Kurallar çatıdan bağımsız kalır ve hızlı test edilir.</div></div>
+    <div class="row"><div class="k">Sözleşme</div><div>İstek ve cevap şemaları Zod 4 ile <code>packages/contracts</code> içinde. Fastify istekleri bu şemalarla doğrular (fastify-type-provider-zod), aynı şemalardan OpenAPI belgesi üretilir (@fastify/swagger). Telefon ve panelin istemcisi bu belgeden türetilir (openapi-typescript, openapi-fetch). Tek kaynak, elle eşitleme yok.</div></div>
+    <div class="row"><div class="k">Veritabanı erişimi</div><div>Drizzle ORM 0.45; 1.0 kararlı olunca geçilir. Veritabanı değişiklikleri düz SQL dosyaları olarak depoda durur ve yalnız ileri yönde uygulanır. ORM değişse bile şema geçmişi kalır.</div></div>
+    <div class="row"><div class="k">Kimlik</div><div>Better Auth 1.7: hoca için e-posta kodu (6 hane, 5 dakika, 3 deneme) ve roller. Oturumlar veritabanında tutulur, sunucu kendi içinde durum saklamaz.</div></div>
+    <div class="row"><div class="k">İmza doğrulama</div><div>Öğrenci kayıtlarının P-256 imzası Node'un yerleşik kripto modülüyle doğrulanır, ek kütüphane yok.</div></div>
+    <div class="row"><div class="k">Arka plan işleri</div><div>pg-boss 12: PostgreSQL üzerinde iş kuyruğu, Redis gerekmez. Gece sınıflandırması, gönderme süresinin kapanması ve e-posta gönderimi bu kuyruktan yürür. İşçiler API'den ayrı süreçte çalışır.</div></div>
+    <div class="row"><div class="k">E-posta</div><div>Nodemailer ile SMTP. Geliştirmede Mailpit (yerel test posta kutusu), testlerde bellek içi posta kutusu.</div></div>
+    <div class="row"><div class="k">Güvenlik</div><div>@fastify/helmet, @fastify/cors ve @fastify/rate-limit. Giriş ve kod uçlarına sıkı istek sınırı.</div></div>
+    <div class="row"><div class="k">Ayarlar</div><div>Ortam değişkenleri açılışta Zod ile doğrulanır; eksik ya da hatalıysa sunucu açılmaz.</div></div>
+    <div class="row"><div class="k">Loglar</div><div>pino (Fastify'ın kendi kaydedicisi), JSON biçiminde, her istekte bir istek kimliği. Öğrenci numarası ve isim gibi alanlar loglarda maskelenir.</div></div>
+  </div>
+
+  <h3>Veritabanı</h3>
+  <div class="rows">
+    <div class="row"><div class="k">Sürüm</div><div>PostgreSQL 18.</div></div>
+    <div class="row"><div class="k">Kimlikler</div><div>UUIDv7: zamana göre sıralı, dizinleri küçük, PostgreSQL 18'de yerleşik. Yoklama kaydının kimliğini telefon üretir; aynı kayıt iki kez gönderilse de tek kayıt olur.</div></div>
+    <div class="row"><div class="k">Kısıtlar</div><div>Kurallar veritabanında da korunur: bir oturumda bir öğrenciye tek kayıt, yabancı anahtarlar, geçerli değer kontrolleri. Kodda hata olsa bile bozuk veri yazılamaz.</div></div>
+    <div class="row"><div class="k">Zaman ve sıralama</div><div>Bütün zamanlar UTC olarak tutulur. İsim sıralaması Türkçe kurallarla (ICU tr-TR) yapılır.</div></div>
+    <div class="row"><div class="k">Denetim kaydı</div><div>Düzeltmeler ve onaylar ayrı tabloya yazılır, silinmez.</div></div>
+    <div class="row"><div class="k">Yedek</div><div>Her gece yedek alınır, düzenli olarak geri yükleme denenir.</div></div>
+  </div>
+
+  <h3>Testler <span class="tag ok">Koddan önce</span></h3>
+  <div class="rows">
+    <div class="row"><div class="k">Yaklaşım</div><div>Her özellik önce davranış senaryosuyla yazılır: senaryo kırmızı, kod yazılır, senaryo yeşil. Senaryosu olmayan özellik bitmiş sayılmaz.</div></div>
+    <div class="row"><div class="k">Davranış testleri</div><div>Cucumber.js 13 ile Türkçe Gherkin senaryoları (Özellik, Senaryo, Diyelim ki, Eğer, O zaman). Senaryolar sunucuya gerçek istek gibi gider (Fastify inject, ağ açmadan) ve gerçek PostgreSQL'e yazar (Testcontainers ile her koşuda temiz veritabanı). Saati test belirler.</div></div>
+    <div class="row"><div class="k">Birim ve özellik testleri</div><div>Vitest 4 ve fast-check. Ortak kurallar binlerce rastgele girdiyle denenir; örneğin hak formülü her T için tam sayı hesabıyla karşılaştırılır.</div></div>
+    <div class="row"><div class="k">Sözleşme testi</div><div>OpenAPI belgesi depoda durur. Değişirse CI'da fark görünür, istemciler yeniden üretilir.</div></div>
+    <div class="row"><div class="k">Yük testi</div><div>k6 ile dersten çıkışta yüzlerce telefonun aynı anda kayıt göndermesi denenir.</div></div>
+    <div class="row"><div class="k">Kapsam hedefi</div><div><code>packages/core</code> için en az %95 dal kapsamı. Sunucunun her ucu en az bir davranış senaryosunda geçer.</div></div>
+  </div>
+  <p style="margin-top:14px">Örnek senaryo:</p>
+<pre><code># language: tr
+Özellik: Yoklama penceresi
+
+  Senaryo: Süre seçilmiş derste pencere içinde verilen yoklama sayılır
+    Diyelim ki "MAT101" dersi pazartesi 09:00-11:00 arasında ve yoklama süresi 15 dakika
+    Ve "2024000123" numaralı öğrenci bu derse kayıtlı
+    Eğer öğrenci pazartesi 09:07'de yoklama verirse
+    O zaman kaydın durumu "var" olur
+
+  Senaryo: Aynı kayıt iki kez gönderilirse tek kayıt sayılır
+    Diyelim ki öğrenci pazartesi 09:07'de yoklama vermiş
+    Eğer telefon aynı kaydı iki kez gönderirse
+    O zaman o oturumda öğrenci için tek kayıt bulunur</code></pre>
+
+  <h3>Telefon uygulaması</h3>
+  <div class="rows">
+    <div class="row"><div class="k">Çatı</div><div>Expo SDK 57 (React Native 0.86, React 19.2), sayfalar Expo Router ile. Yerel modül olduğu için Expo Go değil, kendi geliştirme derlemesi kullanılır.</div></div>
+    <div class="row"><div class="k">Yerel veri</div><div>expo-sqlite ve drizzle. Gönderilmemiş kayıtlar burada durur.</div></div>
+    <div class="row"><div class="k">Sunucu verisi</div><div>TanStack Query 5 ve OpenAPI'den üretilen istemci.</div></div>
+    <div class="row"><div class="k">Anahtar ve imza</div><div>P-256 anahtarı expo-secure-store'da "yalnız bu cihaz" ayarıyla saklanır, çünkü varsayılan ayar yedekten yeni telefona taşınabiliyor. İmza @noble/curves ile atılır, rastgele sayı expo-crypto'dan gelir.</div></div>
+    <div class="row"><div class="k">İç sayaç</div><div>Küçük yerel modül: Android'de <code>elapsedRealtime</code>, iPhone'da <code>mach_continuous_time</code>. İkisi de uykuda işler, yeniden başlatmada sıfırlanır. Expo'nun hazır çalışma süresi fonksiyonu Android'de uykuyu saymadığı için kullanılmaz.</div></div>
+    <div class="row"><div class="k">Arka plan ve bildirim</div><div>expo-background-task (çalışması garanti değil; gönderme asıl olarak uygulama açılınca yapılır) ve yerel bildirim için expo-notifications.</div></div>
+    <div class="row"><div class="k">Sonraki aşamalar</div><div>QR için expo-camera; okuyucu değiştirilebilir parça, Base45 ile kısa yük, sürüm 3-M QR, 5 saniyelik dilim. Konum için expo-location; Bluetooth kütüphanesi Aşama 3'te seçilir.</div></div>
+  </div>
+
+  <h3>Web paneli</h3>
+  <div class="rows">
+    <div class="row"><div class="k">Çatı</div><div>React 19 ve Vite 8, TanStack Query 5, aynı OpenAPI istemcisi. Her tarayıcıda çalışır, internet gerektirir.</div></div>
+    <div class="row"><div class="k">Excel ve PDF</div><div>Okuma için SheetJS (kendi sitesinden; npm'deki xlsx paketi kullanılmaz), yazma için write-excel-file. PDF tarayıcıdan yazdırılır.</div></div>
+  </div>
+
+  <h3>Altyapı ve işletim</h3>
+  <div class="rows">
+    <div class="row"><div class="k">Çalıştırma</div><div>Docker Compose: API, işçi, PostgreSQL ve geliştirmede Mailpit. Sunucu imajı çok aşamalı derlenir; aynı imaj hem API hem işçi olarak çalışır.</div></div>
+    <div class="row"><div class="k">CI</div><div>GitHub Actions. Her gönderimde Biome, tip kontrolü, birim testleri, davranış testleri (Docker'da PostgreSQL ile) ve derleme çalışır. Kırmızıysa birleştirilmez.</div></div>
+    <div class="row"><div class="k">Güncellemeler</div><div>Dependabot haftalık güncelleme önerir; büyük sürümler elle ve testler yeşilken alınır.</div></div>
+    <div class="row"><div class="k">İzleme</div><div>Sağlık uçları (<code>/health</code>, <code>/ready</code>) ve JSON loglar. Ölçüm ve iz sürme (OpenTelemetry) ihtiyaç olunca eklenir.</div></div>
+    <div class="row"><div class="k">API sürümü</div><div><code>/v1</code> ile başlar, yalnız ekleme yapılarak değişir. Eski telefon sürümleri en düşük sürüm kontrolüyle yönetilir.</div></div>
+  </div>
+
+  <h3>Ölçeklenme yolu</h3>
+  <ul>
+    <li><strong>Hacim:</strong> 50.000 öğrenci, 6 ders, haftada 1 oturum ve 28 hafta yılda yaklaşık 8,4 milyon kayıt eder (yaklaşık 4 GB). Tek PostgreSQL bunu rahat taşır.</li>
+    <li><strong>Yatay büyüme:</strong> Sunucu kendi içinde durum tutmadığı için aynı imajdan birden çok kopya, önünde yük dengeleyiciyle çalışabilir. İşçiler ayrı ölçeklenir.</li>
+    <li><strong>Gönderme ucu:</strong> Telefon kayıtları toplu ve tekrar güvenli gönderir; dersten çıkış yoğunluğu az sayıda istekle karşılanır.</li>
+    <li><strong>Büyüdükçe sırasıyla:</strong> bağlantı havuzu (PgBouncer), istek sınırı için Valkey, raporlar için okuma kopyası, yoklama tablosunun döneme göre bölünmesi. Tablolar baştan dönem alanı içerir.</li>
+    <li><strong>Birimlere genişleme:</strong> Birim ve bölüm alanları baştan modelde; tek bölümle başlansa da yapı değişmeden genişler.</li>
+  </ul>
+
+  <h3>Sürdürülebilirlik ilkeleri</h3>
+  <ul>
+    <li>Az bağımlılık: her yeni paket için bir gerekçe; bakımı durmuş paket alınmaz.</li>
+    <li>Tek kaynak: şemalar <code>packages/contracts</code> içinde, kurallar <code>packages/core</code> içinde.</li>
+    <li>Kurallar saf ve testli; çatı değişse de kurallar kalır.</li>
+    <li>Tek komutla kurulum: <code>docker compose up</code> ve <code>pnpm dev</code>; sahte veri üreticisiyle dolu bir deneme ortamı.</li>
+    <li>Her önemli karar bu plana işlenir.</li>
+  </ul>
 </section>
 
 <!-- Başlangıç -->
 <section id="baslangic">
   <h2>Başlangıç</h2>
+  <p>Her şey sunucudan ve davranış testlerinden başlar. Telefon ve panel, sunucu sözleşmesi oturduktan sonra yazılır.</p>
 
   <h3>Klasör yapısı</h3>
   <ul>
+    <li><code>apps/server</code>: sunucu (modüller, veritabanı değişiklikleri, <code>features/</code> altında davranış senaryoları)</li>
     <li><code>apps/mobile</code>: telefon uygulaması (öğrenci ve hoca modu)</li>
     <li><code>apps/panel</code>: web paneli</li>
-    <li><code>apps/server</code>: sunucu</li>
     <li><code>packages/core</code>: ortak kurallar (hak hesabı, saat, işaretleme) ve testleri</li>
+    <li><code>packages/contracts</code>: istek ve cevap şemaları, OpenAPI belgesi, üretilen istemci</li>
   </ul>
 
   <h3>Veri modeli (ilk taslak)</h3>
   <ul>
+    <li><strong>Birimler ve dönemler:</strong> fakülte, bölüm; dönem, tatil, sınav haftaları.</li>
     <li><strong>Kişiler:</strong> yönetici, hoca, öğrenci (öğrenci numarası metin).</li>
     <li><strong>Cihazlar:</strong> kişiye bağlı telefonlar ve açık anahtarları.</li>
     <li><strong>Dersler ve ders saatleri:</strong> gün, saat, derslik, teori ya da uygulama, yoklama süresi.</li>
     <li><strong>Ders listeleri:</strong> hangi öğrenci hangi derste; aktif ya da pasif, muaf mı.</li>
     <li><strong>Oturumlar:</strong> her ders günü; kafa sayısı, yapıldı mı, ayar değişiklikleri.</li>
-    <li><strong>Yoklama kayıtları:</strong> imza, hesaplanan saat, telefon saati, etiket.</li>
-    <li><strong>Düzeltmeler:</strong> sebep kodu, belge numarası, kim, ne zaman.</li>
+    <li><strong>Yoklama kayıtları:</strong> telefonun ürettiği kimlik, imza, hesaplanan saat, telefon saati, etiket.</li>
+    <li><strong>Düzeltmeler ve denetim kaydı:</strong> sebep kodu, belge numarası, kim, ne zaman.</li>
     <li><strong>Olay kaydı:</strong> gönderme ve hata ölçümleri.</li>
   </ul>
 
   <h3>Geliştirme ortamı</h3>
   <ul>
+    <li><code>docker compose up</code> ile PostgreSQL ve Mailpit ayağa kalkar; sahte veri üreticisi deneme hesaplarını ve dersleri kurar.</li>
     <li>Telefonlar sunucuya bilgisayarın yerel ağ adresinden ya da geçici bir tünelden ulaşır.</li>
-    <li>Sahte veri ve deneme hesapları kullanılır; e-posta kodu ekranda görünür.</li>
   </ul>
 
   <h3>İş sırası</h3>
   <ol>
-    <li>Ortak kurallar paketi ve testleri (hak hesabı, saat hesabı).</li>
-    <li>Sunucu: hoca kaydı, yönetici onayı, ders ve liste yükleme.</li>
-    <li>Telefon: öğrenci kaydı, yoklama penceresi, imzalı kayıt, gönderme.</li>
-    <li>Hoca modu: kafa sayısı, toplu onaylar, elle ekleme.</li>
-    <li>Web paneli: raporlar ve AKSİS özeti.</li>
-    <li>Deneme hesabı, derleme ve dağıtım.</li>
+    <li><strong>İskelet:</strong> pnpm, Turborepo, TypeScript, Biome ve CI ilk günden kurulur.</li>
+    <li><strong>Ortak kurallar:</strong> hak hesabı, saat hesabı ve işaretleme; Vitest ve fast-check testleriyle.</li>
+    <li><strong>Davranış senaryoları:</strong> Türkçe olarak önce yazılır: hoca kaydı ve yönetici onayı, ders ve program, liste yükleme, öğrenci kaydı ve teyit, yoklama gönderme, kafa sayısı, düzeltme, AKSİS özeti.</li>
+    <li><strong>Sunucu:</strong> senaryolar modül modül yeşile çevrilir; OpenAPI belgesi ve istemci üretilir.</li>
+    <li><strong>Yük testi:</strong> gönderme ucu k6 ile denenir.</li>
+    <li><strong>Telefon uygulaması:</strong> üretilen istemciyle; önce öğrenci modu, sonra hoca modu.</li>
+    <li><strong>Web paneli:</strong> raporlar ve AKSİS özeti.</li>
+    <li><strong>Dağıtım:</strong> deneme hesabı, derleme, GitHub ve TestFlight.</li>
   </ol>
 </section>
 
@@ -515,6 +612,20 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);color
       <li><a href="https://blog.estimote.com/post/186160021855">iBeacon ve iPhone konum izni</a></li>
       <li><a href="https://docs.expo.dev/versions/latest/sdk/location/">expo-location (sahte konum bilgisi)</a></li>
       <li><a href="https://developer.apple.com/documentation/corelocation/cllocationsourceinformation">CLLocationSourceInformation (iPhone sahte konum)</a></li>
+      <li><a href="https://nodejs.org/en/blog/announcements/evolving-the-nodejs-release-schedule">Node.js sürüm takvimi değişikliği</a></li>
+      <li><a href="https://blog.openreplay.com/manage-package-managers-node-corepack/">Node 25 ve corepack</a></li>
+      <li><a href="https://nx.dev/docs/technologies/typescript/guides/typescript-7">TypeScript 7 ve araç uyumu</a></li>
+      <li><a href="https://fastify.dev/docs/latest/Guides/Testing/">Fastify ile test (inject)</a></li>
+      <li><a href="https://cdn.jsdelivr.net/npm/fastify-type-provider-zod@7.0.0/README.md">fastify-type-provider-zod (Zod 4, OpenAPI)</a></li>
+      <li><a href="https://orm.drizzle.team/docs/latest-releases">Drizzle ORM sürümleri</a></li>
+      <li><a href="https://cucumber.io/docs/gherkin/languages">Gherkin dilleri (Türkçe anahtar kelimeler)</a></li>
+      <li><a href="https://node.testcontainers.org/modules/postgresql/">Testcontainers PostgreSQL modülü</a></li>
+      <li><a href="https://github.com/timgit/pg-boss">pg-boss</a></li>
+      <li><a href="https://thenile.dev/blog/uuidv7">PostgreSQL 18 ve UUIDv7</a></li>
+      <li><a href="https://biomejs.dev/">Biome</a></li>
+      <li><a href="https://grafana.com/blog/2025/05/07/grafana-k6-1.0-release/">Grafana k6</a></li>
+      <li><a href="https://docs.expo.dev/guides/monorepos/">Expo ile tek depo düzeni</a></li>
+      <li><a href="https://hub.docker.com/r/axllent/mailpit">Mailpit</a></li>
     </ul>
   </details>
 </section>
