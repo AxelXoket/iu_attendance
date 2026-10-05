@@ -86,7 +86,8 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
 <header>
   <h1>İÜ Yoklama</h1>
   <p class="lead">Telefonla çalışan, internetsiz de yoklama alabilen ders yoklama uygulaması.</p>
-  <p class="meta">Plan ve kararlar · Son güncelleme 4 Ekim 2026</p>
+  <p class="meta">Plan ve kararlar · Son güncelleme 5 Ekim 2026 · Teknik ayrıntılar: <a href="teknik.html">teknik.html</a></p>
+  <p class="meta">Bu dosya ne yapılacağını, ürün ve mimari kararlarını gerekçeleriyle anlatır; kütüphane, sürüm, ayar, komut, dosya düzeni, test ve işletim ayrıntıları gerekçeleriyle teknik.html'dedir. Her bilgi tek yerde durur, öbür dosya bağlantı verir. Teknolojiler özetindeki sürümlerin asıl yeri teknik.html'dir.</p>
 </header>
 
 <nav aria-label="Bölümler">
@@ -104,18 +105,20 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
   <a href="#hedefler">Hedefler</a>
   <a href="#acik">Açık noktalar</a>
   <a href="#kaynaklar">Kaynaklar</a>
+  <a href="#sozluk">Sözlük</a>
+  <a href="teknik.html">Teknik ayrıntılar</a>
 </nav>
 
 <!-- Tek bakışta -->
 <section id="tek-bakista">
   <h2>Tek bakışta</h2>
   <ul>
-    <li><strong>Ne yapar:</strong> Öğrenci ders saatinde telefonundan yoklama verir. Kayıt telefonda saklanır, internet bulununca sunucuya gider.</li>
-    <li><strong>Kim kullanır:</strong> Öğrenci ve hoca aynı telefon uygulamasını kullanır (öğrenci modu, hoca modu). Hoca ve yönetici ayrıca her tarayıcıda açılan web panelini kullanır.</li>
-    <li><strong>Temel kural:</strong> Yoklama anında telefonda internet olmayabilir. Çıta: kâğıt imzadan iyi ve basit.</li>
-    <li><strong>Neden internetsiz:</strong> Türkiye'deki yoklama uygulamalarının en sık şikâyeti "derse gelip yok yazılmak": giriş hataları ve kampüste çekmeyen internet. İnternetsiz kayıt alıp sonra gönderen bir ürün araştırmada bulunamadı; yaklaşım yeni olduğu için erken ve geniş denenir.</li>
-    <li><strong>AKSİS:</strong> Otomatik bağlantı yok. Hoca "AKSİS özeti" ekranına bakıp değerleri elle girer.</li>
-    <li><strong>Dağıtım:</strong> Android için GitHub'daki APK. iPhone için deneme döneminde TestFlight, kalıcı olarak listelenmeyen App Store bağlantısı.</li>
+    <li><strong>Ne yapar:</strong> Öğrenci ders saatinde telefonundan yoklama verir; kayıt telefonda saklanır, internet bulununca sunucuya gider.</li>
+    <li><strong>Kim kullanır:</strong> Öğrenci ve hoca aynı telefon uygulamasını (öğrenci, hoca modu), hoca ve yönetici ayrıca web panelini kullanır.</li>
+    <li><strong>Temel kural:</strong> Yoklamada internet olmayabilir. Çıta: kâğıt imzadan iyi ve basit.</li>
+    <li><strong>Neden internetsiz:</strong> Türkiye'deki yoklama uygulamalarının sık şikâyeti "derse gelip yok yazılmak" (giriş hataları, kampüste çekmeyen internet; Proliz ve UBYS Mobil Play yorumları, 6 Ekim 2026'da yeniden bakıldı). İnternetsiz çalışan üniversite ürünleri sınıfa donanım koyuyor; öğrencinin kendi telefonuyla internetsiz yoklama veren yaygın bir üniversite ürünü bulunamadı (bkz. <a href="#benzer">Benzer sistemler</a>). Erken ve geniş denenir (az denenmiş yaklaşım): Android'de Play kapalı testi, iPhone'da TestFlight ile (bkz. <a href="#baslangic">Başlangıç</a>, Dağıtım adımı); başarısı hedeflerdeki ölçülerle görülür (bkz. <a href="#hedefler">Hedefler</a>).</li>
+    <li><strong>AKSİS:</strong> Otomatik bağlantı yok; hoca "AKSİS özeti" ekranına bakıp değerleri AKSİS'e elle girer. Dosyadan yükleme sorusu: bkz. <a href="#acik">Açık noktalar</a>.</li>
+    <li><strong>Dağıtım:</strong> Android'de Google Play, Google servissiz telefonda GitHub'daki APK; iPhone'da denemede TestFlight, kalıcı olarak listelenmeyen App Store bağlantısı (bireysel hesapla olup olmayacağı henüz belli değil: bkz. <a href="#dagitim-hesap">Dağıtım, iPhone, Hesap</a>).</li>
     <li><strong>Geliştirme:</strong> Önce sunucu ve davranış testleri, sonra telefon ve panel.</li>
   </ul>
 
@@ -123,17 +126,17 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
     <div class="card">
       <span class="tag ok">Şimdi</span>
       <h3>Aşama 1 · Temel sistem</h3>
-      <p>QR yok. Ders saatinde yoklama kendiliğinden açılır, saat değiştirmek işe yaramaz. Sınıfta olma kanıtı henüz yok.</p>
+      <p>Yoklama QR'ı yok (yalnız makbuz QR'ı). Yoklama ders saatinde kendiliğinden açılır, saati değiştirmek işe yaramaz (yeniden başlatma istisnası: bkz. <a href="#gun-zayif-nokta">Zayıf nokta</a>). Sınıfta olma kanıtı henüz yok; bu yüzden Aşama 1 tek başına kâğıttan zayıf, çıtaya QR'la (Aşama 2) ulaşılır (bkz. <a href="#hile">Hile ve sınırlar</a>).</p>
     </div>
     <div class="card">
       <span class="tag mute">Sonra</span>
       <h3>Aşama 2 · QR</h3>
-      <p>Hoca 5 saniyede bir değişen QR'ı projeksiyondan gösterir. QR'ı okutan öğrencinin sınıfta olduğu doğrulanır.</p>
+      <p>Hoca 5 saniyede bir değişen QR'ı projeksiyondan gösterir; QR, okutmanın kod ekranda göründükten sonra yapıldığını gösterir; ne kadar sonra yapıldığını öğrencinin saat kanıtı belirler (bkz. <a href="#asama23-degisme-ve-kabul">Değişme ve kabul</a>). Hızlı iletme ve canlı aktarım tam engellenmez (bkz. <a href="#hile">Hile ve sınırlar</a>).</p>
     </div>
     <div class="card">
       <span class="tag mute">Sonra</span>
       <h3>Aşama 3 · Konum</h3>
-      <p>Bluetooth ile sınıfa yakınlık, GPS ile bina civarı kontrolü. Referans hocanın telefonu.</p>
+      <p>Bluetooth'la sınıfa yakınlık, GPS'le bina civarı kontrolü; referans hocanın telefonu.</p>
     </div>
   </div>
 </section>
@@ -144,44 +147,49 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
 
   <h3>Hesaplar ve giriş</h3>
   <div class="rows">
-    <div class="row"><div class="k">Roller</div><div>Yönetici ve hoca. İlk yönetici benim, bölüm başkanını sonra kaydettiririm; diğer yöneticileri o ekler. Asistan ve ortak hoca rolünü sonra ekleyeceğim.</div></div>
-    <div class="row"><div class="k">Hoca kaydı</div><div>Hoca uygulamadan ya da panelden ad-soyad, bölüm ve kurumsal e-postasıyla kayıt formunu doldurur; hesap "onay bekliyor" olarak açılır. Yönetici tek tek onaylar. Onaydan önce giriş yapılamaz.</div></div>
-    <div class="row"><div class="k">Hoca girişi</div><div>E-postaya 6 haneli kod gelir: 5 dakika geçerli ve tek kullanımlık, 3 yanlış denemeden sonra yeni kod gerekir. Kod veritabanında açık değil özet olarak tutulur; bir adrese gönderilebilecek kod sayısı sınırlıdır. Oturum açık kalır ama en geç 30 günde bir yeniden kodla girilir. En fazla 3 cihaz.</div></div>
-    <div class="row"><div class="k">Öğrenci kaydı</div><div>Öğrenci numarası ve okuldaki kayıtlı isim, hocaların yüklediği listelerle eşleşir (Türkçe harf duyarlı: I/ı, İ/i). E-posta, şifre ve TC kimlik numarası yok. Eşleşmezse hoca onaylar. Öğrenci henüz hiçbir listede yoksa kayıt bekler, liste yüklenince kendiliğinden eşleşir.</div></div>
-    <div class="row"><div class="k">İlk kayıt teyidi</div><div>Öğrencinin derslerinden herhangi birinin hocası bir kez, toplu olarak teyit eder. Aynı numarayı iki kişi isterse hoca karar verir. Teyide kadar öğrenci yoklama verebilir, kayıtları beklemede kalır. Gerekirse hocanın verdiği tek kullanımlık kayıt koduna geçilir.</div></div>
-    <div class="row"><div class="k">Cihaz doğrulaması</div><div>Kayıtta telefonun gerçek ve uygulamanın değiştirilmemiş olduğu Google (Play Integrity) ya da Apple (App Attest) üzerinden doğrulanır. Telefonun gizli anahtarı güvenli donanımında üretilir ve dışarı çıkmaz. Google servisleri olmayan telefonlarda (ör. Huawei) doğrulama yapılamaz; bu telefonlar hoca teyidiyle kabul edilir ve kayıtları işaretlenir. İlk sürümlerde yazılım anahtarı da kabul edilir, bu kayıtlar da işaretlenir.</div></div>
-    <div class="row"><div class="k">Öğrenci girişi</div><div>Yalnız ilk kayıtta. Sonra şifre ya da giriş yok, telefona bağlı gizli anahtar yeter.</div></div>
-    <div class="row"><div class="k">Öğrenci telefonu</div><div>Her öğrenci hesabı tek telefona bağlı. Telefon değişimi ya da kaybı yüz yüze, kimlik görülerek hoca onayıyla yapılır. Çıkış yapmak ya da uygulamayı silip yeniden kurmak cihaz değişimi sayılır. Gönderilmemiş kayıt varken çıkış ve hesap silme yapılamaz.</div></div>
-    <div class="row"><div class="k">Geliştirme e-postası</div><div>Geliştirirken e-postalar gerçek adrese gitmez, yerel bir test posta kutusunda (Mailpit) toplanır. Böylece yayın sürümüne özel bir "kodu göster" ayarı gerekmez.</div></div>
+    <div class="row" id="kararlar-roller"><div class="k">Roller</div><div>Yönetici, hoca; asistan, ortak hoca rolleri sonra. İlk yönetici benim; bölüm başkanını sonra kaydettiririm, diğer yöneticileri o ekler. İlk yönetici kayıt sayfasından değil, sunucu makinesinde bir kez çalışan komutla açılır; bütün yöneticiler erişimini kaybederse kurtarma yolu da aynı komuttur (bkz. <a href="teknik.html#sunucu-ilk-yonetici">Sunucu, İlk yönetici</a>).</div></div>
+    <div class="row"><div class="k">Hoca kaydı</div><div>Uygulamadan ya da panelden ad-soyad, bölüm ve yalnız <code>@istanbul.edu.tr</code> e-postayla başvuru. E-postadaki kod girilince başvuru "onay bekliyor" olarak yöneticiye düşer; yönetici tek tek onaylar (alan adı bütün çalışanlarda, idari personel dahil; emeklilerde, çünkü emeklinin hesabı silinmiyor; FR-006 ile açılan misafir ve geçici görevli personelde ve FR-005 ile açılan birim hesaplarında da var: İÜ BİDB E-posta Kullanım Talimatı, TL-008). Onaydan önce giriş yok.</div></div>
+    <div class="row"><div class="k">Hoca girişi</div><div>E-postaya 6 haneli kod: 5 dakika geçerli, tek kullanımlık, 3 yanlış denemede geçersiz; veritabanında açık durmaz, sunucunun gizli anahtarıyla özetlenir (yöntem, gerekçesi ve anahtar: bkz. <a href="teknik.html#sunucu-kimlik">Sunucu, Kimlik</a>). Aynı adrese en sık dakikada 1, saatte 5, günde 10 kod. Art arda yanlışta bekleme uzar, kendiliğinden kalkar; yönetici kilidi yok (adresi bilen herkes hocayı kilitleyebilirdi). Kod isteğine her durumda aynı cevap, aynı hızda; e-posta cevap beklenmeden gider, sunucunun iş kuyruğuna konmaz (iş kuyruğundaki işler kod, isim, öğrenci numarası taşımaz). Kod ulaşmazsa hoca yenisini ister; onay bekleyene kod yerine "onay bekliyor" e-postası gider. E-posta alanında otomatik büyük harf kapalı; sunucu adresin tamamını küçük harfe çevirir, İ ve I de i olur.</div></div>
+    <div class="row"><div class="k">Hoca oturumu</div><div>Telefonda en geç 30 gün, kullanımla uzamaz; bitmeden 3 gün önce, internet varken yeni kod istenir. Derste internetsizken biterse kafa sayısı gibi işler silinmez, girişten sonra gider. Panelde sunucu oturumu 1 saat işlemsizlikte ya da en geç 24 saatte bitirir. Tarayıcı kapanınca bitmesi yalnız çerezin tarayıcı oturumuyla sınırlı olmasına dayanır, garanti değil: tarayıcı kaldığı yerden açılınca çerezi geri getirebilir. Bu yüzden çıkış düğmesi her sayfada (panel ortak kürsü bilgisayarlarında da açılır; orada asıl önlem çıkış ve 1 saatlik süre). En fazla 3 cihaz (panel tarayıcıları dahil; bitmiş oturumlar sayılmaz): 4. girişte en eski panel oturumu kapanır, panel oturumu yoksa en eski telefon oturumu (derste internetsiz iş telefon oturumuna dayandığından önce panel kapanır). Her başarılı girişte hocaya kısa bir bildirim e-postası gider: cihaz ya da tarayıcı türü ve saat; en eski oturum kapandıysa o da yazılır; "Sen değilsen Oturumlarım ekranından kapat". Hoca oturumlarını görüp kapatır; yönetici bir hesabın bütün oturumlarını kapatabilir; pasifleşen hesabın oturumları biter.</div></div>
+    <div class="row" id="kararlar-tek-etkenli-giris"><div class="k">Tek etkenli giriş</div><div>Hedefim ASVS 5.0 seviye 2 (iki etkenli giriş ister, 6.3.3); hoca girişinde bilerek sapıyorum, e-posta kodu tek etken. Önlemler: 3 cihaz, 30 gün, her girişte bildirim e-postası (ASVS 6.3.5; seviye 3 maddesi, telafi önlemi olarak alıyorum), oturum listesi, denetim kaydı. Bildirim e-postası gidemezse giriş geri alınmaz, durum denetim kaydına yazılır: kod e-postası aynı yoldan az önce ulaştığından bu çoğunlukla geçici bir gönderim hatasıdır ve hocayı ders başında girişsiz bırakmak daha büyük zarar; bedeli o girişin uyarısının hocaya gitmemesi, giriş oturum listesinde ve denetim kaydında yine görünür. Kendi yazdığım ikinci etken eklemem. E-postayla giriş ASVS 6.3.6 (seviye 3: e-posta giriş etkeni olamaz) ile de çelişir; seviye 3'ü hedeflemiyorum.</div></div>
+    <div class="row" id="kararlar-e-posta-gonderimi"><div class="k">E-posta gönderimi</div><div>Kodlar sunucumdan doğrudan <code>@istanbul.edu.tr</code> adına gitmez: üniversite postası Google Workspace'te; alan adının SPF kaydı yalnız Google'ı, Mailjet'i ve üniversitenin kendi adres bloğunu tanıyor, DMARC politikası "p=none" (5 Ekim 2026): sunucumdan giden böyle bir e-posta doğrulamadan geçmez, istenmeyene düşebilir ya da reddedilebilir. "p=none" yüzünden herkes yoklama@istanbul.edu.tr adına sahte e-posta yollayabilir ve alıcı sunucu onu yine teslim edebilir; bunu ben değiştiremem. Bu yüzden her kod e-postasında ve giriş bildiriminde aynı cümle durur: "Bu kodu yalnız uygulamaya ya da panele gir; uygulama kodu e-postayla, telefonla ya da başka bir yolla asla istemez." E-postalarda bağlantı yok, yalnız kod var. Kod biri tarafından kandırılarak alınırsa her girişte giden bildirim e-postası hocayı uyarır. BİDB'den (Bilgi İşlem Daire Başkanlığı) "Kurumsal e-Posta Talep Formu" (İÜ/BİDB/FR-005) ve bir birimin resmî yazısıyla gönderici hesap (ör. yoklama@istanbul.edu.tr) isterim; formda röle yok, sunucu adresime Google SMTP rölesi iznini aynı yazıda isterim (rölenin sınırı gönderici hesap başına günde 10.000 tekil alıcı); röle olmazsa aynı hesapla OAuth2. BİDB gönderici hesap vermezse kendi alan adımdan gönderirim: SPF, DKIM, DMARC hizalı kurulur, önce birkaç hoca adresinde denenir.</div></div>
+    <div class="row"><div class="k">Öğrenci kaydı</div><div>Öğrenci numarası ve okuldaki kayıtlı isim, hocaların yüklediği listelerle eşleşir. Eşleştirme sunucuda tek fonksiyon (eski Android'de Intl farklı davrandığından Türkçe harf işleri sunucuda): Unicode NFC, baş ve sondaki boşluk silinir, çoklu boşluk teke iner, büyük küçük harf farkı Türkçe kuralla yok sayılır. IŞIK ile ışık eşleşir; Sahin ile Şahin eşleşmez, hoca onayına düşer. E-posta, şifre, TC kimlik numarası yok. Hiçbir listede olmayanın kaydı bekler, liste yüklenince kendiliğinden eşleşir.</div></div>
+    <div class="row"><div class="k">İlk kayıt teyidi</div><div>Öğrencinin herhangi bir dersinin hocası bir kez, toplu teyit eder; telefonu doğrulanamayanlar listede ayrı, işaretli görünür, tek tek onaylanır. Aynı numarayı iki kişi isterse ikisi de beklemede, hoca karar verir; teyitli iki hesap aynı numarayı alamaz. Teyide kadar yoklama verilebilir, kayıtlar beklemede. Gerekirse hocanın verdiği tek kullanımlık kayıt koduna geçilir: güvenli rastgele, tek öğrenci numarasına bağlı, 72 saatte geçersiz, yanlış denemesi sınırlı.</div></div>
+    <div class="row" id="kararlar-cihaz-dogrulamasi"><div class="k">Cihaz doğrulaması</div><div>Kayıtta doğrulanır: telefon gerçek, uygulama bizim; gizli anahtar telefonun güvenli donanımında üretilir, dışarı çıkmaz. <strong>Android:</strong> donanım anahtar kanıtı (key attestation); kanıtı sunucu kendisi doğrular (zincir, kökler, iptal listesi: bkz. <a href="teknik.html#sunucu-imza-dogrulama">İmza doğrulama</a>). Google servisli telefonda Play'den de GitHub APK'sından da kurulsa aynı çalışır (ikisi aynı imza sertifikasını taşır: bkz. <a href="#dagitim-imza-anahtari">İmza anahtarı</a>), kotasız; iptal listesi dışında Google'a sormaz. Play Integrity kullanılmaz: GitHub APK'sına "tanınmayan sürüm" der, Android 7 ile 12 arasında kararı donanıma dayanmaz, sunucuya Google Cloud projesi, hizmet hesabı, her doğrulamada Google çağrısı gerekir; gerekirse sonra eklenir (uygulama Play'de). <strong>iPhone:</strong> App Attest; anahtar kanıtı kayıtta bir kez Apple'a gider, sonraki onaylar telefonda internetsiz üretilir. Sonuç yalnız etiket, kayıt reddedilmez; iPhone'da onay sayacı artmayan kayıt da reddedilmez, gerekçe koduyla "İncelemede" kalır ve hoca karar verir (ham kayıt kanıttır, atılmaz); kararı telefonun bildirdiği değil, sunucunun gördüğü kanıt verir. Kanıtsız telefon (Google servissiz, kanıtı isteğe bağlı Android 7, App Attest'i başarısız iPhone) yine donanım anahtarıyla bağlanır, kayıtları "Cihaz doğrulanmadı" etiketli. Uygulama yalnız donanım anahtarı üretir; kanıtsız telefonda sunucu bunu doğrulayamaz (emülatör ya da değiştirilmiş uygulama yazılım anahtarıyla da aynı sonucu alır), etiket bu yüzden konur.</div></div>
+    <div class="row"><div class="k">Öğrenci girişi</div><div>Yalnız ilk kayıtta; sonra şifre ya da giriş yok. Yoklama kayıtları donanım anahtarıyla imzalanır; diğer istekler (kendi kayıtları, sorun bildirimi) kayıtta verilen oturum anahtarıyla gider. Anahtar güvenli depoda, "yalnız bu cihaz" ayarıyla; telefon kilitliyken de arka plan gönderimi için okunabilir, yeniden başlatmadan sonra ilk kilit açılışını bekler (ayarı: bkz. <a href="teknik.html#telefon-anahtar-imza">Telefon uygulaması, Anahtar ve imza</a>); sunucuda yalnız özeti.</div></div>
+    <div class="row" id="kararlar-ogrenci-telefonu"><div class="k">Öğrenci telefonu</div><div>Hesap tek telefona bağlı. Değişim ya da kayıp: yüz yüze, kimlik görülerek hoca onayıyla. Çıkış ya da silip yeniden kurma değişim sayılır. iPhone'da yerel veritabanı olmadan açılan uygulama eski anahtarları siler, değişim akışına geçer (anahtarlık kayıtları uygulama silinince de kalır). Android'de uygulama verisi yedeklenmez, cihazdan cihaza da aktarılmaz (ayarı: bkz. <a href="teknik.html#telefon-yerel-veri">Yerel veri ve kuyruk</a>). Gönderilmemiş kayıt varken çıkış yapılamaz.</div></div>
+    <div class="row" id="kararlar-hesap-silme"><div class="k">Hesap silme</div><div>Öğrenci ve hoca uygulamadan her zaman "hesabımı sil" isteği başlatabilir (Apple ve Google Play şartı). Google Play ayrıca uygulamayı kurmadan silme isteği verilebilen bir web adresi ister; adres Play'in veri güvenliği formuna yazılır. Hoca o adreste panele e-posta koduyla girip silmeyi başlatır. Öğrencinin e-postası ve şifresi olmadığından web isteği kimliğini kanıtlayamaz, kendiliğinden yapılmaz: sayfa öğrenciye uygulamadaki silme yolunu, telefonu yoksa hocasına yüz yüze, kimlik göstererek başvurmayı yazar; hoca kimliği görüp silmeyi başlatır (cihaz değişimindeki gibi). Gönderilmemiş kayıt ya da iş varsa silme sıraya girer, onlar gidince yapılır; ekranda bu yazar. Öğrenci hesabı silinince giriş bilgisi (oturum anahtarının sunucudaki özeti; öğrencinin e-postası ve giriş kodu yok), cihazların etkinliği ve telefon sayaçları silinir; telefonda yerel veritabanı ve anahtarlar bekleyen kayıtlar gittikten sonra silinir. Hocanın yüklediği ders listesindeki satır, yoklama kayıtları (imzalı ham metin ve imzayı doğrulayan açık anahtar dahil), düzeltmeler ve denetim kaydı kalır: devam kararının dayanağı ve itirazda kanıttır; üniversitenin saklama süresi dolunca silinir ya da anonimleştirilir (süre: bkz. <a href="#acik-saklama-suresi">Açık noktalar, Saklama süresi</a>). Silinen öğrenci listede kalır, yeni kayıt gönderemez; yeniden kaydolursa ilk kayıt teyidinden geçer. Hoca hesabı silinince giriş bilgileri (e-posta adresi, giriş kodları) silinir, oturumları kapanır; dersleri arşivlenir, düzeltmeleri denetim kaydında kalır. Silme ekranı ve web adresi neyin silinip neyin kaldığını, nedenini ve süresini yazar (Apple ve Google Play, tutulan veri kullanıcıya söylenince saklamaya izin veriyor).</div></div>
+    <div class="row" id="kararlar-inceleme-hesaplari"><div class="k">İnceleme hesapları</div><div>Apple ve Google incelemesi için önceden onaylı bir deneme hocası, bir deneme öğrencisi. Deneme hocası yalnız adresine tanımlı sabit kodla girer: kod depoda değil, mağaza panelinde ve sunucunun gizli ayarında; her an açık; normal kodun 3 yanlışta geçersiz olma kuralı ona uygulanmaz, art arda yanlışta uzayan ve kendiliğinden kalkan bekleme uygulanır; her başvuruda değişebilir. İki hesap da yalnız her an açık deneme dersini görür; 3 cihaz ve tek telefon kuralından muaf; silinirse sunucu yeniden kurar; her girişi ve yanlış denemesi loglanır. Deneme hesapları ve sunucu her an, yurt dışından da erişilebilir: Google Play deneme bilgilerinin her zaman ve konumdan bağımsız çalışmasını ister, yalnız inceleme sırasında açmak reddedilme sebebi.</div></div>
   </div>
 
-  <h3>Yoklama <span class="tag ok">Aşama 1</span></h3>
+<h3>Yoklama <span class="tag ok">Aşama 1</span></h3>
   <div class="rows">
-    <div class="row"><div class="k">Yoklama penceresi</div><div>Ders saatinde kendiliğinden açılır. Hoca dersin ayarlarında süre seçtiyse o kadar açık kalır (öneri 15 dakika, örnek 09:00–09:15) ve sayaç bitince kapanır.</div></div>
-    <div class="row"><div class="k">Süre seçilmediyse</div><div>Pencere ders boyunca açık kalır ve kayıtlar "kendi beyanı" olur. Süre seçilmemesi yoklamanın takip edilmediğini gösterebilir, bu yüzden hoca bu kayıtları toplu onaylar.</div></div>
-    <div class="row"><div class="k">Ders içinde değişiklik</div><div>Hoca süreyi değiştirir ya da yoklamayı erken kapatırsa internetsiz telefonlar bunu bilemez. Kayıtlar beklemede kalır, son kararı sunucu hocanın ayarına göre verir.</div></div>
-    <div class="row"><div class="k">Kafa sayısı</div><div>Hoca ders sonunda yaklaşık kafa sayısını girer; kayıt sayısını sayıyı girdikten sonra görür. Bu aynı zamanda "ders yapıldı" onayıdır. Kayıt sayısı kafa sayısını 3 kişiden ve %5'ten fazla aşarsa ders işaretlenir; hoca isterse isim okuyarak kontrol eder.</div></div>
-    <div class="row"><div class="k">Onaysız ders</div><div>Kafa sayısı girilmemiş geçmiş ders için hocaya "Ders yapıldı mı?" diye sorulur. Cevaplanmadan dönem sonu çıktısı alınamaz. Yapılmadı denen dersin kayıtları ve saatleri hesaba girmez.</div></div>
-    <div class="row"><div class="k">Telafi dersi</div><div>Önceden programa girilir. Aynı gün girilirse internetsiz telefonlar haberdar olamaz; o derste hoca öğrencileri listeden işaretler.</div></div>
-    <div class="row"><div class="k">Geç gelen</div><div>Pencere açıkken gelen "var" sayılır.</div></div>
-    <div class="row"><div class="k">Blok ders</div><div>Tek yoklama dersin bütün saatlerini sayar.</div></div>
-    <div class="row"><div class="k">Çakışan dersler</div><div>Öğrenci aynı saatte yalnız bir derse yoklama verebilir; çakışma hocalara gösterilir. Çift anadal ve yandal dersleri kendi listeleriyle ayrı tutulur.</div></div>
-    <div class="row"><div class="k">Birlikte işlenen şubeler</div><div>Tek yoklama ve tek kafa sayısı (böyle şube varsa).</div></div>
+    <div class="row"><div class="k">Yoklama penceresi</div><div>Ders saatinde kendiliğinden açılır; hoca ders ayarında süre seçtiyse o süre sonunda sayaçla kapanır (öneri 15 dakika, örnek 09:00 ile 09:15). Saatler İstanbul saati: sunucu her oturumun açılış ve kapanış anını UTC üretip telefona indirir; telefonun saat dilimi hiç kullanılmaz, farklıysa da pencere kaymaz.</div></div>
+    <div class="row"><div class="k">Süre seçilmediyse</div><div>Pencere ders boyunca açık, kayıtlar "kendi beyanı"; hoca bunları toplu onaylar (yoklama takip edilmiyor olabilir); onaya kadar geçici olarak sayılır (bkz. <a href="#gun-kayit-etiketleri">Kayıt etiketleri</a>).</div></div>
+    <div class="row"><div class="k">Ders içinde değişiklik</div><div>Hoca süreyi değiştirir ya da erken kapatırsa internetsiz telefon bilemez; kayıtlar beklemede, son kararı sunucu hocanın ayarına göre verir.</div></div>
+    <div class="row" id="kararlar-kafa-sayisi"><div class="k">Kafa sayısı</div><div>Hoca ders sonunda yaklaşık kafa sayısını girer ("ders yapıldı" onayı da), kayıt sayısını ancak sonra görür. Kayıt sayısı kafa sayısını 3 kişiden ve %5'ten fazla aşarsa ders işaretlenir: işaret derste çıkarsa hoca bütün listeyi okur, sonra çıkarsa oturumun kayıtlarını toplu inceler. Kayıtlar geç gelebildiğinden karşılaştırma geldikçe yenilenir, gönderme süresi bitince kesinleşir; ekranda: "kayıtların bir kısmı henüz gelmemiş olabilir".</div></div>
+    <div class="row"><div class="k">Onaysız ders</div><div>Kafa sayısı girilmemiş geçmiş ders için hocaya "Ders yapıldı mı?" sorulur; cevaplanmadan dönem sonu çıktısı alınamaz. Yapılmadı denen dersin kayıtları ve saatleri sayılmaz.</div></div>
+    <div class="row"><div class="k">Telafi dersi</div><div>Önceden programa girilir. Aynı gün girilirse programı internetteyken indiren telefonlarda açılır; indirmemiş, internetsiz telefon bilemez, hoca kaydı olmayan öğrencileri listeden işaretler.</div></div>
+    <div class="row"><div class="k">Geç gelen</div><div>Pencere açıksa "var" sayılır.</div></div>
+    <div class="row"><div class="k">Blok ders</div><div>Tek yoklama bütün saatleri sayar; geç gelen ya da erken çıkana hoca düzeltmede saat sayısı seçebilir (ör. 3 saatin 2'si var); seçim yalnız bir saatten uzun oturumda, varsayılan bütün saatler.</div></div>
+    <div class="row"><div class="k">Çakışan dersler</div><div>Aynı saatte yalnız bir derse yoklama verilir, çakışma hocalara gösterilir; çift anadal ve yandal dersleri her programın kendi ders listesinde ayrı tutulur, çakışma bu listeler arasında da denetlenir.</div></div>
+    <div class="row"><div class="k">Birlikte işlenen şubeler</div><div>Tek yoklama, tek kafa sayısı (böyle şube varsa).</div></div>
   </div>
 
   <h3>Kayıt ve gönderme</h3>
   <div class="rows">
-    <div class="row"><div class="k">Kayıt ve makbuz</div><div>Telefon kaydı imzalar ve saklar. Öğrenci iki durumu açıkça görür: "Telefonda kayıtlı, gönderilmedi" ve "Sunucuya ulaştı". Sunucunun kararı (var, incelemede) ayrıca görünür.</div></div>
-    <div class="row"><div class="k">Gönderme</div><div>Yoklama verildiği anda, uygulama açılınca, internet gelince ve fırsat buldukça arka planda denenir. Arka plan garantili değildir: Android en sık 15 dakikada bir dener, iPhone'da zamanı sistem seçer. Kayıtlar sırayla, en çok 200'lük paketlerle gider ve her kayıt için ayrı sonuç döner: kabul, zaten var, ret, tekrar dene.</div></div>
-    <div class="row"><div class="k">Yeniden deneme</div><div>Başarısız gönderim 2 saniyeden 10 dakikaya kadar artan, rastgele kaydırılmış aralıklarla yeniden denenir. Ders çıkışında herkes aynı anda göndermesin diye ilk deneme de birkaç saniye kaydırılır. Gönderilemeyen kayıt için günde bir yerel hatırlatma çıkar.</div></div>
-    <div class="row"><div class="k">İndirme</div><div>Program ve listeler "şu sürümden beri değişenler" diye çekilir; telefonun saati kullanılmaz. Silinen kayıtlar silindi işaretiyle iner.</div></div>
-    <div class="row"><div class="k">Gönderme süresi</div><div>En geç 7 gün. Sonra gelen geçerli kayıt kabul edilir ve "sonradan değişenler" listesine düşer.</div></div>
-    <div class="row"><div class="k">Şüpheli kayıt</div><div>"İncelemede" kalır, hoca onaylayana kadar sayılmaz. Sorular dönem sonunda yığılmasın diye her gece aşamalı sorulur.</div></div>
-    <div class="row"><div class="k">Öğrencinin ekranı</div><div>Öğrenci kendi kayıtlarını, durumlarını ve her ders için kalan hakkını görür. Türkiye'deki uygulamalarda en çok istenen özellik bu.</div></div>
-    <div class="row"><div class="k">Sorun bildir</div><div>Öğrenci bir dersin yoklamasında sorun yaşarsa 3 gün içinde uygulamadan bildirir; bildirim hocanın listesine düşer. Her düzeltme kim, ne zaman ve neden bilgisiyle kaydedilir.</div></div>
-    <div class="row"><div class="k">Bildirim</div><div>Yalnız telefonda yerel bildirim (hak uyarısı, gönderilmemiş kayıt). Push sonra.</div></div>
-    <div class="row"><div class="k">Ölçüm</div><div>Uygulama kendi olay kaydını tutar: gönderme oranı, saati doğrulanamayan oran, işaretli oran. Üçüncü taraf analitik yok.</div></div>
-    <div class="row"><div class="k">Ortak kurallar</div><div>Hak hesabı, uyarı seviyeleri, saat ve işaretleme kuralları tek ortak kod paketinde yazılır. Telefon, sunucu ve panel aynı kuralı aynı testlerle kullanır.</div></div>
+    <div class="row" id="kararlar-kayit-ve-makbuz"><div class="k">Kayıt ve makbuz</div><div>Telefon kaydı bir kez tek metin olarak üretip imzalar; metin değişmeden saklanır ve kuyruktan gider (bkz. <a href="teknik.html#sunucu-imza-dogrulama">İmza doğrulama</a>). Öğrenci iki durumu açıkça görür: "Telefonda kayıtlı, gönderilmedi" (yalnız kayıt telefona kalıcı yazılınca; ayarı: bkz. <a href="teknik.html#telefon-yerel-veri">Yerel veri ve kuyruk</a>) ve "Sunucuya ulaştı"; sunucunun kararı (var, beklemede, incelemede, ret) ayrıca görünür. Ulaşanlar da dönem kilitlenene kadar telefonda saklanır. Makbuz QR'ı kaydın imzalı zarfını aynen taşır (kayıt metni, imza türü, imza; biçim: bkz. <a href="teknik.html#telefon-kamera-qr">Kamera ve QR</a>). Hoca okutunca telefonu yalnız kaydın kendi dersine ait olduğunu denetler, zarfı ortak kuyruğa "makbuz okutma" olarak koyar; zarf hocanın oturumuyla gider, sunucu öğrencinin cihaz imzasını normal gönderimdeki gibi doğrular ve aynı kurallarla karar verir. Hoca kaydı değiştiremez, imza bozulur. Kayıt zaten ulaştıysa hangi yoldan gelirse gelsin "zaten var" döner; aynı kayıt kimliği başka içerikle ya da başka cihazın imzasıyla gelirse "ret" döner, ulaşmış kayıt değişmez (bir kaydın yerine başkası yazılamaz); ulaşma anı hocanın gönderiminin sunucuya ulaştığı an. Kayıtta geliş yolu (öğrencinin telefonu ya da okutan hoca ve okutma zamanı) saklanır; sonuç düzeltme değil, normal kayıttır. Öğrencinin telefonu sonra eşitlediğinde makbuz "Sunucuya ulaştı" olur. Her kayıt ayrı QR; birden çok bekleyen kayıt sırayla gösterilir.</div></div>
+    <div class="row"><div class="k">Ortak kuyruk</div><div>Telefondaki bütün yazmalar aynı kuyruktan, aynı saat belgesi ve yeniden deneme kuralıyla gider: öğrencinin yoklaması, sorun bildirimi; hocanın kafa sayısı, erken kapatma, süre değişikliği, elle ekleme, makbuz okutma, Aşama 2'de QR gösterim kaydı (bkz. <a href="#asama23-degisme-ve-kabul">Değişme ve kabul</a>). Yoklama cihaz anahtarıyla imzalanır, sorun bildirimi öğrencinin oturum anahtarıyla gider, hoca işlemleri hocanın oturumuyla doğrulanır. Günlük sayaçlar (bkz. <a href="#kararlar-olcum">Ölçüm</a>) yoklama kayıtlarından sonra gider. Hazır eşitleme motoru kullanılmaz, küçük bir kuyruk yeter (gerekçe: bkz. <a href="teknik.html#telefon-yerel-veri">Yerel veri ve kuyruk</a>).</div></div>
+    <div class="row" id="kararlar-gonderme"><div class="k">Gönderme</div><div>Yoklama anında, uygulama açılınca, internet gelince ve fırsat buldukça arka planda denenir. Arka plan garantisiz: Android'de en sık 15 dakikada bir, az kullanılan uygulamada daha seyrek; iPhone'da yalnız telefon boştayken, çoğunlukla gece (ayarlar: bkz. <a href="teknik.html#telefon-gonderme-protokolu">Gönderme protokolü</a>). Arka plan yeni yoklama kaydı imzalamaz, yalnız imzalı kayıtları gönderir; gönderim paketini ise <a href="#gun-ikinci-capa">ikinci çapa</a> için imzalar. Anahtarlar, yeniden başlatmadan sonra kilit bir kez açılınca telefon kilitliyken de kullanılır; arka plan görevi kilitli telefonda da gönderir, indirir ve paketi imzalar (ayar: bkz. <a href="teknik.html#telefon-anahtar-imza">Telefon uygulaması, Anahtar ve imza</a>). Yeniden başlatmadan sonra kilit hiç açılmadıysa arka plan görevi o turda bir şey yapmaz. Paket imzalanamadığı her durumda o gönderimde ikinci çapa kurulmaz; saati yalnız ikinci çapayla kurulabilen kayıtlar (ilk çapası bozuk olanlar, ör. kayıttan önce yeniden başlatma: bkz. <a href="#gun-zayif-nokta">Zayıf nokta</a>) o turda gitmez, sonraki turda ya da uygulama açılınca gider. Her istekte zaman aşımı var; beklenmeyen biçimdeki cevap (kampüs ağının giriş sayfası gibi) başarısız sayılır. Kayıtlar sırayla, sınırlı boyutta paketlerle gider (zaman aşımı ve paket boyu: bkz. <a href="teknik.html#telefon-gonderme-protokolu">Gönderme protokolü</a>); sunucu kayıt kayıt doğrular, bozuk kayıt paketi düşürmez, her kayda ayrı sonuç: kabul, zaten var, ret, tekrar dene.</div></div>
+    <div class="row" id="kararlar-yeniden-deneme"><div class="k">Yeniden deneme</div><div>Yalnız geçici hatalarda (ağ hatası, zaman aşımı, sunucunun yoğunluk ya da kendi iç hatası cevabı): saniyelerden dakikalara artan, rastgele kaydırılmış aralıklarla; sunucu bekleme süresi verirse en az o kadar, üstüne rastgele payla beklenir. Paket reddedilirse (bozuk istek ya da fazla büyük paket) ikiye bölünerek sorunlu kayıt bulunur, "ret" işaretlenir ama silinmez, kuyruk sürer. Tek başına da reddedilen kayıt kendiliğinden yeniden denenmez (aynı istek aynı cevabı alır): sorun günlük sayaçlarla bana ulaşır (HTTP kodu ve sunucunun hata kodu; bkz. <a href="#kararlar-olcum">Ölçüm</a>), uygulama ya da uzaktan güncelleme değişince kayıt bir kez daha denenir. O arada makbuzu "Telefonda kayıtlı, gönderilmedi" kalır, günlük hatırlatma sürer; öğrenci makbuz QR'ını hocasına okutabilir (bkz. <a href="#kararlar-kayit-ve-makbuz">Kayıt ve makbuz</a>), o da reddedilirse hoca "beyana dayalı" kodla düzeltir; yetki hatasında gönderim durur, cihaz durumu gösterilir. Kodlar ve süreler: bkz. <a href="teknik.html#telefon-gonderme-protokolu">Gönderme protokolü</a>. İlk deneme de birkaç saniye kaydırılır (ders çıkışında herkes aynı anda göndermesin). Gönderilemeyen kayda günde bir yerel hatırlatma.</div></div>
+    <div class="row" id="kararlar-indirme"><div class="k">İndirme</div><div>Program ve listelerden "şu sürümden beri değişenler" çekilir (telefonun saati kullanılmaz), silinenler silindi işaretiyle iner. Herkes yalnız kendine gerekeni indirir: sınıf listesi yalnız o dersin hocasının telefonuna iner (internetsiz elle ekleme ve telafi işaretlemesi için); öğrenci telefonuna yalnız kendi dersleri, ders saatleri, oturumları, tatiller ve kendi liste satırı iner, başka öğrencinin adı ya da numarası hiç inmez (veri amaçla sınırlı: öğrencinin başka öğrencinin bilgisine ihtiyacı yok). Hoca çıkış yapınca indirilen listeler telefondan silinir; gönderilmemiş işleri kuyrukta kalır. İmleç (telefonun son aldığı değişiklik sürümü) veritabanı neslini taşır. Nesil elle tutulmaz, veritabanının kendisinden okunur ve yedekten dönüşte kendiliğinden değişir (nasıl ve dönüşte uyulacak kural: bkz. <a href="teknik.html#kod-veri-modeli">Kod düzeni, Veri modeli</a>); sunucu imleci tanımazsa (çok eski, sunucudakinden ileri ya da yedekten dönüş sonrası) "baştan indir" der: telefon program ve liste önbelleğini silip yeniden çeker, gönderme kuyruğuna dokunmaz.</div></div>
+    <div class="row" id="kararlar-gonderme-suresi"><div class="k">Gönderme süresi</div><div>Beklenen süre en geç 7 gündür; dönemin son haftasında süre en geç birimin "devamsızlıkların işlenmesi için son gün"ünde biter (bkz. <a href="#devam-donem-sonu">Devamsızlık, Dönem sonu</a>). 7 günden geç gelen geçerli kayıt reddedilmez, kendiliğinden sayılır ve hocanın "sonradan değişenler" listesinde gösterilir; birimin son gününden sonraysa yalnız saklanır, sayım ancak denetim kaydı bırakan düzeltmeyle değişir.</div></div>
+    <div class="row" id="kararlar-supheli-kayit"><div class="k">Şüpheli kayıt</div><div>"İncelemede" kalır, hoca onaylayana kadar sayılmaz; her gece aşamalı sorulur (dönem sonunda yığılmasın). Gece inceleme sıralaması işi kararı değiştirmez: kararlar kayıt geldiğinde ya da ilgili olay olduğunda (teyit, ayar değişikliği, kafa sayısı) aynı işlemde verilir. Gece işi bekleyen incelemeleri ve sorun bildirimlerini sıralayıp her hocanın ertesi gün göreceği küçük partiye koyar: önce öğrencinin devam sonucunu değiştirebilecekler, sonra en eskiler. Parti boyu başlangıç değeri hoca başına 20, kullanımla ayarlanır; kalanlar sonraki geceye devreder. Aynı girdiyle iki kez çalışsa da sonuç değişmez (zamanlama: bkz. <a href="teknik.html#sunucu-arka-plan">Sunucu, Arka plan işleri</a>).</div></div>
+    <div class="row"><div class="k">Öğrencinin ekranı</div><div>Kendi kayıtları, durumları, her derste kalan hakkı; Türkiye'deki uygulamaların Play yorumlarında öğrencilerin övdüğü, çalışmayınca da şikâyet ettiği özellik (UBYS Mobil, Proliz; Ekim 2026).</div></div>
+    <div class="row"><div class="k">Sorun bildir</div><div>Öğrenci yoklama sorununu uygulamadan 3 gün içinde bildirir (süre, kaydı varsa sunucu kararı telefonuna ulaşınca, kaydı yoksa ders bitince başlar), bildirim hocanın listesine düşer; her düzeltme kim, ne zaman, neden bilgisiyle kaydedilir.</div></div>
+    <div class="row"><div class="k">Bildirim</div><div>Yalnız yerel (hak uyarısı, gönderilmemiş kayıt); push sonra. İzin ilk yoklamadan hemen sonra, amacı söylenerek istenir (Android ayrıntısı: bkz. <a href="teknik.html#telefon-arka-plan">Arka plan ve bildirim</a>). İzin yoksa gönderilmemiş kayıt uygulama açılınca ekranın üstünde görünür. Arka plan görevi gönderip indirir, seviye değiştiyse hak uyarısı çıkarır; push olmadığından uyarı uygulama açılana kadar gecikebilir.</div></div>
+    <div class="row" id="kararlar-olcum"><div class="k">Ölçüm</div><div>Ayrı ham olay tablosu yok: gönderme süresi, saati doğrulanamayan ve işaretli oranlar yoklama kayıtlarından tek sorguyla hesaplanır. Telefondan yalnız sunucunun göremediği sayılar günlük toplam gelir: gönderilmemiş kayıt, başarısız deneme, bildirim izni, uygulama hataları (ekran hata sınırları, genel hata yakalayıcı), yerel modül çökmeleri (okunuşu: bkz. <a href="teknik.html#telefon-arka-plan">Arka plan ve bildirim</a>). Hocanın kafa sayısı ve onay ekranlarındaki süresi de ölçülür: kafa sayısı sunucuya zaten gelir, onay ekranlarındaki süreyi telefon ve panel ölçüp günlük toplam olarak gönderir; üçüncü taraf analitik yok.</div></div>
+    <div class="row"><div class="k">Ortak kurallar</div><div>Hak hesabı, uyarı seviyeleri, saat ve işaretleme kuralları tek ortak kurallar paketinde (bkz. <a href="teknik.html#kod">Kod düzeni</a>); telefon, sunucu ve panel aynı kuralı aynı testlerle kullanır. Paket her cihazda aynı sonucu verir, telefonun dil ayarına bağlı değildir (nasıl: bkz. <a href="teknik.html#kod">Kod düzeni</a>).</div></div>
   </div>
 </section>
 
@@ -191,62 +199,69 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
 
   <h3>Önceden, internet varken</h3>
   <ol>
-    <li>Hoca öğrenci listesini yükler. Dersin programını (her saatin teori mi uygulama mı olduğu dahil) ve yoklama süresini ayarlar.</li>
-    <li>Öğrenci numara ve isimle kayıt olur, telefonu doğrulanıp hesabına bağlanır. Dersleri, saatleri ve yerleri telefona iner. Telefon sunucudan saat belgesini alır.</li>
+    <li>Hoca öğrenci listesini yükler; ders programını (her saatin teori/uygulama türüyle) ve yoklama süresini ayarlar.</li>
+    <li>Öğrenci numara ve isimle kaydolur, telefonu doğrulanıp hesabına bağlanır. Dersleri, saatleri ve derslik adları telefona iner; telefon sunucudan saat belgesini alır.</li>
   </ol>
 
   <h3>Derste, internet olmasa da</h3>
   <ol start="3">
-    <li>Ders saati gelince yoklama kendiliğinden açılır ve sayaç başlar.</li>
-    <li>Öğrenci "Yoklamamı ver"e basar. Telefon kaydı imzalayıp saklar, öğrenci "Telefonda kayıtlı" makbuzunu görür.</li>
+    <li>Ders saati gelince yoklama kendiliğinden açılır, sayaç başlar.</li>
+    <li>Öğrenci "Yoklamamı ver"e basar; telefon kaydı imzalayıp saklar, öğrenci "Telefonda kayıtlı" makbuzunu görür.</li>
     <li>Süre dolunca düğme kapanır.</li>
-    <li>Hoca ders sonunda kafa sayısını girer; ders yapıldı onayı da böylece verilmiş olur (hedef: ders başına en çok 2 dakika).</li>
+    <li>Hoca ders sonunda kafa sayısını girer (ders yapıldı onayı da budur).</li>
   </ol>
 
   <h3>Sonra, internet bulunca</h3>
   <ol start="7">
-    <li>Telefon kaydı gönderir, makbuz "Sunucuya ulaştı" olur. Sunucu kontrol eder: geçerli kayıt "var" olur, şüpheli kayıt "incelemede" kalır.</li>
-    <li>Hoca kendi beyanı kayıtlarını ve yeni kayıtları toplu onaylar, şüphelileri ve sorun bildirimlerini inceler.</li>
+    <li>Telefon kaydı gönderir, makbuz "Sunucuya ulaştı" olur. Sunucu denetler: geçerli kayıt "var" olur, şüpheli "incelemede" kalır.</li>
+    <li>Hoca kendi beyanı kayıtlarını ve yeni öğrencilerin ilk kayıt teyidini toplu onaylar; şüphelileri, sorun bildirimlerini inceler.</li>
   </ol>
 
   <div class="callout">
-    <h3>Saati değiştirmek neden işe yaramaz?</h3>
+    <h3 id="gun-saati-degistirmek-neden-ise-yaramaz">Saati değiştirmek neden işe yaramaz?</h3>
     <ul>
-      <li>Telefon internetteyken sunucudan imzalı bir saat belgesi alır ve o anki iç sayaç değerini yanına yazar.</li>
-      <li>Yoklama anında gerçek saat = <strong>saklanan saat + o andan beri geçen süre</strong>. Geçen süreyi telefonun iç sayacı ölçer; bu sayaç ayarlardan değiştirilemez ve telefon uykudayken de işler.</li>
-      <li>Her kayıt bu saat belgesini taşır. Böylece kaydın en erken ne zaman verilebileceği kanıtlanır; en geç zamanı da sunucuya ulaştığı an belirler. Sunucuya ulaştığı andan sonrasını gösteren kayıt reddedilir.</li>
-      <li>İç sayacın kayması için pay bırakılır: 2 saniye + geçen sürenin milyonda 100'ü (haftada yaklaşık 1 dakika). Belge en çok 7 günlük olabilir.</li>
-      <li>Pencere ve sayaç telefonun saatine değil bu hesaplanan saate göre çalışır. Telefonun kendi saati yalnız not düşülür.</li>
-      <li>Uygulama her açıldığında ve ağ değiştiğinde, internet varsa, saat belgesini yeniler.</li>
+      <li>Telefon sunucudan kısa saat belgesi alır. İstek rastgele, tek kullanımlık bir değer taşır; sunucu bu değeri, kendi saatini ve cihaz kimliğini belgeye yazıp gizli anahtarıyla doğrulama kodu (HMAC) ekler. Telefon kendi değerini taşımayan belgeyi kullanmaz; isteği gönderdiği ve cevabı aldığı anlardaki iç sayaç değerlerini belgenin yanına yazar. Aradaki süre payın sabit kısmıdır, 10 saniyeden geç gelen cevap kullanılmaz. Cevabı bekletmek ya da eski belgeyi tekrar oynatmak saati geri kaydıramaz.</li>
+      <li>Yoklama anında gerçek saat = <strong>saklanan saat + o andan beri geçen süre</strong> (süreyi ölçen iç sayaç ayarlardan değiştirilemez, telefon uykudayken de işler).</li>
+      <li id="gun-ikinci-capa">İkinci çapa: telefon göndermeden hemen önce yeni belge alır, her kaydın üzerinden geçen süreyi yollar. Paketi Android'de cihaz anahtarı, iPhone'da kayıtta üretilen ikinci donanım anahtarı (Secure Enclave) imzalar; böylece çevrimiçi istekler App Attest sayacını ilerletmez; sayacı yalnız kayıtlar ve açılıştaki deneme onayı (bkz. <a href="#gun-kenar-durumlar">Kenar durumlar</a>) ilerletir. Sunucu kaydın saatini "belge saati eksi geçen süre" diye de hesaplar; iki çapa paydan fazla ayrışırsa kayıt incelemeye düşer.</li>
+      <li>Kayıt saati sunucuya ulaşma anını aşamaz: pay düşülünce de aşan kayıt reddedilir.</li>
+      <li>Kayıt başına pay: belge isteğinin süresi + geçen sürenin milyonda 100'ü (günde yaklaşık 9 saniye, haftada yaklaşık 1 dakika). 100 ppm başlangıç değeri, gerçek veriyle ayarlanır. Belge en çok 7 günlük olabilir.</li>
+      <li>Pencere ve sayaç hesaplanan saatle çalışır; telefon saati ve saat dilimi yalnız not düşülür. Telefondan ham sayaç değeri hiç çıkmaz, yalnız iki olay arası süreler gider.</li>
+      <li>İnternet varsa belge uygulamanın her açılışında, açıkken ağ değişince ve her arka plan görevinde yenilenir; sunucunun diğer cevapları da yeni belge taşır.</li>
+      <li>Sunucu saati eşitlenip izlenir (bkz. <a href="teknik.html#altyapi-servisler">Servisler</a>); eşitleme bozulursa yeni belge verilmez, telefonlar eldeki belgeyle devam eder. O arada ilk çapası sağlam kayıtlar ikinci çapasız gider; saati yalnız ikinci çapayla kurulabilen kayıtlar telefonda bekler, belge yeniden verilince gider. Eşitleme bozukken sunucu "ulaşma anını aşamaz" denetiminden ret vermez: aşan kayıt gerekçe koduyla İncelemede kalır.</li>
     </ul>
   </div>
   <div class="callout warn">
-    <p><strong>Zayıf nokta: yeniden başlatma.</strong> Telefon yeniden başlayınca iç sayaç sıfırlanır. Android bunu açılış sayısından anlar; telefon açıldıktan sonra bir kez internete çıktıysa Google'ın güvenilir saat servisiyle saati yeniden kurabilir. iPhone yeniden başlatmayı bir sistem işaretinden anlar. Saat kurulamazsa kayıt "saat doğrulanamadı" olur; bunlardan her öğrenci için her derste dönem başına en çok 2 tanesi otomatik kabul edilir, fazlası hocanın incelemesine düşer. Aşama 2'de QR'ın zaman dilimi de saat kanıtı olur.</p>
+    <p id="gun-zayif-nokta"><strong>Zayıf nokta: yeniden başlatma.</strong> Yeniden başlatma iç sayacı sıfırlar. Telefon yeniden başlatmayı anlar: Android'de çekirdeğin açılış kimliğinden ya da açılış sayısından, iPhone'da Apple'ın önerdiği yoldan (ayrıntı: bkz. <a href="teknik.html#telefon-ic-sayac">İç sayaç ve saat</a>). İlk çapa bozuksa (kayıttan önce yeniden başlatma ya da 7 günden eski belge) pencere telefon saatiyle açılır, kaydın saatini ikinci çapa kurar. Kayıttan sonra da yeniden başlatma varsa ikinci çapa da bozulur: kayıt "saat doğrulanamadı" olur, 2'lik ortak sınıra girer (bkz. <a href="#hile-otomatik-kabul-kurali">Otomatik kabul kuralı</a>). Google'ın güvenilir saat servisi (TrustedTime) ilk sürümde yok ve bu sorunu çözmez: yeniden başlatmadan sonra saat vermesi için telefonun bir kez internete çıkması gerekir, o zamana kadar boş döner (Android Developers Blog, Şubat 2025); Google Play hizmetlerini de ister. "Saat doğrulanamadı" ise tam da internetsiz yeniden başlatma durumudur. Android'de saati doğrulanamayan oran %2'yi aşarsa önce sebebi ölçümle ayırırım (kayıttan önce mi sonra mı yeniden başlatma, 7 günden eski belge mi); TrustedTime yalnız yeniden başlatmadan sonra internete çıkıp sunucumdan belge alamamış telefonlara yarar, oran bunlardan geliyorsa eklenir.</p>
   </div>
 
-  <h3>Kayıt etiketleri</h3>
+  <h3 id="gun-kayit-etiketleri">Kayıt etiketleri</h3>
   <div class="rows">
-    <div class="row"><div class="k"><span class="tag mute">QR'sız</span></div><div>Aşama 1'deki her kayıt. Sınıfta olduğu doğrulanmamıştır.</div></div>
-    <div class="row"><div class="k"><span class="tag warn">Kendi beyanı</span></div><div>Süre seçilmemiş derste verilen kayıt. Hoca onayı ister.</div></div>
-    <div class="row"><div class="k"><span class="tag warn">Beklemede</span></div><div>Teyidi gelmemiş öğrencinin kaydı ya da ders içinde ayarı değişen dersin kaydı.</div></div>
-    <div class="row"><div class="k"><span class="tag warn">İncelemede</span></div><div>Şüpheli kayıt. Hoca onaylayana kadar sayılmaz.</div></div>
-    <div class="row"><div class="k"><span class="tag warn">Saat doğrulanamadı</span></div><div>Yeniden başlatma yüzünden saat kurulamadı. Yukarıdaki 2'lik sınır geçerli.</div></div>
-    <div class="row"><div class="k"><span class="tag warn">Cihaz doğrulanmadı</span></div><div>Cihaz doğrulaması yapılamamış telefondan gelen kayıt (yazılım anahtarı ya da Google servisleri olmayan telefon).</div></div>
+    <div class="row"><div class="k"><span class="tag mute">QR'sız</span></div><div>Aşama 1'deki her kayıt; sınıfta olduğu doğrulanmamıştır. Aşama 1 dersinde sayılır; QR'lı derste QR'sız gelen kayıt İncelemede kalır, hoca isterse onaylar; onaylayana kadar sayılmaz.</div></div>
+    <div class="row"><div class="k"><span class="tag warn">Kendi beyanı</span></div><div>Süre seçilmemiş dersteki kayıt; kararı var, onaydan önce de geçici olarak sayılır; hoca toplu onaylar. Reddederse kayıt Yok olur, seviye yeniden hesaplanır, öğrenciye bildirilir. Onay bekleyen varken AKSİS özeti geçici kalır (bkz. <a href="#devam">Devamsızlık</a>). Dönem kilidine kadar onaylanmayan kayıt sayılmış haliyle kilitlenir, denetim kaydına onaysız kilitlendiği yazılır.</div></div>
+
+
+    <div class="row"><div class="k"><span class="tag warn">Saat doğrulanamadı</span></div><div>Kaydın saati iki çapayla da kurulamadı (bkz. <a href="#gun-zayif-nokta">Zayıf nokta</a>); 2'lik ortak sınıra girer.</div></div>
+    <div class="row"><div class="k"><span class="tag warn">Cihaz doğrulanmadı</span></div><div>Donanım kanıtı vermeyen telefondan gelen kayıt (bkz. <a href="#kararlar-cihaz-dogrulamasi">Cihaz doğrulaması</a>); sayılır, hocanın listesinde bu etiketle görünür.</div></div>
+    <div class="row"><div class="k"><span class="tag warn">İkinci profil</span></div><div>Uygulama telefonun ana kullanıcısında değil, ikinci profilde ya da kopyada (Özel alan, Güvenli Klasör, ikiz uygulama) kurulu; kayıtta bir kez bildirilir, cihaz kaydında tutulur. Kayıt sayılır, hocanın listesinde bu etiketle görünür (bkz. <a href="#hile">Hile ve sınırlar</a>).</div></div>
+    <div class="row"><div class="k"><span class="tag warn">Yedek kodlu</span></div><div>QR yerine hocanın telefonunda gösterilen yedek kodla alınan kayıt (Aşama 2); Doğrulanmış etiketi almaz; 2'lik ortak sınır içinde sayılır, sınırı aşan İncelemede kalır (bkz. <a href="#hile-otomatik-kabul-kurali">Otomatik kabul kuralı</a>).</div></div>
     <div class="row"><div class="k"><span class="tag ok">Doğrulanmış</span></div><div>QR ile alınan kayıt (Aşama 2'den itibaren).</div></div>
   </div>
+  <p>Sayımı etiket değil sunucu kararı belirler. Kayıtta birden çok etiket olabilir; veritabanında her biri ayrı evet/hayır alanıdır. Beklemede ve İncelemede etiket değil sunucu kararıdır: her kaydın tek kararı vardır (var, beklemede, incelemede, ret), gerekçe koduyla ayrı tutulur.</p><h3>Sunucu kararları</h3><div class="rows"><div class="row"><div class="k">Var</div><div>Geçerli kayıt; sayılır.</div></div><div class="row"><div class="k">Beklemede</div><div>Teyidi gelmemiş öğrencinin ya da ders içinde ayarı değişen dersin kaydı.</div></div><div class="row"><div class="k">İncelemede</div><div>Şüpheli kayıt; hoca onaylayana kadar sayılmaz.</div></div><div class="row"><div class="k">Ret</div><div>Geçersiz kayıt; sayılmaz.</div></div></div>
 
-  <h3>Son durumlar</h3>
-  <p>Her oturum için öğrencinin son durumu: <strong>Var</strong>, <strong>Yok</strong>, <strong>Görevli</strong>, <strong>Belgeli düzeltme</strong> ya da <strong>Elle eklendi</strong>. Ders düzeyinde ayrıca <strong>Muaf</strong> vardır.</p>
+  <h3 id="gun-son-durumlar">Son durumlar</h3>
+  <p>Her oturumda öğrencinin son durumu: <strong>Var</strong>, <strong>Yok</strong>, <strong>Görevli</strong>, <strong>Belgeli düzeltme</strong> ya da <strong>Elle eklendi</strong>; ders düzeyinde <strong>Devamdan muaf</strong>. Her sebep kodu tek bir son duruma bağlıdır: görevlendirme Görevli; öğrenci işlerinin yazısı ya da kurul kararıyla gelen düzeltme Belgeli düzeltme; beyana dayalı düzeltme ve elle ekleme Elle eklendi; elle eklemenin sebep kodları "telefonu yok ya da çalışmıyor" ve "QR okutamadı" (öğrenciyi suçlamayan tarafsız kod); rastgele isim okumasındaki "yoklamada sınıfta değil" Yok (bkz. <a href="#hile-rastgele-isim">Rastgele isim</a>). Belge numarası yalnız Görevli ve Belgeli düzeltmede zorunludur. Raporlarda her son durumun harfi var; Excel dosyasının başındaki kısa açıklama: V var, Y yok, G görevli, B belgeli düzeltme, E elle eklendi, M muaf.</p>
 
-  <details>
+  <details id="gun-kenar-durumlar">
     <summary>Kenar durumlar</summary>
     <ul>
-      <li><strong>Öğrenci hiç göndermiyor:</strong> Devamsız görünür. Makbuz QR'ını gösterirse hoca telefonuyla okutup düzeltir. Gösteremezse düzeltme "beyana dayalı" sebep koduyla yapılır.</li>
+      <li><strong>Öğrenci hiç göndermiyor:</strong> Devamsız görünür; makbuz QR'ını gösterirse hoca telefonuyla okutur, kayıt hocanın telefonundan aynen sunucuya gider ve normal kayıt gibi karara bağlanır (düzeltme sayılmaz; bkz. <a href="#kararlar-kayit-ve-makbuz">Kayıt ve makbuz</a>), gösteremezse "beyana dayalı" koduyla düzeltilir.</li>
       <li><strong>Telefonu yok ya da şarjı bitik:</strong> Hoca öğrenciyi elle ekler.</li>
-      <li><strong>Telefon göndermeden kayboldu:</strong> Kayıt kaybolur. Hoca "beyana dayalı" kodla düzeltir.</li>
-      <li><strong>Program değişti (iptal, telafi):</strong> Değişiklik internet varken telefona iner. İnternetsizken eski program geçerlidir, son karar sunucuda verilir.</li>
+      <li><strong>Telefon göndermeden kayboldu:</strong> Kayıt kaybolur; hoca "beyana dayalı" kodla düzeltir.</li>
+      <li><strong>Program değişti (iptal, telafi):</strong> Değişiklik internet varken telefona iner; internetsizken eski program geçerli, son karar sunucuda.</li>
       <li><strong>Cihaz değişimi sırasında eski telefonda bekleyen kayıt:</strong> Değişim onaylanınca birlikte karara bağlanır.</li>
-      <li><strong>Uygulama silindi:</strong> Gönderilmemiş kayıtlar gider ve anahtar kaybolur. Yeniden kurulum cihaz değişimi akışıyla yapılır.</li>
+      <li><strong>Uygulama silindi:</strong> Gönderilmemiş kayıtlar gider, anahtar kaybolur; yeniden kurulum cihaz değişimi akışıyla yapılır.</li>
+      <li><strong>iPhone anahtarı bozuldu:</strong> iOS yer açmak için uygulamayı boşaltıp (offload) geri yüklerse ya da telefon yedekten dönerse App Attest anahtarı geçersiz olabilir. İnternet varken uygulama her açılışta küçük deneme onayı üretir; deneme onayı telefonda kalır, sunucuya gitmez; anahtar bozuksa Apple onayı geçersiz anahtar hatasıyla üretmez, uygulama bunu böyle anlar; bu durumda hemen yenisini alır, ikinci donanım anahtarının imzasıyla aynı hesaba bağlar (yüz yüze değişim gerekmez). İkinci anahtar da yoksa (başka telefona yedekten dönüş) cihaz değişimi akışı internet varken başlar. Deneme internet varken yapılır, çünkü bozuk anahtar ancak internetle yenilenir (yeni anahtarın onayı Apple'a gider). Anahtar derste internetsizken bozuksa öğrenci bunu öğrenmez: yeni kayıt ikinci donanım anahtarıyla imzalanır, "Cihaz doğrulanmadı" etiketi alır, yine sayılır; anahtar internet gelince yenilenir. Eski anahtarla imzalı bekleyen kayıtlar yine gönderilir.</li>
+      <li><strong>Sunucu yedekten döndü:</strong> Telefon ortak kuyruğun bütün işlerini (öğrencinin kayıtlarını ve hocanın kafa sayısı, erken kapatma, süre değişikliği, elle ekleme, makbuz okutma, QR gösterim kaydı gibi işlerini) sunucuya ulaşsa da sıra numarasıyla dönem kilidine kadar sakladığından sunucu her eşitlemede cihazdan aldığı son sıra numarasını bildirir, telefon sonrakileri yeniden gönderir. Dönüşte veritabanı nesli değişir, telefonlar program ve listeleri baştan indirir (bkz. <a href="#kararlar-indirme">İndirme</a>). Makbuzlu kayıt, telefon elde olduğu sürece kaybolmaz; geri sarılan sürüm numarası yüzünden değişiklik atlanmaz.</li>
     </ul>
   </details>
 </section>
@@ -257,22 +272,23 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
 
   <h3>Aşama 2 · QR <span class="tag mute">Sonra</span></h3>
   <ul>
-    <li><strong>Nereden gösterilir:</strong> Öncelik projeksiyon. Hoca telefonundan o ders için kısa süreli bir eşleştirme kodu açar; kürsü bilgisayarındaki panel bu kodla yalnız o dersin QR'ını sunucudan alıp tam ekran gösterir ve ders bitince kapanır. Bilgisayarda hocanın hesabı açılmaz. Kürsüde internet yoksa hocanın telefonu QR'ı internetsiz üretir. Türkiye'de amfilerde küçük QR'ın arka sıralardan okunmadığı görüldü.</li>
-    <li><strong>Değişme ve kabul:</strong> QR 5 saniyede bir değişir; şimdiki ve bir önceki kod kabul edilir. Saati doğrulanmış kayıtta QR ile okutma arasındaki fark 10 saniyeye kadar normal sayılır, 10–30 saniye işaretlenir, 30 saniyeden fazlası reddedilir. Bunlar başlangıç değerleri, denemeyle ayarlanır. Başka okullarda 15–30 saniyelik kodlar mesajla paylaşıldı.</li>
-    <li><strong>Okutma:</strong> Yalnız canlı kamerayla; galeriden resim seçilemez, web'den yoklama yok. Kamera varsayılan geniş lensle açılır (0,5x açılmaz); 2x yakınlaştırma telefonun en büyük yakınlaştırma değerinden hesaplanır.</li>
-    <li><strong>QR boyutu:</strong> İçerik kısa tutulur, en küçük QR sürümü ve düşük hata düzeltme seçilir; kareler büyük olur ve uzaktan okunur. Bu yüzden QR'da dijital imza değil kısa bir doğrulama kodu (MAC) kullanılır; imza QR'ı büyütür.</li>
-    <li><strong>Anahtar:</strong> QR internetsiz de üretilebilsin diye hocanın telefonu internetteyken önümüzdeki 5 günün anahtarlarını indirir. Anahtar hocanın cihazına özeldir. Sunucu sahte ya da eski QR'ı ayırt eder.</li>
-    <li><strong>Saat kanıtı:</strong> QR'ın zaman dilimi, saati doğrulanamayan kayıtlar için de kanıt olur.</li>
-    <li>QR'sız kayıtlar ayrı kalır, hoca isterse onaylar. QR okutamayan öğrenci için kısa bir yedek kod vardır; hoca öğrenciyi elle de ekleyebilir.</li>
-    <li>Hocanın telefonunun saati yanlışsa ders işaretlenir. Aynı ders için yoklama iki kez başlatılırsa kayıtlar tek oturumda birleşir.</li>
+    <li id="asama23-nereden-gosterilir"><strong>Nereden gösterilir:</strong> Öncelik projeksiyon. Eşleştirme ters yönde: kürsü bilgisayarındaki projeksiyon sayfası açılınca kendine ait gizli bir anahtar tutar (bilgisayarda hocanın hesabı açılmaz), kısa eşleştirme kodunu QR'ıyla birlikte gösterir; hoca telefonuyla okutup o ders için onaylar. Dönen QR'ı yalnız onaylanan tarayıcı alır; ekrandaki eşleştirme kodunu görmek öğrencinin işine yaramaz. Kod tek kullanımlık, birkaç dakikalık, ilk açan tarayıcıya bağlı, denemeleri sınırlı. Derste aynı anda tek projeksiyon açık; kod ikinci kez kullanılırsa reddedilir, projeksiyon kapanır, hocaya bildirilir. Sayfa kodları sunucudan en çok 30 saniye önceden alır, sunucu saatine göre gösterir; yeni kod yoksa eski QR yerine "bağlantı bekleniyor" yazar. Kürsüde ya da telefonda internet yoksa QR'ı hocanın telefonu internetsiz gösterir. Türkiye'de amfilerde küçük QR'ın arka sıralardan okunmadığı görüldü.</li>
+    <li id="asama23-degisme-ve-kabul"><strong>Değişme ve kabul:</strong> QR 5 saniyede bir değişir. Gecikme (QR'ın zaman diliminin başından okutmaya kadar): kaydın saat payı eklenince 10 saniyenin altındaysa normal (pay sıfırken bu "şimdiki ve bir önceki kod" demek), pay düşülünce 30 saniyeyi aşarsa ret, arası "İncelemede". Hoca telefonu QR'ın zaman dilimini kendi saatinden değil, saat belgesi ve iç sayaçtan hesaplar; geçerli belge yoksa QR yine üretilir ama ders işaretlenir. Hoca telefonunun da saat payı var: internetsiz gösterilen QR'da 10 ve 30 saniyelik sınırlar öğrencinin payıyla hoca telefonunun payı toplanarak uygulanır. Hoca telefonu QR'ı hangi saat belgesiyle ve belgeden ne kadar sonra gösterdiğini QR gösterim kaydı olarak ortak kuyruktan gönderir, ikinci çapası da kurulur; sunucu payı öğrenci kaydındaki kuralla hesaplar (QR'daki anahtar cihaza özel olduğundan hangi telefonun ürettiği bellidir). Bu kayıt gelene kadar o oturumun QR kayıtlarının gecikmesi kesinleşmez, kayıtlar beklemede kalır. Projeksiyonda kodları sunucu verir, sayfa sunucu saatiyle gösterir; ayrı pay eklenmez. Pay geçen süreyle büyür (milyonda 100): 1 günlük belgede yaklaşık 8,6 saniye, sabit kısımla birlikte okutma 5 saniyelik dilimin ilk 1 saniyesinde olmazsa 10 saniye aşılır; 2 günlük belgede (ör. hafta sonundan sonra) yaklaşık 17,3 saniye, normal imkânsız olur; internetsiz QR'da hoca telefonunun payı da eklenir. Bu yüzden QR kaydında sunucu iki çapadan payı küçük olanı kullanır: kayıt dersten sonra birkaç saat içinde gönderilirse pay küçük kalır (3 saatte yaklaşık 1,1 saniye). İki çapası da eski olan kayıt İncelemede kalır; bu oran ilk QR denemesinde ölçülür. Bunlar başlangıç değerleri, denemeyle ayarlanır. Başka okullarda dönen kodlar 15 ile 30 saniyelik; Manchester'da öğrenciler kodun paylaşılıp derse gelinmediğini yazdı, ama orada kodun süresi kaynaklarda yok ve hoca sabit kodu da seçebiliyor (bkz. <a href="#benzer">Benzer sistemler</a>).</li>
+    <li id="asama23-okutma"><strong>Okutma:</strong> Yalnız canlı kamerayla; galeriden seçim, web'den yoklama yok. Kamera ana (1x) kamerayla açılır (0,5x geniş açı kamerası açılmaz); Aşama 2'nin uzaktan okutulan yoklama QR'ında 2x yakınlaştırılır, yakından okutulan makbuz QR'ında yakınlaştırılmaz (1x); hazır tarama ekranı kullanılmaz, çünkü Android'de Google Play hizmetlerine dayanıyor, lens seçimini ve yakınlaştırma ayarını da elden alıyor (yalnız kendi otomatik yakınlaştırması var) (kamera görünümü ve yakınlaştırma hesabı: bkz. <a href="teknik.html#telefon-kamera-qr">Kamera ve QR</a>).</li>
+    <li><strong>QR boyutu:</strong> İçerik kısa tutulur, QR en küçük sürümde kalır: kareler büyük, uzaktan okunur. Dijital imza kullanılmaz (QR'ı büyütür), yerine kısa doğrulama kodu (MAC) var. QR açık zeminde koyu karelerle çizilir; panelin koyu teması QR'a uygulanmaz. İçerik düzeni, kod uzunluğunun gerekçesi ve kütüphane: bkz. <a href="teknik.html#telefon-kamera-qr">Kamera ve QR</a>.</li>
+    <li><strong>Anahtar:</strong> İnternetsiz QR için hocanın telefonu internetteyken önümüzdeki 5 günün anahtarlarını indirir. Anahtar cihaza özel: Android'de Keystore'da dışarı çıkarılamayan HMAC anahtarı, iPhone'da güvenli depoda "yalnız bu cihaz" olarak durur. Anahtar indirilirken bir an uygulama belleğinde durur; bu kabul edildi (iPhone'da her kullanımda zaten öyle; aktarım ayrıntısı: bkz. <a href="teknik.html#telefon-anahtar-imza">Telefon uygulaması, Anahtar ve imza</a>). Sunucu sahte ya da eski QR'ı ayırt eder. Yedek kod ve Aşama 3'ün Bluetooth kodu da aynı anahtardan üretilir; her biri hesaba ayrı bir amaç baytı katar, böylece birinde görülen kod ötekinde geçmez (her anahtar tek iş içindir: bkz. <a href="teknik.html#sunucu-ayarlar">Ayarlar</a>).</li>
+    <li><strong>Saat kanıtı:</strong> QR yalnız okutmanın QR göründükten sonra olduğunu kanıtlar, ne kadar sonra olduğunu değil; mesajla iletilen QR da aynı zaman dilimini taşır. Bu yüzden saati doğrulanamayan QR kaydı etiketini korur, 2'lik ortak sınıra sayılır.</li>
+    <li><strong>Yedek kod:</strong> QR okutamayan öğrenci için kısa kod; QR'ın zaman diliminden üretilir, onunla değişir; projeksiyonda gösterilmez, hoca kendi telefonunda o öğrenciye gösterir. Kod 6 rakam. Kabul QR'daki gecikme kuralıyla, ama yazma süresi için normal sınırı 10 değil 20 saniye; ret sınırı yine 30 saniye (başlangıç değerleri). 2'lik ortak sınıra girer; kayıt "Yedek kodlu" etiketi alır. Hoca öğrenciyi elle de ekleyebilir.</li>
+    <li>QR'lı derste QR'sız gelen kayıtların kararı: bkz. <a href="#gun-kayit-etiketleri">Kayıt etiketleri, QR'sız</a>.</li>
+    <li>Aynı derste QR iki kaynaktan gösterilirse (projeksiyon ve hocanın telefonu) ya da hoca QR'ı kapatıp yeniden açarsa kayıtlar tek oturumda birleşir.</li>
   </ul>
 
   <h3>Aşama 3 · Konum <span class="tag mute">Sonra</span></h3>
   <ul>
-    <li><strong>Bluetooth:</strong> Hocanın telefonu 10–15 saniyede bir değişen kısa bir kodu, servis kimliğinin içinde yayar. İnternet gerekmez. Öğrenci telefonu 2–3 dakikalık bir pencerede tarar ve sinyal gücünü kaydeder. Sinyal duvarı geçip koridora taştığı için duvar gibi kullanılmaz; öğrencilerin %2–5'inin kaçırılması beklenir ve elle düzeltilir.</li>
-    <li><strong>Sınırlar:</strong> iPhone yayına yalnız bir isim ve servis kimliği koyabilir (28 bayt) ve arka planda yayın kısıtlanır; hoca uygulaması yoklama boyunca açık, ekranı açık kalır. Telefonun yayın desteği önceden kontrol edilir. iBeacon kullanılmaz, çünkü iPhone'da algılanması için konum izni gerekir. Android 12 ve üstünde yalnız Bluetooth izni, Android 11 ve altında konum izni ve açık konum gerekir. Sınıfta bırakılan bir telefonla canlı aktarma engellenemez.</li>
-    <li><strong>GPS:</strong> Yalnız yoklama anında okunur, sürekli izlenmez. "Bina civarında mı" sorusunu cevaplar; referans hocanın telefonudur. Sınıfın konumu öğrenci telefonuna gönderilmez; başka bir üründe bu bilgi sızdı ve sahte konumla kullanıldı. Kapalı alanda onlarca metre sapabilir, tek başına kullanılmaz.</li>
-    <li><strong>Sahte konum:</strong> Android'in sahte konum işareti ve iPhone'un yazılım simülasyonu işareti zayıf sinyal olarak kaydedilir. iPhone'un işareti yalnız Apple'ın kendi simülasyonunu yakalıyor, sahte konum uygulamalarını yakalamıyor; kökü açılmış Android'de işaret gizlenebiliyor. Sunucu imkânsız yer değiştirmeleri ayrıca kontrol eder.</li>
+    <li><strong>Bluetooth:</strong> Hocanın telefonu 10 ile 15 saniyede bir değişen kısa kodu 2 ile 3 dakika yayar; internet gerekmez. Öğrenci telefonu en çok 30 saniye tarar, güncel kodu birkaç kez görünce durur, sinyal gücünü kaydeder. iPhone'da tarama yalnız uygulama açıkken yapılır (iOS arka planda yalnız tam servis kimliği verilerek taramaya izin verir; kod kimliğin değişen yarısında yayıldığından arka planda bulunamaz); ekran tarama bitene kadar açık kalır, kilitlenirse kayıt "Bluetooth yok" sayılır, öğrencinin aleyhine kullanılmaz. Sinyal duvarı geçip koridora taştığından duvar gibi kullanılmaz. Yayın ve tarama ayarları: bkz. <a href="teknik.html#telefon-bluetooth">Bluetooth (Aşama 3)</a>. Kaçırma hedefi ve ölçümü: bkz. <a href="#hedefler">Hedefler</a>.</li>
+    <li><strong>Sınırlar:</strong> iPhone yayına yalnız isim ve servis kimliği koyabilir, arka planda yayın kısıtlanır; hoca uygulaması yoklama boyunca açık, ekranı açık kalır. Telefonun yayın desteği önceden kontrol edilir. iBeacon kullanılmaz (iPhone'da algılanması konum izni ister). Android'de Bluetooth taraması da konum izni ve açık konum ister: tarama sonucu sınıfta olmayı göstermekte kullanıldığından izin "konum için kullanılmaz" diye bildirilemez; konum servisi kapalıyken Android tarama sonucu vermez; uygulama taramadan önce bunu denetler, kapalıysa öğrenciden açmasını ister, açılmazsa kayıt "Bluetooth yok" sayılır, öğrencinin aleyhine kullanılmaz; Bluetooth'u açma penceresi de ayrı izin ister (izin adları: bkz. <a href="teknik.html#telefon-bluetooth">Bluetooth (Aşama 3)</a>). Sınıfta bırakılan telefonla canlı aktarma engellenemez.</li>
+    <li id="asama23-gps"><strong>GPS:</strong> Yalnız yoklama anında, yerel modülümde tek seferlik okunur, sürekli izlenmez; Google servisi olmayan telefonda da okunur (sağlayıcılar: bkz. <a href="teknik.html#telefon-konum">Konum (Aşama 3)</a>). "Bina civarında mı" sorusunu cevaplar; referans hocanın telefonu. Yalnız kesin konum izniyle kullanılır: öğrenci yaklaşık konum verirse GPS kontrolü yapılmaz; iPhone'da yoklama anında geçici kesin konum izni istenir. İki telefonun doğruluk yarıçapları toplanır, üstüne pay eklenir (Android'de yarıçap yalnız %68 olasılıkla doğru; iPhone olasılık belirtmiyor). Konum alınamazsa ya da yarıçap çok büyükse sonuç "konum yok", öğrencinin aleyhine sayılmaz. Sınıfın konumu öğrenci telefonuna gönderilmez (başka bir üründe sızıp sahte konumla kullanıldı). Kapalı alanda onlarca metre sapabilir, tek başına kullanılmaz.</li>
+    <li><strong>Sahte konum:</strong> Android'in sahte konum işareti, iPhone'un yazılım simülasyonu ve harici aksesuar işaretleri zayıf sinyal olarak kaydedilir. iPhone'un işareti yalnız Apple'ın kendi simülasyonunu yakalıyor, sahte konum uygulamalarını değil; kökü açılmış Android'de işaret gizlenebiliyor. Sunucu imkânsız yer değiştirmeleri de denetler.</li>
     <li>Bluetooth ya da GPS hiçbir zaman tek yöntem olmaz; QR ve yedek kod her zaman durur.</li>
   </ul>
 </section>
@@ -280,27 +296,28 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
 <!-- Hile -->
 <section id="hile">
   <h2>Hile ve sınırlar</h2>
-  <p>Kâğıt imzada bu hilelerin çoğunun karşılığı da var. Hedef kâğıttan iyi olmak.</p>
+  <p>Bu hilelerin çoğunun kâğıtta da karşılığı var; hedef kâğıttan iyi olmak.</p>
   <div class="cols3">
     <div class="card">
       <h3><span class="tag ok">Engellenir</span></h3>
       <ul>
-        <li>Telefonun saatini değiştirmek (yeniden başlatma hariç, o işaretlenir)</li>
-        <li>Başka telefona bağlı hesabı kullanmak</li>
-        <li>Tek telefondan birden çok hesaba yoklama vermek</li>
-        <li>Galerideki QR resmini okutmak (yalnız canlı kamera)</li>
+        <li>Telefonun saatini değiştirmek (tek istisnası "İşaretlenir ya da sınırlanır" listesinde)</li>
+        <li>Başka telefona bağlı hesabı kullanmak (cihazı doğrulanmış telefonda; "Cihaz doğrulanmadı" etiketli hesapta anahtar yazılımda olabilir, kopyalanabilir: bkz. <a href="#kararlar-cihaz-dogrulamasi">Cihaz doğrulaması</a>)</li>
+        <li>Aynı uygulama kopyasından birden çok hesaba yoklama vermek</li>
         <li>Listesinde olmadığı derse yoklama vermek (sunucu reddeder)</li>
+        <li>Projeksiyon sayfasını başka yerde açmak (Aşama 2): eşleştirme tek kullanımlık, tarayıcıya bağlı, hocanın telefonundan onaylı</li>
       </ul>
     </div>
     <div class="card">
       <h3><span class="tag warn">İşaretlenir ya da sınırlanır</span></h3>
       <ul>
-        <li>Başkasının numarasıyla kayıt olmak: hoca teyidi</li>
-        <li>Kafa sayısını aşan kayıtlar: ders işaretlenir</li>
-        <li>QR'ı mesajla iletmek (Aşama 2): 10 sn'ye kadar normal, 10–30 sn işaretlenir, 30 sn üstü reddedilir</li>
-        <li>Yedek kodu iletmek: her derste dönem başına en çok 2</li>
+        <li>İlk çapa bozuksa (kayıttan önce yeniden başlatma ya da 7 günden eski belge) ve kayıttan sonra da yeniden başlatma olursa telefonun saatini değiştirmek: kayıt "Saat doğrulanamadı" olur, 2'lik ortak sınıra girer (bkz. <a href="#gun-zayif-nokta">Zayıf nokta</a>)</li><li>Başkasının numarasıyla kayıt olmak: hoca teyidi</li>
+        <li>Kafa sayısını aşan kayıtlar: ders işaretlenir (bkz. <a href="#kararlar-kafa-sayisi">Kafa sayısı</a>)</li>
+        <li>QR'ı mesajla iletmek ya da fotoğrafını başka ekrandan okutmak (Aşama 2): galeriden seçmek engellenir; gecikme payla birlikte 10 saniyenin altındaysa fark edilmez, üstü incelemeye ya da redde düşer (bkz. <a href="#asama23-degisme-ve-kabul">Değişme ve kabul</a>)</li>
+        <li>Yedek kodu iletmek (Aşama 2): kod QR'la değişir, yalnız hocanın telefonunda gösterilir; 2'lik ortak sınıra girer</li>
+        <li id="hile-ikinci-profil">Android'de ikinci profil ya da uygulama kopyası (Özel alan, Güvenli Klasör, ikiz uygulama): kopya kendi anahtarını ve geçerli anahtar kanıtını alır, kanıtta profil bilgisi olmadığından sunucu onu ayrı telefondan ayıramaz; ama uygulama ana kullanıcıda çalışmadığını bilir ve bunu kayıtta bildirir, o telefonun kayıtları "İkinci profil" etiketiyle görünür (bkz. <a href="#gun-kayit-etiketleri">Kayıt etiketleri</a>). iPhone'da yok.</li>
         <li>Değiştirilmiş uygulama ve emülatör: cihaz doğrulamasıyla zorlaşır</li>
-        <li>Çalınan hoca anahtarı (Aşama 2): cihaza özel ve 5 gün geçerli</li>
+        <li>Çalınan hoca anahtarı (Aşama 2): cihaza özel; Android'de Keystore'dan çıkarılamaz (yalnız indirilirken bir an bellekte durur), iPhone'da güvenli depoda durur ama her kullanımda uygulama belleğine okunur, bu yüzden risk iPhone'da daha yüksek (bkz. <a href="#asama23">Aşama 2, Anahtar</a>); hoca telefonunda en çok önümüzdeki 5 günün anahtarları bulunur</li>
       </ul>
     </div>
     <div class="card">
@@ -309,17 +326,18 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
         <li>Aşama 1'de evden ya da sınıf dışından yoklama vermek (kafa sayısı yalnız büyük farkı yakalar)</li>
         <li>Canlı aktarım (görüntülü arama, sınıfta bırakılan telefon)</li>
         <li>Arkadaşının telefonunu derse getirmek</li>
-        <li>Android'de ikinci profil (Güvenli Klasör)</li>
-        <li>Kökü açılmış telefonda sahte konum (Aşama 3)</li>
+        <li>Kökü açılmış Android'de ikinci profil işaretini gizlemek (bkz. <a href="#hile-ikinci-profil">İşaretlenir</a>)</li>
+        <li>Sahte konum (Aşama 3): kökü açılmış Android'de; iPhone'da kök açmadan bilgisayar araçlarıyla</li>
         <li>Yoklama verip dersten çıkmak (blok derslerde daha ağır)</li>
       </ul>
     </div>
   </div>
   <div class="callout warn">
-    <p><strong>Aşama 1 tek başına kâğıttan zayıf.</strong> Kâğıtta en azından birinin sınıfta imza atması gerekiyor; Aşama 1'de evden basmak yetiyor. Araştırmada kanıtsız sistemlerde en yaygın hile kodun paylaşılması çıktı. Bu yüzden gerçek yoklamaya QR ile (Aşama 2) geçmek gerekiyor.</p>
+    <p><strong>Aşama 1 tek başına kâğıttan zayıf.</strong> Kâğıtta en azından birinin sınıfta imza atması gerekiyor; Aşama 1'de evden basmak yetiyor. Araştırmamda kanıtsız sistemlerde en yaygın hile kodun paylaşılması çıktı (ör. Manchester'da öğrenciler kodun paylaşılıp derse gelinmediğini yazdı, bkz. <a href="#benzer">Benzer sistemler</a>); Aşama 1'de paylaşılacak kod bile yok, öğrenci her yerden basabiliyor. Bu yüzden gerçek yoklamaya QR'la (Aşama 2) geçmek gerekiyor.</p>
   </div>
-  <p><strong>Otomatik kabul kuralı:</strong> Saati doğrulanamayan ve yedek kodla alınan kayıtlardan her öğrenci için her derste dönem başına en çok 2 tanesi otomatik kabul edilir. Fazlası incelemeye düşer. QR okuyamayan öğrenciyi hoca tarafsız bir sebep koduyla elle ekler.</p>
-  <p><strong>Deneme sınırı:</strong> E-posta kodu ve yedek kod için yanlış denemeler sunucuda sayılır ve sınırlanır.</p>
+  <p id="hile-otomatik-kabul-kurali"><strong>Otomatik kabul kuralı (2'lik ortak sınır):</strong> Saati doğrulanamayan ve yedek kodlu kayıtlar tek ortak sayaçta toplanır; her öğrencinin her dersinde dönem başına toplam en çok 2'si otomatik kabul edilir, fazlası hocanın incelemesine düşer. QR okuyamayan öğrenciyi hoca "QR okutamadı" sebep koduyla elle ekler (tarafsız kod, son durumu Elle eklendi; bkz. <a href="#gun-son-durumlar">Son durumlar</a>). Kural ortak kurallar paketinde tek yerde yazılır, tek test tablosuyla denenir.</p>
+  <p id="hile-rastgele-isim"><strong>Rastgele isim:</strong> Hoca ekranındaki "rastgele isim" düğmesi yalnız sunucuya ulaşmış kayıtlardan birkaç kişi seçer, hoca okur; "burada değil" denenin kaydı düşer: sunucu kararı "ret" olur, gerekçe kodu "yoklamada sınıfta değil", son durumu Yok; kimin ne zaman işaretlediği denetim kaydına yazılır. Önlenemez satırlarındaki hileleri caydırır ama yakalama gücü düşük (100 kayıtta 10 kişi yoksa 3 isimle yakalama olasılığı yaklaşık %27); işaretli derste yine bütün liste okunur. Sınıfta internet yoksa düğme çalışmaz.</p>
+  <p><strong>Deneme sınırı:</strong> E-posta kodu, yedek kod, tek kullanımlık kayıt kodu ve eşleştirme kodu için yanlış denemeler sunucuda sayılıp sınırlanır.</p>
 </section>
 
 <!-- Benzer sistemler -->
@@ -328,24 +346,25 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
 
   <h3>Dünyada</h3>
   <ul>
-    <li>İnternetsiz kayıt alıp sonra gönderen bir yoklama ürünü bulunamadı; hepsi yoklama anında internet istiyor.</li>
-    <li>Dönen QR süreleri: Edusign 5 sn, Qwickly 3 sn; Moodle 15 sn, Manchester ve Uppsala 30 sn. Manchester'da öğrenciler kodun paylaşılıp derse gelinmediğini açıkça yazdı.</li>
-    <li>Konum her üründe zayıf halka: iClicker'da bir hatayla sınıfın konumu sızdı ve sahte konum betikleri yazıldı; Poll Everywhere geniş alan seçmeyi öneriyor.</li>
-    <li>Bluetooth: iClicker 2026'da ekledi; Acadly %95–98 yakalama bildiriyor (üretici verisi). 2018'deki bir çalışmada sabit işaretler ucuz bir cihazla kopyalandı.</li>
-    <li>Çin'de tek telefondan çok hesaba yoklama veren, konumu ve QR'ı taklit eden açık kaynak hile uygulamaları yaygın.</li>
-    <li>Kesintiler dönemin ilk haftasında ve bulut ya da anlık mesaj servisleri çökünce yaşandı. Top Hat, Ohio'da az kullanıldığı ve pahalı olduğu için bırakılıyor.</li>
+    <li>İnternetsiz kayıt alıp sonra gönderen ürünler var: iş yeri devam uygulamaları (ör. Jibble), Edusign'ın sınıfa konan NFC etiketi (telefon okur; etiket internetsiz ve elektriksiz çalışır) ve sınıftaki Bluetooth işaretleriyle çalışan küçük bir üniversite uygulaması (Attendix, Eylül 2025). Edusign ve Attendix sınıfa donanım koyuyor; yaygın üniversite ürünleri yoklama anında internet istiyor (Türkiye'dekiler: aşağıda).</li>
+    <li>Dönen QR süreleri: Edusign 5 sn, Qwickly 3 sn; Moodle 15 sn, Manchester ve Uppsala 30 sn. Manchester'da (SEAtS) 30 sn'lik canlı kod varsayılan oldu ama hoca sabit ders kodunu seçmeye devam edebiliyor; öğrenci QR okutuyor ya da kodu yazıyor, öğrenciler kodun paylaşılıp derse gelinmediğini açıkça yazdı (kodun uzunluğu ve geçerlilik süresi kaynaklarda yok).</li>
+    <li>Konum her üründe zayıf halka: iClicker'ın sunucusu oturumun tam konumunu öğrencinin tarayıcısına gönderiyordu; 2024'te bu konumu alıp sahte konum olarak geri yollayan bir betik yayımlandı (yamalanıp yamalanmadığı bilinmiyor); Poll Everywhere geniş alan seçmeyi öneriyor.</li>
+    <li>Bluetooth: iClicker 2026'da ekledi; Acadly, uygulama herkeste kuruluysa sınıftakilerin ortalama %95'inden fazlasını, ilk derste öğrencilere gösterilip deneme yapılırsa yaklaşık %98'ini yakaladığını bildiriyor (üretici verisi; öğrenci telefonları arası aktarmalı Bluetooth ağı, yoklama 2,5 dakika sürüyor; yakalanmayan öğrenci elle eklenmeye yönlendiriliyor). 2018'deki bir çalışmada sabit işaretler ucuz cihazla kopyalandı.</li>
+    <li>Çin'de açık kaynak hile uygulamaları yaygın: tek telefondan çok hesaba yoklama, konum ve QR taklidi.</li>
+    <li>Kesintiler dönemin ilk haftasında ve bulut ya da anlık mesaj servisleri çökünce yaşandı (ör. 20 Ekim 2025'teki AWS kesintisinde Colorado Üniversitesi iClicker'ı kullanmamayı duyurdu; ilk hafta ve anlık mesaj servisi örneklerinin kaynağı not edilmemiş, teyit edilmedi).</li>
+    <li>Top Hat, Ohio University'de az kullanıldığından bırakılıyor (sözleşme Ocak 2027'de bitince; Güz 2026 boyunca açık): kurulan araç kullanılmazsa bırakılıyor, bu yüzden benimseme baştan ölçülmeli.</li>
   </ul>
 
   <h3>Türkiye'de</h3>
   <ul>
-    <li>En sık şikâyet derse gelip "yok" yazılmak. Sebepler: giriş hataları, kampüste çekmeyen internet (Düzce, UBYS Mobil, Isparta) ve bir güncellemenin Android'de girişi kilitlemesi (Proliz, Mart 2026).</li>
-    <li>Amfilerde QR ön sıralardan sonra okunmuyor (Hacettepe); bazı uygulamalar iPhone kamerasını 0,5x açtığı için en ön sırada bile okunamadı.</li>
-    <li>Çok kısa QR süresi saat farkıyla hatalı ret üretti ("QR hatalı ya da geçmiş").</li>
-    <li>Bluetooth cihaz modeline ve izinlere göre değişiyor; yalnız Bluetooth'a geçen bir sistemde öğrenciler kodu geri istedi.</li>
-    <li>Kayıtların kaybolması (Nişantaşı) güveni bitirdi; bir öğrencinin aktarımına göre imzalara dönüldü.</li>
+    <li>Sık şikâyet derse gelip "yok" yazılmak. Sebepler: giriş hataları, kampüste çekmeyen internet, girişi kilitleyen bir güncelleme (Proliz Mobil, Nisan 2026, mağaza yorumları: giriş yapılamadı, öğrenci 2 hafta derse gelip yok yazıldı). Aksaray Üniversitesi Ders Devamının Takibi Uygulama Yönergesi (Senato, 15.01.2025, karar 2025/01-04): internet erişimi yokluğu gibi mücbir sebeplerde yoklama imza karşılığı alınır, 1 hafta içinde sisteme işlenir (Md.5/2); sınıfta olup sistemle sorun yaşayan öğrenciyi hoca aynı gün elle ekler (Md.5/3).</li>
+    <li>Kalabalık amfide QR okutmak sorun: Proliz kılavuzu ekrandan okutmayı istiyor; UBYS Mobil 28 Eylül 2026 sürümünde QR yoklamada kameranın geniş açıda takılı kalmasını giderdi, yakınlaştırıp uzaklaştırmayı ekledi (mağaza sürüm notu); bazı uygulamalar iPhone kamerasını 0,5x açtığından en ön sırada bile okunamadı.</li>
+    <li>Bluetooth cihaz modeline ve izinlere göre değişiyor; İstanbul Atlas Bluetooth'a geçti ama numara ve QR'ı yedek tuttu (Aralık 2025).</li>
+    <li>Nişantaşı'nda bir öğrencinin şikâyetine göre (Ocak 2024) QR yoklamada tek bir derste dört yoklamanın ikisi kaydında görünmedi; öğrenci sınıfında 25 ile 30 kişinin durumunun benzer olduğunu yazıyor.</li>
+    <li>Düzce'nin D.Ü. Mobil uygulaması 8 ile 18 Mayıs 2026 arasında sertifika hatası yüzünden kullanılamadı; düzeltme yeni uygulama sürümü istedi.</li>
     <li>Her dönem zorunlu yeniden giriş ve zorunlu güncelleme şikâyet konusu.</li>
-    <li>QR yoklama 2025'te basında "fişleme" diye eleştirildi.</li>
-    <li>İÜ İstanbul Tıp Fakültesi 2018–2021 arasında sabit QR ve Google Formu ile 2 dakikalık bir yoklama denemiş; sonucu bilinmiyor.</li>
+    <li>QR yoklama Nisan 2025'te basında "fişleme" diye eleştirildi (Hacettepe ve Üsküdar, 15 saniyede değişen QR); 2025 ile 2026'da hızla yayıldı: Düzce'nin D.Ü. Mobil uygulaması Şubat 2026'da bütün öğrencilere açıldı (QR ile yoklama), Anadolu Şubat 2026'da kartlı yoklamadan QR'a geçti (uygulama üniversitenin internet ağı üzerinden çalışıyor, telefonu olmayana hoca elle yoklama alıyor), BUÜ 28 Eylül 2026'da web tabanlı QR yoklamaya başladı (ayrı uygulama yok, telefonun tarayıcısından okutuluyor). İstanbul Atlas'ın Bluetooth'a geçişi yukarıda. İncelediğim QR uygulamalarının hepsi yoklama anında internet istiyor; Bluetooth kullanan Atlas'ın kaynağı internetten söz etmiyor.</li>
+    <li>İÜ İstanbul Tıp Fakültesi 24 Temmuz 2018'de intörn oryantasyon gününde sabit QR ve Google Formuyla 2 dakikalık yoklama aldı (sabah 377, öğleden sonra 422 katılım; forma öğrenci e-postasıyla oturum açılıyordu). Sabit QR paylaşılabildiğinden sınıfta olma kanıtı yoktu; sürüp sürmediği bilinmiyor.</li>
     <li>Telefon dağılımı (Türkiye, Eylül 2026): Android %77, iPhone %23.</li>
   </ul>
 
@@ -356,8 +375,9 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
     <li>Yalnız canlı kamera, varsayılan geniş lens, kısa QR.</li>
     <li>Tek cihaza bağlı hesap ve cihaz doğrulaması.</li>
     <li>Kafa sayısı, hızlı elle düzeltme ve her değişikliğin kaydı.</li>
-    <li>Öğrencinin kendi kayıtlarını ve kalan hakkını görmesi; "sorun bildir".</li>
-    <li>Dönem ortasında zorunlu güncelleme ve yeniden giriş yok.</li>
+    <li>Öğrencinin kayıtlarını ve kalan hakkını görmesi; "sorun bildir".</li>
+    <li>Dönem ortasında zorunlu güncelleme ve öğrenci için yeniden giriş yok.</li>
+    <li>Sertifika uygulamaya sabitlenmez, sunucuda yenilenir; sertifika sorunu yeni sürüm beklemeden sunucuda çözülür (bkz. <a href="teknik.html#sunucu-guvenlik">Sunucu, Güvenlik</a> ve <a href="teknik.html#altyapi-caddy">Altyapı, Caddy</a>).</li>
     <li>Konum yalnız Aşama 3'te ve yalnız yoklama anında okunur; Aşama 1 ve 2 konum toplamaz.</li>
   </ul>
 </section>
@@ -366,36 +386,36 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
 <section id="devam">
   <h2>Devamsızlık hesabı</h2>
   <ul>
-    <li><strong>Kural (Md.19):</strong> İlk kez alınan derste teoriye en az %70, uygulamaya en az %80 devam şartı var; ikisi ayrı hesaplanır. Şartı sağlamayan öğrenci sınavlardan önce AKSİS'te ilan edilir.</li>
-    <li><strong>Sayım:</strong> Ders saati bazında, yapılan dersler üzerinden. Programda her ders saati teori ya da uygulama olarak işaretlidir.</li>
-    <li><strong>Görevli (Md.35):</strong> Spor, kültür ve sanat etkinliğine görevlendirilen öğrencinin o saatleri devamsızlıktan sayılmaz. Belge numarasıyla girilir.</li>
-    <li><strong>Muaf (Md.20):</strong> Devamsızlık dışı bir nedenle tekrar alınan derste devam şartı yok. Hoca işaretler.</li>
-    <li><strong>Rapor ve izin:</strong> Ayrı kategori yok. Hoca "belgeli düzeltme" koduyla belge numarasını girer. Sağlık bilgisi tutulmaz.</li>
-    <li><strong>Ekle-bırak:</strong> Sonradan eklenen öğrencinin önceki haftaları sayılmaz. Hoca değiştirebilir.</li>
-    <li><strong>Elle düzeltme:</strong> Sebep kodu ve belge numarası girilir, serbest metin yok. Kim ve ne zaman yaptığı kaydedilir.</li>
-    <li><strong>Dönem sonu:</strong> Yönetici kayıtları kilitler. Kilitten sonra gelen geçerli kayıt saklanır ve gösterilir; sayım yalnız denetim kaydı bırakan bir düzeltmeyle değişir. Ders silinmez, arşivlenir.</li>
-    <li><strong>AKSİS özeti:</strong> Öğrenciler liste sırasıyla yer alır. Teori ve uygulama için ayrı sütunlarda toplam, yüzde ve DEVAMLI/DEVAMSIZ bulunur. Sonucu değiştirebilecek açık bir işaret varsa "KARAR BEKLİYOR" yazar ve çıktı "geçici" kalır.</li>
+    <li><strong>Kural (Md.19/1 ve 19/3):</strong> İlk kez alınan derste devam şartı teoriye en az %70, uygulamaya en az %80; ikisi ayrı hesaplanır, birini sağlamayan öğrenci dönem sonu sınavlarından önce otomasyon sisteminde (AKSİS) devamsız ilan edilir. Kuralı farklı programda (ör. hazırlıkta bütün saatlerde %80) yönetici dersin teori ve uygulama oranlarını (iki ayrı p) değiştirir.</li>
+    <li><strong>Sayım:</strong> Ders saati bazında; taban: yapılan dersler (bir İÜ metni açıkça söylemiyor, öğrenci işlerinden teyit edilir; bkz. <a href="#acik-sayim-tabani">Açık noktalar, Sayım tabanı</a>). Ortak kurallar paketi tabanı dışarıdan alır; yapılmayıp telafi edilmeyen saati olan ders AKSİS özetinde işaretlenir.</li>
+    <li><strong>Görevli (Md.35):</strong> Spor karşılaşmaları, kültür ve sanat etkinlikleri, yarışmalar ve bunların hazırlıklarına görevlendirilen öğrencinin o saatleri devamsızlıktan sayılmaz; belge numarasıyla girilir.</li>
+    <li><strong>Devamdan muaf (Md.20/5):</strong> Devam şartı FF, DC ya da DD yüzünden tekrarlanan derste yok (hoca işaretler); FD (devamsız başarısız, Md.21) ile tekrarda, iki kez kalınan klinik uygulamalı derste ve Md.28/4 kapsamındaki (AGNO'sunu yükseltmek için sınırsız sınav hakkı verilen) son dönem öğrencisinin uygulamalı, uygulaması olan ya da daha önce almadığı derslerinde var (muaf açma kapama anahtarının altındaki yardım satırında yazar). Muaf öğrenciye hak uyarısı gitmez.</li>
+    <li><strong>Rapor ve izin:</strong> İÜ Öğrenci Sağlık Raporları Yönergesi'ne göre (Md.7/2) raporlu süreler devamsızlığa dahildir, sıradan sağlık raporu devamsızlığı silmez, bir şey girilmez. Yalnız yatarak tedavi ve sağlık kurulu raporlarının kapsadığı teori saatleri devamsızlıktan düşülür (Md.7/3); öğrenci raporu bitiminden sonra en geç üç iş günü içinde birim öğrenci işlerine verir (Md.6): öğrenci işleri bildirir, hoca "Belgeli düzeltme" koduyla, yazının numarası ve kapsadığı saatlerle girer; rapora dayanan düzeltmede saat türü yalnız teori seçilebilir (birim kararıyla gelen diğer düzeltmeler de bu kodla, onlarda saat türü serbest). Rapor türü ve tarihi, sağlık bilgisi tutulmaz.</li>
+    <li><strong>Sonradan eklenen öğrenci:</strong> Ekle-bırak süresinde eklenen öğrencinin önceki oturumları sayılmaz; yönetim kurulu kararıyla geç ders kaydında (Md.9/4) kayıttan önceki oturumlar "Yok" sayılır. Hoca bu seçimi yalnız ilk yapılan dersten sonra eklenen öğrencide görür; varsayılan ilki.</li>
+    <li><strong>Elle düzeltme:</strong> Sebep kodu girilir, serbest metin yok (belge numarası kuralı: bkz. <a href="#gun-son-durumlar">Son durumlar</a>); yapan ve zaman kaydedilir.</li>
+    <li id="devam-donem-sonu"><strong>Dönem sonu:</strong> Kilit, birimin akademik takvimindeki "devamsızlıkların otomasyona işlenmesi için son gün"e bağlı; yönetici bu tarihi her dönem ve birim için girer. Bu gün takvimde dersin bittiği güne denk gelebiliyor (Eczacılık'ın 2025 ile 2026 öğretim yılı takviminde ikisi de 2 Ocak 2026; 2026 ile 2027 lisans takvimi okunamadı, bkz. <a href="#acik-aksis">Açık noktalar, AKSİS</a>); bu yüzden son haftanın kayıtlarına 7 günlük pay güvenilmez, süre en geç bu gündür. Son hafta gönderilmemiş kayıt hatırlatması her açılışta çıkar. Son oturumdan sonra telefonu sunucuya hiç bağlanmamış ve sonucu tek kayıtla değişebilecek öğrenci özette "KARAR BEKLİYOR" görünür; hoca son ders gününden itibaren bu öğrencilerin listesini görür ve onlardan uygulamayı internetle açmalarını ister (telefondaki son hafta hatırlatması da bunu söyler). Son gün geldiğinde AKSİS'e, KARAR BEKLİYOR öğrenci için de, o ana kadar sunucuya ulaşmış kayıtlarla hesaplanan sonuç girilir; çıktı "geçici" işaretli kalır. Sonradan gelen geçerli kayıt sonucu değiştirirse "sonradan değişenler" listesine düşer; AKSİS'teki düzeltmeyi kimin, hangi kararla yapacağı: bkz. <a href="#acik-aksis">Açık noktalar, AKSİS</a>. Böyle düzeltilen DEVAMSIZ, "Haksız devamsız" sayısına girer (bkz. <a href="#hedefler">Hedefler</a>). Son günden sonra gelen kayıt: bkz. <a href="#kararlar-gonderme-suresi">Gönderme süresi</a>. Ders silinmez, arşivlenir.</li>
+    <li><strong>AKSİS özeti:</strong> Öğrenciler yüklenen listenin satır sırasıyla; elle eklenen sona eklenir, yeni liste yüklenince sıra yenilenir. Teori ve uygulama ayrı sütunlarda: toplam, devam yüzdesi ve DEVAMLI/DEVAMSIZ; tek Sonuç sütunu: biri DEVAMSIZ ise DEVAMSIZ. Yüzde aşağı yuvarlanıp tek ondalıkla yazılır (ör. 69,5); karar her zaman tam sayı formülünden. Devamdan muaf öğrencide, gerçek AKSİS alanı görülene kadar "DEVAMLI (muaf)". Sonucu değiştirebilecek açık işaret varsa "KARAR BEKLİYOR", çıktı "geçici" kalır.</li>
   </ul>
 
-  <h3>Uyarı seviyeleri</h3>
-  <p>Öğrenciye uyarı yalnız seviye değişince gider:</p>
+  <h3 id="devam-uyari-seviyeleri">Uyarı seviyeleri</h3>
+  <p>Öğrenciye uyarı yalnız seviye değişince gider; seviye teori ve uygulama için ayrı hesaplanır, mesajda hangisi olduğu yazar. Seviye durumdan hesaplanır: aynı anda birden çok seviyenin koşulu sağlanırsa yalnız en yüksek seviyenin mesajı gider, atlanan seviyelerin mesajı sonradan gönderilmez. Seviye ilk devamsızlıktan önce de hesaplanır; küçük hakta öğrenci ilk günden uyarı görebilir. Telefonda her ders ve tür için tek bildirim durur, yenisi eskisinin yerine geçer (bkz. <a href="teknik.html#telefon-arka-plan">Arka plan ve bildirim</a>):</p>
   <ol>
     <li>Hakkının yarısını kullandın.</li>
-    <li>Bir ders daha kaçırırsan hakkın biter.</li>
+    <li>Bir ders daha kaçırırsan hakkın biter. Kalan hak sonraki oturumun o türdeki saatinden azsa mesaj: "Bir ders daha kaçırırsan devamsız kalırsın".</li>
     <li>Hakkın kalmadı.</li>
     <li>Hakkını aştın. Kesin durum AKSİS'te ilan edilir.</li>
   </ol>
 
   <details>
     <summary>Hak formülü ve test notları</summary>
-    <p>Devamsızlık hakkı yalnız tam sayıyla hesaplanır:</p>
+    <p>Hak yalnız tam sayıyla hesaplanır:</p>
     <p class="card formula"><code>hak = T − (T × p + 99) div 100</code></p>
     <ul>
-      <li><strong>T:</strong> yapılan ders saatlerinin toplamı. <strong>p:</strong> 70 (teori) ya da 80 (uygulama). <strong>div:</strong> kalansız tam sayı bölmesi.</li>
-      <li>Ondalıklı hesap (<code>floor(T × (1 − p/100))</code>) %80'de T'nin 1–199 arasındaki 39 değerinde yanlış sonuç verir. Örnek: T=15 için doğru hak 3, ondalıklı hesap 2 bulur. %70'te hata çıkmaz. Bu hesap için regresyon testi zorunlu.</li>
-      <li>Dönem ortasında seviye, yapılan ve kalan planlı saatlerin toplamı üzerinden hesaplanır; aksi halde ilk hafta kaçıran öğrenci hemen "hakkını aştın" uyarısı alırdı. Dönem sonu tahmini değişince seviye geri gitmez. Düzeltme yapılırsa seviye yeniden hesaplanır ve öğrenciye bildirilir.</li>
-      <li>2. seviye, kalan hak dersin bir oturumunun saatine eşit ya da ondan az olunca tetiklenir.</li>
-      <li>Küçük haklarda seviyeler çakışabilir (%80'de T=3 için hak 0, T=5 için hak 1). Bunun için ayrı bir test tablosu yazılır.</li>
+      <li><strong>T:</strong> öğrencinin derse eklendiği tarihten sonra yapılan saatler (Md.9/4 geç kayıtta dersin bütün yapılan saatleri). <strong>p:</strong> dersin o türdeki oranı; derste teori ve uygulama için iki ayrı alan, varsayılan teoride 70, uygulamada 80. Formül her tür için kendi T ve p'siyle ayrı çalışır. <strong>div:</strong> kalansız tam sayı bölmesi. Görevli ve Belgeli düzeltme saatleri T'yi değiştirmez, devamsızlık toplamından düşülür.</li>
+      <li>Ondalıklı hesap (<code>floor(T × (1 − p/100))</code>) %80'de T'nin 1 ile 199 arasındaki 39 değerinde yanlış (ör. T=15'te doğru hak 3, ondalıklı 2); %70'te hata yok. Test formülü kendisiyle değil tanımla karşılaştırır (bkz. <a href="teknik.html#testler-birim">Birim ve özellik testleri</a>).</li>
+      <li>Dönem ortasında seviye, formüldeki T yerine yapılan ve kalan planlı saatlerin toplamıyla hesaplanır; AKSİS kararı ve özet yalnız yapılan saatlerle (T) (yoksa ilk hafta kaçıran öğrenci hemen "hakkını aştın" uyarısı alırdı). Dönem sonu tahmini değişince seviye geri gitmez; düzeltmede yeniden hesaplanır, öğrenciye bildirilir.</li>
+      <li>2. seviye, kalan hak sonraki oturumun o türdeki saatini aşmayınca tetiklenir.</li>
+      <li>Küçük haklarda çakışabilen seviyeler (%80'de hak T=3 için 0, T=5 için 1) ayrı test tablosuyla denenir; tabloda beklenen mesaj en yüksek seviyenin mesajıdır. 1 saatlik oturumlarla: T=3'te ilk günden "Hakkın kalmadı"; T=5'te ilk günden "Bir ders daha kaçırırsan hakkın biter", ilk devamsızlıkta yalnız "Hakkın kalmadı".</li>
     </ul>
   </details>
 </section>
@@ -407,39 +427,44 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
   <h3>Telefon uygulaması (hoca modu)</h3>
   <ul>
     <li>Yoklama süresini ayarlar, yoklamayı erken kapatır.</li>
-    <li>Kafa sayısını, kayıt sayısını görmeden girer; bu aynı zamanda "ders yapıldı" onayıdır.</li>
-    <li>Kendi beyanı kayıtlarını ve yeni kayıtları toplu onaylar, şüpheli kayıtları ve sorun bildirimlerini inceler.</li>
+    <li>Kafa sayısını kayıt sayısını görmeden girer (bu, "ders yapıldı" onayıdır).</li>
+    <li>Kendi beyanı kayıtlarını, yeni öğrencilerin ilk kayıt teyidini toplu onaylar; şüpheli kayıtları, sorun bildirimlerini inceler.</li>
+    <li>İnternet varsa kayıt verenlerden rastgele isim seçip okur.</li>
     <li>Telefonu olmayan öğrenciyi elle ekler, makbuz QR'ını okutur.</li>
     <li>Öğrencinin telefon değişimini kimliği görüp yüz yüze onaylar.</li>
-    <li>Aşama 2'de projeksiyon için eşleştirme kodu açar ya da QR'ı kendisi gösterir, Aşama 3'te Bluetooth işareti yayar.</li>
+    <li>Aşama 2'de projeksiyon sayfasının eşleştirme QR'ını okutup o ders için onaylar ya da QR'ı kendisi gösterir; bağlı kürsüleri görür, tek dokunuşla keser. Aşama 3'te Bluetooth işareti yayar.</li>
   </ul>
 
-  <h3>Web paneli · hoca (her tarayıcıda, internet gerekir)</h3>
+  <h3>Web paneli · hoca (internet gerekir)</h3>
   <ul>
-    <li>Ders ve program: gün, saat, derslik, her saatin teori mi uygulama mı olduğu. Oturumlar programdan otomatik üretilir.</li>
-    <li>Öğrenci listesini yükleme, listeye öğrenci ekleme ve listeden çıkarma.</li>
-    <li>Raporlar: ders, öğrenci ve tarih aralığı. Excel olarak indirilir, PDF tarayıcıdan yazdırılır.</li>
+    <li>Ders ve program: gün, saat, derslik, her saatin teori mi uygulama mı olduğu; oturumlar programdan otomatik üretilir.</li>
+    <li>Öğrenci listesi yükleme, listeye ekleme, listeden çıkarma.</li>
+    <li>Raporlar: ders, öğrenci, tarih aralığı. Yalnız Excel (.xlsx) indirilir; numara ve isimler metin hücresi, formül hiç yazılmaz. Rapor ve AKSİS özetinin ayrı baskı görünümü var, PDF tarayıcıdan yazdırılır; üstte ders, tarih aralığı ve "geçici" durumu. Sayfa numarası her tarayıcıda çıkmadığından şart değil (tarayıcı desteği: bkz. <a href="teknik.html#panel-excel">Web paneli, Excel ve PDF</a>).</li>
+    <li>Tarih ve saatler her zaman İstanbul saatiyle (Europe/Istanbul), Türkçe biçimle gösterilir, Excel'e de öyle yazılır; bilgisayarın saat dilimine bırakılmaz. Rapor tarih aralığı sunucuya gün olarak gider.</li>
     <li>Düzeltmeler, onay listeleri, sorun bildirimleri, AKSİS özeti.</li>
-    <li>Projeksiyon sayfası (Aşama 2): eşleştirme koduyla açılır, yalnız QR'ı tam ekran gösterir.</li>
+    <li>Projeksiyon sayfası (Aşama 2; eşleştirme: bkz. <a href="#asama23-nereden-gosterilir">Aşama 2, Nereden gösterilir</a>): yalnız QR'ı, düğmeyle açılan tam ekranda gösterir; tarayıcı destekliyorsa ekran açık tutulur (Screen Wake Lock), çünkü Windows dokunulmayan ekranı güç ayarına göre birkaç dakikada karartır (Microsoft'un enerji önerisi 3 ya da 10 dakika; kürsü bilgisayarının ayarını bilmiyorum).</li>
   </ul>
 
   <h3>Web paneli · yönetici</h3>
   <ul>
     <li>Hoca onayı ve yönetici ekleme.</li>
-    <li>Dönem, tatil ve sınav haftaları (genel İÜ takvimi).</li>
-    <li>Dönem sonu kilidi.</li>
+    <li>Birim (fakülte, enstitü) bazında dönem tarihleri, ekle-bırak bitişi, tatil ve sınav haftaları, devamsızlıkların işlenmesi için son gün. Tek genel takvim varsayılmaz: İÜ genel ön lisans ve lisans takviminin yanında birimlere ayrı takvim yayımlıyor (Eczacılık'ın 2025 ile 2026 öğretim yılı takvimi ayrı; Tıp, Diş Hekimliği, Hukuk, AUZEF ve Konservatuvar için de ayrı takvim olabilir, kaynağı yok ve 2026 ile 2027 takvimleri okunamadığından teyit edilmedi; bkz. <a href="#acik-aksis">Açık noktalar, AKSİS</a>).</li>
+    <li>Dönem sonu kilidi, birimin son gününe bağlı.</li>
+    <li>Kuralı farklı programdaki dersin devam oranları (teori ve uygulama için ayrı p) (bkz. <a href="#devam">Devamsızlık hesabı</a>).</li>
   </ul>
 
-  <h3>Liste yükleme kuralları</h3>
+  <h3 id="hoca-liste-yukleme">Liste yükleme kuralları</h3>
   <ul>
-    <li>Öğrenci numarası metin olarak tutulur (9–10 hane, başı 0 olabilir).</li>
-    <li>Dosya türü içeriğinden tanınır. Karakter kodlaması önce UTF-8, olmazsa Türkçe (cp1254) denenir. Başlık satırı Türkçe harf duyarlı bulunur.</li>
-    <li>Değişiklikler uygulanmadan önce gösterilir. Listeden çıkarılan öğrenci silinmez, pasif olur; böylece yanlış dosya kayıt kaybettirmez.</li>
-    <li>İndirilen CSV ve Excel dosyalarında <code>=</code>, <code>+</code>, <code>-</code>, <code>@</code> ile başlayan hücreler kaçışlanır. Durum işareti olarak V (var) ve Y (yok) kullanılır.</li>
+    <li>Öğrenci numarası metin olarak tutulur (9 ya da 10 hane, başı 0 olabilir).</li>
+    <li>Dosya türü ilk baytlardan tanınır; Excel (.xlsx, .xls) doğrudan okunur. Metin dosyasının karakter kodlaması kendiliğinden tanınır (sıra: bkz. <a href="teknik.html#panel-excel">Excel ve PDF</a>); ayırıcı virgül de noktalı virgül de olabilir. Değerler metin olarak okunur; Excel'de sayı olarak saklanmış numara (başındaki 0 düşmüş olabilir) önizlemede işaretlenir.</li>
+    <li>Başlık eşleştirmede iki taraf da önce NFC'ye çevrilir, Türkçe kuralla küçültülür, sonra Türkçe harfler sadeleştirilir ("ÖĞRENCİ NO" da "OGRENCI NO" da bulunur); sadeleştirme yalnız başlık satırında.</li>
+    <li>Dosyadaki satır sırası saklanır.</li>
+    <li>Değişiklikler uygulanmadan önce gösterilir; çıkarılan öğrenci silinmez, pasif olur (yanlış dosya kayıt kaybettirmez).</li>
+    <li>CSV yalnız yüklemede, indirme yalnız Excel (harfler: bkz. <a href="#gun-son-durumlar">Son durumlar</a>).</li>
   </ul>
 
   <h3>Erişilebilirlik</h3>
-  <p>Ekran okuyucu desteği, yazı boyutu ve kontrast ayarları. QR okuyamayan öğrenciyi hoca elle ekler.</p>
+  <p>Panel ve telefonda hedef WCAG 2.2 AA. Ayrı yazı boyutu ve kontrast ayarı yok; telefonun ve tarayıcının ayarlarına uyulur, renkler baştan yeterli kontrastlı (yazıda en az 4,5:1). Panel yalnız klavyeyle de kullanılır, tıklanan öğeler en az 24 piksel, e-posta kodu alanında yapıştırma ve otomatik doldurma açık. Panel Türkçe dil ve Türkçe biçimle çalışır (ayarlar: bkz. <a href="teknik.html#panel-cati">Web paneli, Çatı</a>). Her sürüm elle denenir (araçlar: bkz. <a href="teknik.html#testler-kalite">Kalite kapıları</a>). QR okuyamayan öğrenciyi hoca elle ekler.</p>
 </section>
 
 <!-- Dağıtım -->
@@ -448,226 +473,88 @@ pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
 
   <h3>Android</h3>
   <div class="rows">
-    <div class="row"><div class="k">GitHub APK</div><div>GitHub Releases sayfasından APK indirilir ve kurulur; telefonda "bilinmeyen kaynaktan kurulum" izni açılır. Play Protect yeni kurulan APK için tarama önerebilir. APK yalnız iki işlemci türü için derlenir (arm64-v8a, armeabi-v7a) ve küçültülür; 32 bit bir telefonda denenir.</div></div>
-    <div class="row"><div class="k">Google doğrulaması</div><div>30 Eylül 2026'da yalnız dört ülkede ve belirli mağazalardan kurulumlarda başladı; doğrudan APK kurulumu henüz denetlenmiyor. 2027'de dünya geneline genişleyecek, Türkiye için tarih açıklanmadı. O zaman doğrulanmamış uygulamayı kurmak için geliştirici ayarlarını açıp 24 saat beklemek gerekecek. Bu yüzden tam doğrulama yaparım (kimlik ve 25 USD): paket adı ve imza anahtarının parmak izi Google'a kaydedilir. Ücretsiz sınırlı hesap 20 cihazla sınırlı, sınıfa yetmez.</div></div>
-    <div class="row"><div class="k">İmza anahtarı</div><div>Anahtar EAS'ta durur; <code>eas credentials</code> ile indirilir ve çevrimdışı yedeklenir. Kaybolursa güncelleme kurulmaz ve paket Google'a kaydedilemez. Google Play de kullanılırsa aynı anahtar oraya yüklenir.</div></div>
-    <div class="row"><div class="k">Google Play (öneri)</div><div>Kapalı test kanalı da eklenirse bilinmeyen kaynak izni ve tarama uyarısı olmaz, güncellemeler kendiliğinden gelir. Yeni bireysel hesapta önce 12 kişilik kapalı test 14 gün sürer, sonra yayına başvurulur. GitHub APK yedek yol olarak kalır; Play sürümünde kendi kendini güncelleme olmaz. Karar açık noktalarda.</div></div>
-    <div class="row"><div class="k">Obtainium</div><div>Uygulamaları GitHub'dan kurup güncelleyen Obtainium'a pasif destek: sabit dosya adları ve "Obtainium'a ekle" bağlantısı. Ana yol yapılmaz.</div></div>
+    <div class="row"><div class="k">Google Play</div><div>Android'in ana yolu: kurulumda bilinmeyen kaynak izni, Play Protect uyarısı, Samsung'un Otomatik Engelleyicisi yok; güncellemeler kendiliğinden gelir. Yeni bireysel hesapta 12 kişiyle 14 gün kapalı test, sonra normal yayın; öğrenciler için test listesi tutulmaz. Expo SDK yükseltme sıklığı: bkz. <a href="teknik.html#telefon">Telefon uygulaması, Çatı</a>.</div></div>
+    <div class="row"><div class="k">GitHub APK</div><div>Google servisi olmayan telefonlarda ve Play'e ulaşılamayınca yedek yol. Herkese açık depodan dağıtılır; kaynak kod gizli kalacaksa yalnız sürüm dosyalarına ayrı açık depo. Sabit dosya adı, GitHub'ın kalıcı "son sürümü indir" bağlantısı. Telefonda "bilinmeyen kaynaktan kurulum" izni açılır; One UI 6.1.1 ve sonrasıyla gelen Samsung'larda Otomatik Engelleyici de kapatılır (Ayarlar, Güvenlik ve gizlilik), yeniden açılırsa sonraki güncelleme yine engellenir. Dosya, Play Console'un AAB'den ürettiği imzalı evrensel APK (bkz. <a href="#dagitim-imza-anahtari">İmza anahtarı</a>); AAB ayarı ve 32 bit telefonda deneme: bkz. <a href="teknik.html#dagitim-ayrinti-derleme">Derleme</a>.</div></div>
+    <div class="row"><div class="k">Google doğrulaması</div><div>30 Eylül 2026'da yalnız dört ülkede başladı; 2027'de dünyaya yayılacak, Türkiye için tarih açıklanmadı. Kural Google sertifikalı telefonlarda geçerli; Google servissiz (sertifikasız) telefonlar muaf. O zaman doğrulanmamış uygulama kurulumu geliştirici ayarlarını açıp 24 saat beklemeyi gerektirecek. Doğrulama Play Console hesabımdan: Play'in kimlik doğrulaması yeterli, ücret Play'in bir kerelik 25 USD kayıt ücreti (bkz. <a href="#acik-hesap-ucretleri">Hesap ücretleri</a>); ayrı Android Developer Console hesabı ve onun 25 USD'si yok. Google'da kayıt, paket adı ile imza sertifikası parmak izi çiftidir; Play App Signing kullanan uygulama kendiliğinden kaydolur ve Play Console hesabı Play dışında dağıtılan uygulamaları da kapsar. GitHub APK aynı paket adını ve Play'in aynı imza anahtarını taşıdığından aynı kayda girer. Doğrulama Türkiye'ye gelince kayıt durumunu Play Console'da bir kez kontrol ederim.</div></div>
+    <div class="row" id="dagitim-imza-anahtari"><div class="k">İmza anahtarı</div><div>EAS'ta (Expo'nun bulut derleme ve imza servisi) durur, çevrimdışı yedekli (bkz. <a href="teknik.html#dagitim-ayrinti-korunacak-anahtarlar">Korunacak anahtarlar</a>). Uygulamayı Play'de açar açmaz, ilk test sürümü yüklenmeden anahtarı "kendi anahtarımı yükle" ile Play App Signing'e veririm; yoksa imza anahtarı yalnız Google'da kalır ve Play hesabı kapanırsa GitHub APK'sı aynı anahtarla derlenemez, kurulu uygulamalar güncellenemez. Yükleme anahtarı da aynı: Google ayrısını öneriyor; bilerek tek anahtar, tek yedek seçiyorum. Her sürümde EAS'ta yalnız AAB derlenir, GitHub'a Play Console'un imzalı evrensel APK'sı konur; Play hesabı kapanırsa APK yine EAS'ta aynı anahtarla derlenir. GitHub yolu sürdükçe Play'in imza anahtarı yükseltme önerisini kabul etmem. Kopyam kaybolursa anahtar Play App Signing'de durduğundan güncellemeler sürer (Play'de yükleme anahtarı Google'a sıfırlatılarak, GitHub'da Play Console'un evrensel APK'sıyla); kopyam da Play hesabı da kaybolursa kurulu uygulamalar güncellenemez.</div></div>
   </div>
 
   <h3>iPhone</h3>
   <div class="rows">
-    <div class="row"><div class="k">Deneme</div><div>TestFlight: en çok 10.000 kişi, her derleme 90 gün. İlk derleme Apple incelemesinden geçer ve süresi dolmayan bir deneme hesabı ister; uygulamada deneme hesabı ve her an açık deneme dersi bulunur. Apple'ın sözleşmesine göre TestFlight yalnız test içindir, kalıcı dağıtım kanalı olarak kullanılamaz.</div></div>
-    <div class="row"><div class="k">Kalıcı yol</div><div>Listelenmeyen App Store dağıtımı: uygulama yalnız bağlantıyla bulunur, aramada çıkmaz; Apple yükseköğretim öğrencilerini uygun kitle sayıyor. Tam inceleme gerekir; derlemeler 90 günde bitmez, güncellemeler normal gelir. Bireysel hesabın bunu kullanıp kullanamayacağı doğrulanmadı.</div></div>
-    <div class="row"><div class="k">Ad ve logo</div><div>App Store incelemesi kurum adı ve logosu için izin ister; izin yoksa nötr bir ad kullanılır.</div></div>
-    <div class="row"><div class="k">Ücret</div><div>Apple geliştirici hesabı yılda 99 USD; bireysel hesaba ücret muafiyeti yok. Ücretsiz yollar (AltStore vb.) 7 günde bir yenileme istediği için kullanılmaz.</div></div>
+    <div class="row" id="dagitim-hesap"><div class="k">Hesap</div><div>Apple hesabım ilk iPhone geliştirme derlemesinden önce, iş sırasının 6. adımının başında kesinleşir (bkz. <a href="#baslangic">Başlangıç</a>): Mac olmadığından iPhone'a kurulan her EAS derlemesi, geliştirme derlemesi de, ücretli Apple Developer Program hesabıyla imzalanır (App Group ve App Attest ücretsiz hesapta da var; şart imzadan geliyor). Hesap sonra değişmez: App Attest anahtarı, App Group ve anahtarlık kayıtları Apple ekip kimliğine bağlı; hesap öğrenci kurulumundan sonra değişirse her iPhone öğrencisi cihaz değişiminden geçer, ilk TestFlight derlemesinden önce değişirse yalnız benim deneme telefonlarım yeniden kurulur. Apple'ın 5.1.1(ix) kuralı hassas kullanıcı bilgisi isteyen uygulamada kuruluş hesabı isteyebiliyor (Mayıs 2026'da bir örnekte uyguladı). Bireysel hesapla gidip gidemeyeceğimi hesabı almadan, 6. adımdan önce Apple'ın birebir App Review görüşmesinde sorarım. Apple'ın üyelik karşılaştırmasına göre Meet with Apple etkinlikleri ücretsiz kayıtlı geliştiriciye de açık, ama 2023 duyurusunda birebir görüşmeler ücretli üyelere açıktı. Randevu üyelik isterse bireysel hesapla başlayıp sorarım; o zaman görüşme kararı önceden veremez, ancak ilk TestFlight derlemesinden önce düzeltir (hesap o zamana kadar değişirse yalnız benim deneme telefonlarım yeniden kurulur, kayıp bir yıllık ücret). Bu yüzden kararı yalnız görüşmeye bağlamam, App Review Guidelines 5.1.1(ix) metnine ve İÜ ile yazışmaya da dayandırırım; İÜ adına kuruluş hesabı da seçenek (bkz. <a href="#acik-apple-hesabi">Açık noktalar, Apple hesabı</a>). Bireysel hesapta satıcı olarak adım görünür.</div></div>
+    <div class="row" id="dagitim-deneme"><div class="k">Deneme</div><div>Deneme dönemi, uygulamanın ilk kez gerçek derslerde denendiği süredir; iPhone'da TestFlight'la dağıtılır, listelenmeyen App Store sürümü yayına girince biter (aşağıdaki Kalıcı yol satırı). Kapsamı (birim, ders, öğrenci sayısı), süresi ve App Store'a geçiş ölçütü henüz belirlenmedi (bkz. <a href="#acik-asama1">Açık noktalar, Aşama 1</a>). TestFlight: en çok 10.000 kişi. Her derleme yüklendikten 90 gün sonra açılmaz; uzaktan güncelleme süreyi uzatmaz. Süre dolmadan yeni derleme yüklerim, öğrenciler TestFlight'ta otomatik güncellemeyi açar ("Dönem ortasında zorunlu güncelleme yok" kuralının deneme dönemindeki tek istisnası). İlk derleme Apple incelemesinden geçer, süresiz deneme hesabı ister (bkz. <a href="#kararlar-inceleme-hesaplari">İnceleme hesapları</a>). Apple sözleşmesine göre TestFlight yalnız test içindir, kalıcı dağıtım kanalı olamaz.</div></div>
+    <div class="row"><div class="k">Kalıcı yol</div><div>Listelenmeyen App Store dağıtımı: yalnız bağlantıyla bulunur, aramada çıkmaz. Tam inceleme gerekir; derlemeler 90 günde bitmez, güncellemeler normal gelir. TestFlight'tan App Store'a geçişte uygulama verisinin kalacağını Apple garanti etmiyor: geçişi önce iPhone'umda, bekleyen kayıt ve bağlı anahtarla denerim; öğrenciye geçiş bağlantısını yalnız gönderilmemiş kaydı yokken gösteririm.</div></div>
+    <div class="row"><div class="k">Ad ve logo</div><div>App Store ve Google Play incelemesi kurum adı ve logosu için izin ister; yoksa işi anlatan nötr ad ve simge.</div></div>
+    <div class="row" id="dagitim-gizlilik-politikasi"><div class="k">Gizlilik politikası</div><div>App Store ve Google Play gizlilik politikası adresi olmadan yayına almaz; Play'in veri güvenliği formu da bu metne dayanır. Metin alan adımda yayımlanır, iş sırasının 8. adımından önce hazır olur. Kimin hazırlayıp onaylayacağı: bkz. <a href="#acik-gizlilik-politikasi">Açık noktalar</a>.</div></div>
+    <div class="row"><div class="k">Ücret</div><div>Apple geliştirici hesabı yılda 99 USD; bireysel hesaba muafiyet yok, İÜ adına açılacak kuruluş hesabı akredite eğitim kurumu olarak isteyebilir (bkz. <a href="#acik-apple-hesabi">Açık noktalar, Apple hesabı</a>). Üyelik otomatik yenilenir (otomatik yenileme web sitesinde açılamıyorsa Apple Developer uygulamasından açılır); düşerse uygulama yeni öğrencilere indirilemez. Ücretsiz yollar (AltStore vb.) 7 günde bir yenileme istediğinden kullanılmaz.</div></div>
   </div>
 
-  <h3>Güncelleme</h3>
+  <h3 id="dagitim-guncelleme">Güncelleme</h3>
   <div class="rows">
-    <div class="row"><div class="k">Uzaktan güncelleme</div><div>Uygulamanın JavaScript kısmı, mağazaya gitmeden kendi sunucumdaki güncelleme servisiyle (xprem, Expo Updates protokolü) güncellenir. Güncellemeler imzalıdır, kademeli açılır ve geri alınabilir. Yalnız hata düzeltmeleri için kullanılır; Apple yeni özelliği bu yolla vermeye izin vermiyor. Yerel kod değişikliği ve yeni özellik yeni sürümle gelir. Bu altyapı ilk yayın sürümüne baştan konur.</div></div>
-    <div class="row"><div class="k">Sürüm kontrolü</div><div>Uygulama açılışta, günde en çok bir kez kendi sunucuma sorar. Sunucu yayın bilgisini yayın sırasında yazılan bir dosyadan ya da GitHub'dan anahtarla ve önbellekle okur; APK'nın özet değerini ve izin verilen en düşük sürümü bildirir. Doğrudan GitHub'a sorulmaz, çünkü GitHub girişsiz isteklerde aynı internet adresine saatte yalnız 60 cevap veriyor.</div></div>
-    <div class="row"><div class="k">Güncelleme ilkesi</div><div>Dönem ortasında zorunlu güncelleme ve zorunlu yeniden giriş yok; güncellemeler kademeli açılır. Desteklenmeyen sürüm güncelleme ekranı görür, ama kayıt gönderme ucu eski sürümlere en son kapatılır; bekleyen kayıtlar hiçbir zaman engellenmez.</div></div>
-    <div class="row"><div class="k">Desteklenen sürümler</div><div>Android 7 ve üstü, iOS 16.4 ve üstü (Expo SDK 57'nin alt sınırı). Türkiye'de Android kullanımının yaklaşık %98'i, iOS kullanımının yaklaşık %97,5'i bu aralıkta (StatCounter, Eylül 2026).</div></div>
-    <div class="row"><div class="k">Korunacak anahtarlar</div><div>Android imza anahtarı, güncelleme imza anahtarı ve Apple sertifikaları çevrimdışı yedeklenir.</div></div>
-    <div class="row"><div class="k">Derleme</div><div>Mac olmadan iPhone derlemesi EAS ile bulutta yapılır. Ücretsiz planda ayda 15 Android ve 15 iPhone derlemesi var, sıra önceliği düşük.</div></div>
+    <div class="row"><div class="k">Uzaktan güncelleme</div><div>Uygulamanın JavaScript kısmı mağazaya gitmeden sunucumdaki xprem ile güncellenir (Expo Updates protokolü). Güncelleme adresi baştan alan adımda; xprem'in ana anahtarı ve veritabanı yedekte olduğundan xprem'in bakımı durursa Expo Updates protokolünü konuşan başka bir sunucu aynı adresi ve aynı güncelleme imza anahtarını alabilir. Güncellemeler imzalı, kademeli açılır, geri alınabilir; her düzeltme yalnız ait olduğu uygulama sürümüne gider, böylece yeni özellik eski derlemeye gitmez (sunucu kurulumu ve sürüm eşleştirmesi: bkz. <a href="teknik.html#dagitim-ayrinti-guncelleme-sunucusu">Güncelleme sunucusu</a>). Uzaktan güncelleme hata düzeltmesi içindir, telefondaki veritabanı yapısını değiştirmez; yeni özellik incelemeden geçen yeni sürümle gelir. Aşama 2 ve 3'ün kodu ilk sürüme gizli konup sonradan açılmaz (Apple gizli özelliği ve mağaza dışından özellik açmayı yasaklıyor). Güncelleme günde en çok bir kez, kayıt gönderiminden bağımsız sorulur: arka plan görevinde ya da uygulama ön plandayken son sorgudan 24 saat geçmişse. Açık yoklama penceresi varken ve gönderim sürerken sorulmaz; böylece ders başı yoğunluğunda güncelleme sorgusu ve indirmesi gönderimle yarışmaz, hiç kayıt göndermeyen hoca ve öğrenci de düzeltmeyi alır. İnen güncelleme bir sonraki açılışta devreye girer, uygulama kendini yeniden başlatmaz; indirme yükünü kademeli açma yayar. İnternetsiz sınıfta açılış güncelleme beklemez (ayarlar: bkz. <a href="teknik.html#dagitim-ayrinti-guncelleme-sorgusu">Güncelleme sorgusu</a>).</div></div>
+    <div class="row"><div class="k">Sürüm kontrolü</div><div>Uygulama günde en çok bir kez, güncelleme sorgusuyla aynı anda sunucuma sorar; cevap: yeni sürüm ve izin verilen en düşük sürüm. Yayın bilgisini CI yayında küçük dosyaya yazar, sunucu yalnız onu okur; GitHub'a sorulmaz. Telefon her istekte uygulama sürümünü ve çalışan güncellemenin kimliğini (updateId) bildirir; hatalı güncellemenin etkilediği kayıtlar sunucuda görünür. Güncelleme ekranı Play kurulumunda Play sayfasını, iPhone'da App Store sayfasını (deneme döneminde TestFlight'ı), GitHub APK kurulumunda GitHub'daki son sürüm bağlantısını açar; uygulama kendi APK'sını indirip kurmaz. GitHub APK güncellemesi kademeli duyurulur: yeni sürüm önce cihazların bir yüzdesine.</div></div>
+    <div class="row" id="dagitim-guncelleme-ilkesi"><div class="k">Güncelleme ilkesi</div><div>Dönem ortasında zorunlu güncelleme yok: izin verilen en düşük sürüm yalnız dönem arasında, birimlerin devamsızlık işleme son günü (bkz. <a href="#devam-donem-sonu">Dönem sonu</a>) geçip yeni dönem başlamadan yükseltilir (deneme dönemindeki TestFlight istisnası yukarıdaki Deneme satırında). Dönem içinde bir sürümde kayıtların güvenilirliğini bozan hata çıkarsa en düşük sürüm yine yükseltilmez: hata o sürümün dalından uzaktan güncellemeyle düzeltilir; düzeltilemezse sunucu o sürümün yeni kayıtlarını gerekçe koduyla "İncelemede" alır. Öğrenciye zorunlu yeniden giriş de yok (hoca 30 günde bir kodla girer); güncellemeler kademeli açılır. En düşük sürümün altındaki telefon güncelleme ekranı görür ve yeni yoklama kaydı almaz; giriş, makbuzlar ve bekleyen kayıtların gönderimi çalışır. Kayıt gönderme ucu hiçbir sürüme kapanmaz: API yalnız eklemeyle değiştiğinden eski sürümün kaydı her zaman okunur; bekleyen kayıtlar hiçbir zaman engellenmez.</div></div>
+    <div class="row" id="dagitim-desteklenen-surumler"><div class="k">Desteklenen sürümler</div><div>Android 7 ve üstü, iOS 16.4 ve üstü (Expo SDK 57 ve 58'in alt sınırı). Türkiye'de Android kullanımının yaklaşık %98'i, iOS kullanımının yaklaşık %97,6'sı bu aralıkta (StatCounter sürüm sayfalarının Eylül 2026 CSV dökümünden topladım). iOS 26 kullanıcı aracısında işletim sistemi sürümünü 18.6 diye bildirdiğinden StatCounter'ın iOS 26 ara sürüm dağılımı güvenilir değil (düzeltme 19 Ocak 2026'da başladı); bu yalnız 18.6 üstünü karıştırır, 16.4 sınırının altındaki payı değiştirmez. Sunucu sertifikası Android 7.0'ın güvendiği kökten; Let's Encrypt kökü (ISRG Root X1) Android 7.0'da tanınmıyor. Let's Encrypt seçilirse iki yol var: alt sınırı Android 7.1.1'e çıkarmak ya da uygulamanın bu kökü Android'in ağ güvenlik ayarıyla (Android 7.0 ile geldi) ek güvenilen kök olarak taşıması. İkincisi sabitleme değil: sertifika sunucuda yenilenmeye devam eder, Android 7.0 telefonlar dışarıda kalmaz; bedeli, Let's Encrypt kökünü değiştirirse yeni kökün Android 7.0'a uzaktan güncellemeyle değil ancak yeni uygulama sürümüyle gelmesi. Seçim sertifika kararıyla birlikte verilir (bkz. <a href="#acik-sunucu-sertifikasi">Açık noktalar, Sunucu sertifikası</a>; ayar: <a href="teknik.html#altyapi-caddy">Altyapı, Caddy</a>). Web paneli tarayıcı alt sınırları ve kürsüde eski Chrome çıkarsa yapılacak: bkz. <a href="teknik.html#panel-cati">Web paneli, Çatı</a>. Yayın öncesi denemeler: bkz. <a href="teknik.html#testler-kalite">Kalite kapıları</a>.</div></div>
   </div>
+  <p>Güncelleme sorgusu, xprem güvenliği, korunacak anahtarlar ve derleme: <a href="teknik.html#dagitim-ayrinti">teknik.html, Dağıtım ayrıntıları</a>.</p>
 </section>
 
 <!-- Teknoloji -->
 <section id="teknoloji">
   <h2>Kullanılacak teknolojiler</h2>
-  <p>Seçim ölçütü: yıllarca bakımı kolay, yaygın, iyi belgelenmiş, az parçalı ve büyümeye hazır olmak. Her yerde TypeScript, tek depo. Sürümler kilit dosyasıyla sabitlenir; büyük sürüm geçişleri bilerek ve testler yeşilken yapılır.</p>
+  <p>Ölçüt: yıllarca bakımı kolay, yaygın, iyi belgelenmiş, az parçalı, büyümeye hazır. Her yerde TypeScript, tek depo. Sürümler kilit dosyasıyla sabit; büyük sürüme bilerek ve testler yeşilken geçilir.</p>
 
   <h3>Özet</h3>
   <div class="rows">
-    <div class="row"><div class="k">Temel</div><div>TypeScript 6, Node.js 24 LTS, pnpm, Turborepo, Biome 2</div></div>
-    <div class="row"><div class="k">Sunucu</div><div>Fastify 5, Zod 4 sözleşmeleri ve OpenAPI, Drizzle ORM 1.0 RC, Better Auth 1.7, pg-boss 12</div></div>
-    <div class="row"><div class="k">Veritabanı</div><div>PostgreSQL 18</div></div>
-    <div class="row"><div class="k">Testler</div><div>Cucumber.js 13 (Türkçe), Vitest 5, fast-check, Testcontainers, k6, oasdiff, Schemathesis, Stryker</div></div>
-    <div class="row"><div class="k">Telefon</div><div>Expo SDK 57, expo-sqlite ve drizzle, TanStack Query 5, @expo/app-integrity, kendi küçük yerel modülüm</div></div>
-    <div class="row"><div class="k">Web paneli</div><div>React 19, Vite 8, TanStack Query 5</div></div>
-    <div class="row"><div class="k">Altyapı</div><div>Docker Compose, GitHub Actions, Dependabot, pino, OpenTelemetry, xprem</div></div>
+    <div class="row"><div class="k"><a href="teknik.html#temel">Temel</a></div><div>TypeScript 6, Node.js 26, pnpm 12, Biome 2</div></div>
+    <div class="row"><div class="k"><a href="teknik.html#sunucu">Sunucu</a></div><div>Fastify 5, Zod 4 sözleşmeleri, Drizzle ORM 1.0 RC, pg-boss 12, kendi küçük kimlik modülüm</div></div>
+    <div class="row"><div class="k"><a href="teknik.html#veritabani">Veritabanı</a></div><div>PostgreSQL 18</div></div>
+    <div class="row"><div class="k"><a href="teknik.html#testler">Testler</a></div><div>Cucumber.js 13 (Türkçe), Vitest 5, fast-check, k6, oasdiff, Stryker; Schemathesis sonra</div></div>
+    <div class="row"><div class="k"><a href="teknik.html#telefon">Telefon</a></div><div>Expo SDK 57, expo-sqlite, @expo/app-integrity (yalnız iPhone), expo-camera, qrcode, kendi küçük yerel modülüm</div></div>
+    <div class="row"><div class="k"><a href="teknik.html#panel">Web paneli</a></div><div>React 19, Vite 8, TanStack Query 5, TanStack Router 1, SheetJS</div></div>
+    <div class="row"><div class="k"><a href="teknik.html#altyapi">Altyapı</a></div><div>Docker Compose, Caddy, GitHub Actions, Dependabot, pino, xprem, EAS (bulut derleme); OpenTelemetry sonra</div></div>
   </div>
 
-  <details class="det">
-    <summary>Temel</summary>
-    <div class="rows">
-      <div class="row"><div class="k">Dil</div><div>TypeScript 6, sıkı modda. Ayarlar TypeScript 7 ile uyumlu tutulur. 7.0 çok hızlı ama araçların kullandığı programlama arayüzünü henüz içermiyor; bu arayüz 7.1 ile gelince geçerim.</div></div>
-      <div class="row"><div class="k">Çalışma ortamı</div><div>Node.js'in uzun destekli (LTS) sürümü, şu an 24. Node 26 LTS olunca ona geçilir; CI şimdiden 24 ve 26 ile birlikte çalışır. LTS dışı sürüm kullanılmaz.</div></div>
-      <div class="row"><div class="k">Paket yöneticisi</div><div>pnpm, sürümü depoda sabit. Node 25'ten itibaren corepack gelmediği için CI ve Docker'da pnpm ayrıca kurulur. Yeni yayımlanan paket sürümü en az 1 gün bekletilir, sürüm düşürmeye izin verilmez.</div></div>
-      <div class="row"><div class="k">Depo düzeni</div><div>pnpm çalışma alanları ve Turborepo (görev sırası ve önbellek). Expo bu düzeni kendiliğinden tanır.</div></div>
-      <div class="row"><div class="k">Kod kalitesi</div><div>Biome 2: biçimlendirme ve kural denetimi tek araçta. TypeScript derleyicisine bağlı olmadığı için TypeScript 7 geçişini engellemez.</div></div>
-    </div>
-  </details>
+  <p>Her katmanın sürümleri, ayarları ve gerekçeli kütüphane seçimleri: <a href="teknik.html">teknik.html</a>.</p>
 
-  <details class="det">
-    <summary>Sunucu (ilk yazılacak)</summary>
-    <div class="rows">
-      <div class="row"><div class="k">Çatı</div><div>Fastify 5. Ortak altyapı (veritabanı, iş kuyruğu, kimlik, saat, e-posta) kökte bir kez kaydedilir; her modül <code>/v1/&lt;modül&gt;</code> altında kendi eklentisidir. Fastify 6'ya hazırlık: tek kök hata yakalayıcı, kullanımdan kalkan API'ler kullanılmaz.</div></div>
-      <div class="row"><div class="k">Mimari</div><div>Modüllere ayrılmış tek uygulama: kimlik, dersler, listeler, oturumlar, yoklama, düzeltmeler, raporlar, yönetim. Modüller birbirinin tablolarına dokunmaz, birbirinin dış yüzünü çağırır; bu sınır CI'da dependency-cruiser ile denetlenir. Gerekirse bir modül sonradan ayrı servise çıkarılabilir.</div></div>
-      <div class="row"><div class="k">Kurallar</div><div><code>packages/core</code> içinde saf fonksiyonlar; veritabanı ve saat dışarıdan verilir. Kurallar çatıdan bağımsız kalır ve hızlı test edilir.</div></div>
-      <div class="row"><div class="k">Sözleşme</div><div>İstek ve cevap şemaları Zod 4 ile <code>packages/contracts</code> içinde. Fastify istekleri bu şemalarla doğrular (fastify-type-provider-zod), aynı şemalardan OpenAPI belgesi üretilir (@fastify/swagger). Telefon ve panelin istemcisi bu belgeden türetilir (openapi-typescript, openapi-fetch). Kırıcı değişiklikler CI'da oasdiff ile, desteklenen her uygulama sürümünün sözleşmesine karşı yakalanır. Uygulama sürümünü bildirir; istemciler bilinmeyen değerlere dayanıklı yazılır. Tek kişinin bakımındaki kütüphanelerin yedeği belli: fastify-zod-openapi, Orval.</div></div>
-      <div class="row"><div class="k">Veritabanı erişimi</div><div>Drizzle ORM 1.0 RC, sürüm tam sabit. Henüz göç ve sorgu olmadığı için 0.45'ten sonradan geçiş derdi baştan yok; sorun çıkarsa 0.45.3'e dönülür. Göç akışı: üret, SQL'i gözden geçir, Squawk ile denetle, <code>drizzle-kit check</code>, sonra açılışta değil ayrı bir yayın adımı olarak uygula. Değişiklikler "önce genişlet, sonra daralt" yöntemiyle ve kilit zaman aşımıyla yapılır.</div></div>
-      <div class="row"><div class="k">Kimlik</div><div>Better Auth 1.7.7, sürüm tam sabit ve sıkı ayarla: yalnız e-posta kodu eklentisi; kendi kendine kayıt kapalı (kayıt bizim kayıt ucumuzdan); kod özet olarak saklanır; kod uçlarına ve adres başına gönderime sıkı sınır; oturumlar yalnız veritabanında ve en uzun süre sınırıyla. Panelde güvenli çerez, telefonda @better-auth/expo. Proje 2026'da çok sayıda güvenlik duyurusu yayımladı; duyurular takip edilir. Risk büyürse yerine küçük bir kendi kod ve oturum modülüm yazılır.</div></div>
-      <div class="row"><div class="k">İmza doğrulama</div><div>Kayıt tam baytlarıyla imzalanır (JWS ES256 biçimi), yeniden biçimlendirme hatası olmaz. Node'un yerleşik kripto modülü donanım imzalarını (DER) ve yazılım imzalarını (ham r||s) doğrular. Android anahtar kanıtı @peculiar/asn1-android, iPhone App Attest node-app-attest ile doğrulanır.</div></div>
-      <div class="row"><div class="k">Arka plan işleri</div><div>pg-boss 12. Her oturumun gönderme süresi tek bir ertelenmiş işle kapanır; gece sınıflandırması İstanbul saatine göre zamanlanır; işler veritabanı işlemiyle birlikte kuyruğa girer. pg-boss'un tabloları da göç dosyası olarak depoda durur. İşçiler API'den ayrı süreçte çalışır.</div></div>
-      <div class="row"><div class="k">E-posta</div><div>Nodemailer ile SMTP. Geliştirmede Mailpit, testlerde bellek içi posta kutusu.</div></div>
-      <div class="row"><div class="k">Güvenlik</div><div>@fastify/helmet, @fastify/cors, @fastify/rate-limit ve aşırı yükte "sonra dene" (503) dönen @fastify/under-pressure. Hedef OWASP ASVS 5.0 seviye 2; telefon için OWASP MASVS.</div></div>
-      <div class="row"><div class="k">Ayarlar</div><div>Ortam değişkenleri açılışta Zod ile doğrulanır; eksik ya da hatalıysa sunucu açılmaz.</div></div>
-      <div class="row"><div class="k">Loglar ve izleme</div><div>pino ile JSON log; oturum başlıkları, çerezler, kodlar ve imzalar loglara yazılmaz, öğrenci numarası ve isim maskelenir. Baştan küçük bir OpenTelemetry kurulumu (@fastify/otel). Sağlık uçları: <code>/health/live</code> (dış bağımlılık yok) ve <code>/health/ready</code> (veritabanı, iş kuyruğu, şema sürümü).</div></div>
-    </div>
-  </details>
-
-  <details class="det">
-    <summary>Veritabanı</summary>
-    <div class="rows">
-      <div class="row"><div class="k">Sürüm</div><div>PostgreSQL 18. 19 çıkınca hemen geçilmez.</div></div>
-      <div class="row"><div class="k">Kimlikler</div><div>UUIDv7: zamana göre sıralı, dizinleri küçük, PostgreSQL 18'de yerleşik. Oluşturulma zamanını ele verdiği için dışarıya açık jeton olarak kullanılmaz. Yoklama kaydının kimliğini telefon üretir ve bu aynı zamanda tekrar gönderme anahtarıdır; aynı kayıt iki kez gönderilse de tek kayıt olur. (Cihaz, sıra numarası) da tekildir.</div></div>
-      <div class="row"><div class="k">Kısıtlar</div><div>Kurallar veritabanında da korunur: bir oturumda bir öğrenciye tek kayıt, yabancı anahtarlar, geçerli değer kontrolleri. Kodda hata olsa bile bozuk veri yazılamaz.</div></div>
-      <div class="row"><div class="k">Dönem alanı</div><div>Yoklama tablosunun tekil anahtarlarında dönem kimliği baştan yer alır. Tablo sunucunun belleğinden büyüyünce döneme göre bölünür; tahmin yılda 1–3 GB, şimdilik gerekmez.</div></div>
-      <div class="row"><div class="k">Dizinler</div><div>Gerçek sorgulara göre birkaç dizin; raporlar için kayıt zamanında hafif bir aralık dizini (BRIN).</div></div>
-      <div class="row"><div class="k">Zaman ve sıralama</div><div>Bütün zamanlar UTC olarak tutulur. İsim sıralaması Türkçe kurallarla (ICU tr-TR) yapılır.</div></div>
-      <div class="row"><div class="k">Denetim kaydı</div><div>Düzeltmeler ve onaylar ayrı tabloya yazılır, silinmez.</div></div>
-      <div class="row"><div class="k">Bağlantı havuzu</div><div>PgBouncer şimdilik yok; gerekince eklenir. İş kuyruğu doğrudan bağlantıda kalır.</div></div>
-      <div class="row"><div class="k">Yedek</div><div>pgBackRest ile istenen ana geri dönülebilen yedek, ayrıca gecelik <code>pg_dump</code> ve düzenli geri yükleme denemesi.</div></div>
-    </div>
-  </details>
-
-  <details class="det">
-    <summary>Testler (koddan önce)</summary>
-    <div class="rows">
-      <div class="row"><div class="k">Yaklaşım</div><div>Her özellik önce davranış senaryosuyla yazılır: senaryo kırmızı, kod yazılır, senaryo yeşil. Senaryosu olmayan özellik bitmiş sayılmaz.</div></div>
-      <div class="row"><div class="k">Davranış testleri</div><div>Cucumber.js 13, Türkçe Gherkin. Yalnız temel anahtar kelimeler kullanılır: Özellik, Geçmiş, Kural, Senaryo, Senaryo taslağı, Örnekler, Diyelim ki, Eğer ki, O zaman, Ve, Fakat. Senaryolar sunucuya gerçek istek gibi gider (Fastify inject, ağ açmadan) ve gerçek PostgreSQL'e yazar. 4 paralel koşu.</div></div>
-      <div class="row"><div class="k">Veritabanı sıfırlama</div><div>Her koşuda bir PostgreSQL kabı (Testcontainers). Göçler bir şablon veritabanına bir kez uygulanır, her paralel koşu ondan kopya açar; her senaryodan önce tablolar boşaltılır. İşlem geri alma yöntemi kullanılmaz, çünkü uygulama, iş kuyruğu ve kimlik ayrı bağlantılar kullanıyor ve geri alma gerçek hataları gizler.</div></div>
-      <div class="row"><div class="k">Saat ve sahteler</div><div>Saat çekirdekte bir arayüzdür; testte sahte saat kullanılır, iş kuyruğunun da test saati vardır. E-posta bellek içi posta kutusuna düşer. Ders, oturum ve öğrenci cihazı için hazır veri kurucular bulunur.</div></div>
-      <div class="row"><div class="k">Birim ve özellik testleri</div><div>Vitest 5 ve fast-check. Ortak kurallar binlerce rastgele girdiyle denenir; örneğin hak formülü her T için tam sayı hesabıyla karşılaştırılır.</div></div>
-      <div class="row"><div class="k">Kalite kapıları</div><div>Her değişiklikte: sözleşme kırılma denetimi (oasdiff), göç denetimi (Squawk), çekirdekte en az %90 kapsam ve özellik testleri. Her gece: OpenAPI'ye rastgele istek testi (Schemathesis, giriş uçları hariç) ve kısa yük testi (k6). Haftada bir: çekirdek kurallar için mutasyon testi (Stryker). Yayından önce: ders çıkışı yoğunluğunu taklit eden yük testi.</div></div>
-    </div>
-    <p style="margin-top:14px">Örnek senaryo:</p>
-<pre><code># language: tr
-Özellik: Yoklama penceresi
-
-  Senaryo: Süre seçilmiş derste pencere içinde verilen yoklama sayılır
-    Diyelim ki "MAT101" dersi pazartesi 09:00-11:00 arasında ve yoklama süresi 15 dakika
-    Ve "2024000123" numaralı öğrenci bu derse kayıtlı
-    Eğer ki öğrenci pazartesi 09:07'de yoklama verirse
-    O zaman kaydın durumu "var" olur
-
-  Senaryo: Aynı kayıt iki kez gönderilirse tek kayıt sayılır
-    Diyelim ki öğrenci pazartesi 09:07'de yoklama vermiş
-    Eğer ki telefon aynı kaydı iki kez gönderirse
-    O zaman o oturumda öğrenci için tek kayıt bulunur</code></pre>
-  </details>
-
-  <details class="det">
-    <summary>Telefon uygulaması</summary>
-    <div class="rows">
-      <div class="row"><div class="k">Çatı</div><div>Expo SDK 57 (React Native 0.86, React 19.2), sayfalar Expo Router ile. Yerel modül olduğu için Expo Go değil, kendi geliştirme derlemesi kullanılır. Kendi yerel modülüm <code>npx create-expo-module --local</code> ile kurulur, yapılandırma eklentisi gerekmez.</div></div>
-      <div class="row"><div class="k">Yerel veri ve kuyruk</div><div>expo-sqlite ve drizzle. Gönderme kuyruğunda her kaydın kimliği, sıra numarası, imzalı baytları, durumu ve sonraki deneme zamanı durur. Hazır eşitleme motorları (Zero, PowerSync, Electric vb.) kullanılmaz: veri büyük ölçüde yalnız ekleniyor, Zero internetsiz yazmayı desteklemiyor, diğerleri ya kendi veritabanını getiriyor ya da yakın zamanda el değiştirdi.</div></div>
-      <div class="row"><div class="k">Sunucu verisi</div><div>TanStack Query 5 ve OpenAPI'den üretilen istemci.</div></div>
-      <div class="row"><div class="k">Anahtar ve imza</div><div>Hedef: Android'de Keystore'da P-256 anahtarı (kayıtta anahtar kanıtıyla), iPhone'da App Attest (her kayıt için artan sayaçlı onay). @expo/app-integrity (alfa, sürümü sabit) ve kendi yerel modülüm kullanılır. App Attest'in internetsiz imzalaması belgelenmemiş; uçak modunda denenecek. İlk sürümlerde yazılım anahtarı (@noble/curves, expo-secure-store "yalnız bu cihaz") kabul edilir ve kayıtları işaretlenir.</div></div>
-      <div class="row"><div class="k">İç sayaç ve saat</div><div>Kendi yerel modülüm: Android'de <code>elapsedRealtimeNanos</code>, açılış sayısı (BOOT_COUNT) ve Google'ın güvenilir saat servisi (TrustedTime); iPhone'da <code>CLOCK_MONOTONIC</code> ve yeniden başlatmayı anlamak için bir sistem işareti. Expo'nun hazır çalışma süresi fonksiyonu Android'de uykuyu saymadığı için kullanılmaz. iPhone'un gizlilik bildiriminde açılış süresi kullanımı beyan edilir; açılış zamanı telefondan dışarı gönderilmez, yalnız geçen süreler gider.</div></div>
-      <div class="row"><div class="k">Arka plan ve bildirim</div><div>expo-background-task (çalışması garanti değil; gönderme asıl olarak uygulama açılınca yapılır) ve yerel bildirim için expo-notifications.</div></div>
-      <div class="row"><div class="k">Kamera (Aşama 2)</div><div>expo-camera. Android'de Google'ın ML Kit tarayıcısını kullanır (yaklaşık 2,4 MB) ve kareleri en yüksek çözünürlükte işler; düşük modelli telefonlarda denenir. Varsayılan geniş lens kullanılır. expo-camera gerçek yakınlaştırma katsayısını vermediği için 2x değeri telefonun en büyük yakınlaştırmasından yerel modülde hesaplanır.</div></div>
-      <div class="row"><div class="k">Bluetooth (Aşama 3)</div><div>Tarama için react-native-ble-manager; react-native-ble-plx'in Expo eklentisinin SDK 56'da bozulduğu bildirildi. Yayın için kendi yerel modülüm ya da sürümü sabitlenmiş munim-bluetooth (yeni ve tek geliştiricili).</div></div>
-      <div class="row"><div class="k">Konum (Aşama 3)</div><div>expo-location; Android'de sahte konum işareti hazır geliyor, iPhone'un işareti için küçük yerel kod gerekir.</div></div>
-      <div class="row"><div class="k">Uzaktan güncelleme</div><div>expo-updates, kendi sunucumdaki xprem ile; güncellemeler imzalı.</div></div>
-    </div>
-  </details>
-
-  <details class="det">
-    <summary>Web paneli</summary>
-    <div class="rows">
-      <div class="row"><div class="k">Çatı</div><div>React 19 ve Vite 8, TanStack Query 5, aynı OpenAPI istemcisi. Her tarayıcıda çalışır, internet gerektirir.</div></div>
-      <div class="row"><div class="k">Excel ve PDF</div><div>Okuma için SheetJS (kendi sitesinden; npm'deki xlsx paketi kullanılmaz), yazma için write-excel-file. PDF tarayıcıdan yazdırılır.</div></div>
-    </div>
-  </details>
-
-  <details class="det">
-    <summary>Altyapı ve işletim</summary>
-    <div class="rows">
-      <div class="row"><div class="k">Çalıştırma</div><div>Docker Compose: API, işçi, PostgreSQL, güncelleme servisi (xprem) ve geliştirmede Mailpit. Sunucu imajı çok aşamalı derlenir; aynı imaj hem API hem işçi olarak çalışır.</div></div>
-      <div class="row"><div class="k">CI</div><div>GitHub Actions, Node 24 ve 26 ile: kilit dosyası değişmeden kurulum, Biome, tip kontrolü, OpenAPI ve istemciyi yeniden üretip fark varsa durdurma, oasdiff, <code>drizzle-kit check</code>, Squawk, Vitest kapsam kapısı, 4 paralel Cucumber koşusu. Kırmızıysa birleştirilmez. Gece: Schemathesis, Stryker, k6.</div></div>
-      <div class="row"><div class="k">Güncellemeler</div><div>Dependabot gruplu ve 3 gün bekletmeli; güvenlik güncellemeleri beklemez. Büyük sürümler elle ve testler yeşilken alınır.</div></div>
-      <div class="row"><div class="k">API sürümü</div><div><code>/v1</code> ile başlar, yalnız ekleme yapılarak değişir. Eski telefon sürümleri en düşük sürüm kontrolüyle yönetilir; kayıt gönderme ucu en son kapatılır.</div></div>
-    </div>
-  </details>
-
-  <h3>Ölçeklenme yolu</h3>
+  <h3 id="teknoloji-olceklenme-yolu">Ölçeklenme yolu</h3>
   <ul>
-    <li><strong>Hacim:</strong> 50.000 öğrenci, 6 ders, haftada 1 oturum ve 28 hafta yılda yaklaşık 8,4 milyon kayıt eder. Tek PostgreSQL bunu rahat taşır.</li>
-    <li><strong>Hız:</strong> 20.000 telefonun 1–5 dakika içinde göndermesi saniyede yaklaşık 70–330 istek eder. Her gönderim tek kısa veritabanı işlemiyle tek sunucuda karşılanır; k6 ile kanıtlanır. Gönderimler rastgele kaydırıldığı için ders çıkışı yığılması yumuşar.</li>
-    <li><strong>Yatay büyüme:</strong> Sunucu kendi içinde durum tutmadığı için aynı imajdan birden çok kopya, önünde yük dengeleyiciyle çalışabilir. İşçiler ayrı ölçeklenir.</li>
-    <li><strong>Büyüdükçe sırasıyla:</strong> bağlantı havuzu (PgBouncer), istek sınırı için Valkey, raporlar için okuma kopyası, yoklama tablosunun döneme göre bölünmesi.</li>
-    <li><strong>Birimlere genişleme:</strong> Birim ve bölüm alanları baştan modelde; tek bölümle başlansa da yapı değişmeden genişler.</li>
+    <li id="teknoloji-sunucu-yeri"><strong>Sunucu yeri:</strong> Tek Linux sanal makine, yurt içinde. Önceliğim üniversitenin kendi veri merkezi (BİDB); olmazsa kurum kontrolünde, yerli (Türkiye'de kurulu) bir hizmet sağlayıcı; yabancı bir bulutun Türkiye bölgesi bu ölçüte girmez. Yurt dışı bulut kullanmam: Bilgi ve İletişim Güvenliği Tedbirleri Genelgesi (2019/12) kamu kurumu verisinin kurumun kendi sistemi ya da kurum kontrolündeki yerli sağlayıcı dışında bulut depolamada tutulmasını yasaklıyor. Yedek deposu da aynı ölçüte uyar: yurt içinde, kurumun kendi sisteminde ya da kurum kontrolünde yerli bir hizmet sağlayıcıda. Makine mağaza incelemesi için yurt dışından da erişilebilir olmalı (bkz. <a href="#kararlar-inceleme-hesaplari">İnceleme hesapları</a>). Başlangıç boyutu ve büyüme: bkz. <a href="teknik.html#altyapi-sunucu-makinesi">Sunucu makinesi</a>; BİDB'ye soru: bkz. <a href="#acik-sunucu-makinesi">Açık noktalar, Sunucu makinesi</a>.</li>
+    <li><strong>Hacim:</strong> 50.000 öğrenci, 6 ders, haftada en az 1 oturum (iki gün işlenen derste 2), 28 hafta: yılda en az 8,4 milyon kayıt. Tek PostgreSQL bunu rahat taşır; gerçek boyut yük testinden sonra ölçülür.</li>
+    <li><strong>Hız:</strong> 20.000 telefon 1 ile 5 dakikada gönderirse saniyede yaklaşık 70 ile 330 gönderim. Ders çıkışında telefon başına iki ya da üç istek: göndermeden hemen önce saat belgesi (ikinci çapa), gönderme, gerekirse değişenler. Gönderme cevabındaki yeni belge sonraki kayıtların ilk çapası, gönderim öncesi belge isteğinin yerini tutmaz. Her gönderim tek kısa veritabanı işlemi; yük testi bunu en kötü durumla kanıtlar (bkz. <a href="teknik.html#testler-kalite">Kalite kapıları</a>). Gönderimler rastgele kaydırıldığından yığılma yumuşar.</li>
+    <li><strong>Yatay büyüme:</strong> Sunucu kendi içinde durum tutmadığından aynı imajdan birden çok kopya, önündeki Caddy'yle çalışabilir; işçiler ayrı ölçeklenir.</li>
+    <li><strong>Büyüdükçe sırasıyla:</strong> bağlantı havuzu (PgBouncer), raporlar için okuma kopyası, yoklama tablosunun döneme göre bölünmesi. Valkey listede yok: kopyalar arası kesin olması gereken sayaçlar (giriş kodları) zaten PostgreSQL'de, kaba sınırlar her kopyanın belleğinde; ölçüm bir gün ayrı depo isterse Valkey seçilir.</li>
+    <li><strong>Birimlere genişleme:</strong> Birim ve bölüm alanları baştan modelde, dönem tarihleri ve kilit birim bazında. Yıllık dersler ile tıp, diş hekimliği, eczacılık ve hemşirelikte anabilim dalı bazında uygulama hesabı (Md.19/2) ilk sürümde yok; bu birimler katılınca eklenir.</li>
   </ul>
 
-  <h3>Sürdürülebilirlik ilkeleri</h3>
+  <h3 id="teknoloji-surdurulebilirlik">Sürdürülebilirlik ilkeleri</h3>
   <ul>
-    <li>Az bağımlılık: her yeni paket için bir gerekçe; bakımı durmuş paket alınmaz.</li>
-    <li>Tek kişinin bakımındaki paketlerin yedeği belli (fastify-zod-openapi, Orval, graphile-worker).</li>
-    <li>Tek kaynak: şemalar <code>packages/contracts</code> içinde, kurallar <code>packages/core</code> içinde.</li>
-    <li>Kurallar saf ve testli; çatı değişse de kurallar kalır.</li>
-    <li>Tek komutla kurulum: <code>docker compose up</code> ve <code>pnpm dev</code>; sahte veri üreticisiyle dolu bir deneme ortamı.</li>
-    <li>Güvenlik duyuruları takip edilir, özellikle kimlik kütüphanesinde.</li>
-    <li>Her önemli karar bu plana işlenir.</li>
+    <li>Az bağımlılık: her yeni pakete gerekçe; bakımı durmuş paket alınmaz. Son 12 ayda sürüm çıkarmamış paket bakımı durmuş sayılır. İstisna SheetJS: son sürümü iki yıldan eski (bkz. <a href="teknik.html#temel-yedek-paketler">Yedek paketler</a>); okuma ve yazmayı tek kütüphaneyle yaptığı için seçildi, sürümü özetle sabit, yalnız liste yükleme ve rapor indirme sayfalarında yüklenir, yedeği belli (bkz. <a href="teknik.html#panel-excel">Excel ve PDF</a>).</li>
+    <li>Tek kişinin bakımındaki her paketin yedeği belli (liste: bkz. <a href="teknik.html#temel-yedek-paketler">Yedek paketler</a>).</li>
+    <li>Tek kaynak: şemalar ve rota tablosu yalnız sözleşme paketinde, kurallar yalnız ortak kurallar paketinde (bkz. <a href="teknik.html#kod">Kod düzeni</a>); kurallar saf, testli, çatı değişse de kalır.</li>
+    <li>Tek komutla kurulum (bkz. <a href="teknik.html#kod-gelistirme-ortami">Geliştirme ortamı</a>).</li>
+    <li>Güvenlik duyuruları otomatik izlenir, npm dışından kurulan SheetJS'inki elle (bkz. <a href="teknik.html#altyapi-guncellemeler">Güncellemeler</a>, <a href="teknik.html#panel-excel">Excel ve PDF</a>); Fastify ve imza doğrulamada kullanılan paketler öncelikli.</li>
+    <li>Her önemli karar işlenir: ürün ve mimari kararı plan.html'e, teknik seçim teknik.html'e.</li>
   </ul>
 </section>
 
 <!-- Başlangıç -->
 <section id="baslangic">
   <h2>Başlangıç</h2>
-  <p>Her şey sunucudan ve davranış testlerinden başlar. Telefon ve panel, sunucu sözleşmesi oturduktan sonra yazılır.</p>
+  <p>Önce sunucu ve davranış testleri; telefon ve panel, sunucu sözleşmesi oturduktan sonra.</p>
 
-  <h3>Klasör yapısı</h3>
-  <ul>
-    <li><code>apps/server</code>: sunucu</li>
-    <li><code>apps/mobile</code>: telefon uygulaması (öğrenci ve hoca modu)</li>
-    <li><code>apps/panel</code>: web paneli</li>
-    <li><code>packages/core</code>: ortak kurallar (hak hesabı, saat, işaretleme) ve testleri</li>
-    <li><code>packages/contracts</code>: istek ve cevap şemaları, OpenAPI belgesi, üretilen istemci</li>
-  </ul>
-<pre><code>apps/server/src/
-  app.ts            uygulamayı kurar (veritabanı, saat, e-posta, iş kuyruğu dışarıdan verilir)
-  infra/            ortak altyapı: ayarlar, veritabanı, iş kuyruğu, kimlik, saat, e-posta, izleme
-  modules/&lt;ad&gt;/     eklenti ve dış yüz, uçlar, servis, veri erişimi, tablolar
-  jobs/             iş kuyruğu görevleri
-apps/server/migrations/   Drizzle ve pg-boss SQL dosyaları (yalnız ileri)
-apps/server/test/
-  features/&lt;modül&gt;/   Türkçe senaryolar (.feature)
-  steps/            adım tanımları
-  support/          test dünyası, kancalar, sıfırlama, veri kurucular, sahte saat ve posta</code></pre>
-
-  <h3>Veri modeli (ilk taslak)</h3>
-  <ul>
-    <li><strong>Birimler ve dönemler:</strong> fakülte, bölüm; dönem, tatil, sınav haftaları.</li>
-    <li><strong>Kişiler:</strong> yönetici, hoca, öğrenci (öğrenci numarası metin).</li>
-    <li><strong>Cihazlar:</strong> kişiye bağlı telefonlar, açık anahtarları, anahtar türü (donanım ya da yazılım) ve doğrulama sonucu.</li>
-    <li><strong>Dersler ve ders saatleri:</strong> gün, saat, derslik, teori ya da uygulama, yoklama süresi.</li>
-    <li><strong>Ders listeleri:</strong> hangi öğrenci hangi derste; aktif ya da pasif, muaf mı.</li>
-    <li><strong>Oturumlar:</strong> her ders günü; kafa sayısı, yapıldı mı, ayar değişiklikleri.</li>
-    <li><strong>Yoklama kayıtları:</strong> telefonun ürettiği kimlik, (cihaz, sıra numarası), dönem, saat belgesi, imza, hesaplanan saat, telefon saati, etiket.</li>
-    <li><strong>Düzeltmeler, sorun bildirimleri ve denetim kaydı:</strong> sebep kodu, belge numarası, kim, ne zaman.</li>
-    <li><strong>Olay kaydı:</strong> gönderme ve hata ölçümleri.</li>
-  </ul>
-
-  <h3>Geliştirme ortamı</h3>
-  <ul>
-    <li><code>docker compose up</code> ile PostgreSQL ve Mailpit ayağa kalkar; sahte veri üreticisi deneme hesaplarını ve dersleri kurar.</li>
-    <li>Telefonlar sunucuya bilgisayarın yerel ağ adresinden ya da geçici bir tünelden ulaşır.</li>
-  </ul>
+  <p>Klasör yapısı, veri modeli (ilk taslak) ve geliştirme ortamı: <a href="teknik.html#kod">teknik.html, Kod düzeni ve geliştirme ortamı</a>.</p>
 
   <h3>İş sırası</h3>
   <ol>
-    <li><strong>İskelet:</strong> pnpm, Turborepo, TypeScript, Biome ve CI ilk günden kurulur.</li>
-    <li><strong>Ortak kurallar:</strong> hak hesabı, saat hesabı ve işaretleme; Vitest ve fast-check testleriyle.</li>
-    <li><strong>Davranış senaryoları:</strong> Türkçe olarak önce yazılır: hoca kaydı ve yönetici onayı, ders ve program, liste yükleme, öğrenci kaydı ve teyit, yoklama gönderme, kafa sayısı, düzeltme, sorun bildirimi, AKSİS özeti.</li>
-    <li><strong>Sunucu:</strong> senaryolar modül modül yeşile çevrilir; OpenAPI belgesi ve istemci üretilir.</li>
-    <li><strong>Yük testi:</strong> gönderme ucu k6 ile denenir.</li>
-    <li><strong>Telefon uygulaması:</strong> üretilen istemciyle; önce öğrenci modu, sonra hoca modu.</li>
-    <li><strong>Web paneli:</strong> raporlar ve AKSİS özeti.</li>
-    <li><strong>Dağıtım:</strong> deneme hesabı, uzaktan güncelleme altyapısı, derleme; Android'de GitHub, iPhone'da TestFlight, sonra listelenmeyen App Store.</li>
+    <li><strong>İskelet:</strong> pnpm, TypeScript, Biome ve CI, ilk günden. Bekleme süresi uzun dış işler de bu adımla başlar: BİDB'ye resmî yazı (gönderici e-posta hesabı ve SMTP rölesi, hoca girişi buna bağlı, bkz. <a href="#kararlar-e-posta-gonderimi">E-posta gönderimi</a>; sunucu makinesi, bkz. <a href="#teknoloji-sunucu-yeri">Sunucu yeri</a>) ve Play Console hesabının açılıp kimlik doğrulamasının bitirilmesi.</li>
+    <li><strong>Ortak kurallar:</strong> hak ve saat hesabı, işaretleme; Vitest ve fast-check testleriyle.</li>
+    <li><strong>Davranış senaryoları:</strong> önce Türkçe yazılır: hoca kaydı ve yönetici onayı, ders ve program, liste yükleme, öğrenci kaydı ve teyit, cihaz değişimi, saat belgesi ve saat kuralları (kayma payı, 7 günlük belge, ulaşma anından sonraki tarihli kaydın reddi), yoklama gönderme, kafa sayısı, düzeltme, sorun bildirimi, AKSİS özeti. Yetki ve hile: başka hocanın dersini görme ya da onaylama, başka öğrencinin adına imzalanmış kayıt, başka telefona bağlı hesapla gönderim, tek telefondan ikinci hesaba yoklama, listesinde olmadığı derse yoklama. Her biri ret beklentisiyle önce kırmızı yazılır.</li>
+    <li><strong>Sunucu:</strong> senaryolar modül modül yeşile çevrilir; sözleşme ve rota tablosu oturur.</li>
+    <li><strong>Yük testi:</strong> gönderme ucu ve ders çıkışı istekleri, k6 ile. Bu adımda senaryolar yazılır ve geliştirme makinesinde denenir; gerçek sunucu boyutundaki koşu aynı senaryolarla yayından önce yapılır (bkz. <a href="teknik.html#testler-kalite">Kalite kapıları</a>).</li>
+    <li><strong>Telefon uygulaması:</strong> ilk iPhone geliştirme derlemesinden önce Apple hesabı kararı (bkz. <a href="#dagitim-hesap">Dağıtım, iPhone, Hesap</a>); ortak sözleşme ve fetch yardımcısıyla; önce öğrenci, sonra hoca modu.</li>
+    <li><strong>Web paneli:</strong> giriş, ders ve program, liste yükleme, onaylar ve düzeltmeler, raporlar ve AKSİS özeti, yönetici ekranları.</li>
+    <li><strong>Dağıtım:</strong> inceleme hesapları (Apple hesabı 6. adımda kesinleşmiş olur), uzaktan güncelleme altyapısı, derleme; Android'de Play kapalı testi (14 günlük süresi 6. adımın ilk Android derlemesiyle başlar, bu adımı beklemez; bkz. <a href="#dagitim">Dağıtım</a>) ve GitHub APK, iPhone'da TestFlight, sonra listelenmeyen App Store.</li>
   </ol>
 </section>
 
@@ -675,15 +562,15 @@ apps/server/test/
 <section id="hedefler">
   <h2>Hedefler</h2>
   <div class="rows">
-    <div class="row"><div class="k">Hocanın işi</div><div>Ders başına en çok 2 dakika.</div></div>
-    <div class="row"><div class="k">Gönderme</div><div>Kayıtların en az %95'i 24 saat içinde sunucuda.</div></div>
+    <div class="row"><div class="k">Hocanın işi</div><div>Ders başına en çok 2 dakika (kafa sayısı ve onay ekranlarındaki sürenin ders başına ortancası).</div></div>
+    <div class="row"><div class="k">Gönderme</div><div>Kayıtların en az %95'i 24 saat içinde sunucuda (ulaşma zamanıyla ölçülür).</div></div>
     <div class="row"><div class="k">Saati doğrulanamayan</div><div>Kayıtların en çok %2'si (Android ve iPhone ayrı ölçülür).</div></div>
-    <div class="row"><div class="k">İşaretlenmeden kabul</div><div>En az %98. Kafa sayısıyla fark en çok %5.</div></div>
-    <div class="row"><div class="k">Haksız devamsız</div><div>0. Hesabın elle hesaplananla uyuşmazlığı da 0.</div></div>
-    <div class="row"><div class="k">Kayıt kaybı</div><div>0. Makbuzu olup sunucuda bulunmayan kayıt çıkmamalı.</div></div>
-    <div class="row"><div class="k">Yoklama hızı (Aşama 2)</div><div>100 kişilik sınıfta katılımın %90'a ulaşması en çok 120 sn (ortanca).</div></div>
-    <div class="row"><div class="k">QR okuma (Aşama 2)</div><div>En büyük amfide en arka sıradan okunur.</div></div>
-    <div class="row"><div class="k">Bluetooth (Aşama 3)</div><div>Sınıftaki öğrencilerin en çok %5'i kaçırılır.</div></div>
+    <div class="row"><div class="k">İşaretlenmeden kabul</div><div>En az %98. Payda: sunucunun kararı "var" ya da "incelemede" olan kayıtlar (Beklemede kayıt, beklemesi bitince verilen kararla girer; ret girmez). Pay: bunlardan ilk kararı "var" olan, Saat doğrulanamadı etiketi taşımayan ve kafa sayısı aşımıyla işaretlenen oturumda olmayanlar. Yani şüphe sayılan üç şey: İncelemede kararı (etiket değil, sunucu kararı), Saat doğrulanamadı etiketi, kafa sayısı aşımı. Yedek kodlu ve Kendi beyanı kararı "var" ise paya girer (sınırı aşan Yedek kodlu zaten İncelemede). "Cihaz doğrulanmadı", "İkinci profil" ve "QR'sız" paya girer, ayrıca ayrı oranla izlenir. Derslerin en az %95'inde kayıt sayısı kafa sayısını işaret sınırının (3 kişi ve %5) üstünde aşmaz.</div></div>
+    <div class="row"><div class="k">Haksız devamsız</div><div>0: AKSİS özetinde DEVAMSIZ çıkıp sonradan düzeltmeyle DEVAMLI olan öğrenci sayısı; yalnız sistemden kaynaklanan değişimler sayılır: Elle eklendi düzeltmeleri (beyana dayalı, "telefonu yok ya da çalışmıyor", "QR okutamadı") ve özetten sonra sunucuya ulaşan geçerli kayıt. Görevli ve Belgeli düzeltme ile gelen değişimler (geç gelen rapor ya da görev yazısı) haksızlık sayılmaz, ayrı oranla izlenir. Sebep kodundan ve denetim kaydından çıkar, her dönem sonu raporunda görünür. Hesabın elle hesaplananla uyuşmazlığı da 0.</div></div>
+    <div class="row"><div class="k">Kayıt kaybı</div><div>"Sunucuya ulaştı" makbuzlu kayıtta kayıp 0. Telefonda kalıp kaybolan kayıtlar (kayıp telefon, silinen uygulama) onaylanan cihaz değişimlerinden ve beyana dayalı düzeltmelerden ayrı oranla sayılır; (cihaz, sıra numarası) boşlukları hata yakalamak için.</div></div>
+    <div class="row"><div class="k">Yoklama hızı (Aşama 2)</div><div>100 kişilik sınıfta %90 katılıma en çok 120 sn (ortanca); kayıtlardaki QR zaman dilimlerinden ölçülür.</div></div>
+    <div class="row"><div class="k">QR okuma (Aşama 2)</div><div>En büyük amfinin en arka sırasında, desteklenen en ucuz Android ve en eski iPhone ile, her telefonda 20 denemenin en az %95'inde QR değişmeden (5 saniye içinde) okunur. Önceden perde yüksekliği ve en arka sıranın uzaklığı not edilir.</div></div>
+    <div class="row"><div class="k">Bluetooth (Aşama 3)</div><div>Denenecek hedef, beklenti değil: sınıfın en çok %5'i kaçırılır. Acadly'nin bildirdiği kaçırma oranı, uygulama herkeste kuruluyken %2 ile %5 arası, ilk derste deneme yapılınca %2. Acadly öğrenci telefonları arası aktarma kullanıyor, buradaki yöntem tek adımlı. İlk denemede en büyük amfide, QR ile doğrulanmış kayıtlarda kodu görmeyenlerin oranı telefon modeline göre ölçülür; kaçırılan elle düzeltilir.</div></div>
   </div>
 </section>
 
@@ -691,18 +578,25 @@ apps/server/test/
 <section id="acik">
   <h2>Açık noktalar</h2>
   <ol>
-    <li><strong>Aşama 1 gerçek yoklamada kullanılacak mı?</strong> Önerim: hayır, yalnız deneme için. Gerçek yoklamaya QR ile geçilir.</li>
-    <li><strong>Android'de Google Play kapalı test kanalı da eklensin mi?</strong> Önerim: evet; GitHub APK yedek yol olarak kalır.</li>
-    <li><strong>Hesap ücretleri:</strong> Apple geliştirici hesabı (yılda 99 USD) ve Google geliştirici doğrulaması (25 USD).</li>
-    <li><strong>İÜ'de daha önce denenen sistem:</strong> Hangisiydi, neden olmadı? İstanbul Tıp Fakültesi'nin 2018–2021 arasındaki sabit QR ve Google Formu denemesi olabilir.</li>
-    <li><strong>Derslik koşulları:</strong> Binalarda ve bodrumlarda internet kapsaması nasıl? Her derslikte kürsü bilgisayarından tarayıcı açılıp projeksiyona yansıtılabiliyor mu? En büyük sınıf kaç kişi?</li>
-    <li><strong>AKSİS:</strong> İlandan sonra düzeltme yapılabiliyor mu? Yapılabiliyorsa dönem sonu sıkışması sorun olmaz.</li>
-    <li><strong>Gerçek bir AKSİS liste örneği</strong> (isimler maskeli): sütun başlıkları, e-posta sütunu, ekle-bırak, çift anadal ve tekrar alınan dersler.</li>
-    <li><strong>Uygulama (lab) dersleri:</strong> Oturumları hoca mı yürütüyor? Asistan yürütüyorsa asistan rolü öne çekilir. Blok derslerde ikinci okutma gerekli mi?</li>
+    <li id="acik-asama1"><strong>Aşama 1 gerçek yoklamada kullanılacak mı?</strong> Önerim: hayır, yalnız deneme için; gerçek yoklama QR ile. Deneme döneminin kapsamı (hangi birim ve dersler, kaç öğrenci), süresi ve listelenmeyen App Store'a geçiş ölçütü (Hedefler'deki hangi sayılar tutunca, bkz. <a href="#hedefler">Hedefler</a>) de birlikte belirlenir (bkz. <a href="#dagitim-deneme">Dağıtım, Deneme</a>).</li>
+    <li id="acik-apple-hesabi"><strong>Apple hesabı:</strong> Bireysel hesapla listelenmeyen App Store dağıtımına girilebilir mi, yoksa 5.1.1(ix) gereği kuruluş hesabı mı gerekir? Kuruluş hesabı İÜ adına açılabilir mi: Apple D-U-N-S numarası ve hesabı İÜ adına bağlamaya yetkili birinin onayını ister, numara ve Apple doğrulaması için bekleme var; hesap sahibi İÜ'nün yetkilisi olur, ben ekipte yönetici rolüyle çalışırım, mağazada satıcı İÜ görünür, 5.1.1(ix) riski kalmaz ve İÜ akredite eğitim kurumu olarak yıllık 99 USD'den muafiyet isteyebilir (Apple'ın sayfası Türkiye'de hangi tanınmanın yettiğini yazmıyor). Bedeli, hesabın açılmasının ve yenilenmesinin İÜ'ye bağlı olması. Cevap, iş sırasının 6. adımında ilk iPhone geliştirme derlemesinden önce gerekir. (bkz. <a href="#dagitim-hesap">Dağıtım, iPhone, Hesap</a>)</li>
+    <li id="acik-hesap-ucretleri"><strong>Hesap ücretleri:</strong> Apple geliştirici hesabı (yılda 99 USD) ve Google Play Console (bir kerelik 25 USD kayıt ücreti; Android geliştirici doğrulaması için ek ücret yok, bkz. <a href="#dagitim">Dağıtım, Google doğrulaması</a>); EAS'ın ücretsiz iPhone derleme kotası yetmezse o ay Starter plana geçerim (ayda 19 USD, bkz. <a href="teknik.html#dagitim-ayrinti-derleme">Derleme</a>).</li>
+    <li><strong>E-posta gönderici hesabı:</strong> FR-005 (Kurumsal e-Posta Talep Formu) birimler ve etkinlikler için ve resmî yazıyla gidiyor: yazıyı hangi birim gönderir? Aynı yazıda Google SMTP rölesi izni verilir mi? Aynı resmî yazıda DMARC'ın Google'ın önerdiği sırayla kademeli olarak "quarantine" düzeyine çekilmesini öneririm; karar BİDB'nin, plan buna bağlı değil. (bkz. <a href="#kararlar-e-posta-gonderimi">E-posta gönderimi</a>)</li>
+    <li><strong>İÜ'de daha önce denenen sistem:</strong> Hangisiydi, neden olmadı? İstanbul Tıp Fakültesi'nin 2018'deki intörn oryantasyon günü denemesi (sabit QR ve Google Formu) olabilir.</li>
+    <li><strong>Derslik koşulları:</strong> Binalarda ve bodrumlarda internet kapsaması nasıl? Her derslikte kürsü bilgisayarından tarayıcı açılıp projeksiyona yansıtılabiliyor mu; Windows ve tarayıcı sürümleri ne (Chrome 109'da kalan var mı; bkz. <a href="teknik.html#panel-cati">Web paneli, Çatı</a>)? En büyük sınıf kaç kişi, orada perde yüksekliği ve en arka sıranın uzaklığı ne?</li>
+    <li id="acik-aksis"><strong>AKSİS:</strong> Devamsızlıkları otomasyona işleme son gününden sonra AKSİS'te düzeltmeyi (son gün KARAR BEKLİYOR kalan öğrencinin sonradan gelen kaydı dahil) kim, hangi kararla yapar? 2026-2027'de bu gün genel lisans takviminde de dersin bittiği gün mü, hangi birimlerin ayrı takvimi var? (bkz. <a href="#devam-donem-sonu">Dönem sonu</a>) AKSİS'in devamsızlık ekranı dosyadan (Excel) yükleme alıyor mu? Alıyorsa AKSİS özeti o şablonla da indirilir, dosyayı hoca kendisi yükler, otomatik bağlantı yine olmaz; almıyorsa elle giriş kalır. (Kamuya açık AKSİS kılavuzu yalnız öğrenci ekranlarını anlatıyor.)</li>
+    <li id="acik-sayim-tabani"><strong>Sayım tabanı:</strong> Devam yüzdesi yapılan saatten mi, planlanandan mı hesaplanır? Öğrenci işlerinden teyit edilir; teyide kadar yapılan saat kullanılır.</li>
+    <li><strong>Gerçek bir AKSİS liste örneği</strong> (isimler maskeli): sütun başlıkları, satır sırası, e-posta sütunu, ekle-bırak, çift anadal, tekrar alınan dersler ve devamdan muaf için alan.</li>
+    <li id="acik-sunucu-makinesi"><strong>Sunucu makinesi:</strong> BİDB üniversitenin veri merkezinde Linux sanal makine verebilir mi (4 çekirdek, 8 GB bellek, 100 GB SSD ile başlayıp büyütülebilen), alan adı ve 443 portu internete, mağaza incelemesi için yurt dışına da açılabilir mi, yedek için ayrı bir depo verilebilir mi? Verilemezse kurum kontrolünde, yerli (Türkiye'de kurulu) bir hizmet sağlayıcıyı kurum adına kullanmak uygun mu? (bkz. <a href="#teknoloji-sunucu-yeri">Sunucu yeri</a>)</li>
+    <li id="acik-sunucu-sertifikasi"><strong>Sunucu sertifikası:</strong> Üniversitenin mi, Caddy'nin kendiliğinden yenilediği mi? İkisinde de sağlayıcının kökü Android 7.0'da tanınmalı; Caddy seçilirse Let's Encrypt yerine böyle bir sağlayıcı ayarlanır ya da Let's Encrypt kalır ve uygulama onun kökünü ek güvenilen kök olarak taşır (Let's Encrypt ile alt sınır Android 7.1.1 ya da uygulamada ek kök, bkz. <a href="#dagitim-desteklenen-surumler">Desteklenen sürümler</a>).</li>
+    <li><strong>Yedek deposu:</strong> S3 uyumlu bir depo mu, SFTP ile başka bir makine mi? Her durumda sunucu dışında, yurt içinde (sağlayıcı ölçütü: bkz. <a href="#teknoloji-sunucu-yeri">Sunucu yeri</a>) ve şifreli (bkz. <a href="teknik.html#veritabani-yedek">Yedek</a>).</li>
+    <li><strong>Depo görünürlüğü:</strong> Kod deposu açık mı, özel mi? Korumalı dal ve ücretsiz CI dakikaları buna bağlı; APK için her durumda açık sürüm deposu gerekir.</li>
+    <li><strong>Uygulama (lab) dersleri:</strong> Oturumları hoca mı yürütüyor? Asistansa asistan rolü öne çekilir. Blok derslerde ikinci okutma gerekli mi?</li>
     <li><strong>Tek kullanımlık kayıt kodu</strong> baştan mı gelsin, yoksa önce hoca teyidiyle mi başlansın?</li>
     <li><strong>Birlikte işlenen şubeler</strong> var mı?</li>
-    <li><strong>Akıllı telefonu olmayan öğrenci</strong> sayısı. Bu öğrencileri hoca elle ekliyor.</li>
-    <li><strong>Hoca onayı:</strong> Kurumsal alan adı (<code>@istanbul.edu.tr</code>) yeterli mi, yoksa her hoca elle mi onaylansın? Şimdilik elle. Alan adı sınırı öğrenciyi eler (öğrencilerin adresi başka alan adında) ama emekli personeli elemez.</li>
+    <li><strong>Akıllı telefonu olmayan öğrenci</strong> sayısı; hoca bunları elle ekliyor.</li>
+    <li id="acik-saklama-suresi"><strong>Saklama süresi:</strong> Hesabı silinen öğrencinin yoklama kayıtları, düzeltmeleri ve denetim kaydı kaç yıl tutulur? İÜ'nün kayıt saklama politikasında yoklama ve devam kayıtları için süre var mı; yoksa Öğrenci İşleri hangi süreyi verir? Süre gelene kadar kayıtlar silinmez (bkz. <a href="#kararlar-hesap-silme">Hesap silme</a>).</li>
+    <li id="acik-gizlilik-politikasi"><strong>Gizlilik politikası:</strong> Mağazaların istediği gizlilik politikası metnini kim hazırlar, kim onaylar; İÜ adına mı yayımlanır, benim adıma mı? Cevap, iş sırasının 8. adımından önce gerekir (bkz. <a href="#dagitim-gizlilik-politikasi">Gizlilik politikası</a>).</li>
   </ol>
 </section>
 
@@ -713,62 +607,75 @@ apps/server/test/
   <details>
     <summary>Benzer sistemler</summary>
     <ul class="src">
-      <li><a href="https://raw.githubusercontent.com/danmarsden/moodle-mod_attendance/MOODLE_405_STABLE/settings.php">Moodle Attendance ayarları (dönen QR, 15 sn)</a></li>
-      <li><a href="https://help.edusign.com/en/articles/4742581-getting-student-signatures-via-qr-code">Edusign (5 sn QR)</a></li>
-      <li><a href="https://www.staffnet.manchester.ac.uk/news/display/?id=33282">Manchester, SEAtS 30 sn kod</a> · <a href="https://mancunion.com/2024/11/20/university-implements-seats-attendance/">öğrenci gazetesi</a></li>
-      <li><a href="https://github.com/1vke/iclicker-exploit-poc">iClicker konum sızıntısı (2024)</a> · <a href="https://dts.ucla.edu/news/iclicker-enhancement-bluetooth-attendance-tracking">iClicker Bluetooth (2026)</a></li>
-      <li><a href="https://uic.acadly.com/faq.html">Acadly</a> · <a href="https://www.ohio.edu/news/2026/05/top-hat-retiring-january-2027-supported-alternatives-attendance-engagement">Ohio, Top Hat'ten çıkış</a></li>
+      <li><a href="https://github.com/danmarsden/moodle-mod_attendance">Moodle Attendance (dönen QR, 15 sn)</a> · <a href="https://www.uu.se/en/staff/gateway/teaching/news/archive/2025-12-12-new-in-studium-register-attendance-via-qr-code">Uppsala QR yoklama (30 sn)</a></li>
+      <li><a href="https://apps.apple.com/ie/app/attendix/id6752208780">Attendix (Bluetooth işaretli, internetsiz kuyruk)</a> · <a href="https://edusign.com/attendance-software">Edusign NFC etiketi</a> · <a href="https://apps.apple.com/us/app/jibble-attendance-tracker/id1541142980">Jibble</a></li>
+      <li><a href="https://help.edusign.com/en/articles/4742581-getting-student-signatures-via-qr-code">Edusign (5 sn QR)</a> · <a href="https://blogs.chapman.edu/academics/2024/08/12/new-features-available-in-qwickly-attendance/">Qwickly (3 sn QR, Chapman Üniversitesi, Ağustos 2024)</a></li>
+      <li><a href="https://www.staffnet.manchester.ac.uk/news/display/?id=33282">Manchester, SEAtS 30 sn canlı kod ve sabit ders kodu</a> · <a href="https://mancunion.com/2024/11/20/university-implements-seats-attendance/">öğrenci gazetesi</a></li>
+      <li><a href="https://github.com/1vke/iclicker-exploit-poc">iClicker konum sızıntısı (2024)</a> · <a href="https://dts.ucla.edu/news/iclicker-enhancement-bluetooth-attendance-tracking">iClicker Bluetooth (2026)</a> · <a href="https://oit.colorado.edu/news/canvas-and-oit-services-outage-update">AWS kesintisinde iClicker (Colorado Üniversitesi, 20 Ekim 2025)</a></li>
+      <li><a href="https://help.uillinois.edu/TDClient/37/uic/KB/PrintArticle?ID=2353">Acadly (UIC yardım sayfası, %95 ve %98)</a> · <a href="https://pages.acadly.com/uic">Acadly, Bluetooth ağı yöntemi</a> · <a href="https://www.ohio.edu/news/2026/05/top-hat-retiring-january-2027-supported-alternatives-attendance-engagement">Ohio University, Top Hat'ten çıkış</a></li>
       <li><a href="https://github.com/aquamarine5/ChaoxingSignFaker">Chaoxing hile uygulaması</a> · <a href="https://nsl.cau.ac.kr/papers/ieeeaccess/beas-ieeeaccess2018.pdf">Bluetooth işaret kopyalama (2018)</a></li>
-      <li><a href="https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=qr-kod-ile-online-yoklama-(1).pdf">İstanbul Tıp Fakültesi QR yoklama kılavuzu</a></li>
-      <li><a href="https://play.google.com/store/apps/details?id=com.ubys.mobile">UBYS Mobil</a> · <a href="https://play.google.com/store/apps/details?id=com.prolizyazilim.mobil">Proliz</a> · <a href="https://www.sikayetvar.com/nisantasi-universitesi/nisantasi-universitesi-qr-devamsizlik-sorunu">Nişantaşı şikâyeti</a></li>
-      <li><a href="https://www.sozcu.com.tr/universite-ogrencileri-qr-kodla-fislenecek-p164076">Sözcü, "fişleme" eleştirisi (2025)</a> · <a href="https://www.uludag.edu.tr/buu-de-akilli-yoklama-sistemi-basliyor-98669">BUÜ akıllı yoklama</a> · <a href="https://www.khas.edu.tr/wp-content/uploads/2026/08/CELT-KHAS-Learn-Yoklama-Modulu.pdf">Kadir Has yoklama modülü</a></li>
-      <li><a href="https://gs.statcounter.com/os-market-share/mobile/turkey">StatCounter, Türkiye mobil işletim sistemi payları</a></li>
+      <li><a href="https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=qr-kod-ile-online-yoklama-(1).pdf">İstanbul Tıp Fakültesi QR yoklama kılavuzu (24 Temmuz 2018 intörn oryantasyon günü, katılım 377 ve 422)</a></li>
+      <li><a href="https://play.google.com/store/apps/details?id=com.ubys.mobile">UBYS Mobil (sürüm notu, 28 Eylül 2026)</a> · <a href="https://play.google.com/store/apps/details?id=com.prolizyazilim.mobil">Proliz (Nisan 2026 yorumları)</a> · <a href="https://www.sikayetvar.com/nisantasi-universitesi/nisantasi-universitesi-qr-devamsizlik-sorunu">Nişantaşı öğrenci şikâyeti (5 Ocak 2024)</a></li>
+      <li><a href="https://www.sozcu.com.tr/universite-ogrencileri-qr-kodla-fislenecek-p164076">Sözcü, "fişleme" eleştirisi (Nisan 2025)</a> · <a href="https://www.uludag.edu.tr/buu-de-akilli-yoklama-sistemi-basliyor-98669">BUÜ akıllı yoklama</a> · <a href="https://www.gazetebirlik.com/egitim/buude-akilli-yoklama-sistemi-2026-2027-egitim-ogretim-doneminde-basliyor/1101949">BUÜ, 28 Eylül 2026 başlangıcı ve web tabanlı oluşu (Yeni Birlik)</a></li>
+      <li><a href="https://ogris.aksaray.edu.tr/indir/8e182fcf-d4bf-493a-8d29-7634355fc1ca.pdf">Aksaray Üniversitesi yoklama yönergesi (2025, Md.5)</a> · <a href="https://apps.apple.com/tr/app/d-%C3%BC-mobil/id6752337210">D.Ü. Mobil sürüm notları</a></li>
+      <li><a href="https://www.dha.com.tr/egitim/bluetooth-tabanli-dijital-yoklama-yesil-cevreye-destek-ve-zaman-tasarrufu-sagliyor-2776335">İstanbul Atlas, Bluetooth ve numara ile QR yedeği (DHA, Aralık 2025)</a> · <a href="https://www.anadolu.edu.tr/duyurular/qr-kodlu-yoklama-sistemine-gecilmistir-1770989551">Anadolu Üniversitesi QR yoklama duyurusu (Şubat 2026)</a></li>
+      <li><a href="https://gs.statcounter.com/os-market-share/mobile/turkey">StatCounter, Türkiye mobil işletim sistemi payları</a> · <a href="https://gs.statcounter.com/android-version-market-share/mobile/turkey">Android sürümleri</a> · <a href="https://gs.statcounter.com/ios-version-market-share/mobile/turkey">iOS sürümleri</a> · <a href="https://pxlnv.com/linklog/ios-26-usage-updates/">StatCounter iOS 26 sayım düzeltmesi (Ocak 2026)</a></li>
     </ul>
   </details>
 
   <details>
     <summary>Kurallar, internetsiz çalışma ve saat</summary>
     <ul class="src">
-      <li><a href="https://www.resmigazete.gov.tr/eskiler/2025/09/20250928-2.htm">İÜ Önlisans ve Lisans Eğitim ve Öğretim Yönetmeliği (Resmî Gazete, 28.09.2025)</a>: Md.19, Md.20, Md.35</li>
-      <li><a href="https://zero.rocicorp.dev/docs/offline">Zero: internetsiz yazma desteği yok</a> · <a href="https://www.powersync.com/pricing">PowerSync</a></li>
+      <li><a href="https://www.resmigazete.gov.tr/eskiler/2025/09/20250928-2.htm">İÜ Ön Lisans ve Lisans Eğitim ve Öğretim Yönetmeliği (Resmî Gazete, 28.09.2025)</a>: Md.9/4, Md.14, Md.19, Md.20/5, Md.21 (harf notları, FD), Md.23 (DC ve DD tekrarı), Md.28/4, Md.35 · <a href="https://sks.istanbul.edu.tr//storage/files/yonerge-pdf/%C3%96%C4%9Frenci%20Sa%C4%9Fl%C4%B1k%20Raporlar%C4%B1%20Y%C3%B6nergesi.pdf">İÜ Öğrenci Sağlık Raporları Yönergesi: Md.6, Md.7</a> · <a href="https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=2025-2026-akademik-takvim-onerisi-eczacilik.pdf">İÜ Eczacılık Fakültesi 2025-2026 akademik takvimi (devamsızlık son günü)</a> · <a href="https://ebs.istanbul.edu.tr/home/universite/?id=takvim">İÜ akademik takvimler (EBS)</a></li>
+      <li><a href="https://www.alomaliye.com/2019/07/06/bilgi-ve-iletisim-guvenligi-tedbirleri-2019-12/">Bilgi ve İletişim Güvenliği Tedbirleri Genelgesi 2019/12 (metin)</a></li>
+      <li><a href="https://zero.rocicorp.dev/docs/offline">Zero: internetsiz yazma desteği yok</a> · <a href="https://docs.powersync.com/client-sdks/reference/react-native-and-expo">PowerSync ve Expo</a> · <a href="https://electric.ax/blog/2026/08/11/electric-joining-databricks">Electric, Databricks'e katıldı</a></li>
       <li><a href="https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/">Rastgele kaydırmalı yeniden deneme</a></li>
-      <li><a href="https://android-developers.googleblog.com/2025/02/trustedtime-api-introducing-reliable-approach-to-time-keeping-for-apps.html">Android TrustedTime</a> · <a href="https://developer.android.com/reference/android/os/SystemClock">Android SystemClock</a></li>
-      <li><a href="https://developer.apple.com/forums/thread/110044">iPhone'da yeniden başlatmayı anlama</a> · <a href="https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons">Apple gerekçe isteyen API'ler</a></li>
-      <li><a href="https://developer.apple.com/forums/thread/797864">iPhone sahte konum işaretinin sınırı</a> · <a href="https://docs.expo.dev/versions/latest/sdk/location/">expo-location</a></li>
-      <li><a href="https://developer.android.com/google/play/integrity/overview">Play Integrity</a> · <a href="https://developer.apple.com/documentation/devicecheck/preparing-to-use-the-app-attest-service">App Attest</a> · <a href="https://developer.android.com/privacy-and-security/security-key-attestation">Android anahtar kanıtı</a> · <a href="https://docs.expo.dev/versions/latest/sdk/app-integrity/">@expo/app-integrity</a></li>
-      <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheralmanager/startadvertising(_:)">iPhone Bluetooth yayın sınırları</a> · <a href="https://developer.android.com/develop/connectivity/bluetooth/bt-permissions">Android Bluetooth izinleri</a></li>
-      <li><a href="https://docs.expo.dev/versions/latest/sdk/securestore/">expo-secure-store</a> · <a href="https://docs.expo.dev/versions/latest/sdk/background-task/">expo-background-task</a> · <a href="https://docs.expo.dev/versions/latest/sdk/device/">expo-device</a></li>
+      <li><a href="https://android-developers.googleblog.com/2025/02/trustedtime-api-introducing-reliable-approach-to-time-keeping-for-apps.html">Android TrustedTime</a> · <a href="https://developer.android.com/reference/android/os/SystemClock">Android SystemClock</a> · <a href="https://android.googlesource.com/platform/system/sepolicy/+/9d9c370f31556c33f62e7889f64ad3a2728f1863">AOSP, boot_id herkese açık (2017)</a> · <a href="https://developer.android.com/reference/android/provider/Settings.Global">Android BOOT_COUNT</a></li>
+      <li><a href="https://developer.apple.com/forums/thread/110044">iPhone'da yeniden başlatmayı anlama (semafor)</a> · <a href="https://developer.apple.com/forums/thread/774658">Apple DTS notu</a> · <a href="https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons">Apple gerekçe isteyen API'ler</a></li>
+      <li><a href="https://developer.apple.com/forums/thread/797864">iPhone sahte konum işaretinin sınırı</a> · <a href="https://docs.expo.dev/versions/latest/sdk/location/">expo-location (neden kullanılmadığı)</a></li>
+      <li><a href="https://developer.android.com/google/play/integrity/overview">Play Integrity (neden kullanılmadığı)</a> · <a href="https://developer.apple.com/documentation/devicecheck/preparing-to-use-the-app-attest-service">App Attest</a> · <a href="https://developer.apple.com/videos/play/wwdc2026/201/">App Attest, iOS 27 alanları (WWDC 2026)</a> · <a href="https://developer.android.com/privacy-and-security/security-key-attestation">Android anahtar kanıtı</a> · <a href="https://developer.android.com/privacy-and-security/keystore">Android Keystore (sarılı aktarım, StrongBox)</a> · <a href="https://developer.apple.com/documentation/security/protecting-keys-with-the-secure-enclave">Secure Enclave anahtar sınırı</a> · <a href="https://docs.expo.dev/versions/latest/sdk/app-integrity/">@expo/app-integrity</a></li>
+      <li><a href="https://developer.apple.com/documentation/corebluetooth/cbperipheralmanager/startadvertising(_:)">iPhone Bluetooth yayın sınırları</a> · <a href="https://developer.android.com/develop/connectivity/bluetooth/bt-permissions">Android Bluetooth izinleri</a> · <a href="https://source.android.com/docs/core/connect/bluetooth/ble">Android: konum kapalıyken Bluetooth taraması</a></li>
+      <li><a href="https://docs.expo.dev/versions/latest/sdk/securestore/">expo-secure-store</a> · <a href="https://docs.expo.dev/versions/latest/sdk/background-task/">expo-background-task</a> · <a href="https://docs.expo.dev/versions/latest/sdk/device/">expo-device</a> · <a href="https://developer.apple.com/documentation/security/ksecattraccessibleafterfirstunlockthisdeviceonly">Apple, ilk kilit açılışından sonra erişim</a> · <a href="https://developer.apple.com/documentation/backgroundtasks/bgprocessingtask">Apple, uzun iş görevi</a></li>
     </ul>
   </details>
 
   <details>
     <summary>Sunucu ve testler</summary>
     <ul class="src">
-      <li><a href="https://nodejs.org/en/blog/announcements/evolving-the-nodejs-release-schedule">Node.js sürüm takvimi</a> · <a href="https://blog.openreplay.com/manage-package-managers-node-corepack/">Node 25 ve corepack</a> · <a href="https://nx.dev/docs/technologies/typescript/guides/typescript-7">TypeScript 7 ve araç uyumu</a></li>
+      <li><a href="https://nodejs.org/en/blog/announcements/evolving-the-nodejs-release-schedule">Node.js sürüm takvimi</a> · <a href="https://nodejs.org/en/blog/release/v25.0.0">Node 25 sürüm notu (corepack)</a> · <a href="https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/">TypeScript 7.0 duyurusu</a> · <a href="https://pnpm.io/cli/recursive">pnpm çalışma alanı komutları</a></li>
       <li><a href="https://github.com/fastify/fastify/blob/main/docs/Reference/LTS.md">Fastify destek süreleri</a> · <a href="https://github.com/fastify/demo">Fastify örnek proje</a> · <a href="https://fastify.dev/docs/latest/Guides/Testing/">Fastify ile test</a></li>
-      <li><a href="https://cdn.jsdelivr.net/npm/fastify-type-provider-zod@7.0.0/README.md">fastify-type-provider-zod</a> · <a href="https://github.com/oasdiff/oasdiff">oasdiff</a></li>
+      <li><a href="https://cdn.jsdelivr.net/npm/fastify-type-provider-zod@7.0.0/README.md">fastify-type-provider-zod</a> · <a href="https://github.com/fastify/fastify-type-provider-zod">@fastify/type-provider-zod (resmî)</a> · <a href="https://fastify.dev/docs/latest/Reference/Type-Providers/">Fastify tip sağlayıcıları</a> · <a href="https://github.com/oasdiff/oasdiff">oasdiff</a> · <a href="https://github.com/openapi-ts/openapi-typescript/issues/2874">openapi-typescript bakım modunda</a></li>
       <li><a href="https://orm.drizzle.team/docs/v0-v1-changes">Drizzle 1.0 değişiklikleri</a> · <a href="https://orm.drizzle.team/docs/latest-releases">Drizzle sürümleri</a></li>
-      <li><a href="https://www.better-auth.com/docs/plugins/email-otp">Better Auth e-posta kodu</a> · <a href="https://github.com/better-auth/better-auth/security/advisories">Better Auth güvenlik duyuruları</a></li>
-      <li><a href="https://github.com/timgit/pg-boss">pg-boss</a> · <a href="https://www.postgresql.org/docs/18/ddl-partitioning.html">PostgreSQL bölme</a> · <a href="https://thenile.dev/blog/uuidv7">PostgreSQL 18 ve UUIDv7</a> · <a href="https://pgbackrest.org/news.html">pgBackRest</a></li>
-      <li><a href="https://github.com/cucumber/cucumber-js">Cucumber.js</a> · <a href="https://cucumber.io/docs/gherkin/languages">Gherkin Türkçe anahtar kelimeler</a> · <a href="https://node.testcontainers.org/modules/postgresql/">Testcontainers PostgreSQL</a></li>
-      <li><a href="https://www.npmjs.com/package/vitest">Vitest</a> · <a href="https://pypi.org/project/schemathesis/">Schemathesis</a> · <a href="https://grafana.com/blog/2025/05/07/grafana-k6-1.0-release/">k6</a> · <a href="https://biomejs.dev/">Biome</a></li>
-      <li><a href="https://github.com/OWASP/ASVS/tree/master/5.0/en">OWASP ASVS 5.0</a> · <a href="https://mas.owasp.org/MASVS/">OWASP MASVS</a> · <a href="https://opentelemetry.io/docs/languages/js/">OpenTelemetry JS</a></li>
-      <li><a href="https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api">GitHub REST API istek sınırları</a> · <a href="https://www.better-auth.com/docs/integrations/fastify">Better Auth ve Fastify</a></li>
+      <li><a href="https://github.com/better-auth/better-auth/security/advisories">Better Auth güvenlik duyuruları (neden kullanılmadığı)</a></li>
+      <li><a href="https://github.com/timgit/pg-boss">pg-boss</a> · <a href="https://www.postgresql.org/docs/18/ddl-partitioning.html">PostgreSQL bölme</a> · <a href="https://thenile.dev/blog/uuidv7">PostgreSQL 18 ve UUIDv7</a> · <a href="https://hub.docker.com/_/postgres">PostgreSQL resmî imajı (18 veri yolu)</a> · <a href="https://pgbackrest.org/news.html">pgBackRest</a></li>
+      <li><a href="https://github.com/cucumber/cucumber-js">Cucumber.js</a> · <a href="https://cucumber.io/docs/gherkin/languages">Gherkin Türkçe anahtar kelimeler</a></li>
+      <li><a href="https://www.npmjs.com/package/vitest">Vitest</a> · <a href="https://pypi.org/project/schemathesis/">Schemathesis</a> · <a href="https://github.com/grafana/k6/releases/tag/v2.0.0">k6 2.0</a> · <a href="https://biomejs.dev/">Biome</a></li>
+      <li><a href="https://github.com/OWASP/ASVS/tree/master/5.0/en">OWASP ASVS 5.0</a> · <a href="https://mas.owasp.org/MASVS/">OWASP MASVS</a> · <a href="https://github.com/fastify/otel">@fastify/otel</a></li>
+      <li><a href="https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=iu-bidb-tl-008-e-posta-kullanim-talimati.pdf">İÜ BİDB E-posta Kullanım Talimatı (TL-008; FR-005, FR-006)</a> · <a href="https://knowledge.workspace.google.com/admin/gmail/advanced/route-outgoing-smtp-relay-messages-through-google">Google Workspace SMTP rölesi ve sınırları</a> · <a href="https://knowledge.workspace.google.com/admin/security/set-up-dmarc">Google, DMARC politikaları</a></li>
     </ul>
   </details>
 
   <details>
     <summary>Dağıtım ve cihazlar</summary>
     <ul class="src">
-      <li><a href="https://developer.android.com/developer-verification/guides/faq">Android geliştirici doğrulaması, SSS</a> · <a href="https://android-developers.googleblog.com/2026/06/android-developer-verification.html">Google duyurusu (Haziran 2026)</a></li>
-      <li><a href="https://developers.google.com/android/play-protect/warning-dev-guidance">Play Protect uyarıları</a> · <a href="https://support.google.com/googleplay/android-developer/answer/14151465">Google Play test şartı</a> · <a href="https://github.com/ImranR98/Obtainium">Obtainium</a></li>
+      <li><a href="https://developer.android.com/developer-verification/guides/faq">Android geliştirici doğrulaması, SSS</a> · <a href="https://android-developers.googleblog.com/2026/06/android-developer-verification.html">Google duyurusu (Haziran 2026)</a> · <a href="https://developer.android.com/developer-verification/guides/google-play-console">Play Console'dan doğrulama</a> · <a href="https://android-developers.googleblog.com/2026/03/android-developer-verification-rolling-out-to-all-developers.html">Google duyurusu (Mart 2026)</a> · <a href="https://developer.android.com/developer-verification/guides/check-registration-status">Kayıt: paket adı ile sertifika parmak izi</a></li>
+      <li><a href="https://developers.google.com/android/play-protect/warning-dev-guidance">Play Protect uyarıları</a> · <a href="https://support.google.com/googleplay/android-developer/answer/14151465">Google Play test şartı</a> · <a href="https://www.samsung.com/tr/support/mobile-devices/galaxy-cihazinizi-yeni-otomatik-engelleyici-ozelligi-ile-koruyun">Samsung Otomatik Engelleyici</a> · <a href="https://letsencrypt.org/docs/certificate-compatibility/">Let's Encrypt ve eski Android</a> · <a href="https://developer.android.com/privacy-and-security/security-config">Android ağ güvenlik ayarı (ek güvenilen kök)</a></li>
       <li><a href="https://docs.expo.dev/app-signing/app-credentials/">EAS imzalama bilgileri</a> · <a href="https://expo.dev/pricing">Expo ve EAS planları</a></li>
       <li><a href="https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview">TestFlight</a> · <a href="https://developer.apple.com/help/app-store-connect/reference/app-review-information">App Review deneme hesabı</a> · <a href="https://developer.apple.com/support/terms/">Apple geliştirici sözleşmesi</a></li>
-      <li><a href="https://developer.apple.com/support/unlisted-app-distribution/">Listelenmeyen App Store dağıtımı</a> · <a href="https://developer.apple.com/support/membership-fee-waiver/">Apple ücret muafiyeti</a></li>
-      <li><a href="https://docs.expo.dev/technical-specs/expo-updates-1/">Expo Updates protokolü</a> · <a href="https://github.com/axelmarciano/expo-open-ota">xprem</a></li>
-      <li><a href="https://docs.expo.dev/versions/latest/">Expo SDK sürümleri ve desteklenen işletim sistemleri</a> · <a href="https://expo.dev/changelog/sdk-57">Expo SDK 57</a> · <a href="https://docs.expo.dev/modules/get-started/">Expo Modules</a> · <a href="https://docs.expo.dev/guides/monorepos/">Expo tek depo düzeni</a></li>
-      <li><a href="https://developers.google.com/ml-kit/vision/barcode-scanning/android">ML Kit barkod tarama</a> · <a href="https://github.com/munimtechnologies/munim-bluetooth">munim-bluetooth</a> · <a href="https://github.com/dotintent/react-native-ble-plx">react-native-ble-plx</a></li>
+      <li><a href="https://developer.apple.com/support/unlisted-app-distribution/">Listelenmeyen App Store dağıtımı</a> · <a href="https://developer.apple.com/support/membership-fee-waiver/">Apple ücret muafiyeti</a> · <a href="https://developer.apple.com/app-store/review/guidelines/">App Review Guidelines (5.1.1)</a> · <a href="https://developer.apple.com/support/compare-memberships/">Apple üyelik karşılaştırması</a> · <a href="https://appleinsider.com/articles/23/09/26/apple-launches-meet-with-apple-experts-for-developers-worldwide">Meet with Apple Experts duyurusu (2023, üyelik şartı)</a></li>
+      <li><a href="https://docs.expo.dev/technical-specs/expo-updates-1/">Expo Updates protokolü</a> · <a href="https://github.com/mercuretechnologies/xprem">xprem</a> · <a href="https://mercure-technologies.gitbook.io/xprem/">xprem belgeleri</a> · <a href="https://github.com/mercuretechnologies/xprem/blob/main/LICENSE.md">xprem lisansı (MIT çekirdek, ee/ ticari)</a></li>
+      <li><a href="https://docs.expo.dev/versions/latest/">Expo SDK sürümleri ve desteklenen işletim sistemleri</a> · <a href="https://expo.dev/changelog/sdk-57">Expo SDK 57</a> · <a href="https://expo.dev/changelog/sdk-58-beta">Expo SDK 58 beta</a> · <a href="https://github.com/expo/expo/blob/sdk-58/templates/expo-template-bare-minimum/ios/Podfile">SDK 58 iOS alt sınırı</a> · <a href="https://github.com/facebook/react-native/blob/0.88-stable/packages/react-native/gradle/libs.versions.toml">React Native 0.88 Android alt sınırı</a> · <a href="https://docs.expo.dev/modules/get-started/">Expo Modules</a> · <a href="https://docs.expo.dev/guides/monorepos/">Expo tek depo düzeni</a></li>
+      <li><a href="https://developers.google.com/ml-kit/vision/barcode-scanning/android">ML Kit barkod tarama</a></li>
       <li><a href="https://hub.docker.com/r/axllent/mailpit">Mailpit</a></li>
+    </ul>
+  </details>
+
+  <details>
+    <summary>Web paneli</summary>
+    <ul class="src">
+      <li><a href="https://docs.sheetjs.com/docs/getting-started/installation/frameworks">SheetJS kurulumu</a> · <a href="https://vite.dev/config/build-options">Vite derleme hedefi</a></li>
+      <li><a href="https://www.w3.org/TR/WCAG22/">WCAG 2.2</a> · <a href="https://encoding.spec.whatwg.org/">Encoding Standard (windows-1254)</a></li>
+      <li><a href="https://support.microsoft.com/en-US/Windows/Experience/power-battery/learn-more-about-energy-recommendations">Windows enerji önerileri (ekran kapanma süresi)</a> · <a href="https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API">Screen Wake Lock</a> · <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@page">CSS @page (sayfa kenar kutuları)</a></li>
     </ul>
   </details>
 </section>
@@ -778,15 +685,22 @@ apps/server/test/
     <summary>Kısa sözlük</summary>
     <ul>
       <li><strong>Pencere:</strong> Yoklamanın verilebildiği zaman aralığı.</li>
-      <li><strong>Sayaç:</strong> Pencerenin kalan süresini gösteren geri sayım.</li>
+      <li><strong>Sayaç:</strong> Pencerenin kalan süresini gösteren geri sayım. Günlük sayaçlar, telefon sayaçları ve 2'lik ortak sayaç ise olay sayan sayılardır; iç sayaç aşağıda ayrı.</li>
+      <li><strong>Oturum (ders):</strong> Bir dersin tek buluşması; yoklama ve son durum oturum başına tutulur.</li>
+      <li><strong>Oturum (giriş):</strong> Hesaba girişten sonra sunucunun telefonu ya da paneli tanıdığı süre; hoca işlemleri hocanın oturumuyla doğrulanır.</li>
       <li><strong>İç sayaç:</strong> Telefonun açıldığından beri geçen süreyi sayan, ayarlardan değiştirilemeyen saat.</li>
-      <li><strong>Saat belgesi:</strong> Sunucunun imzaladığı, telefonun en son ne zaman doğru saati aldığını gösteren kayıt.</li>
-      <li><strong>Cihaz doğrulaması:</strong> Telefonun gerçek ve uygulamanın değiştirilmemiş olduğunun Google ya da Apple üzerinden kanıtlanması.</li>
+      <li><strong>Saat belgesi:</strong> Sunucunun gizli anahtarıyla doğrulama kodu eklediği, telefonun en son ne zaman doğru saati aldığını gösteren kısa kayıt.</li>
+      <li><strong>Cihaz doğrulaması:</strong> Telefonun gerçek ve uygulamanın bizim olduğunun Android'de donanım anahtar kanıtıyla, iPhone'da App Attest ile kanıtlanması.</li>
+      <li><strong>Ters vekil (Caddy):</strong> Sunucunun önünde durup HTTPS'i, panel dosyalarını ve istek yönlendirmeyi üstlenen parça.</li>
+      <li><strong>İlk çapa:</strong> Kayıt anında kullanılan saat: son alınan saat belgesi artı o andan beri geçen süre.</li>
+      <li><strong>İkinci çapa:</strong> Göndermeden hemen önce alınan saat belgesiyle kaydın saatinin geriye doğru da hesaplanması.</li>
       <li><strong>Uzaktan güncelleme:</strong> Mağazaya gitmeden uygulamanın JavaScript kısmının güncellenmesi.</li>
       <li><strong>Gönderme:</strong> Telefondaki kaydın sunucuya iletilmesi.</li>
-      <li><strong>Makbuz:</strong> Kaydın alındığını gösteren, telefonun imzaladığı belge.</li>
+      <li><strong>İmleç:</strong> Telefonun indirmede sunucuya verdiği, son aldığı değişiklik sürümü ile veritabanı nesli.</li>
+      <li><strong>Veritabanı nesli:</strong> PostgreSQL'in küme kimliği ile zaman çizelgesi; yedekten dönüşte kendiliğinden değişir, telefonlara "baştan indir" dedirtir.</li>
+      <li><strong>Makbuz:</strong> Kaydın telefonda kalıcı yazıldığını, sonra sunucuya ulaştığını gösteren durum; makbuz QR'ı kaydın imzalı zarfını aynen taşır (bkz. <a href="#kararlar-kayit-ve-makbuz">Kayıt ve makbuz</a>).</li>
       <li><strong>Kafa sayısı:</strong> Hocanın sınıfta saydığı yaklaşık öğrenci sayısı.</li>
-      <li><strong>Kendi beyanı:</strong> Süre seçilmemiş derste verilen, hoca onayı bekleyen kayıt.</li>
+      <li><strong>Kendi beyanı:</strong> Süre seçilmemiş derste verilen, hoca onayına kadar geçici olarak sayılan kayıt.</li>
       <li><strong>İncelemede:</strong> Şüpheli bulunup hocanın onayını bekleyen kayıt.</li>
     </ul>
   </details>
