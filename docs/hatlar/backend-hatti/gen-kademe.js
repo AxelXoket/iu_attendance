@@ -145,6 +145,7 @@ fs.writeFileSync(path.join(OUT, 'ilerleme.json'), JSON.stringify({
   aciklama: 'Her paketin durumu. Yalnız durum, tarih ve commit alanları değişir; paket eklenmez, silinmez, yeniden adlandırılmaz. durum: bekliyor | yapiliyor | bitti.',
   kademeler: stages.map(s => ({ kademe: s.ad, dosya: s.dosya, asama: s.asama, paketler: s.paketler.map(id => ({ id, baslik: pkg.get(id).title, durum: 'bekliyor', tarih: null, commit: null })) })),
 }, null, 1) + '\n');
+fs.writeFileSync(path.join(OUT, 'yol-haritasi.txt'), stages.map(s => s.dosya).join('\r\n') + '\r\n');
 fs.writeFileSync(path.join(OUT, 'ilerleme-notlari.md'), '# İlerleme notları\n\nHer oturumun sonunda en üste bir not eklenir: tarih, kademe, bitenler, kalanlar, engeller, sonraki oturumun ilk işi.\n');
 fs.writeFileSync(path.join(OUT, 'BENIOKU.md'), `# Backend kademeleri: çalışma düzeni
 
