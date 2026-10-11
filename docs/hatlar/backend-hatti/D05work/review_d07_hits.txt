@@ -1,0 +1,53 @@
+.summary :: D07 (dogrulama) telefonun gerçek, uygulamanın bizim olduğunu kayıtta doğrulayan cihaz kanıtı denetimini, App Attest onay sayacını ve her yoklama kaydının yedi etiketini ve tek sunucu kararını (Var, Beklemede, İncelemede, Ret) veren karar motorunu tutar. Kararın tek yazarı D07'dir: ilk kararı kararHesapla ile verir, sonraki her geçişi kararDegistir ile yapar ve kayit_karar_gecmisi tablosuna yazar; kayıt satırındaki sütunları D07'nin verdiği değerle D05 yazar. Kural mantığı packages/core/src/dogrulama içinde saf fonksiyondur ve tek test tablosuyla denenir; saat D04'ün arayüzünden, cihaz, liste ve oturum bilgisi sahiplerinin dış yüzünden gelir. 2'lik ortak sınır, kafa sayısı karşılaştırması ve işareti, rastgele isim ve burada değil işaretleri, dönem kilidindeki karar kapanışı ve Google iptal listesi de bu modüldedir. Doğrulama sonucu yalnız etikettir; doğrulanamayan telefonun kaydı bu yüzden reddedilmez.
+
+.tables[4].name :: ortak_sinir_sayaclari
+
+.tables[4].purpose :: 2'lik ortak sınırın (dönem, öğrenci, ders) başına kullanılan hakları ve hakkın kullanıldığı oturumlar. Satır SELECT ... FOR UPDATE ile kilitlenir; eşzamanlı iki işlem son hakkı birlikte alamaz.
+
+.tables[4].constraints[0] :: ortak_sinir_sayaclari_donem_id_ogrenci_id_ders_id_pk PRIMARY KEY (donem_id, ogrenci_id, ders_id)
+
+.tables[4].constraints[1] :: ortak_sinir_sayaclari_donem_id_fk, ortak_sinir_sayaclari_ogrenci_id_fk, ortak_sinir_sayaclari_ders_id_fk
+
+.tables[4].constraints[2] :: ortak_sinir_sayaclari_kullanilan_ck CHECK (kullanilan >= 0)
+
+.tables[4].constraints[3] :: ortak_sinir_sayaclari_kullanilan_oturum_idleri_ck CHECK (cardinality(kullanilan_oturum_idleri) = kullanilan)
+
+.tables[4].constraints[4] :: Üst sınır (ORTAK_SINIR = 2) kodda tek sabittir; CHECK'e yazılmaz, testler sabiti içe alır.
+
+.state_machines[0].transitions[0].when :: Hiçbir Ret, Beklemede ya da İncelemede kuralı uymadı; Saat doğrulanamadı ya da Yedek kodlu kayıt ortak sınırdan hak aldıysa gerekçe ORTAK_SINIRLA_KABUL.
+
+.invariants[7] :: Bir (dönem, öğrenci, ders) için ortak sınırdan en çok ORTAK_SINIR (2) oturumda, aynı oturumda en çok bir kez hak kullanılır; kullanılan hak geri verilmez.
+
+.invariants[8] :: Ortak sınırdan hak yalnız başka hiçbir kural uymayan, Var olacak Saat doğrulanamadı ya da Yedek kodlu kayıtta kullanılır.
+
+.exports[2].purpose :: D05 App Attest onayı taşıyan her yeni kayıtta, kaydın geri dönüş noktası içinde çağırır. Anahtar kilidi altında aynı anahtarın bir önceki ve bir sonraki sıra numaralı geçen onayına bakar, boşluk kabul edilir, satırı yazar; aynı (anahtar, sıra) yeniden gelirse saklı sonucu döner.
+
+.exports[3].signature :: kararHesapla(tx: Tx, kayitTaslagi: KayitTaslagi, baglam: KararBaglami): Promise<KararSonucu>
+
+.exports[3].purpose :: D05 yeni kaydı eklemeden önce çağırır. Bağlamı sahiplerinin dış yüzünden toplar, kararVer ile etiketleri, kararı, birincil ve öbür gerekçeleri, geç geldi işaretini hesaplar; Var olacak Saat doğrulanamadı ya da Yedek kodlu kayıtta ortak sınırdan hakkı aynı işlemde kullanır. Kayıt satırına yazmaz.
+
+.exports[4].signature :: kararGecmisineYaz(tx: Tx, kayitAnahtari: KayitAnahtari, karar: KararSonucu, kaynak: KararKaynagi): Promise<void>
+
+.exports[4].purpose :: D05 kayıt satırını ekledikten hemen sonra, aynı geri dönüş noktasında çağırır; ilk geçmiş satırını (sira 1, guncel) yazar. Kafa sayısı girilmiş oturumda karşılaştırmayı yeniler, eşik ilk kez aşıldıysa işareti açar. Yalnız ilk karar içindir; ikinci çağrı tekil kısıta takılır.
+
+.exports[5].purpose :: İlk karardan sonraki her geçişin tek yolu: D09 onay ve retleri, burada değil ve yeniden değerlendirme bunu kullanır. Önce kayıt anahtarından türetilen işlem kilidini (pg_advisory_xact_lock) alır, sonra güncel geçmiş satırını okur; böylece aynı kayda eşzamanlı iki geçiş sıraya girer ve ikincisi birincinin sonucunu görür. Geçiş durum makinesinde yoksa DOGRULAMA_GECIS_GECERSIZ, beklenen eski karar güncel kararla aynı değilse DOGRULAMA_KARAR_DEGISTI, birim-dönem kilitliyse DOGRULAMA_DONEM_KILITLI, hoca dersin hocası değilse DOGRULAMA_YETKISIZ_HOCA döner. Sonra önceki satırı guncel = false yapar, yeni satırı yazar, D05.kararSutunlariniYaz ve D08.devamHesaplaIsiKoy'u aynı işlemde çağırır. Karar aynıysa yazmaz. Hoca kaynaklı geçişin denetim olayını çağıran yazar.
+
+.tests[2].name :: Ortak sınır özelliği
+
+.tests[2].asserts :: fast-check (10.000 deneme) rastgele kayıt dizilerinde (etiketli, etiketsiz, aynı oturuma tekrar, önce Beklemede) bir (dönem, öğrenci, ders) için ORTAK_SINIRLA_KABUL alan farklı oturum sayısı ORTAK_SINIR'ı geçmez, kullanilan azalmaz, aynı oturum ikinci hak harcamaz, başka kural uyan kayıt hak harcamaz.
+
+.tests[26].name :: 2'lik ortak sınır uçtan uca
+
+.tests[26].asserts :: Aynı derste iki Saat doğrulanamadı kaydı Var ORTAK_SINIRLA_KABUL, üçüncüsü İncelemede ORTAK_SINIR_ASILDI; aynı oturuma ikinci kayıt hak harcamaz; Kendi beyanı dersinde de aynı.
+
+.resolved_gaps[3].decision :: Sayaç (dönem, öğrenci, ders) satırında, SELECT ... FOR UPDATE ile kilitli (yoksa önce ON CONFLICT DO NOTHING ile eklenir). Hak yalnız başka kural uymayan, Var olacak Saat doğrulanamadı ya da Yedek kodlu kayıtta kullanılır; iki etiketi taşıyan kayıt bir hak kullanır. Plan'daki "toplam en çok 2'si" oturum başına okunur: hak bir oturumda bir kez kullanılır (kullanilan_oturum_idleri), aynı oturumdaki ikinci kayıt o hakkı paylaşır ve devamı değiştirmez. Sıra varış sırasıdır; Beklemede kayıt hakkı beklemesi çözülünce kullanır. Verilen otomatik kabul geri alınmaz, sonradan Ret olan kayıt hakkı geri vermez. Ders düzeyidir (teori ve uygulama birlikte), Kendi beyanı dersinde de işler.
+
+.resolved_gaps[6].why :: Ders çıkışında yüz öğrenci aynı oturuma gönderir; tek satırı güncellemek kilit sırası yaratır (Ölçeklenme yolu (plan.html#teknoloji-olceklenme-yolu)). D13'ün GET veri değiştirmez kuralı envanterdeki derste_goruldu yazımını engelliyordu.
+
+.resolved_gaps[10].decision :: app_attest_sayaclari her iPhone kaydının (anahtar, sıra numarası, sayaç, geçti) satırını tutar. Kural: aynı anahtarın sıra numarası daha küçük en yakın geçen satırının sayacından büyük ve daha büyük en yakın geçen satırının sayacından küçük; boşluk kabul; ilk onayın alt sınırı 0. Aynı anahtarın eşzamanlı onayları anahtardan türetilen işlem kilidiyle (pg_advisory_xact_lock) sıraya girer. Tutmayan satır gecti = false yazılır ve komşu denetimine girmez. Aynı (anahtar, sıra) yeniden gelirse saklı sonuç döner.
+
+.resolved_gaps[17].decision :: D05, D04'ün packages/core/src/saat fonksiyonlarıyla çapaları kurar ve kayıt satırına yazar; kararHesapla bu sonucu (DOGRULANDI, DOGRULANAMADI, CAPALAR_AYRISIYOR ya da ULASMA_ANINI_ASIYOR; alt ve üst sınır; telefon saati; eşitleme bozukken ulaştı mı) KayitTaslagi içinde alır, D04.pencereSonucu'nu kendisi çağırır. Eşleme: DOGRULANAMADI etiket ve ortak sınır; CAPALAR_AYRISIYOR İncelemede; ULASMA_ANINI_ASIYOR Ret, eşitleme bozukken İncelemede SAAT_ESITLEMESI_BOZUK; pencere sonucu öğrenci lehine payla (D04-B01). Saat doğrulanamadı kaydında pencereyi D04 telefon saatiyle denetler. Sebep D04'ün çapa durum sütunlarında kalır.
+
+.open_points[1].recommendation :: Derste hocanın açtığı QR'lı ayarı (D02 sütunu, gelecekteki oturumlara kopyalanır); o oturumda QR gösterim kaydı hiç yoksa oturum Aşama 1 kuralıyla değerlendirilir (D02-B47). Eşleme gerekçe kataloğundaki Aşama 2 kodlarıyla (D11-B23): MAC tutmayan, başka oturumun ya da yetkisiz anahtarın QR'ı ve 30 saniyeyi aşan gecikme Ret; 10 (yedek kodda 20) ile 30 saniye arası, önce okutulmuş, gösterim dışı, hoca saati yok ve anahtar iptal İncelemede; gösterim kaydı gelene kadar Beklemede (Değişme ve kabul (plan.html#asama23-degisme-ve-kabul)). İki çapası da eski QR kaydının 2'lik ortak sınıra sayılması önerilir (D11-B20). Aşama 1 kodu ayarı false varsayılanla taşır.
+
+.open_points[3].recommendation :: D05 yoklama_kayitlari'nda karar, gerekce_kodu, karar_ani, yedi etiket_* sütunu ve gec_geldi'yi tutar ve yalnız D07'nin verdiği değerle yazar; CHECK listeleri kodlar.ts'den türer. Kayıt başına sıra, kaydın geri dönüş noktası içinde: appAttestSayaciniDenetle (yalnız App Attest onayında), kararHesapla, satırın eklenmesi, kararGecmisineYaz, ilk karar için D08.devamHesaplaIsiKoy; sayılan kayıt dizinine takılan kayıt yeniden yazılırken bu sıra aynı geri dönüş noktasından baştan çağrılır, böylece ortak sınır hakkı iki kez sayılmaz. kararSutunlariniYaz sayılan kaydı yeniden seçer ve D06.ogrenciDurumuDegisti'yi çağırır. D05'in oturum kayıt listesi ucu ve D09'un onay listeleri kafa sayısı ya da yapılmadı cevabı gelmeden o oturumun sayılarını ve listesini döndürmez (D07-B06).

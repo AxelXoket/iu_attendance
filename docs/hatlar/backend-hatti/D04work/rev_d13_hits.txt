@@ -1,0 +1,57 @@
+{
+ "name": "rotalariKaydet",
+ "signature": "function rotalariKaydet(app: FastifyInstance, rotalar: readonly RotaUygulamasi[]): void; type RotaUygulamasi<R extends RotaTanimi = RotaTanimi> = { tanim: R; isleyici: RotaIsleyicisi<R>; oncekiKancalar?: readonly preHandlerAsyncHookHandler[] }",
+ "purpose": "Modül eklentisi kendi sözleşme dosyasındaki rota tanımlarını işleyicileriyle kaydeder. Tanımın TUM_ROTALAR'da olduğunu, yolun modülün önekiyle başladığını, kimlik, rol, hız sınıfı ve gövde sınırı beyanını açılışta denetler; Fastify yolunu ({dersId} biçiminden :dersId'ye), Zod şemalarını, gövde sınırını kurar ve rotaya sırasıyla modülün kancalarını, kimlik beyanı denetimini ve hız sınıfı kancasını ekler. Kaydedileni tamlık denetimi için not eder."
+}
+{
+ "name": "uygulamaHatasi",
+ "signature": "function uygulamaHatasi<K extends HataKodu>(kod: K, ayrinti?: HataAyrintisi<K>): UygulamaHatasi",
+ "purpose": "Katalogdaki kodla fırlatılacak hatayı kurar; HTTP durumu ve mesaj katalogdan gelir, ayrinti kodun katalogdaki küçük şemasına uymak zorundadır ve kişisel veri taşımaz. Sınıf packages/contracts/src/ortak/hata.ts'tedir; D12 gibi infra/api'yi içe aktaramayan modüller aynı sınıfı oradan kurar."
+}
+{
+ "name": "istekKimligi",
+ "signature": "function istekKimligi(istek: FastifyRequest): string",
+ "purpose": "İsteğin sunucuda üretilmiş UUIDv4 kimliği. İşi tetikleyen istek varsa modül iş verisine kaynakIstekKimligi olarak koyar (D14.isGonder), işçi logu aynı kimlikle aranır."
+}
+{
+ "name": "hizSinifi",
+ "signature": "function hizSinifi(ad: HizSinifiAdi): (istek: FastifyRequest, cevap: FastifyReply) => Promise<void>; type HizSinifiAdi = 'girissiz' | 'oturum' | 'agir' | 'gonderim' | 'saat' | 'projeksiyon'",
+ "purpose": "Adlı hız sınıfını doğrulanmış kimliğe bağlı uygulayan kanca; her sınıfın tek sayaç tablosu vardır. Sınıflar ve başlangıç değerleri: girissiz IP başına dakikada 3000 (onRequest), oturum oturum başına 120, agir oturum başına 20, gonderim cihaz başına 30, saat cihaz ya da oturum başına 30, projeksiyon projeksiyon başına 60. rotalariKaydet her rotaya kendisi ekler; elle çağırmak yalnız kimliği kendi kancasında kuran modül içindir."
+}
+{
+ "name": "apiKur ve eklenti (yalnız app.ts)",
+ "signature": "function apiKur(app: FastifyInstance, b: ApiBagimliliklari): Promise<void>; const eklenti: FastifyPluginAsync; type ApiBagimliliklari = { ayarlar: { panelAdresi: string; baski: { olayDongusuGecikmesiMs: number; kullanim: number; bellekBayt: number } }; veritabani: NodePgDatabase; islem: <T>(fn: (tx: Islem) => Promise<T>) => Promise<T>; simdi: () => Date; oturumDogrula: (istek: FastifyRequest) => Promise<OturumSonucu>; saatBelgesi: (kimlik: Kimlik, deger: string) => Promise<string | null>; donemArasiMi: (tx: Islem, an: Date) => Promise<boolean>; yayinBilgisiYolu: string | null; deneme?: DenemeSecenekleri }; type Islem = Parameters<Parameters<NodePgDatabase['transaction']>[0]>[0]; type OturumSonucu = { durum: 'yok' } | { durum: 'gecerli'; kimlik: Kimlik } | { durum: 'gecersiz'; kod: HataKodu }",
+ "purpose": "apiKur kökte şu sırayla kurar: ilk kanca olarak @fastify/under-pressure (eşikler ayarlardan; pressureHandler zarflı 503 ve rastgele Retry-After verir), @fastify/cookie, @fastify/helmet (API başlıkları D15-B05: nosniff, frame-ancestors 'none', HSTS), @fastify/rate-limit (global kapalı), yalnız application/json ayrıştırıcısı, veritabanına dokunmayan kök kancalar, oturum kancası, onSend kancaları, yakalayıcılar ve rota bekçisi; böylece aşırı yükte istek veritabanına gitmeden düşer. eklenti GET /v1/surum'u kaydeder. Tipler drizzle-orm kütüphanesinden gelir, D12 içe aktarılmaz; app.ts D01'in işlevi fırlatırsa da OturumSonucu biçimine çevirir. Başka modül kullanmaz."
+}
+{
+ "name": "rotaTanimla ve RotaTanimi (packages/contracts/src/ortak/rota.ts)",
+ "signature": "function rotaTanimla<const R extends RotaTanimi>(tanim: R): R; interface RotaTanimi { modul: ModulAdi; ad: string; yontem: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; yol: string; kimlik: readonly ('girissiz' | 'oturum' | 'cihazImzasi' | 'projeksiyon')[]; roller?: readonly ('ogrenci' | 'personel' | 'hoca' | 'yonetici')[]; hiz: HizSinifiAdi; govdeSiniri?: number; istek: { yol?: z.ZodObject; sorgu?: z.ZodObject; govde?: z.ZodType; baslik?: z.ZodObject }; cevap: { durum: 200 | 201 | 204; sema: z.ZodType | null }; hatalar: readonly string[]; saatBelgesi?: boolean; istemciCevapDenetimi?: boolean; baskiDisi?: boolean; ozet: string }",
+ "purpose": "Her modül kendi sözleşme dosyasında rotalarını bununla tanımlar; tanım anında yol biçimini, önek kuralını ve beyanların varlığını denetler. Aynı nesne sunucuda rotalariKaydet'e, istemcide istemci.cagir'a verilir: yöntem, yol ve şemalar tek kaynaktan gelir."
+}
+{
+ "name": "Ortak şemalar (packages/contracts/src/ortak/)",
+ "signature": "anSemasi; gunSemasi; dersSaatiSemasi; sureMsSemasi; bindeSemasi; buyukSayiSemasi; kimlikSemasi<const A extends string>(ad: A): z.ZodType<string & { readonly __kimlik: A }>; istemciKimligiSemasi; ogrenciNoSemasi; beklenenSurumSemasi; sayfaSemasi<T extends z.ZodType>(oge: T); sayfaSorgusuSemasi; ogeSonuclariSemasi<const S extends readonly [string, ...string[]]>(sonuclar: S); imzaliMetinSemasi(s: { metinEnCok: number; imzaEnCok: number; imzaTurleri: readonly [string, ...string[]] }); surumSemasi; surumAyristir(metin: string): readonly [number, number, number] | null; surumKarsilastir(a: string, b: string): -1 | 0 | 1; MODULLER; BASLIKLAR; CEREZLER",
+ "purpose": "Zaman, sayı, kimlik, sayfalama, toplu sonuç, imzalı metin ve sürüm biçimlerinin tek tanımı (D13-B12, B13, B15, B28, B32); başlık ve çerez adlarının tek listesi. Bütün modül sözleşme dosyaları ve iki istemci bunları kullanır, kendi biçimini yazmaz."
+}
+D13.summary: api modülü sunucunun dış yüzünü tek yerde toplar: rota tablosunun biçimi ve kaydı, kök kancalar (istek kimliği, istemci başlıkları, köken denetimi, oturum kancasının bağlanması, hız sınıfları, aşırı yük), tek hata zarfı ve hata kataloğu, ortak sözleşme tipleri ve telefonla panelin paylaştığı fetch yardımcısı. Bileşim kökü app.ts bu modülündür: altyapıyı ve bütün modül eklentilerini parametreyle bağlar; infra/api hiçbir modülü içe aktarmaz, oturum doğrulama (D01), saat belgesi (D04) ve dönem arası bilgisi (D02) ona app.ts'ten işlev olarak gelir. Tek tablosu istemci_surum_esikleri, imajdaki yayin-bilgisi.json dosyasından alınan en düşük sürüm kararlarının yalnız eklenen tarihçesidir; GET /v1/surum cevabını bu tarihçeden verir ve en düşük sürümü yalnız ortak dönem arasında yükseltir. Sunucu hiçbir isteği istemci sürümüne göre reddetmez, kayıt gönderme ucu hiçbir sürüme kapanmaz. OpenAPI belgesi yalnız kırılma denetimi için üretilir; her uygulama sürümünün belgesi saklanır ve CI her değişiklikte oasdiff ile karşılaştırır.
+
+D13.tables[0].columns[12].note: Kararın verildiği an; D04'ün saat arayüzünden gelir, SQL now() kullanılmaz.
+
+D13.endpoints[0].rate_limit: girissiz sınıfı: IP başına dakikada 3000 (girişsiz uçların ortak geniş sınırı, teknik.html#sunucu-guvenlik). Cevap X-Saat-Belgesi taşımaz: girişsiz istekte belgeye yazılacak doğrulanmış özne yoktur.
+
+D13.state_machines[1].transitions[8].when: Cevap şemaya göre serileştirilir (şemada olmayan alan atılır, uymayan cevap 500). Her cevaba Cache-Control: no-store ve X-Istek-Kimligi; koşulları tutarsa X-Saat-Belgesi eklenir. onResponse istek logunu rota kalıbıyla yazar.
+
+D13.invariants[8]: istemci_surum_esikleri yalnız eklenir; karar_ani D04'ün saat arayüzünden gelir; uygulama kodu bu tabloda UPDATE ve DELETE çalıştırmaz.
+
+D13.invariants[11]: infra/api hiçbir modülü içe aktarmaz; D01, D02, D04 işlevleri ve D12 bağlantısı app.ts'ten parametreyle gelir, tipler drizzle-orm kütüphanesinden. Tek tanım düzeyi bağ tablolar.ts'in, bütün tablo dosyaları gibi, D12'nin uygulama şema nesnesini almasıdır. Modül eklentileri kayıt sırasında veritabanına dokunmaz (belge üretimi veritabanısız koşar).
+
+D13.invariants[16]: Saat belgesi yalnız doğrulanmış özneye ve D04 eşitlemeyi sağlıklı sayarken verilir; 429, 5xx ve girişsiz cevaplar belge taşımaz.
+
+D13.tests[22].asserts: Dört kanal için enSonSurum, enDusukSurum ve magazaBaglantisi dosyayla aynı; testflight'ta gecisBaglantisi dolu, ötekilerde null; android ve appstore çifti 400; X-Uygulama-Surumu eksik 400; cevap X-Saat-Belgesi taşımaz.
+
+D13.tests[28].asserts: Kimlikli istekte geçerli X-Saat-Istegi varsa 200 ve 4xx cevabı X-Saat-Belgesi taşır ve belge isteğin değerini içerir; 429, 500, 503, eşitleme bozukken, girişsiz rotada, saatBelgesi false rotada ve bozuk X-Saat-Istegi'nde başlık yoktur, istek yine işlenir.
+
+D13.resolved_gaps[13].decision: Türkçe ASCII adlar (ç c, ğ g, ı i, ö o, ş s, ü u). Yol /v1/<modül>/... ve yönetici uçları /v1/<modül>/yonetim/... (contracts.json bağlayıcı kararı); dört kök istisna /health/live, /health/ready, /v1/durum, /v1/surum. Yol bölümleri küçük harf ve tireli, koleksiyon çoğul, kaynak kimliği yolda UUID, en çok iki düzey iç içe; durum geçişleri kaynak altında eylem (POST .../erken-kapat). JSON alanları camelCase, kod değerleri BÜYÜK_HARF; cevap kökü her zaman nesne; değeri olmayan alan null döner, atlanmaz. DELETE yalnız gerçekten kapanan şeyde; pasifleştirme ve arşivleme eylem ucuyla. Öğrenci numarası, kod, anahtar ve jeton yola ve sorguya girmez; numarayla arama gövdeli POST ile. Başlık adları da aynı kurala uyar (X-Istek-Kimligi, X-Saat-Belgesi). İnventerdeki /v1/yonetim/hocalar örneği bağlayıcı önek kararıyla geçersiz.
+
+D13.resolved_gaps[21].decision: Başlık çifti: istekte X-Saat-Istegi (16 rastgele baytın base64url'i, 22 karakter), cevapta X-Saat-Belgesi. Kök onSend kancası şu koşulların hepsi tutarsa belgeyi D04'ün işleviyle (app.ts'ten) üretip ekler: istekte geçerli X-Saat-Istegi var; rotanın saatBelgesi bayrağı false değil (D04'ün kendi belge ucu false); istekte doğrulanmış özne var (öğrenci ya da cihaz için cihaz kimliği, hoca için oturum kimliği); durum 2xx ya da 4xx ve 429 değil; D04 eşitlemeyi sağlıklı sayıyor. Gönderim cevabı da aynı başlığı taşır (gönderim öncesi belge isteğinin yerini tutmaz, plan.html#teknoloji-sunucu-yeri). Girişsiz uçlar belge taşımaz; panel X-Saat-Istegi koymaz. Başlıklar OpenAPI'de ortak istek ve cevap başlığıdır; belgenin içeriği, imzası ve doğrulaması D04'ün.
+

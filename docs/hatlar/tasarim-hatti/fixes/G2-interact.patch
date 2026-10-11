@@ -1,0 +1,69 @@
+--- variants/A2/tools/interact.js	2026-10-06 09:19:08.719359000 +0300
++++ g2work/verify/variants/A2/tools/interact.js	2026-10-06 11:31:11.844499500 +0300
+@@ -165,10 +165,7 @@
+     check('backup code: one term (Yedek kodu gir, Yedek kod; never Kodla gir)', /Yedek kodu gir/.test(t.scan) && !/Kodla gir/.test(t.all));
+     await ev(`document.querySelector('[data-scan]').click()`); await sleep(200); await shot('17-scan-lock', '#scr-scan');
+     check('scan: frame locks on detection', await ev(`document.querySelector('#ph-scan .scan-frame').classList.contains('lock')`));
+-    check('scan: the attendance QR screen opens at 2x (plan.html#asama23-okutma)', await ev(`document.querySelector('[data-zoom="2"]').getAttribute('aria-checked') === 'true' && /scale\\(2\\)/.test(document.querySelector('#ph-scan .cam').style.transform)`));
+-    await ev(`document.querySelector('[data-zoom="1"]').click()`); await sleep(400); await shot('18-scan-1x', '#scr-scan');
+-    check('scan: 1x zooms out to the whole room', /scale\(1\)/.test(await ev(`document.querySelector('#ph-scan .cam').style.transform`)) && await ev(`document.querySelector('[data-zoom="1"]').getAttribute('aria-checked') === 'true'`));
+-    await ev(`document.querySelector('[data-zoom="2"]').click()`); await sleep(400); await shot('18-scan-2x', '#scr-scan');
++    // G2 copy: the 1x and 2x control is gone (finding 26); see g2-checks B1, B21 for the corner checks.
+   }
+ 
+   /* 9. Success moment, frame by frame. Animations are paused at exact times with the Web Animations API.
+@@ -211,7 +208,7 @@
+     await ev(`document.querySelector('[data-receipt]').click()`); await sleep(300); await shot('21-success-offline', '#scr-success');
+     const off = await ev(`(() => { const l = document.querySelector('#ph-success .rsteps[data-v=off]'); const st = [...l.querySelectorAll('.rs')]; const m = st[1].querySelector('.rs-m'), cs = getComputedStyle(m); return { visible: getComputedStyle(l).visibility, wait: st.map(s => s.classList.contains('wait')), time: st[1].querySelector('.rs-time').textContent, bg: cs.backgroundColor, bd: cs.borderTopColor, help: document.querySelector('#ph-success .ok-help [data-v=off]').textContent }; })()`);
+     check('receipt offline: hollow pending nodes and "bekliyor"', off.visible === 'visible' && off.wait.join() === 'false,true,true' && off.time === 'bekliyor' && rgbHex(off.bg) === hexOf('neutral.2') && rgbHex(off.bd) === hexOf('neutral.9'), off);
+-    check('receipt offline copy', off.help === 'İnternet gelince kendiliğinden gönderilir. Uygulamayı kapatabilirsin.', off.help);
++    check('receipt offline copy', off.help === 'İnternet gelince, uygulamayı açtığında gönderilir.', off.help);
+     await ev(`document.querySelector('[data-receipt]').click()`); await sleep(200);
+   }
+ 
+@@ -244,7 +241,7 @@
+     await ev(`document.querySelectorAll('#pnl-tabs [role=tab]')[0].click()`); await sleep(320);
+     const tot = await ev(`(() => { const tabs = [...document.querySelectorAll('#pnl-tabs [role=tab]')].map(t => ({ f: t.dataset.filter, n: +t.querySelector('.cnt').textContent })); const figs = [...document.querySelectorAll('#scr-panel .pfig')].map(f => ({ k: f.querySelector('.k').textContent.trim(), n: +f.querySelector('.n').textContent })); const rows = [...document.querySelectorAll('#pnl-table tbody tr')]; const by = f => rows.filter(r => r.dataset.f === f).length; return { tabs, figs, rows: rows.length, by: { var: by('var'), yok: by('yok'), bekleyen: by('bekleyen'), diger: by('diger') }, foot: document.querySelector('[data-total-line]').textContent }; })()`);
+     const all = tot.tabs.find(t => t.f === 'all').n, parts = tot.tabs.filter(t => t.f !== 'all');
+-    check('totals: one class size everywhere (rows, Tümü, figure)', tot.rows === all && tot.figs[0].n + tot.figs[1].n + tot.figs[2].n + tot.figs[3].n === all && /^53 öğrenci:/.test(tot.foot), { rows: tot.rows, all, figs: tot.figs });
++    check('totals: one class size everywhere (rows, Tümü, figure)', tot.rows === all && tot.figs[0].n + tot.figs[1].n + tot.figs[2].n + tot.figs[3].n === all && new RegExp('^' + all + ' öğrenci:').test(tot.foot), { rows: tot.rows, all, figs: tot.figs });
+     check('totals: groups partition the class and match the rows', parts.reduce((a, t) => a + t.n, 0) === all && parts.every(t => t.n === tot.by[t.f]), { parts, by: tot.by });
+     check('totals: figures equal the filter counts', tot.figs[0].n === tot.by.var && tot.figs[1].n === tot.by.yok && tot.figs[2].n === tot.by.bekleyen && tot.figs[3].n === tot.by.diger, tot.figs);
+     for (const [i, t] of tot.tabs.entries()) {
+@@ -255,14 +252,14 @@
+     await ev(`document.querySelectorAll('#pnl-tabs [role=tab]')[0].click()`); await sleep(60);
+     const fin = await ev(`[...document.querySelectorAll('#pnl-table tbody tr')].map(r => r.children[6].textContent.trim())`);
+     const NAMES = ['Var', 'Yok', 'Görevli', 'Belgeli düzeltme', 'Elle eklendi', 'Devamdan muaf'];
+-    check('Son durum: only the brief\'s names, empty until final', fin.every(x => x === '' || NAMES.includes(x)) && fin.includes('') && NAMES.every(n => fin.includes(n)), [...new Set(fin)]);
++    check('Son durum: only the brief\'s names, empty until final', fin.every(x => x === 'son durum henüz yok' || NAMES.includes(x)) && fin.includes('son durum henüz yok') && NAMES.every(n => fin.includes(n)), [...new Set(fin)]);
+     check('panel: "Karar bekleniyor" and "Onayını bekliyor" are gone', await ev(`!/Karar bekleniyor|Onayını bekliyor/.test(document.querySelector('#scr-panel').textContent)`));
+     const chips = await ev(`(() => { const bg = s => getComputedStyle(s).backgroundColor; return { yok: [...document.querySelectorAll('#pnl-table .ind.st-yok')].map(bg), ret: [...document.querySelectorAll('#pnl-table .ind.st-ret')].map(bg), var: [...document.querySelectorAll('#pnl-table .ind.st-var')].map(bg), yokInk: getComputedStyle(document.querySelector('#pnl-table .ind.st-yok')).color }; })()`);
+     const rose = hexOf(T.color.status.danger.subtle);
+     check('exception chips: only Yok and Ret get the rose ground, Var stays white', chips.yok.length > 0 && chips.ret.length > 0 && chips.yok.concat(chips.ret).every(c => rgbHex(c) === rose) && chips.var.every(c => rgbHex(c) === 'transparent'), { rose, yok: chips.yok[0], var: chips.var[0] });
+     check('exception chips: red ink on rose at least 4.5:1, rose hue 0 to 30', C.wcagRatio(rgbHex(chips.yokInk), rose) >= 4.5 && C.hexToOklch(rose).H <= 30, [C.wcagRatio(rgbHex(chips.yokInk), rose).toFixed(2), C.hexToOklch(rose).H]);
+     // Hit area: geometry, hit testing at the corners of a 22 px square, then a real mouse click 10 px off centre.
+-    const cb = await ev(`(() => { const r = document.querySelectorAll('#pnl-table tbody tr')[1]; r.scrollIntoView({ block: 'center' }); const l = r.querySelector('label.cb'), i = r.querySelector('input'); const lr = l.getBoundingClientRect(), ir = i.getBoundingClientRect(); const cx = ir.left + ir.width / 2, cy = ir.top + ir.height / 2; const pts = [[-11, -11], [11, -11], [-11, 11], [11, 11]].map(([dx, dy]) => { const e = document.elementFromPoint(cx + dx, cy + dy); return !!e && (e === i || e.closest('label') === l); }); return { lw: lr.width, lh: lr.height, iw: ir.width, cx, cy, pts, checked: i.checked }; })()`);
++    const cb = await ev(`(() => { const r = document.querySelectorAll('#pnl-table tbody tr')[1]; r.scrollIntoView({ block: 'center' }); const l = r.querySelector('label.cb'), i = r.querySelector('input'); const lr = l.getBoundingClientRect(), ir = i.getBoundingClientRect(), pz = document.querySelector('#scr-panel'), z = pz.getBoundingClientRect().width / pz.offsetWidth; const cx = ir.left + ir.width / 2, cy = ir.top + ir.height / 2; const pts = [[-11, -11], [11, -11], [-11, 11], [11, 11]].map(([dx, dy]) => { const e = document.elementFromPoint(cx + dx, cy + dy); return !!e && (e === i || e.closest('label') === l); }); return { lw: lr.width / z, lh: lr.height / z, iw: Math.round(ir.width / z * 100) / 100, cx, cy, pts, checked: i.checked }; })()`);
+     check('checkbox: drawn 16 px, hit area at least 24 x 24 px', cb.iw === 16 && cb.lw >= 24 && cb.lh >= 24, { label: cb.lw + 'x' + cb.lh, box: cb.iw });
+     check('checkbox: hit test reaches 11 px from the centre in every direction', cb.pts.every(Boolean), cb.pts);
+     await mouse('mouseMoved', cb.cx + 10, cb.cy + 10); await mouse('mousePressed', cb.cx + 10, cb.cy + 10); await mouse('mouseReleased', cb.cx + 10, cb.cy + 10); await sleep(80);
+@@ -402,7 +399,7 @@
+     check('no status ink in hue 220 to 290 except Var', ['gorevli', 'belgeli', 'elle', 'muaf', 'yok'].every(k => H(k).C < 0.04 || H(k).H < 220 || H(k).H > 290) && H('var').H >= 220 && H('var').H <= 290, Object.fromEntries(Object.keys(ink).map(k => [k, H(k)])));
+     const muaf = await ev(`getComputedStyle(document.querySelector('.st-grid .stamp.st-muaf')).borderTopStyle`);
+     check('Devamdan muaf stamp has a dashed frame', muaf === 'dashed', muaf);
+-    const lv = await ev(`(() => { const rows = [...document.querySelectorAll('.warn-row')]; const bars = [...document.querySelectorAll('.lvl-bar i')]; return { bg: rows.map(r => getComputedStyle(r).backgroundColor), minH: Math.min(...bars.map(b => b.getBoundingClientRect().height)), home: [...document.querySelectorAll('#ph-home .lvl-t')].map(x => x.textContent) }; })()`);
++    const lv = await ev(`(() => { const rows = [...document.querySelectorAll('.warn-row')]; const bars = [...document.querySelectorAll('.lvl-bar i')]; return { bg: rows.map(r => getComputedStyle(r).backgroundColor), minH: Math.min(...bars.map(b => { const sc = b.closest('.device-screen'); const z = sc ? sc.getBoundingClientRect().width / sc.offsetWidth : 1; return Math.round(b.getBoundingClientRect().height / z * 10) / 10; })), home: [...document.querySelectorAll('#ph-home .lvl-t')].map(x => x.textContent) }; })()`);
+     check('warning level 4 is the only filled red banner', rgbHex(lv.bg[3]) === hexOf(T.color.status.danger.solid) && lv.bg.slice(0, 3).every(b => rgbHex(b) === 'transparent'), lv.bg);
+     check('level meter: labelled "Seviye n/4" (the plan word, D6), segments at least 8 px', lv.minH >= 8 && lv.home.join() === 'Seviye 2/4,Seviye 1/4', lv);
+     const home = await ev(`getComputedStyle(document.querySelector('#ph-home .now-fig .n')).color`);
+@@ -444,8 +441,8 @@
+     check('reduced preview: switch sets html.rm', rmOn);
+     check('reduced preview: ground control, the OS setting changes the motion of many elements', diffAC.length >= 20, diffAC.length + ' elements differ');
+     check('reduced preview: every element moves exactly as under prefers-reduced-motion', diffAB.length === 0 && keys.length > 1000, diffAB.length ? diffAB.slice(0, 3).map(k => A1[k] + ' VS ' + B1[k]) : keys.length + ' elements compared');
+-    await ev(`document.querySelector('[data-zoom="2"]').click()`); await sleep(50);
+-    check('reduced preview: script-driven motion follows it too (camera zoom without transition)', await ev(`document.querySelector('#ph-scan .cam').style.transition === 'none'`));
++    
++    
+     check('reduced preview: the durations swap too', JSON.stringify(await ev(durs)) === JSON.stringify(wantRed));
+     // Reduced motion, pattern by pattern (the preview reproduces the OS setting, checked above).
+     await ev(`(() => { const b = document.querySelector('[data-sort]'); b.scrollIntoView({ block: 'center' }); b.click(); return true; })()`);

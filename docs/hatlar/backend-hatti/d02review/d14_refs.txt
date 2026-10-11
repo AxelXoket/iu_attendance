@@ -1,0 +1,66 @@
+
+[isTanimla]
+ SIG: isTanimla<V>(tanim: { kuyruk: KuyrukTanimi<V>; isleyici: (veri: V, baglam: IsBaglami) => Promise<void>; sureAsimiSaniye: number; kalpAtisiSaniye?: number; deneme?: { sayi?: number; beklemeSaniye?: number; ustel?: boolean }; zamanlama?: { cron: string; sonra?: readonly string[] } }): IsTanimi<V>
+ PURPOSE: Saf: tanımı doğrular ve döndürür; modül jobs/<modül>/index.ts dosyasında export const isler dizisine koyar, worker.ts toplar. sureAsimiSaniye zorunlu (10-3.600), deneme sayısı 0-5 (varsayılan 3), bekleme 1-3.600 saniye (varsayılan 30, üstel), cron 5 alanlı, tz her zaman Europe/Istanbul. Ad tekliği, sonra başvuruları ve çizelge kuralları işçi açılışında, kur'da ve sözleşme testinde denetlenir.
+
+[KuyrukTanimi (tip, sözleşme)]
+ SIG: type KuyrukTanimi<V> = { readonly ad: string; readonly veri: z.ZodType<V>; readonly politika: 'standard' | 'stately' | 'exclusive' }  // packages/contracts/src/is-kuyrugu.ts
+ PURPOSE: Kuyruk sözleşmesi: sahibi modül kendi modules/<ad>/ klasöründe nesne olarak yazar, hem isGonder hem isTanimla aynı nesneyi alır (jobs klasörü modülün index.ts'ini içe aktarır, tersi olmaz; döngü kurulmaz). Ad deseni ^[a-z][a-z0-9_]{2,62}$, _olu soneki yasak. Veri şeması strict nesne, alan adı _ ile başlamaz (_istekKimligi D14'e ayrılmış); yapraklar yalnız z.uuid, z.iso.date, z.iso.datetime, açık min ve max'lı z.int (mutlak değer en çok 100.000; 6 haneli kod ve öğrenci numarası sığmaz), z.boolean, z.enum ve en çok 1.000 elemanlı diziler. Denetim Zod 4'ün toJSONSchema çıktısı üzerinde yapılır.
+
+[IsBaglami (tip)]
+ SIG: type IsBaglami = { isId: string; kuyruk: string; deneme: number; tetiklemeAni: Date; istekKimligi: string | null; log: Logger; iptal: AbortSignal }
+ PURPOSE: İşleyiciye verilen bağlam: tetiklemeAni pg-boss createdOn (includeMetadata), iptal pg-boss'un süre aşımı ya da kapanış sinyali, log isId, kuyruk ve deneme ile alt kaydedici. İstanbul tarihine çevirme D04'ün saat yardımcısıyla yapılır.
+
+[kuyruklariKur (bileşim kökü)]
+ SIG: kuyruklariKur(secenek: { sahipBaglantiAdresi: string; tanimlar: readonly IsTanimi<unknown>[]; log: Logger; testSaati?: TestClock }): Promise<{ acilan: string[]; guncellenen: string[]; kaldirilanZamanlama: string[]; tanimsizKuyruk: string[] }>
+ PURPOSE: Yayın adımında worker.ts kur ile (db:migrate'in üçüncü adımı) sahip rolle: sürüm ve kayma denetimi, pgboss yetkileri, kuyruk ve ölü kuyruk ayarları, zamanlamaların kayıtla eşitlenmesi. Kayıttan kalkan kuyruk silinmez, raporlanır (__pgboss önekli iç kuyruklar sayılmaz). Tekrar çalışınca aynı sonuç, ikincide boş rapor.
+* D14.jobs.1.schedule :: Her gün 02:45 Europe/Istanbul (cron '45 2 * * *', tz 'Europe/Istanbul', missed: 'once'); kuyruk politikası exclusive, süre aşımı 300 saniye, 3 deneme.
+
+* D14.state_machines.1.transitions.1.when :: Cron anı Europe/Istanbul ile geldi; exclusive kuyrukta bekleyen ya da çalışan iş varsa yeni iş açılmaz; işçi kapalıyken kaçan günlük iş açılışta bir kez (missed: once).
+
+* D14.invariants.6 :: Her zamanlama Europe/Istanbul ile kayıtlıdır; günlük ve seyrek işler missed: once ile kayıtlıdır, 03:00-05:00 arasında başlamaz ve aralarında en az 5 dakika vardır.
+
+* D14.tests.6.asserts :: Zamanlaması açık işçi durdurulup saat setTime ile 3 gün ileri alınır, işçi açılıp saat 1 dakika ilerletilince eposta_gonderim_temizligi kuyruğunda tam 1 iş oluşur (missed: once, 3 kaçan gün için 3 değil); her dakika çalışan test işinde yalnız açılıştan sonraki dakika için 1 iş oluşur, kaçan dakikalar için oluşmaz (skip).
+
+* D14.tests.14.asserts :: Kayıttaki her zamanlama için 14 günlük örnek dönemde tetikleme anları cron-parser ile Europe/Istanbul üretilir: günlük ve seyrek işlerin hiçbiri 03:00-05:00 arasında başlamaz, aralarında en az 5 dakika vardır, sonra listesindeki her iş en az 10 dakika önce tetiklenir; günlük işler missed: once, sık işler skip; politika exclusive ya da stately. Kural bozan örnek kayıt IS_KUYRUGU_ZAMANLAMA_KURALI verir.
+
+* D14.resolved_gaps.4.gap :: D14-B05
+
+* D14.resolved_gaps.4.decision :: Sunucu işleri pg-boss'ta; makine işleri (pg_dump, pgBackRest, xprem birim yedeği, log arşivi) makinede ve D12 ile D15'indir. pg-boss zamanlama kuralları D14'ündür ve işçi açılışı, kur ve sözleşme testi denetler: tz her zaman Europe/Istanbul; günlük ve seyrek işler 03:00-05:00 arasında başlamaz, aralarında en az 5 dakika olur, missed: once ile kaydedilir; sık işler missed: skip. Önerilen yerleşim İşler bölümündeki çizelgede; sahibi modül cron'unu isTanimla'da yazar, sıra gereken iş sonra listesiyle bildirir (ör. gece_inceleme_siralamasi 05:50, pencere_beklemede_kesinlestir 05:15, bekleyen_kararlari_coz 05:25 ve devam_tutarlilik_denetimi 05:35'ten sonra).
+
+* D14.resolved_gaps.4.why :: Envanterdeki 02:15 pg_dump önerisi D12'nin 03:30 seçimiyle değişti; 03:00-04:00 aynı zamanda geçmişteki yaz saati geçişinin saatidir. Kural saat yerine pencereye bağlanınca sahibi modül saatini değiştirebilir, çakışmayı test yakalar. missed varsayılanı skip'tir (pgboss.io/api/scheduling): işçi kapalıyken gece işi hiç çalışmazdı.
+
+* D14.resolved_gaps.5.decision :: oturum_pencere_kapat (D04) her dakika ('* * * * *'), exclusive, missed: skip; sonraki çalışma kaçanların hepsini toplar. Kararlar alanın değil kapanış anının kendisine dayanır (D04'ün kuralı); iş yalnız görünen durumu günceller.
+
+* D14.resolved_gaps.6.decision :: Parti (hoca, İstanbul tarihi) tekil anahtarıyla bir kez yazılır, aynı güne ikinci çalışma var olan partiye dokunmaz; tablo ve kural D09'undur. D14'ün payı: gece_inceleme_siralamasi exclusive ve missed: once ile günde bir tetiklenir; işleyiciye tetiklemeAni (pg-boss createdOn) verilir; İstanbul tarihine çevirme D04'ün saat yardımcısıyla yapılır, D14 ikinci bir dönüştürücü vermez.
+
+* D14.resolved_gaps.7.gap :: D14-B08
+
+* D14.resolved_gaps.7.why :: pg-boss'ta tz yazılmazsa UTC'dir (pgboss.io/api/scheduling). Sabit +03:00 saat dilimi verisi güncellemesiyle düzelmez; Intl yasağı packages/core içindir (teknik.html#kod), sunucu tam ICU'lu Node ile çalışır. Ay ve gün adını kendi tablomuzdan almak ICU yerel verisindeki biçim farkını kapatır.
+
+* D14.resolved_gaps.8.gap :: D14-B09
+
+* D14.resolved_gaps.8.decision :: Kural sonuçları (son gün bitişi, gönderme süresi, kafa sayısı kesinleşmesi) okuma ya da varış anında saat arayüzüyle hesaplanır; işler yalnız kalıcı yan etki yazar. Kilitte onaysız kalan kayıtların denetim kaydı ayrı iş değil, D02'nin donem_kilidi işi (00:05) içindeki D07 adımıdır.
+
+* D14.queue_policy.11.ayar :: schedule: tz, missed
+
+* D14.schedule_plan.0.not :: exclusive, missed skip
+
+* D14.schedule_plan.4.is :: donem_kilidi
+
+* D14.schedule_plan.4.sahip :: D02
+
+* D14.schedule_plan.5.not :: sonra: donem_kilidi
+
+* D14.schedule_plan.6.is :: aksis_gun_sonu_anligi
+
+* D14.schedule_plan.7.is :: deneme_dersi_oturumlari
+
+* D14.schedule_plan.15.saat :: 03:00-05:00
+
+* D14.schedule_plan.26.is :: takvim_oturumlarini_yenile, esitleme_sonrasi_yeniden_degerlendir, devam_hesapla, projeksiyon_baglanti_kapat
+
+* D14.schedule_plan.26.sahip :: D02, D04, D08, D11
+
+* D14.error_codes.4.ne_zaman :: Günlük iş 03:00-05:00 arasında, iki günlük iş 5 dakikadan yakın, sonra listesindeki iş 10 dakika önce değil ya da yok, missed kuralı bozuk.
+

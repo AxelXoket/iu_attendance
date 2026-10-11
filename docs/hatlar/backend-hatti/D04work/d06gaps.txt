@@ -1,0 +1,93 @@
+GAP D06-B01: Gönderim ucu tek toplu uç mu (bütün kuyruk öğe türleri tek pakette), yoksa her öğe türü için ayrı uç mu?
+  REC: Tek toplu uç, yeni bir 'esitleme' modülünde. Gerekçe: sıra numarası tek alandır ve sunucu 'cihazdan aldığı son sıra numarasını' bildirir (plan.html#gun-kenar-durumlar); ikinci çapa paket başına imzalanır (plan.html#gun-ikinci-capa); 'Her gönderim tek kısa veritabanı işlemi' (plan.html#teknoloji-sunucu-yeri) ve 'gönderim baştan sona tek bağlantıda, tek işlemde' (teknik.html#sunucu-mimari). Modül sınırı korunur: esitleme modülü yalnız dağıtıcıdır, iş kuralı ve tablo yazımı sahibi modülün dış yüzündedir (teknik: dış yüz tx'i parametreyle alır). Bilinmeyen öğe türü (yeni istemci, eski sunucu) öğe sonucu 'tekrar_dene' ve gerekçe 'tur_bilinmiyor' alır, atılmaz.
+
+GAP D06-B02: Gönderim paketinin zarfı nedir, ikinci çapa için paketin hangi baytları imzalanır ve sunucu neyi doğrular?
+  REC: Birinci seçenek. Kaydın kendi zarf ilkesiyle aynı (teknik.html#sunucu-imza-dogrulama: zarf = metin, imza türü, imza); JSON ayrıştırıcıdan bağımsız doğrulanır; yalnız ikinci çapanın gerektirdiği veriyi bağlar; bölünen pakette yalnız bu küçük metin yeniden imzalanır. Çapa metni, kayıtların hesaplanan saatinin dayanağı olduğundan kayıtla birlikte kanıt olarak saklanır (plan: ham kayıt kanıttır). Çapa bölümü yoksa (imzalanamadı) öğeler yine işlenir, ikinci çapa gerektiren kayıt 'tekrar_dene' alır. Biçimin içeriği D04 (saat belgesi) ve D07 (çapa denetimi) ile birlikte yazılır.
+
+GAP D06-B03: Hangi hatalar paketin tamamını 400 ya da 413 ile düşürür, hangileri yalnız o öğeye 'ret' verir; gövde sınırı kaç bayt?
+  REC: Birinci seçenek. Gövde sınırı en büyük paketten hesaplanır: makbuz zarfı tahmini 600 ile 900 bayt (teknik.html#telefon-kamera-qr), base64 ve alan payıyla öğe başına yaklaşık 1,5 KB, 200 öğe yaklaşık 300 KB; sınır 512 KB yazılır ve 200 öğelik en büyük paket testte gönderilir. 200'ü aşan paket 413 alır, çünkü telefonun 413 tepkisi bölmektir (teknik.html#telefon-gonderme-protokolu). Hata gövdesi biçimi D13'ündür.
+
+GAP D06-B04: Öğe sonucunun tam sözlüğü ve cevapta öğe başına hangi alanlar döner; telefon bilinmeyen bir sonuç değerini ne yapar?
+  REC: Birinci seçenek. 'zaten_var' da saklanan ulaşma anını ve güncel kararı döndürür; böylece hoca okutmasıyla ulaşmış kaydı yeniden yollayan öğrenci telefonu makbuzu 'Sunucuya ulaştı' yapar (plan.html#kararlar-kayit-ve-makbuz). Bilinmeyen değer tekrar_dene sayılır, en uzun bekleme aralığıyla ve günlük sayaca yazılarak: 'makbuzu olan kayıt kaybolmaz' kuralını (teknik.html#testler-birim) bozmayan tek seçenek budur. Zaman alanları metin, UTC (teknik: tarih metin olarak).
+
+GAP D06-B05: Öğe sonucu 'ret' (kayıt sunucuya ulaşmadı) ile sunucu kararı 'Ret' (kayıt ulaştı, saklandı, sayılmaz) ayrımı hangi gerekçede hangisidir?
+  REC: Birinci seçenek: 'ham kayıt kanıttır, atılmaz' (plan.html#kararlar-cihaz-dogrulamasi); öğrenci kararı görür ve 'Kaydım yanlış derse düştü' gibi sorun bildirebilir (tasarım, Sorun bildir); Hedefler'deki 'işaretlenmeden kabul' oranı saklanan kararlar üzerinden hesaplanır. Her gerekçe kodunun sınıfı sözleşmede yanında yazılır; gerekçelerin kendisi D05 ve D07'nin. Öğrencinin ekranda ne gördüğünü değiştirdiği için sahibin onayı istenir.
+
+GAP D06-B06: Öğe düzeyinde 'tekrar dene' hangi durumlarda döner ve telefon o öğeyi nasıl bekletir?
+  REC: Birinci seçenek: tek öğenin geçici sorunu öbür 199 öğeyi bekletmez; aralık plandaki yeniden deneme kuralıyla aynıdır (teknik.html#telefon-gonderme-protokolu), her deneme günlük sayaçlarda 'başarısız deneme' olarak sayılır. Gönderme süresi geçse de öğe atılmaz (plan.html#kararlar-gonderme-suresi: geç kayıt reddedilmez).
+
+GAP D06-B07: 'Cihazdan alınan son sıra numarası' nasıl tanımlanır: en büyük sıra mı, kesintisiz su seviyesi mi; sıra numarası hangi öğeleri kapsar ve dönemle sıfırlanır mı?
+  REC: Birinci seçenek, telefonda tek uçuş kuralıyla birlikte (ön plan ve arka plan aynı kilidi paylaşır). Sıra kurulum başına tek ve hep artan, dönemle sıfırlanmaz; (dönem, cihaz, sıra) tekilliği yoklama tablosunda kalır (teknik.html#veritabani). Gönderim retleri defterde saklandığından su seviyesi onların üstünden geçer; reddedilmiş öğe sürüm değişince yeniden geldiğinde defter sonucu önbellek gibi kullanılmaz, öğe yeniden değerlendirilir. Defter aynı zamanda Hedefler'deki '(cihaz, sıra numarası) boşlukları' ölçümünün kaynağıdır. Su seviyesi gönderim ve indirme cevaplarının hepsinde 'son_sira' olarak döner.
+
+GAP D06-B08: Hocanın telefonu için sıra numarası ve tekrar gönderme anahtarı nerede tutulur; hoca telefonunun sunucuda kalıcı bir kimliği var mı?
+  REC: Birinci seçenek. Planın kurtarma kuralını hoca işlerine de uygular, yeniden girişte bozulmaz, Aşama 2'de hocanın en çok 3 cihaz anahtarı (teknik.html#telefon-kamera-qr) aynı satıra bağlanır. Giriş için 'tanınan cihaz' sayılmadığından teknik.html#sunucu-kimlik kararıyla çelişmez; yine de bu ayrım teknik.html'e yazılmalı. Her hoca işi ayrıca kendi UUIDv7 öğe kimliğini taşır (kayıttaki tekrar gönderme anahtarı ilkesi).
+
+GAP D06-B09: Hoca işleri hangi sırayla uygulanır ve aynı oturumun ayarı için birden çok kaynaktan (en çok 3 telefon ve panel) gelen işler nasıl çözülür; iş hangi hesaba aittir?
+  REC: Birinci seçenek. Pencere değişikliğinin anlamı ve geç gelen değişiklikte kararların yeniden verilmesi D04'ün; bu alanın sorumluluğu her işin çapalı işlem anını ve hesabını taşımak ve sunucuda sıralı uygulamaktır. 'girişten sonra gider' kuralı (plan.html#kararlar-roller, Hoca oturumu) böylece yanlış hesaba gitmeden korunur.
+
+GAP D06-B10: Gönderim ucunda kimlik doğrulama nasıl yapılır; öğrencinin oturumu kapandıktan sonra (cihaz değişimi) eski telefondaki ya da yedekten dönen imzalı bekleyen kayıtlar nasıl ulaşır?
+  REC: Birinci seçenek: planın 'yoklama kayıtları donanım anahtarıyla imzalanır' ilkesinin doğrudan karşılığıdır ve bekleyen kayıtları hiçbir zaman engellemez (plan.html#dagitim-guncelleme-ilkesi). Paket düzeyinde 401 yalnız istek hiçbir öğe için doğrulanamıyorsa döner. Hız sınırı doğrulanmış cihaza bağlı kalır (teknik.html#sunucu-guvenlik). Pasif cihazın değişimden sonraki saatli kayıtlarının kararı D07'nindir.
+
+GAP D06-B11: Öğrencinin kendi kayıtlarının kararları, hoca okutmasıyla ulaşan kayıtları, düzeltmeleri ve son durumları telefona hangi yolla iner?
+  REC: Birinci seçenek: genel sıcak satır yok, yalnız o öğrencinin satırı kilitlenir; dönemde öğrenci başına en çok yaklaşık 170 oturum olduğundan tam liste küçüktür; ayrı istek açmadığı için ders çıkışındaki 2 ile 3 istek bütçesi korunur (plan.html#teknoloji-sunucu-yeri). Uç öğrencinin oturum anahtarıyla doğrulanır ('diğer istekler (kendi kayıtları, sorun bildirimi) kayıtta verilen oturum anahtarıyla gider'). Telefon sunucunun listesinde bulunan her yerel kaydı 'ulaştı' yapar ve yeniden denemesini durdurur. Bölümün alanları kalan hak ve uyarı hesabı için D08'le, karar ve etiketler için D05 ve D07'yle yazılır.
+
+GAP D06-B12: Kararın telefona ulaştığı an sunucuda nasıl belirlenir?
+  REC: Birinci seçenek: kesin, ucuz (yalnız bildirilen sürüm sunucudaki onaylanmış sürümden büyükse yazar) ve kaybolan cevapta yanlış başlatmaz. Her karar değişikliği öğrencinin o anki durum sürümüyle kaydedilir; onay gelince o öğrencinin bu sürüme kadarki teslim anı boş kararlarına tek UPDATE ile teslim anı yazılır. Teslim anı kural taşıdığı için SQL now() ile değil ortak saat arayüzünden yazılır (teknik.html#testler, Saat ve sahteler). Kayıt (dönem, kimlik) çiftiyle başvurur (teknik.html#veritabani-donem-alani). Karar sonradan değişirse sürenin yeniden başlayıp başlamadığı D09'un kuralıdır; bu alan her karar sürümü için teslim anını sağlar.
+
+GAP D06-B13: Sunucu 'telefonu sunucuya hiç bağlanmamış' öğrenciyi nasıl bilir; bağlantı neyi kapsar?
+  REC: Birinci seçenek. Kurulum satırı her doğrulanmış istekte güncellenir: gönderim yolunda zaten açık olan işlemde, indirme yolunda tek satırlık birincil anahtar güncellemesiyle (ders çıkışında saniyede en çok birkaç yüz; yük testinde ölçülür). Seyreltme yapılmaz: son oturumun kapanışından hemen sonraki bir temas atlanırsa öğrenci yanlışlıkla KARAR BEKLİYOR görünür. Son temas anı kural taşıdığı için ortak saat arayüzünden yazılır. Hesabın kendisi D08 ve D10'un; bu alan verinin toplanmasını ve doğruluğunu sağlar.
+
+GAP D06-B14: İndirme ucunun biçimi, imlecin teldeki biçimi ve sayfalama nasıl olur; imleç hesap ve rol başına mı tutulur?
+  REC: Birinci seçenek: ders çıkışındaki 'gerekirse değişenler' tek istektir (plan.html#teknoloji-sunucu-yeri). Sayfa sınırı sürüm sınırında kesilir: bir işlem tek sürüm aldığından aynı sürümün satırları bölünmez (büyük liste yüklemesi tek sayfada gelebilir). İmleç metin olduğu için 64 bit sorun olmaz ve istemci içini yorumlamaz. Sayfalama ve sorgu parametresi kuralları D13'le uyumlu yazılır.
+
+GAP D06-B15: Kullanıcının kapsamı değişince (derse sonradan eklenme, listeden çıkarılma ya da pasif olma, şube değişimi, derse hoca atanması ya da hocanın dersten alınması) süzülmüş indirme ne gönderir; hangi sütunlar hangi role iner?
+  REC: Birinci seçenek, nadir karışık durumlarda (ör. şube birleşmesi) ikinci seçenek yedek olarak. Öğrenciye oturumun yalnız açılış, kapanış, ders, derslik, iptal ve tür alanları iner; kafa sayısı ve hoca ayarlarının ayrıntısı inmez. Liste satırının pasif olması ve eklenme tarihi D03'ün, ders atamaları D02'nin verisidir; bu alan onların sürüm ve silindi alanlarını nasıl taşıyacağını belirler.
+
+GAP D06-B16: Telefondaki özellikler için takvim ve dönem durumu gerekir mi; gerekirse hangi yoldan iner?
+  REC: Birinci seçenek: plandaki 'yalnız' listesini değiştirmeden aynı işi görür, yeni tablo açmaz. Telefon kilitli dönemin yalnız ulaşmış öğelerini siler, gönderilmemiş öğeyi kilitten sonra da saklar ve gönderir (birimin son gününden sonra gelen kayıt yine saklanır). İkinci seçenek gerekirse sahibin onayıyla planın listesine eklenir.
+
+GAP D06-B17: Telefona hangi oturumlar iner: dönemin bütün oturumları mı, kayan bir pencere mi?
+  REC: Birinci seçenek: küçük ve doğru; aynı gün eklenen telafi dersi yeni satır olarak hemen sürüm alır ve internetteki telefona iner (plan, Telafi dersi). Oturumların dönem boyunca önceden üretilmesi D02'nin işidir.
+
+GAP D06-B18: Silindi işaretli satırlar ne kadar tutulur ve 'çok eski imleç' tam olarak nedir?
+  REC: Birinci seçenek: bugün ek iş yok, gelecekteki temizlik de güvenli. Saklama kuralları D12'nindir.
+
+GAP D06-B19: Tek sayaç satırından sürüm alma sırası nasıldır; hangi yazmalar sürüm alır?
+  REC: Birinci seçenek, teknikteki karara uygun (teknik.html#kod-veri-modeli). Yalnız telefona inen bir sütun değişince sürüm alınır; ör. süresi dolan oturumu kapatan zamanlanmış iş (teknik.html#sunucu-arka-plan) inen bir alanı değiştirmiyorsa sürüm almaz. Öğrencinin kendi kayıtları ayrı, öğrenci başına sürümle iner (bkz. D06-B11), böylece saniyede 70 ile 330 gönderimlik yol sayaç satırına hiç dokunmaz.
+
+GAP D06-B20: Nesil okunurken yetki ve geri dönüş anı nasıl güvenceye alınır?
+  REC: Birinci seçenek ve ikincisi denetim olarak: teknik zaten geri yükleme denemesinde neslin değiştiğini denetler (teknik.html#kod-veri-modeli); bu adım geri dönüş yönergesine yazılır. Yetki ve geri dönüş yönergesi D12'yle birlikte.
+
+GAP D06-B21: Saat belgesi telde nasıl taşınır: hangi istekler nonce taşır, hangi cevaplar yeni belge taşır?
+  REC: Birinci seçenek: belgeyi her internet temasında tazeler, ilk çapayı güçlendirir. Belgenin biçimi, imzası ve ayrı belge ucu D04'ün; başlık adları D13'ün.
+
+GAP D06-B22: Bir oturumun gönderme süresinin sonu tam olarak nasıl hesaplanır?
+  REC: Birinci seçenek: saatler UTC milisaniyeyle hesaplanır (teknik.html#kod), zamanlanmış iş gerekmez. D07, D09 ve D10 aynı fonksiyonu kullanır.
+
+GAP D06-B23: Sürüm kontrolü ucu ne alır, ne döner; kanal, kademeli APK duyurusu ve TestFlight geçiş bağlantısı nasıl taşınır?
+  REC: Birinci seçenek: plan sorguyu gönderimden bağımsız ve günde bir kez yapar (plan.html#dagitim-guncelleme), ayrı küçük uç bellekten cevaplanır. Kova kurulum kimliğinden çıktığı için aynı telefon her gün aynı kararı alır. Geçiş bağlantısını telefon yalnız kuyruğu boşken gösterir.
+
+GAP D06-B24: CI'nın yazdığı yayın bilgisi dosyası nerede durur, biçimi nedir, sunucu onu ne zaman yeniden okur?
+  REC: Birinci seçenek, plandaki 'sunucu yalnız onu okur' kuralına uygun. Dosya her platform ve kanal için en yeni sürümü ve bağlantıyı, en düşük sürümü, APK yüzdesini ve geçiş bağlantısını taşır. En düşük sürümün dönem içinde yükseltilmemesi kuralının denetimi D13'ün (birimlerin takvimi farklıysa ortak dönem arası olmayabilir).
+
+GAP D06-B25: Bir kaydı hangi uygulama sürümü üretti: kaydın içinden mi, gönderen isteğin başlığından mı okunur?
+  REC: Birinci seçenek: imzalı metnin içinde olduğu için değiştirilemez ve doğru sürümü gösterir. Kural ve gerekçe kodu D07'nin, kayıt biçimi D05'in.
+
+GAP D06-B26: Hesap silme isteği kuyrukla nasıl sıralanır; silmeden sonra gelen öğeler ne alır?
+  REC: Birinci seçenek: sıralama kesintisiz su seviyesiyle güvencededir (bkz. D06-B07) ve çökmeden etkilenmez. Panelden başlatılan hoca silmesi kuyruksuzdur, doğrudan gider. Silmenin kendisi D01'in, silinen ve kalan veriler D12'nin.
+
+GAP D06-B27: Sunucu hocanın telefon oturumunu kendisi bitirdiğinde (4. cihaz, yöneticinin bütün oturumları kapatması, pasif hesap, 30 günün dolması) telefondaki sınıf listeleri ne olur?
+  REC: Birinci seçenek: çıkıştaki gizlilik gerekçesinin aynısı (plan.html#kararlar-indirme) ve kuyruk kuralı korunur (plan, Hoca oturumu: işler girişten sonra gider). Derste internetsizken telefon 401'i göremeyeceği için internetsiz çalışma etkilenmez.
+
+GAP D06-B28: Günlük sayaçlar kuyrukta nasıl gider: günün sınırı, tekillik, çok günlük birikme ve paneldeki onay ekranı süreleri?
+  REC: Birinci seçenek: tekrar gönderimde çift sayım olmaz, sıra kuralı korunur. Sayaç tablosu ve ölçümün kendisi D15'in; bu alan taşımayı sağlar.
+
+GAP D06-B29: Sunucu hangi durumda hangi Retry-After değerini verir; gönderim ve indirme uçlarında cihaz başına hız sınırı kaçtır?
+  REC: Birinci seçenek; kesin değerler ders çıkışı yük testinden yazılır (teknik.html#testler-kalite). Hız sınırı ve hata kodları kuralı D13'ün, eşikler D15'in.
+
+GAP D06-B30: Sunucu tarafında gönderim isteğinin ve işleminin zaman sınırı nedir?
+  REC: Birinci seçenek: telefon yeniden göndermeden önce sunucu kesin olarak vazgeçmiş olur; değerler yük testiyle ayarlanır. İşletim değerleri D15'le birlikte.
+
+GAP D06-B31: Telefonun yeni sürümü yerel veritabanına yeni bir inen tablo ya da alan eklediğinde imleç ne olur?
+  REC: Birinci seçenek: kararı sunucu verir ve test edilebilir, telefona özel mantık gerekmez; 'baştan indir' zaten var olan yol (plan.html#kararlar-indirme) ve gönderme kuyruğuna dokunmaz. Yapı sürümüne göre alan süzme, sözleşmenin yalnız eklemeyle değişmesi kuralıyla (teknik.html#altyapi-guncellemeler) aynı doğrultudadır.
+

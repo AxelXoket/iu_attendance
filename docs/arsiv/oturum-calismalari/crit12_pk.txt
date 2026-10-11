@@ -1,0 +1,274 @@
+{
+ "id": "D01-P15",
+ "title": "Eklenti, uç bağlama ve dış yüz",
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "kimlikEklentisi"
+ ],
+ "tests": [
+  "Eklenti kayıtta veritabanına dokunmaz",
+  "Modül sınırı döngüsüz"
+ ],
+ "notes": "28 rotanın işleyicileri rotalariKaydet ile bağlanır, kimlikEklentisi D03 (bekleyenKayitlariEslestir), D12 ve D09 kayıtlarını her süreçte yapar ve index.ts dış yüzü kurulur; eklenti yalnız servis paketlerini bekler, birleşik senaryo paketini (D01-P17) beklemez. sinirlar.test.ts dependency-cruiser ile yaprak kuralını, eklentinin kapalı veritabanı havuzuyla kaydolduğunu ve rota listesinin tam geldiğini denetler."
+}
+=====
+{
+ "id": "D05-P11",
+ "title": "Makbuz okutması ve yoklama eklentisi",
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "makbuzOkutmasiOgesi",
+  "yoklamaEklentisi"
+ ],
+ "tests": [
+  "Hocanın makbuz okutması",
+  "Başka hocanın okutması",
+  "Devirden önce okutulan makbuz",
+  "Aynı okutma öğesi iki kez gelir",
+  "Reddedilmiş okutma yeniden gelir",
+  "Okutma öğesi başka hesabın adıyla gelir",
+  "Eklenti birleşimi",
+  "Denetim olayları kaydı",
+  "Öğe gövde şemaları"
+ ],
+ "notes": "Hocanın okutma işleyicisi (hesap ve dersin hocası denetimi, devirden önceki hocanın okutması, personel öznesiyle okutma anı, deneme satırları, kayıt P10 çekirdeğinden OKUTMA yoluyla) ile iki öğe türünü, öğrenci indirme kaynağını, saklama sınıfını, denetim olaylarını ve rotayı veritabanına dokunmadan kaydeden yoklamaEklentisi ve boş iş girişi yazılır; okutma senaryoları, eklenti birleşimi (sahte havuzda 0 sorgu, işleyici değişmez), denetim olayı şeması ve TUM_OGE_TURLERI gövde şeması testleriyle sınanır. D13 uygulamaKur bunu bekler; uçtan uca senaryolar bu paketi beklemez, sonraki iki pakettedir."
+}
+=====
+{
+ "id": "D06-P11",
+ "title": "Kimlik kancası, eklenti ve modül dizini",
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "esitlemeEklentisi",
+  "esitlemeKimlikDinleyicisi"
+ ],
+ "tests": [
+  "Kurulum kimliği başlığı",
+  "Hiçbir uygulama sürümüne kapanmaz",
+  "Oturumsuz ve imzasız gönderim reddedilir",
+  "Kapanmış Bearer ve pasif cihaz imzası kökten geçer",
+  "Cihaz değişiminden sonra eski telefonun bekleyen kayıtları ulaşır",
+  "Hoca oturumu bitince işler silinmez",
+  "Kişi uyuşmazlığı",
+  "Kurulum kilidi beklenemezse",
+  "Kişi başına kurulum sınırı",
+  "Cevap başlıkları",
+  "Hız sınırı doğrulanmış kimliğe bağlı",
+  "Kısıtlı oturum oturumsuz sayılır",
+  "Son temas ve bekleyen yoklama"
+ ],
+ "notes": "Gönderim ucunun kimlik kancası (kurulum başlığı, oturum, paket imzası, anahtar türü eşlemesi, ECDSA doğrulaması, kişi uyuşmazlığı; kısa salt okunur işlemde D01 işlevleri eklenti seçeneğinden), esitlemeEklentisi (rotalar yalnız D13.rotalariKaydet ile, saklama işleyicisi her süreçte D12.saklamaIsleyicisiKaydet ile, kayıtta veritabanına dokunmaz, zamanlayıcı kurmaz) ve modül dizini (index.ts: esitlemeEklentisi, esitlemeKimlikDinleyicisi, ogeTuruKaydet, indirmeKaynagiKaydet) yazılır. gonderim-kimlik.feature eklentiyi test uygulamasına bağlayıp iki uçtaki 401, 403, 429 ve 503 cevaplarını, satır açılmadığını, kurulum sınırını ve kilit beklemesini, cevap başlıklarını, kısıtlı oturumu ve uçların son temas ile bekleyen yoklama yazımını doğrular. Bileşim kökleri yalnız bu paketi bekler."
+}
+=====
+{
+ "id": "D07-P19",
+ "title": "Eklenti, dış yüz ve rotalar",
+ "endpoints": [
+  "POST /v1/dogrulama/deger",
+  "GET /v1/dogrulama/oturumlar/{oturumId}/kafa-sayisi",
+  "POST /v1/dogrulama/oturumlar/{oturumId}/rastgele-isim",
+  "POST /v1/dogrulama/oturumlar/{oturumId}/sinifta-degil",
+  "DELETE /v1/dogrulama/oturumlar/{oturumId}/sinifta-degil/{ogrenciId}"
+ ],
+ "jobs": [],
+ "exports": [
+  "dogrulamaEklentisi"
+ ],
+ "tests": [
+  "Eklenti birleşimi",
+  "kafa_sayisi kuyruk öğesi",
+  "Denetim olayları kayıtlı"
+ ],
+ "notes": "dogrulamaEklentisi'ni, dış yüzü veren index.ts'i ve beş rotayı yazar; D06 öğe türünü, D02 kilit adımını, D03, D04 ve D11 dinleyicilerini, D12 saklama işleyicisini ve D09 denetim olaylarını kaydeder. Yalnız içe aktardığı dosyaları bekler: işler (D07-P17, D07-P18) worker.ts'e gider, eşzamanlılık senaryoları (D07-P14) ve core dizini (D07-P22) ayrı yapraklardır; eklenti onları beklemez, onlar da eklentiyi beklemez. Uçtan uca paketler (D07-P20, D07-P21) eklentiyi bekler, tersi değil. Testler çıplak Fastify örneğiyle koşar ve bileşik uygulamayı beklemez: kayıt sırasında veritabanına dokunmama, surec isci'de rota olmaması, öğe türü kaydı ve denetim olayı listesinin bütünlüğü. D08 ve bileşim kökü yalnız uçtan uca paketlerde (D07-P20, D07-P21)."
+}
+=====
+{
+ "id": "D10-P14",
+ "title": "Raporlar eklentisi, rotalar, kuyruk, kilit adımı ve saklama işleyicisi",
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "raporlarEklentisi"
+ ],
+ "tests": [
+  "Başka hocanın dersi, şubesi ve öğrencisi bulunamadı döner",
+  "Rol ve kimlik denetimi rapor uçlarında çalışır",
+  "Rota listesi sözleşmeyle birebir",
+  "Eklenti birleşim kurallarına uyar",
+  "Anlık tablolarına uygulama rolleri yalnız ekler ve okur"
+ ],
+ "notes": "raporlarEklentisi beş rotayı D13.rotalariKaydet ile, sira 20 kilit adımını ve saklama.ts raporlar.donem_verisi parti işleyicisini (kilit_ani sınırdan eski başlıkları siler, satırlar CASCADE ile gider) her süreçte kaydeder, index.ts aksisAnligiGetir ve degisimSinifi dış yüzünü de verir, kuyruk.ts stately aksisGunSonuKuyrugu tanımını, kilit-adimi.ts kilit işlemi içindeki isGonder çağrısını verir. rapor-yetkisi.feature rol ve kimlik reddini, varlık sızdırmayan 404 cevabını, rota listesinin sözleşmeyle aynılığını, eklenti birleşim kurallarını ve iki anlık tablosunda uygulama rollerinin yalnız ekleyip okuduğunu, silmenin yalnız D12.saklamaIsleyicisiniCalistir altında yoklama_saklama girişiyle geçtiğini denetler. Bileşim kökünü beklemez: senaryolar D13 senaryo düzeneğinde yalnız bu eklentiyle koşar."
+}
+=====
+{
+ "id": "D11-P19",
+ "title": "Saklama işleyicisi",
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "tests": [
+  "Saklama dönemle ve kayıttan önce siler"
+ ],
+ "notes": "projeksiyon.donem_verisi partiIsle işleyicisi en eski dönemi yalnız kendi tablolarından seçip kanıt, gösterim, bağlantı, tarayıcı, indirme ve yuva sırasıyla partili siler; başka dosyayı içe aktarmaz. Senaryo satırları doğrudan kurar ve D12.saklamaIsleyicisiniCalistir ile gerçek yoklama_saklama girişinde, başka tabloya sorgu olmadığını gösteren sorgu günlüğüyle ve CASCADE mutasyonuyla denetlenir."
+}
+=====
+{
+ "id": "D15-P17",
+ "title": "İşletim eklentisi, uçlar, kapanış ve API ölçüsü",
+ "endpoints": [
+  "GET /health/live",
+  "GET /health/ready",
+  "GET /v1/durum",
+  "POST /v1/isletim/ekran-sureleri"
+ ],
+ "jobs": [],
+ "exports": [
+  "isletimEklentisi",
+  "kapanisiBaslat",
+  "kapanisDurumu"
+ ],
+ "tests": [
+  "API ölçü dosyalarından uyarı"
+ ],
+ "notes": "Eklenti rotalariKaydet, ogeTuruKaydet, danismaKilidi ve hesapSilindiMi seçenekleriyle dört ucu ve telefon_sayaci işleyicisini bağlar, sağlık uçları, kapanış durumu, birikmiş toplamlı ekran süresi yazımı ve dakikalık API ölçü dosyası yazıcısıyla okuyucusu gelir; ölçü dosyası logOlustur'un log olayı sayaçlarını ve ayarlardaki durum dizinini kullanır. api-olcum.test.ts iki kopyanın sahte ölçü dosyalarından 5xx, 503 oranı ve gönderim p95 uyarı kararlarını kurallar.ts ile sınırlarında denetler."
+}
+=====
+{
+ "id": "D02-P17",
+ "title": "Rotalar, eklenti ve modül girişi",
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "derslerEklentisi",
+  "DerslerEklentisiSecenekleri"
+ ],
+ "tests": [
+  "derslerEklentisi çıplak Fastify örneğinde 31 rotayı rotalariKaydet ile kaydeder, kayıt sırasında sorgu atmaz, ikinci kayıtta ve liste kaynağı yokken açılışta hata verir"
+ ],
+ "notes": "Üç rota dosyası 31 işleyiciyi D13.rotalariKaydet ile bağlar, eklenti beş indirme kaynağını ve personel kapsamını kaydedip liste kaynağını açılışta denetler, index.ts dışa açılanları verir; iş tanımlarını içe aktarmaz. eklenti.test.ts sahte bağımlılıklarla çıplak Fastify örneğinde koşar, bileşim kökü kurulmaz."
+}
+=====
+{
+ "id": "D03-P12",
+ "title": "Uçlar ve eklenti",
+ "endpoints": [
+  "GET /v1/listeler/subeler/{subeId}",
+  "POST /v1/listeler/subeler/{subeId}/onizleme",
+  "POST /v1/listeler/subeler/{subeId}/uygula",
+  "POST /v1/listeler/subeler/{subeId}/satirlar",
+  "PATCH /v1/listeler/satirlar/{satirId}",
+  "GET /v1/listeler/subeler/{subeId}/yuklemeler"
+ ],
+ "jobs": [],
+ "exports": [
+  "listelerEklentisi"
+ ],
+ "tests": [
+  "Rota listesi altı uçtan oluşur",
+  "Modül sınırı"
+ ],
+ "notes": "Altı uç (dersYetkisi denetimi, servis sonuç birliğinin uygulamaHatasi ile LISTELER_ koduna çevrilmesi), listelerEklentisi (D02 liste kaynağı ve kilit adımı, D06 iki indirme kaynağı, D09 denetim olay türleri, D12 saklama işleyicisi kayıtları ve defterin örneğe bağlanması) ve boş iş listesi yazılır, index.ts'e eklenir. Altı ucun sözleşmedeki rota listesiyle birebir kaydı D13'ün rota tablosu denetimiyle, modül sınırı Biome ve dependency-cruiser ile doğrulanır."
+}
+=====
+{
+ "id": "D04-P13",
+ "title": "Saat eklentisi ve dış yüz",
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "saatEklentisi",
+  "SaatEklentisiSecenekleri"
+ ],
+ "tests": [
+  "İstanbul çevirisi D02 SQL çevirisiyle aynı",
+  "Öğe işleyicisi D06 sözleşmesine uyar",
+  "Kod değerleri BÜYÜK_HARF ve genişleyen enum",
+  "Eklenti birleşim kurallarına uyar",
+  "Denetim olayları kayıtlı ve birimli"
+ ],
+ "notes": "D02 üretim dinleyicisi, D06 öğe işleyicileri ve indirme kaynağı, D12 saklama işleyicisi ve rota kayıtlarını yapan saatEklentisi (eşitleme zamanlayıcısı yalnız api sürecinde, SAAT_ESITLEME_AYARI_GECERSIZ denetimi) ile modülün index.ts dış yüzü yazılır. Bileşim kökünün (D13 uygulamaKur) beklediği tek geç parçadır; servis dışa verimleri önceki paketlerde hazırdır. sozlesme.test.ts birleşim, öğe sözleşmesi, kod, denetim olayı ve İstanbul çevirisi kurallarını denetler."
+}
+=====
+{
+ "id": "D09-P12",
+ "title": "Eklenti, rotalar ve saklama",
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "duzeltmelerEklentisi"
+ ],
+ "tests": [
+  "Toplu sonuç ve kuyruk işleyicileri ortak sözleşmeye uyar"
+ ],
+ "notes": "uygulamaKur'un beklediği eklenti yalnız kod paketlerini bekler, senaryo paketlerini beklemez. 16 rotayı rotalariKaydet ile, iki kuyruk öğesini, iki indirme kaynağını, duzeltmeler.donem_verisi saklama işleyicisini ve denetim olaylarını kayıt sırasında veritabanına dokunmadan kaydeder; rotalar.ts isteği servis çağrısına çevirir (kimlik, istekKimligi ve gövde parametre olur). Saklama ve hesap silme senaryoları tam bileşim ister, D09-P18'de."
+}
+=====
+{
+ "id": "D12-P12",
+ "title": "Geri yükleme kayıtları ve yönetici ucu eklentisi",
+ "endpoints": [
+  "GET /v1/veritabani/yonetim/geri-yuklemeler"
+ ],
+ "jobs": [],
+ "exports": [
+  "geriYuklemePencereleri",
+  "veritabaniEklentisi"
+ ],
+ "tests": [
+  "Geri yükleme pencereleri"
+ ],
+ "notes": "geriYuklemePencereleri, imleçli ve salt okunur geri yükleme listesi ve rotayı rotalariKaydet ile kaydeden veritabaniEklentisi yazılır, dışa açma satırları index.ts'e eklenir; spec dosya listesine eklenen servis.test.ts test veritabanında boş ve iki kayıtlı durumu denetler, uç senaryoları P20'dedir."
+}
+=====
+{
+ "id": "D13-P09",
+ "title": "Eşik durumu, GET /v1/surum ve sürüm senaryoları",
+ "endpoints": [
+  "GET /v1/surum"
+ ],
+ "jobs": [],
+ "exports": [
+  "enDusukSurumDenetle",
+  "apiEklentisi"
+ ],
+ "tests": [
+  "Veritabanı kısıt hatası yalnız kod ve kısıt adıyla loglanır",
+  "Sürüm başlıkları bozuk ya da yokken istek reddedilmez",
+  "En düşük sürümün altındaki istemci reddedilmez",
+  "GET /v1/surum platform ve kanala göre cevap verir",
+  "Kanal kaydı yokken GET /v1/surum 503 döner",
+  "GitHub kademesi aynı kuruluma her gün aynı kararı verir",
+  "Altyapı tipleri D12 ile aynıdır"
+ ],
+ "notes": "Eşik durumu önbelleği ve enDusukSurumDenetle, apiEklentisi ile GET /v1/surum yazılır, index.ts'e bu iki satır eklenir. Sürüm senaryoları apiKur düzeneği ve atılabilir test veritabanıyla koşar, bileşim kökünü beklemez; altyapı tip testi ApiBagimliliklari ile D12 tiplerinin eşitliğini ve eşik tazelemesinin salt okuma seçeneğini denetler."
+}
+=====
+{
+ "id": "D02-P19",
+ "title": "Veri kurucusu ve ortak adımlar",
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "tests": [
+  "Kurucu ve ortak adımlar tsc ile derlenir; dersler kurucusu KurucuHaritasi'na tek adla kaydolur, aynı ad ikinci kez reddedilir"
+ ],
+ "notes": "Öbür modüllerin senaryolarının da kurucu('dersler') ile kullandığı veri kurucusu (birim, dönem, takvim, ders, şube, program saati ve oturum satırları) ve birim, dönem, takvim, tatil, sınav haftası, sahte saat ve TZ ortak adımları yalnız tablolar, saat.ts ve sözleşmeyle yazılır; servisleri ve bileşim kökünü beklemez."
+}
+=====
+{
+ "id": "D15-P18",
+ "title": "Ölçüm görünümleri, özet sorguları ve haftalık özet işi",
+ "endpoints": [],
+ "jobs": [
+  "haftalik_olcum_ozeti"
+ ],
+ "exports": [],
+ "tests": [
+  "Ölçüm görünümleri kişisel veri çıkarmaz"
+ ],
+ "notes": "On bir olcum_ görünümü security_invoker ile _isletim_ göçünde açılır, olcumler.ts görünümleri bildirir, olcum-ozeti.ts hedef satırlarını kohort aralığıyla tek sorgudan üretir, haftalık iş her alıcıya tek e-posta yollar ve 13 aydan eski sayaç, ekran süresi ve kapanmış uyarı satırlarını siler. Görünümler D01, D02, D03, D05, D06, D07 ve D09 tablolarını okuduğundan göç bu tabloların göçlerinden sonra koşmalı: klasör 20261021090000 olarak bütün komşu göçlerin (en geç 20261020100000) arkasına alındı, needs içindeki yedi komşu okuyucu kodda çağrılmaz, yalnız o tabloların göçünü taşıyan ya da onlardan sonra gelen paketi işaret eder (tablo göçlerinin dış yüz adı yok); uygulamaKur ve kancalar beklenmez. olcum-ozeti.test.ts D12 test veritabanında katalogdan her görünümde kişisel sütun olmadığını ve security_invoker değerini denetler."
+}
+=====

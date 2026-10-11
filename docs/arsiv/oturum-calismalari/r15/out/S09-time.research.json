@@ -1,0 +1,331 @@
+{
+ "checked_ok": [
+  {
+   "plan_line": 184,
+   "claim": "Android elapsedRealtime/elapsedRealtimeNanos counts deep sleep, is guaranteed monotonic, is the recommended interval clock, and restarts at boot; only the wall clock (currentTimeMillis) can be set by the user or network.",
+   "source_url": "https://raw.githubusercontent.com/aosp-mirror/platform_frameworks_base/main/core/java/android/os/SystemClock.java"
+  },
+  {
+   "plan_line": 686,
+   "claim": "Settings.Global.BOOT_COUNT was added in API level 24, matching the plan's Android 7 floor; apps can read Settings.Global without a permission.",
+   "source_url": "https://developer.android.com/sdk/api_diff/24/changes/android.provider.Settings.Global"
+  },
+  {
+   "plan_line": 194,
+   "claim": "TrustedTime returns time only after one internet connection since boot ('If the device hasn't connected to the internet since booting, the TrustedTime APIs won't return timestamps'); needs Google Play services, Android 5+, no extra permission, and gives an error estimate per timestamp. The plan's 'açıldıktan sonra bir kez internete çıktıysa ... kurabilir' is accurate.",
+   "source_url": "https://android-developers.googleblog.com/2025/02/trustedtime-api-introducing-reliable-approach-to-time-keeping-for-apps.html"
+  },
+  {
+   "plan_line": 686,
+   "claim": "com.google.android.gms:play-services-time 16.0.1 is still the newest release (Maven metadata lastUpdated 20250109); no deprecation found.",
+   "source_url": "https://dl.google.com/android/maven2/com/google/android/gms/play-services-time/maven-metadata.xml"
+  },
+  {
+   "plan_line": 686,
+   "claim": "The Expo uptime function is expo-device getUptimeAsync; SDK 57 docs: 'Android devices do not count time spent in deep sleep.'",
+   "source_url": "https://docs.expo.dev/versions/latest/sdk/device/"
+  },
+  {
+   "plan_line": 686,
+   "claim": "On iOS, CLOCK_MONOTONIC 'will continue to increment while the system is asleep' (Darwin man page) and Apple DTS recommends it for this offline trusted-time pattern; Libc computes it as now minus boot time, which the system shifts on clock changes, so user clock changes do not move it. CLOCK_UPTIME_RAW / mach_absolute_time stop during sleep and are rightly avoided.",
+   "source_url": "https://raw.githubusercontent.com/apple-oss-distributions/Libc/main/gen/clock_gettime.3"
+  },
+  {
+   "plan_line": 686,
+   "claim": "Apple System boot time reason 35F9.1 forbids sending boot time off-device but explicitly allows 'the amount of time that has elapsed between events that occurred within the app', matching 'açılış zamanı telefondan dışarı gönderilmez, yalnız geçen süreler gider'.",
+   "source_url": "https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons"
+  },
+  {
+   "plan_line": 686,
+   "claim": "Declaring the boot-time reason in the app's own manifest is required with Expo: Apple does not correctly parse PrivacyInfo files of static CocoaPods such as Expo SDK packages; Expo exposes ios.privacyManifests for this.",
+   "source_url": "https://docs.expo.dev/guides/apple-privacy/"
+  },
+  {
+   "plan_line": 188,
+   "claim": "100 ppm over 7 days is 60.48 s, so 'haftada yaklaşık 1 dakika' is right; 100 ppm is a safe upper bound because a standard 32.768 kHz RTC crystal is ±20 ppm at 25 °C, loses up to about 0.04 ppm/°C² away from its turnover point and ages ±3 ppm per year, roughly 60 ppm worst case between 0 and 45 °C.",
+   "source_url": "https://www.raltron.com/webproducts/specs/CRYSTAL/R38.pdf"
+  },
+  {
+   "plan_line": 188,
+   "claim": "The 7-day certificate age limit and the 7-day send window (line 136) do not conflict: one bounds anchor age at check-in, the other the delay to the server.",
+   "source_url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html"
+  }
+ ],
+ "findings": [
+  {
+   "id": "S09-F1",
+   "plan_line": 194,
+   "plan_quote": "Saat kurulamazsa kayıt \"saat doğrulanamadı\" olur",
+   "kind": "BETTER",
+   "lenses": [
+    "correct",
+    "useful",
+    "compact",
+    "sustainable",
+    "scalable"
+   ],
+   "severity": "medium",
+   "finding": "The plan anchors time only forward (server certificate, then elapsed counter). Any reboot between the certificate and the check-in makes the record unverifiable, unless TrustedTime (Android with Play services only) synced after the boot. The server already uses receipt time as the upper bound. If the phone also reports the counter-measured time since the record at send time (valid when no reboot happened between record and send), the server can compute the record time backward from receipt (post-facto synchronization). A record is then unverifiable only when reboots happened both before and after it, on both platforms. With both anchors present, a mismatch larger than the two allowances exposes a hidden reboot or a replayed certificate. This makes TrustedTime optional, so the only Android-only time dependency can leave the first release. Sending elapsed time between in-app events is allowed by Apple reason 35F9.1.",
+   "evidence": [
+    {
+     "url": "https://graphics.stanford.edu/courses/cs321/Private/Readings/roemer-wsn-ts.pdf",
+     "quote": "we advocate post-facto synchronization, where clocks run unsynchronized at their own natural rates. When timestamps from different clocks need to be compared, they can be reconciled after the fact",
+     "date": "2002-10-28"
+    },
+    {
+     "url": "https://developer.apple.com/forums/thread/110044?answerId=754364022#754364022",
+     "quote": "The main drawback continues to be that, if the user restarts their device, you can't re-establish a trusted time until it comes online.",
+     "date": "2023-05"
+    },
+    {
+     "url": "https://android-developers.googleblog.com/2025/02/trustedtime-api-introducing-reliable-approach-to-time-keeping-for-apps.html",
+     "quote": "If the device hasn't connected to the internet since booting, the TrustedTime APIs won't return timestamps.",
+     "date": "2025-02-12"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons",
+     "quote": "There is an exception for information about the amount of time that has elapsed between events that occurred within the app, which may be sent off-device.",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Gönderim anını ikinci çapa yaparım: telefon gönderirken her kayıt için, arada yeniden başlatma yoksa, kayıttan bu yana geçen süreyi de yollar; sunucu kaydın saatini ulaştığı an eksi bu süre diye hesaplar (kayıt tablosuna bu alan eklenir). Böylece \"saat doğrulanamadı\" yalnız kayıttan hem önce hem sonra yeniden başlatma olursa kalır; telefondaki etiket geçicidir, son kararı sunucu verir. Saat kurulamayan telefonda pencere telefonun kendi saatiyle açılır. İki çapa da varsa ve paydan fazla ayrışırsa kayıt incelemeye düşer. Bu yüzden Google'ın güvenilir saat servisini (TrustedTime) ilk sürüme koymam; Android'de saati doğrulanamayan oran %2'yi aşarsa eklerim.",
+   "confidence": "high"
+  },
+  {
+   "id": "S09-F2",
+   "plan_line": 194,
+   "plan_quote": "iPhone yeniden başlatmayı bir sistem işaretinden anlar.",
+   "kind": "RISK",
+   "lenses": [
+    "correct",
+    "current",
+    "sustainable"
+   ],
+   "severity": "medium",
+   "finding": "The 'sistem işareti' (also line 686) is unspecified, and the obvious candidates fail. kern.boottime also changes when the user adjusts the clock: it gives false reboots, and a deliberate clock change after a real reboot can make it look unchanged. Apple DTS also calls it an entropy (fingerprinting) source. kern.bootsessionuuid was removed for apps in iOS 18, which Apple DTS confirmed. Apple DTS says systemUptime is not reliable for restart detection. Apple DTS's current advice (2023, re-linked in Feb 2025, Dec 2025 and Jul 2026) is a POSIX named semaphore under an App Group prefix: it exists until restart, and creating it with O_EXCL succeeds only on the first run after a restart. Apple also says CPU-counter clocks do not promise a start value at boot, so 'the counter went backwards' alone is not a reboot test on iPhone.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/forums/thread/110044?answerId=337069022#337069022",
+     "quote": "the kern.boottime sysctl variable is modified when a) the device restarts, and b) when the user adjusts the time.",
+     "date": "2018-10"
+    },
+    {
+     "url": "https://developer.apple.com/forums/thread/774658",
+     "quote": "Apple has removed access to kern.bootsessionuuid in iOS 18",
+     "date": "2025-02"
+    },
+    {
+     "url": "https://developer.apple.com/forums/thread/809339",
+     "quote": "No. You could probably make it work a lot of the time, but it definitely won't be completely reliable.",
+     "date": "2025-12"
+    },
+    {
+     "url": "https://developer.apple.com/forums/thread/110044?answerId=754364022#754364022",
+     "quote": "My recommendation is that you use a Posix semaphore for that.",
+     "date": "2023-05"
+    },
+    {
+     "url": "https://developer.apple.com/forums/thread/838582",
+     "quote": "APIs that are based on the CPU counter don't specify what the initial value is when the system boots.",
+     "date": "2026-07"
+    }
+   ],
+   "recommendation_tr": "iPhone'da yeniden başlatmayı Apple'ın önerdiği yolla anlarım: uygulama her açılışta, uygulama grubuna bağlı bir sistem semaforunu \"yoksa oluştur\" diye açar; semafor yeniden başlatmada silindiği için oluşturulabiliyorsa telefon yeniden başlamıştır. kern.boottime, kern.bootsessionuuid ve systemUptime kullanılmaz: ilki kullanıcı saati değiştirince de değişir, ikincisi iOS 18'de kapatıldı, üçüncüsüne Apple güvenilmez diyor. Bunun için uygulamaya bir App Group eklenir; açılış zamanı hiç okunmaz.",
+   "confidence": "high"
+  },
+  {
+   "id": "S09-F3",
+   "plan_line": 686,
+   "plan_quote": "açılış sayısı (BOOT_COUNT)",
+   "kind": "RISK",
+   "lenses": [
+    "correct",
+    "useful"
+   ],
+   "severity": "low",
+   "finding": "BOOT_COUNT is a Settings.Global value. Apps can only read it, but the adb shell user holds WRITE_SECURE_SETTINGS. On a phone with USB debugging, a student can reboot and write the old boot_count back. Once elapsedRealtime catches up with the anchor value, the reboot goes unseen and the computed time shifts back. /proc/sys/kernel/random/boot_id is a per-boot random UUID made by the kernel. Current AOSP SELinux policy lets every app domain read it, and it cannot be changed without root.",
+   "evidence": [
+    {
+     "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/packages/Shell/AndroidManifest.xml",
+     "quote": "<uses-permission android:name=\"android.permission.WRITE_SECURE_SETTINGS\" />",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.android.com/reference/android/provider/Settings.Global",
+     "quote": "Applications can read these but are not allowed to write",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://android.googlesource.com/platform/system/sepolicy/+/refs/heads/main/private/domain.te",
+     "quote": "allow domain proc_random:file r_file_perms;",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://docs.kernel.org/admin-guide/sysctl/kernel.html",
+     "quote": "boot_id: a UUID generated the first time this is retrieved, and unvarying after that",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Android'de yeniden başlatmayı önce çekirdeğin her açılışta ürettiği açılış kimliğinden (/proc/sys/kernel/random/boot_id) anlarım; açılış sayısı (BOOT_COUNT) ikinci kontrol olarak kalır. BOOT_COUNT, USB hata ayıklaması açık telefonda bilgisayardan değiştirilebilen bir ayar; çekirdek kimliği kök yetkisi olmadan değişmez. Okumak için izin ya da yeni paket gerekmez, kendi yerel modülümde okunur.",
+   "confidence": "medium"
+  },
+  {
+   "id": "S09-F4",
+   "plan_line": 188,
+   "plan_quote": "2 saniye + geçen sürenin milyonda 100'ü (haftada yaklaşık 1 dakika). Belge en çok 7 günlük olabilir.",
+   "kind": "RISK",
+   "lenses": [
+    "correct",
+    "useful"
+   ],
+   "severity": "medium",
+   "finding": "With a 7-day-old certificate the plan's own allowance is 2 s + 100 ppm x 604,800 s = about 62.5 s. After 1 day it is about 10.6 s. It stays under 10 s only for about 22 h and under 30 s for about 3.2 days. Aşama 2 (lines 243 and 291) classifies QR scan delay on 'saati doğrulanmış' records with 10 s and 30 s thresholds. With older certificates, honest scans can be flagged (or, near the allowance limit, rejected), and a forwarded QR can look normal. The plan already notes that short QR times with clock differences caused false rejects in Turkey (line 341). Real RTC crystals drift tens of ppm, and at 50 ppm a week is about 30 s, so this is not only theoretical. The same allowance must apply to the 'later than server receipt' reject rule (line 186). Otherwise a fast-running honest phone that sends right after check-in can be rejected (about +14 s at +23 ppm over 7 days). 100 ppm itself is a sound bound.",
+   "evidence": [
+    {
+     "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+     "quote": "Saati doğrulanmış kayıtta QR ile okutma arasındaki fark 10 saniyeye kadar normal sayılır",
+     "date": "2026-10-04"
+    },
+    {
+     "url": "https://www.raltron.com/webproducts/specs/CRYSTAL/R38.pdf",
+     "quote": "FREQUENCY TOLERANCE ±20 ppm Standard ... PARABOLIC CURVATURE CONSTANT (TYP) -0.034±0.006 ppm/°C² ... AGING (FIRST YEAR MAX) ±3 ppm",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://android-developers.googleblog.com/2025/02/trustedtime-api-introducing-reliable-approach-to-time-keeping-for-apps.html",
+     "quote": "The device's internal clock can drift due to various factors, such as temperature, doze mode, battery level, etc.",
+     "date": "2025-02-12"
+    }
+   ],
+   "recommendation_tr": "Payı her kayıt için ayrı hesaplarım ve QR gecikme kuralını bu payla uygularım: ret yalnız \"fark eksi pay\" 30 saniyeyi aşınca, \"normal\" yalnız \"fark artı pay\" 10 saniyenin altındayken; arası işaretlenir. 7 günlük belgede pay yaklaşık 62 saniye, 1 günlükte yaklaşık 11 saniye olduğu için QR kayıtlarında pay en yakın çapadan (saat belgesi ya da gönderim anı) alınır. \"Sunucuya ulaştığı andan sonrası\" kuralında da pay düşülür. Hocanın telefonu da QR zaman dilimini aynı hesaplanan saatle üretir. Olay kaydına her kaydın payı ve iki çapa arasındaki fark yazılır; 100 ppm gerçek veriyle ayarlanır.",
+   "confidence": "high"
+  },
+  {
+   "id": "S09-F5",
+   "plan_line": 182,
+   "plan_quote": "Telefon internetteyken sunucudan imzalı bir saat belgesi alır ve o anki iç sayaç değerini yanına yazar.",
+   "kind": "MISSING",
+   "lenses": [
+    "correct",
+    "useful",
+    "sustainable"
+   ],
+   "severity": "medium",
+   "finding": "The plan does not say which counter value is stored or how the certificate is tied to the request. Two standard attacks on time protocols work even when messages are authenticated: holding a message back (delay manipulation) and replaying an older valid message. Suppose the phone stores the counter when the response arrives and accepts any valid certificate. A student who controls the network path can then hold the response, or inject a certificate captured earlier, and shift the computed time back by that gap. On iPhone this only needs a user-installed root certificate with full trust, which Apple allows. Android apps targeting API 24+ ignore user CAs by default, so there it needs root. Roughtime handles both with a client nonce and a maximum request-to-response delay. With the counter taken at send time and a 2 s cap, the bound stays conservative against a late student, and the plan's 2 s fixed allowance already covers it.",
+   "evidence": [
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc7384",
+     "quote": "In a packet delay manipulation scenario, an MITM attacker receives protocol packets and relays them to their destination after adding a maliciously computed delay.",
+     "date": "2014-10"
+    },
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc7384",
+     "quote": "In a replay attack, an attacker records protocol packets and replays them at a later time without any modification.",
+     "date": "2014-10"
+    },
+    {
+     "url": "https://datatracker.ietf.org/doc/html/draft-ietf-ntp-roughtime-19",
+     "quote": "this proves that the signed response could only have been generated after the nonce",
+     "date": "2026-03-17"
+    },
+    {
+     "url": "https://support.apple.com/en-us/102390",
+     "quote": "You must manually turn on trust for SSL/TLS when you install a profile that is sent to you via email or downloaded from a website.",
+     "date": "2025-03-26"
+    }
+   ],
+   "recommendation_tr": "Telefon saat belgesini isterken rastgele bir tek kullanımlık değer gönderir, sunucu bu değeri belgeye yazar; telefon kendi değerini taşımayan belgeyi kullanmaz. Sayaç değerini isteği gönderdiği an alır; cevap 2 saniyeden geç gelirse yeni belgeyi kullanmaz, öncekiyle devam eder. Böylece araya girip eski bir belgeyi tekrar oynatmak ya da cevabı bekletmek saati geri kaydıramaz; iPhone'da kullanıcı kendi kök sertifikasını kurup trafiğin arasına girebiliyor.",
+   "confidence": "high"
+  },
+  {
+   "id": "S09-F6",
+   "plan_line": 973,
+   "plan_quote": "Saat belgesi: Sunucunun imzaladığı, telefonun en son ne zaman doğru saati aldığını gösteren kayıt.",
+   "kind": "SIMPLIFY",
+   "lenses": [
+    "compact",
+    "sustainable",
+    "scalable"
+   ],
+   "severity": "low",
+   "finding": "No time-stamping standard fits better than a small MAC'd token. Roughtime (draft-19, March 2026, Experimental, in the RFC Editor queue) is built for clients that do not trust a single server: it queries at least three servers over UDP/TCP and uses Ed25519 delegation. RFC 3161 needs a Time Stamping Authority and CMS SignedData. Here only our own server issues and checks the certificate. An HMAC over (server time, device id, client nonce) using Node's built-in crypto is the smallest option, and the phone never needs to verify it. Returning a fresh certificate on every server response (send, sync, version check) keeps anchors fresh without extra requests at the class-exit peak; this is the piggyback approach Elson and Römer describe. It also replaces the separate refresh on network change in line 192.",
+   "evidence": [
+    {
+     "url": "https://datatracker.ietf.org/doc/html/draft-ietf-ntp-roughtime-19",
+     "quote": "randomly select at least three servers from the list, and sequentially query them",
+     "date": "2026-03-17"
+    },
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc3161",
+     "quote": "This document describes the format of a request sent to a Time Stamping Authority (TSA) and of the response that is returned.",
+     "date": "2001-08"
+    },
+    {
+     "url": "https://graphics.stanford.edu/courses/cs321/Private/Readings/roemer-wsn-ts.pdf",
+     "quote": "piggybacks round trip time measurements to ordinary data packets sent by other processes. This achieves time synchronization without imposing any additional load on the network.",
+     "date": "2002-10-28"
+    }
+   ],
+   "recommendation_tr": "Saat belgesi için Roughtime ya da RFC 3161 kullanmam: ilki birden çok bağımsız saat sunucusu, ikincisi ayrı bir zaman damgası kurumu için tasarlandı ve fazladan parça getirir. Belgeyi yalnız kendi sunucum doğruladığı için sunucu saati, cihaz kimliği ve telefonun tek kullanımlık değeri üzerine sunucunun gizli anahtarıyla doğrulama kodu (HMAC) eklenmiş kısa bir belge yeterli; bunu Node'un yerleşik kripto modülü yapar. Her sunucu cevabı (gönderme, indirme, sürüm kontrolü) yeni bir belge taşır, ayrı belge isteği gerekmez. Sözlükte \"imzaladığı\" yerine \"doğrulama kodu eklediği\" yazarım.",
+   "confidence": "high"
+  },
+  {
+   "id": "S09-F7",
+   "plan_line": 686,
+   "plan_quote": "Expo'nun hazır çalışma süresi fonksiyonu Android'de uykuyu saymadığı için kullanılmaz.",
+   "kind": "MISSING",
+   "lenses": [
+    "correct"
+   ],
+   "severity": "low",
+   "finding": "On iOS, expo-device getUptimeAsync returns ProcessInfo.systemUptime, which Apple defines as time the system has been awake. So it excludes sleep on iPhone too. The plan's reason names only Android, which suggests the Expo function would be fine on iPhone.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/expo/expo/main/packages/expo-device/ios/DeviceModule.swift",
+     "quote": "ProcessInfo.processInfo.systemUptime * 1000",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/foundation/processinfo/systemuptime",
+     "quote": "The amount of time the system has been awake since the last time it was restarted.",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Cümleyi \"Expo'nun hazır çalışma süresi fonksiyonu iki platformda da uykuyu saymadığı için kullanılmaz\" diye düzeltirim; iPhone'da da yalnız uyanık geçen süreyi veriyor.",
+   "confidence": "high"
+  },
+  {
+   "id": "S09-F8",
+   "plan_line": 211,
+   "plan_quote": "Yukarıdaki 2'lik sınır geçerli.",
+   "kind": "RISK",
+   "lenses": [
+    "correct",
+    "compact"
+   ],
+   "severity": "low",
+   "finding": "Lines 194 and 211 cap 'saat doğrulanamadı' records at 2 per student per course per term. Line 293 caps backup-code use at 2. Line 315 sets 2 for unverified-time and backup-code records together. It is unclear whether this is one shared counter or two separate counters of 2. The shared rules package and its tests need one answer.",
+   "evidence": [
+    {
+     "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+     "quote": "Saati doğrulanamayan ve yedek kodla alınan kayıtlardan her öğrenci için her derste dönem başına en çok 2 tanesi otomatik kabul edilir.",
+     "date": "2026-10-04"
+    },
+    {
+     "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+     "quote": "Yedek kodu iletmek: her derste dönem başına en çok 2",
+     "date": "2026-10-04"
+    }
+   ],
+   "recommendation_tr": "2'lik sınırın saati doğrulanamayan ve yedek kodlu kayıtlar için tek ortak sayaç mı, ayrı sayaçlar mı olduğunu tek cümleyle yazarım. Önerim tek ortak sayaç: ortak kural paketinde tek kural ve tek test tablosu olur, hile için ikinci bir 2'lik hak açılmaz.",
+   "confidence": "high"
+  }
+ ],
+ "compactness_notes": "If every recommendation is accepted, the net change in moving parts is negative. Removed: TrustedTime (com.google.android.gms:play-services-time) leaves the first release, which drops one native dependency and the only Android-only time path (F1). Added: one App Group entitlement on iOS, which is config only and EAS can register (F2). Everything else needs no new package. The boot_id read lives in the existing local native module (F3). The HMAC certificate uses Node's built-in crypto (F6). The backward anchor is one extra field per send (F1). Certificates piggybacked on normal responses remove the separate refresh call on network change (F6). Net packages: -1. Nothing in this slice needs a new tool.",
+ "open_questions": [
+  "Line 686 says boot time ('açılış zamanı') never leaves the phone. That suggests the iOS 'sistem işareti' was meant to be kern.boottime. Is that the intent, or was Apple's semaphore method meant? F2 changes the wording either way.",
+  "Is the cap of 2 automatic accepts per course per term one counter shared by 'saat doğrulanamadı' and backup-code records, or two separate counters (lines 194, 211, 293, 315)?",
+  "Will the app pin its TLS certificate? Without pinning, the nonce rule in F5 is the only guard against certificate replay on iPhone. With pinning, the nonce is still a cheap extra guard.",
+  "Sleep drift on the target phones has not been measured. Should the first trial log each record's allowance and the gap between the forward and backward anchors, so 100 ppm and the QR thresholds are tuned on real data?"
+ ]
+}

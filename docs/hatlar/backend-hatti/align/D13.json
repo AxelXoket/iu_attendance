@@ -1,0 +1,89 @@
+{
+ "id": "D13",
+ "instructions": [
+  {
+   "refs": [
+    "I068",
+    "I059"
+   ],
+   "do": "D13-A04'ü kapat: D12.islem geçici hataları VERITABANI_ kodlarına çeviriyor (http 503, bekleme { aralik: [15, 45] }), D12-B06 cümlesi düzeliyor. D13'ün SQLSTATE yedek tablosuna 55P03, 25P03, 57P01, 57P02 ve 08 sınıfı API_SUNUCU_YOGUN olarak eklenir (ikinci güvence). app.ts'te ApiBagimliliklari.veritabani'ya Veritabani.db, islem'e Veritabani.islem verilir; Islem tipi D12'nin index.ts'inden; ApiBagimliliklari.islem secenek'i (saltOkunur, yalitim, zamanAsimiMs, yenidenDene) aynen iletir. Kök log cause alanındaki { neden, sqlstate, kisit, tablo } bilgisini yazar. veritabaniEklentisi öneksiz kaydedilir. Kendi göçündeki hedefsiz ON CONFLICT DO NOTHING hedefli yazılır."
+  },
+  {
+   "refs": [
+    "I069"
+   ],
+   "do": "D13-A05'i kapat: D15 eşleşmeleri kabul edildi. dependency-cruiser kuralları ayrı yapılandırma dosyasında değil D13'ün sınır testinde durur (dependency-cruiser API'siyle apps/server/src üstünde no-circular ve yaprak kuralı, iskelet adımında da koşar); D15 paketi tam sürümle ekler ve kalite iş akışında testi koşar."
+  },
+  {
+   "refs": [
+    "I070",
+    "A2"
+   ],
+   "do": "D13-A07'yi kapat: birleşim kuralları contracts.json ortak kurallarına işlendi; eklenti adı 'eklenti' değil <ad>Eklentisi'dir (kimlikEklentisi, derslerEklentisi, listelerEklentisi, saatEklentisi, yoklamaEklentisi, esitlemeEklentisi, dogrulamaEklentisi, devamEklentisi, duzeltmelerEklentisi, raporlarEklentisi, projeksiyonEklentisi, veritabaniEklentisi, isletimEklentisi) ve EklentiTemelSecenekleri ({ surec }) genişletir. iki_yonlu_ciftler tablosunu A2'ye göre yeniden yaz: D01 ile D02 (D02 D01'i yalnız kimlik/yaprak.ts'ten, D01 D02'yi yalnız dersler/yaprak.ts'ten), D01 ile D07 (D07 D01'i yalnız kimlik/yaprak.ts'ten ya da eklenti seçeneğiyle; D01 D07'nin index.ts'ini), D05 ile D07 (D07 D05'i yalnız yoklama/yaprak.ts'ten ya da eklenti seçeneğiyle; D05 D07'nin index.ts'ini), D08 ile D09 (D08 D09'u yalnız duzeltmeler/yaprak.ts ve packages/core/src/duzeltmeler üstünden; D09 D08'in index.ts'ini). Sınır testi: yaprak.ts başka modülden yalnız yaprak.ts içe aktarır; modules/ dosyası jobs/ ve bileşim kökü içe aktarmaz; no-circular sıfır ihlal; her kural bilerek eklenen yanlış içe aktarmayla kırmızıya döner."
+  },
+  {
+   "refs": [
+    "I071",
+    "I076"
+   ],
+   "do": "D13-A08'i kapat: komşulara eşleşme talimatları gitti. Tek ayrım: IS_KUYRUGU_ kodları için http null ya da 500 koddan koda verilir (API isteğinde de doğabilen isGonder hataları 500 ve genel metin, yalnız işçide doğanlar null); IS_KUYRUGU_HATA_KODLARI hataKodlariTanimla ile hatalar.ts birleştirmesine girer. app.ts kurucusu uygulamaKur dinleme açmadan ve surec ('api' | 'isci' | 'belge') ile çağrılır; zamanlayıcıları yalnız api kurar."
+  },
+  {
+   "refs": [
+    "I072",
+    "I122"
+   ],
+   "do": "D13-A09'u kapat: apps/server/scripts/api/* globu D13'e eklendi, apps/server/src/jobs/api/* globu kalktı. openapi-belgesi-sakla.ts ve oasdiff-kirilma-denetimi.ts apps/server/scripts/api/ altına taşınır, jobs/api/index.ts silinir; spec.files, .github/workflows/sozlesme.yml komutları ve iş açıklamaları yeni yolu kullanır; worker.ts jobs/api içe aktarmaz."
+  },
+  {
+   "refs": [
+    "I050",
+    "I080",
+    "I081"
+   ],
+   "do": "Kimlik olayları (I050): D01.kimlikDinleyicileriniKur(aboneler: { dersler: KimlikDinleyicisi; esitleme: KimlikDinleyicisi; projeksiyon: KimlikDinleyicisi; isletim: KimlikDinleyicisi }): void ve kimlikDinleyicileriHazir(): void; KimlikDinleyicisi = (tx, olay: KimlikOlayi) => Promise<void>. Aboneler: dersler D02.derslerKimlikDinleyicisi, esitleme D06.esitlemeKimlikDinleyicisi, projeksiyon D11.projeksiyonKimlikDinleyicisi, isletim D15.kimlikOlayiDinleyicisi; D01 olayı doğuran işlemde bu sırayla çağırır. Kurulumu bileşim kökleri yapar: app.ts uygulamaKur (api ve isci), D12 cli/geri-yukleme, D15 cli/anahtar-uret ve cli/olay*. kimlikOlayiDinleyicisiKaydet adlı bir işlev yoktur. D13 için: uygulamaKur api ve isci süreçlerinde, eklentileri kaydetmeden önce D01.kimlikDinleyicileriniKur({ dersler: derslerKimlikDinleyicisi, esitleme: esitlemeKimlikDinleyicisi, projeksiyon: projeksiyonKimlikDinleyicisi, isletim: kimlikOlayiDinleyicisi }) ve kimlikDinleyicileriHazir() çağırır. isletimEklentisi'ni rotalariKaydet, D06.ogeTuruKaydet, D01.hesapSilindiMi, D12.danismaKilidi, veritabani, saat ve surec ile kaydeder (kimlikOlayiDinleyicisiKaydet seçeneği yok). uygulamaKur olcumYazici seçeneği alır (varsayılan false, yalnız server.ts true; test dünyası ve openapi_belgesi_sakla vermez) ve eklentiye geçirir; logger D15'in log'u; apiKur ayarları D15 ayarlarından (panelAdresi, baski, guvenilenVekilAdresi, yayinBilgisiYolu); derslerEklentisi'ne qrDersAyariAcik = ayarlar().asama2.qrAcik; projeksiyonEklentisi'ne qrAcik = ayarlar().asama2.qrAcik, ayarlar = ayarlar().projeksiyon ve geriYuklemePencereleri = D12.geriYuklemePencereleri."
+  },
+  {
+   "refs": [
+    "I006"
+   ],
+   "do": "app.ts D02.donemArasiMi'yi en düşük sürüm denetimine parametre olarak verir; infra/api D02'yi içe aktarmaz."
+  },
+  {
+   "refs": [
+    "I031"
+   ],
+   "do": "yayinBilgisiSemasi'na iosDagitimTurleri eklenir; D07 dosyayı yalnız yayinBilgisi() ile okur. packages/contracts/package.json packages/core'a çalışma alanı bağımlılığı ekler: sözleşme dosyaları core'daki sabit listeleri içe aktarabilir; core packages/contracts'ı çalışma zamanında içe aktarmaz, gerekirse yalnız import type kullanır (sınır testine bu kuralı da ekle)."
+  },
+  {
+   "refs": [
+    "I018"
+   ],
+   "do": "Saat başlıklarının adları X-Saat-Istegi ve X-Saat-Belgesi; saat kancasında özne istekteki kimlikten (tur cihaz ise imzalayan cihaz), saatOznesiKur ile."
+  },
+  {
+   "refs": [
+    "I045"
+   ],
+   "do": "ogeSonuclariSemasi öğesine modüllerin yalnız ekleme alanlarına izin ver (duzeltme, yeniKarar, sayilan); şema bilinmeyen ek alanı reddetmez, tanımlı alanları doğrular."
+  },
+  {
+   "refs": [
+    "I052"
+   ],
+   "do": "Rota kimliği projeksiyon olan uçlarda ve kimliği ['girissiz', 'projeksiyon'] beyan eden eşleştirme kodu ucunda istek.panelden iken kök kanca oturum aramaz, istek.projeksiyonAnahtari'nı çerezden doldurur; doğrulamayı D11'in kimlik kancası yapar ve girissiz beyanlı uçta tanınmayan ya da kapanmış çerezi yeni tarayıcı sayar. Oturum rotasında projeksiyon çerezi kimlik sayılmaz (401 API_KIMLIK_GEREKLI). Adres başına yeni tarayıcı sınırı istek.ip'yi (trustProxy, girissiz sınıfıyla aynı kaynak) yalnız süreç belleğindeki sayaçta kullanır."
+  },
+  {
+   "refs": [
+    "I009"
+   ],
+   "do": "Ortak Kimlik tipi (packages/contracts/src/ortak/kimlik.ts, D13): { kisiId, girisOturumuId, oturumKapsami, kaynak, roller: readonly { rol: 'ogrenci' | 'hoca' | 'yonetici'; kapsamBirimId: BirimId | null }[], incelemeHesabi }; kapsamBirimId null bütün birimler demektir. Bu tip packages/contracts/src/ortak/kimlik.ts'te D13'ündür; D01 doldurur."
+  },
+  {
+   "refs": [
+    "A1"
+   ],
+   "do": "Göç klasörü (A1): spec'te ve bölümde göç yerini contracts.json migration_dir ile aynı yaz: apps/server/migrations/<14 haneli UTC>_api_<açıklama>/ (migration.sql ve snapshot.json; dosya haritasında apps/server/migrations/??????????????_api_* globu bu modülündür). Göç yalnız bu modülün tablolarına dokunur; göç dosyaları spec.files'a değil iş paketine yazılır; klasör kuralı ve CI göç denetimi D12'nindir. Paralel paketler birleşmeden önce ana dala yeniden dayanır, araya göç girdiyse kendi klasörünü silip drizzle-kit generate ile yeniden üretir."
+  }
+ ]
+}

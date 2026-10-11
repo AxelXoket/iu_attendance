@@ -1,0 +1,134 @@
+
+-- [0] dogrulamaDegeriniTuket
+  SIG: dogrulamaDegeriniTuket(tx: Tx, degerId: string, beklenenAmac: DogrulamaAmaci): Promise<{ tamam: true } | { tamam: false; kod: 'DOGRULAMA_DEGER_GECERSIZ' }>
+  PURPOSE: D01'in kayıt, cihaz değişimi ve App Attest yenileme işlemleri çağırır. degerId telefonun aldığı base64url değerin kendisidir; satır SHA-256 özetiyle bulunur ve her durumda silinir; süresi geçmiş ya da amacı uymayan değer DOGRULAMA_DEGER_GECERSIZ döner.
+
+-- [1] cihazKanitiniDogrula
+  SIG: cihazKanitiniDogrula(tx: Tx, kanit: CihazKaniti): Promise<KanitSonucu>
+  PURPOSE: Android anahtar kanıtını ve App Attest kanıtını tek arayüzün (CihazDogrulayici) arkasında doğrular, meydan okumayı değer, öğrenci numarası, isSystemUser ve Secure Enclave açık anahtarından yeniden kurar, cihaz_kanitlari satırını çağıranın işleminde yazar. Hata atmaz: REDDEDILDI de bir sonuçtur ve gerekçesiyle döner; telefona dönecek kod D01'in sözleşmesindedir (D07-A01). Sonucu D01 kendi cihazDogrulamaSonucunuYaz işleviyle cihaz satırına yazar.
+
+-- [2] appAttestSayaciniDenetle
+  SIG: appAttestSayaciniDenetle(tx: Tx, anahtarId: CihazAnahtariId, sayac: number, siraNo: bigint): Promise<'GECTI' | 'ARTMADI'>
+  PURPOSE: D05 App Attest onayı taşıyan her yeni kayıtta, kaydın geri dönüş noktası içinde çağırır. Anahtar kilidi altında aynı anahtarın bir önceki ve bir sonraki sıra numaralı geçen onayına bakar, boşluk kabul edilir, satırı yazar; aynı (anahtar, sıra) yeniden gelirse saklı sonucu döner.
+
+-- [3] kararHesapla
+  SIG: kararHesapla(tx: Tx, kayitTaslagi: KayitTaslagi, baglam: KararBaglami): Promise<KararSonucu>
+  PURPOSE: D05 yeni kaydı eklemeden önce çağırır. Bağlamı sahiplerinin dış yüzünden toplar, kararVer ile etiketleri, kararı, birincil ve öbür gerekçeleri, geç geldi işaretini hesaplar; Var olacak Saat doğrulanamadı ya da Yedek kodlu kayıtta ortak sınırdan hakkı aynı işlemde kullanır. Kayıt satırına yazmaz.
+
+-- [4] kararGecmisineYaz
+  SIG: kararGecmisineYaz(tx: Tx, kayitAnahtari: KayitAnahtari, karar: KararSonucu, kaynak: KararKaynagi): Promise<void>
+  PURPOSE: D05 kayıt satırını ekledikten hemen sonra, aynı geri dönüş noktasında çağırır; ilk geçmiş satırını (sira 1, guncel) yazar. Kafa sayısı girilmiş oturumda karşılaştırmayı yeniler, eşik ilk kez aşıldıysa işareti açar. Yalnız ilk karar içindir; ikinci çağrı tekil kısıta takılır.
+
+-- [5] kararDegistir
+  SIG: kararDegistir(tx: Tx, kayitAnahtari: KayitAnahtari, yeniKarar: YeniKarar, kaynak: KararKaynagi): Promise<KararDegisimi>
+  PURPOSE: İlk karardan sonraki her geçişin tek yolu: D09 onay ve retleri, burada değil ve yeniden değerlendirme bunu kullanır. Önce kayıt anahtarından türetilen işlem kilidini (pg_advisory_xact_lock) alır, sonra güncel geçmiş satırını okur; böylece aynı kayda eşzamanlı iki geçiş sıraya girer ve ikincisi birincinin sonucunu görür. Geçiş durum makinesinde yoksa DOGRULAMA_GECIS_GECERSIZ, beklenen eski karar güncel kararla aynı değilse DOGRULAMA_KARAR_DEGISTI, birim-dönem kilitliyse DOGRULAMA_DONEM_KILITLI, hoca dersin hocası değilse DOGRULAMA_YETKISIZ_HOCA döner. Sonra önceki satırı guncel = false yapar, yeni satırı yazar, D05.kararSutunlariniYaz ve D08.devamHesaplaIsiKoy'u aynı işlemde çağırır. Karar aynıysa yazmaz. Hoca kaynaklı geçişin denetim olayını çağıran yazar.
+
+-- [6] donemKilidiKararKapanisi
+  SIG: donemKilidiKararKapanisi(tx: Tx, birimId: BirimId, donemId: DonemId): Promise<{ onaysizKendiBeyani: number; kararsiz: number }>
+  PURPOSE: D02'nin donem_kilidi işlemi kilitAdimiKaydet ile kayıtlı adımı aynı işlemde çağırır. Kararları değiştirmez; onaysız Kendi beyanı için dogrulama.onaysiz_kilitlendi, açık Beklemede ve İncelemede için dogrulama.kararsiz_kilitlendi olayını oturum başına yazar.
+
+-- [7] yenidenDegerlendir
+  SIG: yenidenDegerlendir(tx: Tx, suzgec: YenidenSuzgec, neden: YenidenNeden): Promise<{ incelenen: number; degisen: number }>
+  PURPOSE: Bir olaydan sonra süzgece uyan kayıtların otomatik kararlarını aynı kurallarla baştan hesaplar, değişenleri kararDegistir yoluyla yazar. Hoca kararına, kilitli döneme ve etiketlere dokunmaz. Süzgeç: kayıt anahtarları, oturum, öğrenci ve şube, cihaz ya da gerekçe ve ulaşma aralığı.
+
+-- [8] oturumIsaretleri
+  SIG: oturumIsaretleri(tx: Tx, suzgec: IsaretSuzgeci): Promise<OturumIsareti[]>
+  PURPOSE: D09'un işaretli oturum listesi, D08 ve D10 okur: tür, geçerli mi, ilk işaret anı, derste mi, son karşılaştırma, kesinleşme ve inceleme bilgisi.
+
+-- [9] isaretIncelendi
+  SIG: isaretIncelendi(tx: Tx, isaretId: Uuid, hoca: { kisiId: KisiId }): Promise<OturumIsareti>
+  PURPOSE: D09'un toplu inceleme kapatma ucu çağırır; incelendi_ani ve inceleyen_kisi_id yazar. Zaten incelenmişse değiştirmeden döner; hoca dersin hocası değilse DOGRULAMA_YETKISIZ_HOCA.
+
+-- [10] cihazDogrulanmadiMi
+  SIG: cihazDogrulanmadiMi(tx: Tx, cihazId: CihazId): Promise<boolean>
+  PURPOSE: Cihazın son kanıtı DOGRULANDI değilse ya da iptal listesine düştüyse true; D09'un ilk kayıt teyidi listesi bu öğrencileri ayrı ve işaretli gösterir.
+
+-- [11] kafaSayisiOgesi
+  SIG: kafaSayisiOgesi(tx: Tx, oge: KuyrukOgesi<KafaSayisiGovdesi>): Promise<OgeSonucu>
+  PURPOSE: kafa_sayisi kuyruk öğesinin işleyicisi. Göndereni dersin hocası olarak doğrular, D02.kafaSayisiniYaz ile değeri ve yapıldı onayını yazdırır, denetim olayını yazar, aynı işlemde oturumun pencereye bağlı kararlarını son ayara göre çözer, karşılaştırmayı hesaplayıp işareti açar.
+
+=== TABLE cihaz_dogrulama_degerleri: Cihaz bağlama, cihaz değişimi ve App Attest anahtar yenilemesinde kanıta konan tek kullanımlık, 5 dakikalık sunucu değerleri. Değerin kendisi saklanmaz; satır SHA-256 özetiyle bulunur, ilk tüketimde ya da süresi geçince silinir.
+  deger_ozeti bytea null=false :: Telefona verilen 32 baytlık değerin SHA-256 özeti; birincil anahtar. Telefon değeri geri getirir, sunucu özetle bulur.
+  amac text null=false :: KAYIT, CIHAZ_DEGISIMI ya da ANAHTAR_YENILEME; değer yalnız bu amaçla tüketilir.
+  olusturma_ani timestamptz null=false :: D04.simdi() ile yazılır.
+  son_gecerlilik_ani timestamptz null=false :: olusturma_ani artı 5 dakika (DEGER_OMRU_MS).
+  CON cihaz_dogrulama_degerleri_deger_ozeti_pk PRIMARY KEY (deger_ozeti)
+  CON cihaz_dogrulama_degerleri_deger_ozeti_ck CHECK (octet_length(deger_ozeti) = 32)
+  CON cihaz_dogrulama_degerleri_amac_ck CHECK (amac IN ('KAYIT','CIHAZ_DEGISIMI','ANAHTAR_YENILEME'))
+  CON cihaz_dogrulama_degerleri_son_gecerlilik_ani_ck CHECK (son_gecerlilik_ani > olusturma_ani)
+
+=== TABLE cihaz_kanitlari: Her cihaz bağlama, cihaz değişimi ve App Attest anahtar yenilemesinde alınan kanıtın ham hali, sunucunun okuduğu değerler ve sonucu (DOGRULANDI, DOGRULANAMADI, REDDEDILDI). Cihaz doğrulanmadı etiketinin ve ayrı oran ölçümünün dayanağı; iptal listesi bu satırlara işlenir.
+  id uuid null=false :: Kanıt kimliği.
+  cihaz_id uuid null=false :: cihazlar(id) (D01).
+  anahtar_id uuid null=false :: Kanıtlanan anahtar: Android cihaz anahtarı ya da App Attest anahtarı, cihaz_anahtarlari(id) (D01). Kanıtsız telefonda bağlanan donanım anahtarı.
+  platform text null=false :: ANDROID ya da IOS.
+  kanit_turu text null=false :: ANDROID_ANAHTAR_KANITI, APP_ATTEST ya da KANITSIZ (Google servissiz Android, kanıtı isteğe bağlı Android 7, App Attest'i başarısız iPhone).
+  amac text null=false :: KAYIT, CIHAZ_DEGISIMI ya da ANAHTAR_YENILEME.
+  sonuc text null=false :: DOGRULANDI, DOGRULANAMADI ya da REDDEDILDI (REDDEDILDI'nin bağlamaya etkisi D07-A01).
+  gerekce_kodu text null=true :: DOGRULANDI dışında zorunlu; kanıt gerekçe kataloğundan (ör. GUVENLIK_DUZEYI_YAZILIM, APP_ATTEST_GELISTIRME_ORTAMI).
+  ham_kanit bytea null=true :: Android sertifika zinciri (DER, sırayla) ya da App Attest kanıt nesnesi (CBOR) aynen; KANITSIZ'da boş. Hesap silmede silinip silinmeyeceği D07-A07.
+  seri_nolari text[] null=false :: Zincirdeki sertifika seri numaraları (küçük harf onaltılık); iptal listesi denetimi için.
+  kanit_guvenlik_duzeyi text null=true :: Android attestationSecurityLevel: SOFTWARE, TRUSTED_ENVIRONMENT ya da STRONG_BOX.
+  anahtar_guvenlik_duzeyi text null=true :: Android keymasterSecurityLevel; aynı değerler.
+  dogrulanmis_acilis text null=true :: Android verifiedBootState: VERIFIED, SELF_SIGNED, UNVERIFIED ya da FAILED.
+  cihaz_kilitli boolean null=true :: Android rootOfTrust.deviceLocked.
+  paket_adi text null=true :: Kanıttaki uygulama paket adı (Android).
+  imza_ozeti bytea null=true :: Kanıttaki imza sertifikası SHA-256 özeti (Android); birden çoksa eşleşen.
+  kok text null=true :: Zincirin bağlandığı kök: GOOGLE_RSA, GOOGLE_P384 ya da APPLE_APP_ATTEST; bağlanmadıysa boş.
+  app_attest_ortami text null=true :: PRODUCTION ya da DEVELOPMENT; yalnız PRODUCTION doğrulanmış sayılır.
+  ios_acilis_dogrulama_turu text null=true :: iOS 27 kanıt uzantısındaki açılış doğrulama türü (ham değer); iOS 26 ve öncesinde boş.
+  ios_paket_surumu text null=true :: iOS 27 kanıt uzantısındaki paket sürümü (bundle version).
+  ios_aykirilik text null=true :: BEKLENMEYEN_DAGITIM_TURU ya da YAYIMLANMAMIS_PAKET_SURUMU; etiketi ve kararı değiştirmez.
+  iptal_ani timestamptz null=true :: Zincirdeki bir seri numarası iptal listesinde ilk görüldüğü an; liste kalkınca boşalır.
+  iptal_durumu text null=true :: REVOKED ya da SUSPENDED.
+  olusturma_ani timestamptz null=false :: D04.simdi().
+  CON cihaz_kanitlari_id_pk PRIMARY KEY (id)
+  CON cihaz_kanitlari_cihaz_id_fk FOREIGN KEY (cihaz_id) REFERENCES cihazlar (id)
+  CON cihaz_kanitlari_anahtar_id_fk FOREIGN KEY (anahtar_id) REFERENCES cihaz_anahtarlari (id)
+  CON cihaz_kanitlari_platform_ck CHECK (platform IN ('ANDROID','IOS'))
+  CON cihaz_kanitlari_kanit_turu_ck CHECK (kanit_turu IN ('ANDROID_ANAHTAR_KANITI','APP_ATTEST','KANITSIZ'))
+  CON cihaz_kanitlari_amac_ck CHECK (amac IN ('KAYIT','CIHAZ_DEGISIMI','ANAHTAR_YENILEME'))
+  CON cihaz_kanitlari_sonuc_ck CHECK (sonuc IN ('DOGRULANDI','DOGRULANAMADI','REDDEDILDI'))
+  CON cihaz_kanitlari_gerekce_kodu_ck CHECK (gerekce_kodu IS NULL OR gerekce_kodu IN (kanıt gerekçe kataloğu))
+  CON cihaz_kanitlari_sonuc_gerekce_kodu_ck CHECK ((sonuc = 'DOGRULANDI') = (gerekce_kodu IS NULL))
+  CON cihaz_kanitlari_kanit_turu_ham_kanit_ck CHECK (kanit_turu <> 'KANITSIZ' OR (ham_kanit IS NULL AND sonuc = 'DOGRULANAMADI'))
+  CON cihaz_kanitlari_iptal_ani_iptal_durumu_ck CHECK ((iptal_ani IS NULL) = (iptal_durumu IS NULL))
+  CON cihaz_kanitlari_iptal_durumu_ck CHECK (iptal_durumu IS NULL OR iptal_durumu IN ('REVOKED','SUSPENDED'))
+  CON cihaz_kanitlari_platform_ios_alanlari_ck CHECK (platform = 'IOS' OR (app_attest_ortami IS NULL AND ios_paket_surumu IS NULL AND ios_aykirilik IS NULL))
+  CON Düzey, açılış, kök, ortam ve aykırılık sütunlarında değer listesi CHECK'i (yukarıdaki notlardaki değerler)
+
+=== TABLE app_attest_sayaclari: App Attest anahtarı başına onay sayacı dizisi: her iPhone kaydının (anahtar, sıra numarası, sayaç) satırı ve kuralı geçip geçmediği. Anahtarın son sayacı en büyük sıra numaralı geçen satırdır; yenilenen anahtarın dizisi sıfırdan başlar, eski anahtarın satırları kalır. Açık anahtar cihaz_anahtarlari tablosundadır (D01).
+  anahtar_id uuid null=false :: App Attest anahtarı, cihaz_anahtarlari(id).
+  sira_no bigint null=false :: Kaydın cihazdaki sıra numarası (kayıt metninden).
+  sayac bigint null=false :: Onaydaki sayaç (authenticator data); kanıttaki ilk değer 0.
+  gecti boolean null=false :: Sayaç komşu geçen onaylara göre kesin artıyor mu; false olan satır komşu denetimine girmez.
+  olusturma_ani timestamptz null=false :: D04.simdi(); saklama süresi bu anla uygulanır.
+  CON app_attest_sayaclari_anahtar_id_sira_no_pk PRIMARY KEY (anahtar_id, sira_no)
+  CON app_attest_sayaclari_anahtar_id_fk FOREIGN KEY (anahtar_id) REFERENCES cihaz_anahtarlari (id)
+  CON app_attest_sayaclari_sayac_ck CHECK (sayac >= 0)
+  CON app_attest_sayaclari_sira_no_ck CHECK (sira_no >= 0)
+
+=== TABLE android_iptal_listesi: Google'ın anahtar kanıtı iptal listesinin son başarılı çekilen kopyası; her satır bir sertifika seri numarası. Cihaz bağlamada ve günlük yeniden denetimde kullanılır. Son başarılı çekim anı en büyük son_gorulme_ani'dir.
+  seri_no text null=false :: Sertifika seri numarası, listedeki gibi küçük harf onaltılık.
+  durum text null=false :: REVOKED ya da SUSPENDED; bilinmeyen durum REVOKED sayılır ve loglanır.
+  sebep text null=true :: Google'ın gerekçesi (ör. KEY_COMPROMISE); dış değer olduğu için CHECK yok, en çok 64 karakter.
+  ilk_gorulme_ani timestamptz null=false :: Satırın ilk görüldüğü çekim anı.
+  son_gorulme_ani timestamptz null=false :: Satırın göründüğü son başarılı çekim anı.
+  CON android_iptal_listesi_seri_no_pk PRIMARY KEY (seri_no)
+  CON android_iptal_listesi_seri_no_ck CHECK (seri_no ~ '^[0-9a-f]{1,64}$')
+  CON android_iptal_listesi_durum_ck CHECK (durum IN ('REVOKED','SUSPENDED'))
+  CON android_iptal_listesi_sebep_ck CHECK (sebep IS NULL OR length(sebep) <= 64)
+  CON android_iptal_listesi_son_gorulme_ani_ck CHECK (son_gorulme_ani >= ilk_gorulme_ani)
+
+=== TABLE ortak_sinir_sayaclari: 2'lik ortak sınırın (dönem, öğrenci, ders) başına kullanılan hakları ve hakkın kullanıldığı oturumlar. Satır SELECT ... FOR UPDATE ile kilitlenir; eşzamanlı iki işlem son hakkı birlikte alamaz.
+  donem_id uuid null=false :: donemler(id) (D02).
+  ogrenci_id uuid null=false :: kisiler(id) (D01).
+  ders_id uuid null=false :: dersler(id) (D02); teori ve uygulama birlikte sayılır.
+  kullanilan smallint null=false :: Hak kullanılan oturum sayısı; hiç azalmaz.
+  kullanilan_oturum_idleri uuid[] null=false :: Hakkın kullanıldığı oturumlar; aynı oturumdaki ikinci kayıt yeni hak harcamaz.
+  son_degisim_ani timestamptz null=false :: D04.simdi().
+  CON ortak_sinir_sayaclari_donem_id_ogrenci_id_ders_id_pk PRIMARY KEY (donem_id, ogrenci_id, ders_id)
+  CON ortak_sinir_sayaclari_donem_id_fk, ortak_sinir_sayaclari_ogrenci_id_fk, ortak_sinir_sayaclari_ders_id_fk
+  CON ortak_sinir_sayaclari_kullanilan_ck CHECK (kullanilan >= 0)
+  CON ortak_sinir_sayaclari_kullanilan_oturum_idleri_ck CHECK (cardinality(kullanilan_oturum_idleri) = kullanilan)
+  CON Üst sınır (ORTAK_SINIR = 2) kodda tek sabittir; CHECK'e yazılmaz, testler sabiti içe alır.

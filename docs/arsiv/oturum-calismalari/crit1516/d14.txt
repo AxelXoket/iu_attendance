@@ -1,0 +1,78 @@
+{
+"id": "D14-P13",
+"files": [
+"apps/server/src/infra/is-kuyrugu/kur.ts",
+"apps/server/test/features/is-kuyrugu/kurulum.feature",
+"apps/server/test/steps/is-kuyrugu/kurulum-adimlari.ts"
+],
+"notes": "Şemayı kuran yoklama_goc rolüyle sürüm ve kayma denetimi, pgboss yetkileri, kuyruk ve ölü kuyruk ayarları, zamanlama eşitlemesi ve acilistaBirKez işini yapan kuyruklariKur yazılır; tanımları parametre alır, worker.ts'i ve D15 iş listesini beklemez, D12'nin yetki senaryosu bu paketten sonra başlar. kurulum.feature ve eklenen kurulum-adimlari.ts ayarların aynen yazılmasını ve ikinci çalışmanın boş raporunu, API ve işçi rolü yetkilerini, şema sürümü uyuşmazlığını ve açılış işinin tekliğini D12 test veritabanında sınar."
+}
+{
+"id": "D14-P14",
+"files": [
+"apps/server/src/infra/eposta/temizlik.ts",
+"apps/server/src/jobs/is-kuyrugu/index.ts",
+"apps/server/src/jobs/is-kuyrugu/eposta-gonderim-temizligi.ts",
+"apps/server/test/features/is-kuyrugu/eposta-temizlik.feature",
+"apps/server/test/features/is-kuyrugu/zamanlama.feature",
+"apps/server/test/steps/is-kuyrugu/zamanlama-adimlari.ts"
+],
+"notes": "1.000'lik partili temizlik (her parti ayrı D12.islem) ve eposta_gonderim_temizligi tanımı jobs/is-kuyrugu/index.ts isler dizisiyle yazılır. eposta-temizlik.feature saklama sabitinden bir gün eski ve yeni satırla silmeyi ve 'aynı veriyle iki kez çalışırsa' adımını; zamanlama.feature ve eklenen zamanlama-adimlari.ts zamanlamaliOrnekAc ve TestClock ile kaçan günlük işin bir kez çalışmasını ve İstanbul saatli tetiklemeyi sınar. Koruyucu bozma burada denenir: tz kaldırılınca 'Zamanlama İstanbul saatiyle' kırmızı."
+}
+{
+"id": "D14-P16",
+"files": [
+"apps/server/src/worker.ts",
+"apps/server/src/infra/is-kuyrugu/altyapi-uyarlayici.ts",
+"apps/server/src/infra/is-kuyrugu/altyapi-uyarlayici.test.ts",
+"apps/server/src/infra/is-kuyrugu/zamanlama.test.ts",
+"apps/server/test/features/is-kuyrugu/isci-sureci.feature",
+"apps/server/test/steps/is-kuyrugu/isci-adimlari.ts"
+],
+"notes": "D15 tanımlarını isTanimla biçimine çeviren uyarlayıcı ve 11 adımlı açılış, kapanış ve kur alt komutunu taşıyan worker.ts yazılır; D14'te uygulamanın tamamını bekleyen tek pakettir ve arkasında D14 paketi yoktur. zamanlama.test.ts ve altyapi-uyarlayici.test.ts worker.ts'in topladığı gerçek kayıtta ad ve veri kurallarını, 14 günlük İstanbul zamanlama kurallarını ve uyarlanan işleri; isci-sureci.feature ve eklenen isci-adimlari.ts açılış sırasını, çıkış kodlarını ve kapanış sırasını denetler. Koruyucu testler: işçi bozmaları (isleriBaslat sırası, eposta.kapat sırası, ALTYAPI_CIKTI_SEMASI) burada denenir; öbür on beş bozma kendi paketlerinde denenmiştir ve bu paket on sekiz bozmanın hepsini tek betikle son kez koşar, her dosyanın md5'i geri yazımdan sonra denetlenir."
+}
+['id', 'module', 'summary', 'tables', 'endpoints', 'jobs', 'state_machines', 'invariants', 'exports', 'files', 'tests', 'resolved_gaps', 'contradictions_resolved', 'open_points', 'queue_policy', 'schedule_plan', 'templates', 'constants', 'error_codes', 'requests', 'worker_acilisi', 'baglanti_kurali']
+FILE "apps/server/src/worker.ts"
+FILE "apps/server/src/infra/is-kuyrugu/kur.ts"
+## /summary
+D14 sunucunun arka plan iş altyapısını (pg-boss 12: kuyruk politikası, İstanbul saatli zamanlama, yayın adımında kuyruk kurulumu, işçi süreci ve worker.ts) ve e-posta gönderimini (şablonlar, süreç içi gönderici, adres başına gönderim sınırı) üstlenir. İşlerin ne hesapladığı her işin sorumlu modülündür; D14 işin iş kuralıyla aynı veritabanı işleminde kuyruğa girmesini, iş verisinin yalnız iç kimlik ve tarih taşımasını, her kuyruğun açık ayarla çalışmasını ve hata çıktısının değer sızdırmamasını garanti eder. Kod e-postası kuyruğa konmaz, cevaptan sonra süreç içinde gider; giriş bildirimi de aynı yoldan gider ve sonucu çağırana döner, denetim kaydını D01 yazar. Tek uygulama tablosu eposta_gonderimleri adres yerine anahtarlı özet tutar ve 7 günde silinir; pgboss şemasını pg-boss'un kendi göçü kurar, Drizzle'a girmez. Çok işli kuyruk (D08 devam_hesapla) parti işleyicisiyle alınır, her iş ayrı tamamlanır ya da başarısız sayılır; zamanlamalı işin küçük çıktısı (D08 farkSayisi) isSagligi'nda görünür. worker.ts işçinin bileşim köküdür: D15'in ayarları ve logu, D12'nin iki veritabanı girişi (yoklama_isci, yoklama_saklama) ve işleri, D13'ün uygulamaKur'u ve modüllerin iş tanımları orada bağl
+## /tables[1]/constraints[3]
+Yetki: yoklama_api yalnız iş eklemeye yeten en dar küme; yoklama_isci SELECT, INSERT, UPDATE, DELETE ve MAINTAIN; şemayı kuran rol yoklama_goc. D12 rollere pgboss şemasında yalnız USAGE verir; tablo, dizi ve işlev yetkilerinin tamamını yayın adımındaki kur verir (I060).
+## /state_machines[1]/transitions[2]/by
+kuyruklariKur (yayın adımı)
+## /state_machines[1]/transitions[2]/when
+acilistaBirKez tanımlı exclusive kuyruğa kur bir iş gönderir; bekleyen ya da çalışan iş varken ikinci kur iş açmaz.
+## /invariants[5]
+Kuyruk, ölü kuyruk, zamanlama ve pgboss tablo, dizi ve işlev yetkilerini yalnız yayın adımındaki kur komutu şemayı kuran yoklama_goc rolüyle verir ve değiştirir (D12 rollere pgboss şemasında yalnız USAGE verir); API rolü pgboss şemasında yalnız iş ekler.
+## /exports[1]/signature
+isTanimla<V, C = void>(tanim: { kuyruk: KuyrukTanimi<V, C>; sureAsimiSaniye: number; kalpAtisiSaniye?: number; deneme?: { sayi?: number; beklemeSaniye?: number; ustel?: boolean }; zamanlama?: { cron: string; sonra?: readonly string[] }; acilistaBirKez?: true } & ({ isleyici: (veri: V, baglam: IsBaglami) => Promise<C | void> } | { partiIsleyici: (isler: ReadonlyArray<PartiIsi<V>>, baglam: PartiBaglami) => Promise<{ basarisiz: ReadonlyArray<{ isId: string; hata: unknown }> }>; parti: { boyut: number; esZamanli: number } })): IsTanimi<V>
+## /exports[1]/purpose
+Saf: tanımı doğrular ve döndürür; modül jobs/<modül>/index.ts dosyasında export const isler dizisine koyar, worker.ts toplar. sureAsimiSaniye zorunlu (10-3.600; parti kuyruğunda bütün partinin süresi), deneme sayısı 0-5 (varsayılan 3), bekleme 1-3.600 saniye (varsayılan 30, üstel), cron 5 alanlı, tz her zaman Europe/Istanbul. Tek işli tanım isleyici alır (localConcurrency 1, batchSize 1, yoklama 2 saniye); çok işli kuyruk partiIsleyici ile parti { boyut: 2-100, esZamanli: 1-4 } alır (batchSize, localConcurrency; yoklama 0,5 saniye), zamanlama ve çıktı şeması taşımaz. Bütün parti tanımlarının esZamanli toplamı işçinin Drizzle havuzundan (3) en az 1 eksik olmalıdır: tek işli kuyruklara bağlantı kalır. acilistaBirKez yalnız exclusive kuyrukta; kur yayın adımında bir iş açar. Ad tekliği, sonra başvuruları, parti ve çizelge kuralları işçi açılışında, kur'da ve sözleşme testinde denetlenir (IS_KUYRUGU_TANIM_GECERSIZ, _YINELENEN_AD, _ZAMANLAMA_KURALI). Altyapı işleri de buradan geçer: D12'nin veritabaniIsleri öğeleri doğrudan (sureAsimiSaniye vermeyen öğeye worker.ts ALTYAPI_IS_VARSAYILANI'ndaki 1.800'ü koyar), D15'in isletimIsleri tanımları altyapiIsleriniUyarla ile.
+## /exports[15]/purpose
+Yayın adımında worker.ts kur ile (db:migrate'in üçüncü adımı) şemayı kuran yoklama_goc rolüyle: sürüm ve kayma denetimi, pgboss yetkileri, kuyruk ve ölü kuyruk ayarları, zamanlamaların kayıtla eşitlenmesi. Seyrek zamanlamalı kuyrukta deleteAfterSeconds en az 2 beklenen aralık artı 1 gündür. acilistaBirKez tanımlı her kuyruğa bir iş gönderir (kuyruk exclusive: bekleyen ya da çalışan iş varken ikinci gönderim iş açmaz; rapor acilisIsi). Kayıttan kalkan kuyruk silinmez, raporlanır (__pgboss önekli iç kuyruklar sayılmaz). Tekrar çalışınca aynı sonuç, ikincide boş rapor.
+## /exports[15]/not
+bileşim kökü (yayın adımı, worker.ts kur)
+## /tests[10]/name
+API rolü pgboss şemasında yalnız iş ekler
+## /tests[43]/asserts
+acilistaBirKez tanımlı exclusive test kuyruğu için kur iki kez çalışınca kuyrukta 1 iş vardır ve ikinci raporun acilisIsi listesi boştur; iş tamamlandıktan sonra kur yeniden çalışınca 1 yeni iş açılır (zemin); exclusive olmayan kuyrukta acilistaBirKez IS_KUYRUGU_TANIM_GECERSIZ verir.
+## /resolved_gaps[3]/decision
+Kuyruklar, ölü kuyruklar, zamanlamalar ve pgboss yetkileri yayın adımında kurulur: db:migrate'in üçüncü adımı worker.ts kur (Drizzle göçleri ve pg-boss migrate'ten sonra), şemayı kuran rolle (yoklama_goc), tekrar çalışmaya dayanıklı. kur önce şema sürümünü ve detectSchemaDrift'i denetler; yoklama_isci'ye pgboss tablolarında SELECT, INSERT, UPDATE, DELETE ve MAINTAIN (PostgreSQL 18; pg-boss'un dizin bakımı için), yoklama_api'ye yalnız iş eklemeye yeten en dar yetkiyi verir (liste en az yetki testiyle sabit); pgboss yetkilerinin tamamı bu adımdadır, D12 rollere pgboss şemasında yalnız USAGE verir (I060); createQueue ya da updateQueue ile ayarları yazar; zamanlamaları kayıtla eşitler, fazlasını unschedule eder. Kayıttan kalkan kuyruk silinmez, raporlanır. Politika yerinde değiştirilmez, yeni adla kuyruk açılır (önce genişlet sonra daralt). pg-boss yükseltmesinde pg-boss plans migrate çıktısı değişiklik isteğinde okunur. teknik.html#altyapi-imaj'daki db:migrate tarifine üçüncü adım eklenir: önce Drizzle göçleri, sonra pg-boss migrate, sonra kuyruk kurulumu (aynı betik, göç adımı yine tek yerde).
+## /resolved_gaps[25]/decision
+isTanimla'da acilistaBirKez: true yalnız exclusive kuyrukta; kur (yayın adımı) her çalışmada bu kuyruklara bir iş gönderir, bekleyen ya da çalışan iş varken exclusive politika ikinci işi açmaz. D01 inceleme_hesaplari_kurulumu bunu kullanır (yayında bir kez ve 00:45 zamanlaması).
+## /resolved_gaps[25]/why
+D01 işin yayın adımında da çalışmasını istiyor; ayrı yol yazılmazsa her modül kendi açılış kodunu yazardı. Tekillik anahtarına yayın kimliği koymak gerekmez: exclusive politika aynı sonucu verir ve iş zaten tekrar çalışmaya dayanıklıdır.
+## /queue_policy[12]/ayar
+acilistaBirKez
+## /queue_policy[12]/not
+kur yayın adımında bir iş gönderir; bekleyen iş varken ikincisi açılmaz
+## /schedule_plan[8]/not
+yayın adımında da (acilistaBirKez)
+## /error_codes[2]/ne_zaman
+Ad deseni, _olu soneki, yasak yaprak tip, eksik ya da sınır dışı süre aşımı, standard politikada zamanlama, 5 alanlı olmayan cron, parti ayarı sınır dışı ya da esZamanli toplamı havuzu dolduruyor, en kötü durum veri boyutu 8 KiB ya da çıktı boyutu 1 KiB üstü, acilistaBirKez exclusive olmayan kuyrukta, altyapı işinde saat dilimi Europe/Istanbul değil.
+## /requests[0]/istek
+Kod (giris), başvuru kodu, başvuru silme kodu (basvuru_silme_kodu) ve onay bekliyor e-postasından önce, kod üretmeden ve adresle ilgili başka kilitten önce, kendi READ COMMITTED işleminde epostaSiniriDenetle(tx, normalAdres, tur); izin yoksa kod üretmez, cevap aynı. İşlem bitip cevap gittikten sonra (onResponse) epostaGonder; giris_bildirimi BASARISIZ dönerse D09.denetimeYaz ile bildirim_gonderilemedi. Adres D01'in tek normalleştirme fonksiyonundan geçmiş olur. Cihaz etiketi tarayıcı ya da telefon ailesi ve işletim sisteminden oluşan sabit listeden üretilir. inceleme_hesaplari_kurulumu tanımına acilistaBirKez: true (yayında bir kez).
+## /requests[0]/sonuc
+Kabul. D01 epostaSiniriDenetle'yi kod üretmeden ve işleminin ilk kilidi olarak çağırır (D14 'is-kuyrugu:eposta:<özet>' anahtarını katman 1'de alır), e-postayı cevaptan sonra gönderir, BASARISIZ giriş bildiriminde bildirim_gonderilemedi yazar; inceleme_hesaplari_kurulumu acilistaBirKez: true taşır.
+## /requests[4]/istek
+compose.yaml: API, işçi ve göç kaplarında TZ=UTC; işçide stop_grace_period 40 saniye; smtp_parolasi ve eposta_ozeti anahtarı API kopyalarına ve işçiye koşulsuz (işçi isletim_uyarisi ve isletim_ozeti gönderir; e-posta ayarı eksikse işçi açılmaz). apps/server/package.json: pg-boss 12 tam sabit (en az 12.36.0), nodemailer tam sabit, cron-parser tam sabit (pg-boss'un kullandığı sürüm), tlds tam sabit (bağlantı denetiminin IANA listesi); db:migrate'e kur adımı. Biome noRestrictedImports: pg-boss ve nodemailer yalnız infra/is-kuyrugu ve infra/eposta içinde. Ayar şeması: EPOSTA_SMTP_SUNUCU, EPOSTA_SMTP_PORT, EPOSTA_SMTP_GUVENLIK, EPOSTA_SMTP_KULLANICI, EPOSTA_GONDEREN_ADRES, EPOSTA_GONDEREN_AD, EPOSTA_URUN_ADI, EPOSTA_GUNLUK_SINIR, işçi ve göç bağlantı adresleri. server.ts açılışta isKuyruguKur({ rol: 'api', saat }) ve epostaKur({ saat, ... })'u app.ts'ten önce çağırır; saat D04'ün Saat nesnesidir, uyarlayıcı gerekmez; kapanış sırası app.close, eposta.kapat(10 sn), iş kuyruğu durdur, havuz kapat. Bağlantı bütçesi satırı: işçi 5 = pg-boss 2 + Drizzle 3, Drizzle'ın 2'si devam_hesapla partileri. isletim.devam_tutarlilik_farki kuralı IsSagligi'nda devam_tutarlilik_denetimi kuyruğunun zamanlam

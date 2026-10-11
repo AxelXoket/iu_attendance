@@ -1,0 +1,133 @@
+{
+ "id": "D02",
+ "instructions": [
+  {
+   "refs": [
+    "I004",
+    "I010",
+    "I011",
+    "I096"
+   ],
+   "do": "D02-A12 ve D02-A18'i kapat. Dış yüz: listeKaynagiKaydet(kaynak: { etkinSatirlar(tx: VeritabaniIslemi, suzgec: { subeIdleri?: readonly string[]; ogrenciNolari?: readonly string[] }): Promise<ReadonlyArray<{ satirId: string; subeId: string; ogrenciNo: string }>> }): void; D03 kendi eklentisinde kaydolur, D02 hazır olurken kaydı denetler (yoksa açılmaz). subeGetir(tx, subeId, s?: { kilitle?: 'paylasimli' }) ve dersGetir(tx, dersId, s?: { kilitle?: 'paylasimli' }) seçenek verilince SELECT ... FOR SHARE okur. Şube pasifleştirme ve ders arşivi önce şube ve ders satırlarını FOR UPDATE kilitler, liste kaynağını (etkinSatirlar) kilitten sonra sorar. dersGetir açıklamasındaki 'D03 devirde sahipAtamaSurumu okur' notunu kaldır. Öğrenci kapsam kaynağını D03 kaydeder; D02 yalnız personel kapsam kaynağını kaydeder."
+  },
+  {
+   "refs": [
+    "I003",
+    "I005"
+   ],
+   "do": "D02-A13'ü kapat; çekme modeli reddedildi. Dış yüze denemeDersiniKur(tx: VeritabaniIslemi, hocaKisiId: string): Promise<{ dersId: string; subeId: string }> ekle: eş güçlü; inceleme dönemi yoksa açar, etkin deneme dersi yoksa açar (birimsiz, süre seçilmemiş, kod DENEME, ad Deneme dersi, şube 1, dersler.deneme_dersi_kuruldu), sahibi farklıysa yeni hocaya devreder (devir kuralı, gerekçe inceleme_hesabi_yenilendi), şube 1'in kimliğini döner; bugünkü kısmi tekil dizinler ve ON CONFLICT kuralları aynen. Çağıran D01'in jobs/kimlik altındaki inceleme_hesaplari_kurulumu işidir, aynı işlemde D03.denemeListesiniKur'u dönen şubeyle çağırır. deneme_dersi_oturumlari yalnız var olan deneme dersinin 14 günlük oturumlarını üretir; D01.incelemeHesaplari okumaz (o dış yüz yoktur), deneme dersi yoksa log yazıp durur. denemeDersi(tx) dış yüzünü kaldır (tüketicisi kalmadı). derslerKimlikDinleyicisi deneme işini kuyruğa koymaz; inceleme hocası silinince D01 kendi kurulum işini koyar."
+  },
+  {
+   "refs": [
+    "I006"
+   ],
+   "do": "D02-A14'ü kapat: donemArasiMi(tx, an?) dış yüzde kalır; D13 ve D15 onu içe aktarmaz, bileşim kökü (app.ts en düşük sürüm denetimine, server.ts yayın penceresine) parametre olarak verir."
+  },
+  {
+   "refs": [
+    "I007"
+   ],
+   "do": "D02-A15'i kapat: takvim_oturumlarini_yenile gece çalışması 01:55 Europe/Istanbul kalır; D14 çizelgesine satır olarak girdi."
+  },
+  {
+   "refs": [
+    "I008",
+    "I019",
+    "I092",
+    "I018"
+   ],
+   "do": "D02-A16'yı kapat. Sürüm damgası (I019): D06.surumDamgasiIste(tx: Islem, damga: (surum: bigint) => Promise<void>): void (modules/esitleme/yaprak.ts) damgayı işleme bağlar; işlemin sahibi son adımda D06.surumAl(tx)'ı bir kez çağırır, sayaç bir kez artar ve bütün bekleyen damgalar aynı sürümle çağrılır; damga yalnız işlemde zaten kilitli satırları günceller; surumAl çağrılmadan biten damgalı işlem D12.islemSonuKancasi denetimiyle hata verir ve geri alınır. PaketBaglami.surumlaDamgala aynı işleve giden kısayoldur. D02 için: OturumUretimOlayi'nda surumleDamgala geri çağrısı yoktur, dinleyiciler surumAl çağırmaz ve sürümü D06.surumDamgasiIste ile bırakır; D02 üretimin son adımında, dinleyicilerden sonra D06.surumAl'ı bir kez çağırır. Olay sırası (satırlar, dinleyiciler, denetim, iş kuyruğu, sürüm) aynen kalır. D04 için olaya şu alanları ekle: oturumlar[].subeIdleri, onceki.yoklamaSuresiDk ve an (oturum_degisiklikleri satırındaki anla aynı); oturumGetir().degisiklikler[] öğesine oncekiYoklamaSuresiDk."
+  },
+  {
+   "refs": [
+    "I009",
+    "I071"
+   ],
+   "do": "D02-A17'yi kapat. Ortak Kimlik tipi (packages/contracts/src/ortak/kimlik.ts, D13): { kisiId, girisOturumuId, oturumKapsami, kaynak, roller: readonly { rol: 'ogrenci' | 'hoca' | 'yonetici'; kapsamBirimId: BirimId | null }[], incelemeHesabi }; kapsamBirimId null bütün birimler demektir. D02.dersYetkisi(tx, kimlik: Kimlik, dersId): Promise<'sahip' | 'yonetici' | null> (yoneticiKapsami parametresi yok; yönetici kapsamı kimlik.roller'dan okunur). Değer adı 'sahip'tir; OTURUM_TURLERI ve OTURUM_DURUMLARI sabitleri sözleşmeden dışa açıktır; D02 DEVAM_NEDENLERI'ni D08'in sözleşmesinden içe aktarır; oturumlariGetir tarih süzgeçleri tarihten ve tarihe; büyük taramalar oturumSayfasi; 'yalnız kendi dersleri' hocaninDersleri ile. Beklenen sürüm ortak beklenenSurumNoSemasi'ndan; POST /v1/dersler durumlar [201, 200]."
+  },
+  {
+   "refs": [
+    "I027",
+    "I055"
+   ],
+   "do": "DersBilgisi'ne sahiplikGecmisi: readonly { kisiId: string; baslangicAni: Date; bitisAni: Date | null }[] ekle (eski sahipler devir anıyla kapanır, şimdiki sahip sonda bitisAni null); devir işlemi anı yazar; saklama yeri dersler tablosunda D02'nin seçtiği sütundur, yeni tablo yok. oncekiSahipKisiIdleri alanı kalkar; D05 ve D11 sahiplikGecmisi'ni okur."
+  },
+  {
+   "refs": [
+    "I034",
+    "I049",
+    "A5",
+    "I109",
+    "I046"
+   ],
+   "do": "Kilit adımlarının sırasını yaz: kayıtlı adımlar sira ile çalışır, dogrulama.karar_kapanisi (D07) 10, raporlar.gun_sonu_anligi (D10) 20; D02'nin kendi arşiv ve devam adımları kayıtlı adımlardan sonra gelir. donem_kilidi zamanlama metninden '(D10 anlığı kilidin koyduğu devam_hesapla işlerinden sonra çalışır (PROGRESS 5))' ve '(D10'un gün sonu anlığı bu işleri bekler)' cümlelerini kaldır, yerine 'D10'un kilit adımı gün sonu anlığı işini kilit işleminde kuyruğa koyar; anlık D08'i canlı okur, devam_hesapla işlerini beklemez.' yaz. Saatler aynen: donem_kilidi 00:05, D01 bekleyen_kayit_kapatma 00:15, D10 güvenlik ağı 00:25. kilitliBirimDonemleri(tx, an?, s?: { uygulanmis?: true }) seçeneği ekle: verilince yalnız kilitUygulandiAni dolu satırlar döner."
+  },
+  {
+   "refs": [
+    "I038"
+   ],
+   "do": "D08 için: kafa sayısı ve 'Ders yapıldı mı?' yazımında aynı işlemde D08.devamHesaplaIsiKoy(tx, dersId, null, DEVAM_NEDENLERI.YAPILDI); oturumlariGetir satırları subeIdleri, tur, iptalNedeni, telafiEdilenOturumId, yapildi, baslangicAni ve bitisAni taşır. Dış yüze denetlenecekDersler(tx: VeritabaniIslemi, s: { an: Date; kilittenSonraGun: number }): Promise<string[]> ekle: kilidi uygulanmamış ya da kilidi kilittenSonraGun günden yeni uygulanmış birim dönemlerinin deneme dışı ders kimlikleri (arşiv dahil)."
+  },
+  {
+   "refs": [
+    "I040"
+   ],
+   "do": "Son gün ve kilit anı kilit genel kaynağındaki birim dönemi satırıyla telefona iner (D02-B32 kalır); D06 ve D08 bunu kullanır."
+  },
+  {
+   "refs": [
+    "I042"
+   ],
+   "do": "oranlariYaz amacındaki yol PUT /v1/devam/yonetim/dersler/{dersId}/oranlar olur (contracts.json)."
+  },
+  {
+   "refs": [
+    "I063"
+   ],
+   "do": "Kısıt, dizin ve tetikleyici adlarını D12.kisitAdi'nin ek biçimiyle ver: oturumlar_ders_id_tarih_deneme_uq, oturumlar_degismez_tg, oturumlar_onaysiz_idx. POST /v1/dersler/yonetim/donemler dönem açan işlemde D12.donemBolumuAc(tx, donemId) çağırır (tablo bölünmemişse işlem yapmaz)."
+  },
+  {
+   "refs": [
+    "I050",
+    "A2"
+   ],
+   "do": "Kimlik olayları (I050): D01.kimlikDinleyicileriniKur(aboneler: { dersler: KimlikDinleyicisi; esitleme: KimlikDinleyicisi; projeksiyon: KimlikDinleyicisi; isletim: KimlikDinleyicisi }): void ve kimlikDinleyicileriHazir(): void; KimlikDinleyicisi = (tx, olay: KimlikOlayi) => Promise<void>. Aboneler: dersler D02.derslerKimlikDinleyicisi, esitleme D06.esitlemeKimlikDinleyicisi, projeksiyon D11.projeksiyonKimlikDinleyicisi, isletim D15.kimlikOlayiDinleyicisi; D01 olayı doğuran işlemde bu sırayla çağırır. Kurulumu bileşim kökleri yapar: app.ts uygulamaKur (api ve isci), D12 cli/geri-yukleme, D15 cli/anahtar-uret ve cli/olay*. kimlikOlayiDinleyicisiKaydet adlı bir işlev yoktur. D02 için: dış yüze derslerKimlikDinleyicisi: KimlikDinleyicisi ekle (hesap_durumu_degisti: sahip_hesap_durumu; hesap_silindi: sahipsizDersKurali; öbür olay türleri yok sayılır); D02 eklentisi kimlikOlayiDinleyicisiKaydet çağırmaz. Yaprak kuralı (A2, contracts.json ortak kural): modules/<ad>/yaprak.ts başka alan modülünden yalnız onun yaprak.ts dosyasını içe aktarır, hiçbir index.ts'i içe aktarmaz; jobs/<modül>/ dosyaları ve bileşim kökleri (app.ts, server.ts, worker.ts, cli/) her index.ts'i içe aktarabilir; modules/ altındaki dosya jobs/ ya da bileşim kökü içe aktarmaz. D02 için: D02 D01'i yalnız modules/kimlik/yaprak.ts'ten (kisiGetir, personelRolleri, yetkiDenetle, hesapSilindiMi) içe aktarır; dersGetir, dersYetkisi, subeGetir, dersSubeleri, birimGetir ve kilitliBirimDonemleri modules/dersler/yaprak.ts'te durur (D01 bunları oradan alır) ve o dosya hiçbir index.ts içe aktarmaz."
+  },
+  {
+   "refs": [
+    "I093"
+   ],
+   "do": "BUGUNKU_OTURUM_KORUNDU davranışını koru ve resolved_gaps'e mimar onayıyla yaz: haftalık program kaydı başlamamış bugünkü oturumu geçmişe taşıyacaksa oturuma dokunmaz, uyarı döner; tekil PATCH'in DERSLER_OTURUM_BASLAMIS reddi kalır."
+  },
+  {
+   "refs": [
+    "I094"
+   ],
+   "do": "Öğrenci kapsam kaynağı D03'ündür (I013); D02 KapsamKaynagi('PERSONEL') kaydeder, 'iki kaynağı da D02 kaydeder' ifadesi kalmaz."
+  },
+  {
+   "refs": [
+    "I074"
+   ],
+   "do": "İşler (I074): her pg-boss işi jobs/<modül>/index.ts'teki export const isler dizisinde D14.isTanimla ile tanımlıdır; KuyrukTanimi modules/<ad>/ içindedir; zamanlama D14 çizelge kurallarına uyar (03:00 ile 05:00 arası günlük iş yok, en az 5 dakika aralık); her iş için D14'ün adımıyla 'aynı veriyle iki kez çalışırsa' senaryosu vardır. Uymayan satırı düzelt."
+  },
+  {
+   "refs": [
+    "I045"
+   ],
+   "do": "Denetim (I045): dersId taşıyan her denetim olayı birimId de taşır; olay türleri sözleşme dosyasında DERSLER_DENETIM_OLAYLARI listesindedir ve D09.denetimOlaylariniKaydet ile kaydolur."
+  },
+  {
+   "refs": [
+    "I070"
+   ],
+   "do": "Birleşim (I070): index.ts derslerEklentisi adlı Fastify eklentisini ve EklentiTemelSecenekleri'ni ({ surec }) genişleten seçenek tipini dışa verir (spec.exports'a 'derslerEklentisi' adıyla); eklenti altyapıyı seçenekten alır, kayıt sırasında veritabanına dokunmaz, zamanlayıcıyı yalnız surec 'api' iken kurar, dinleyici kayıtlarını her süreçte yapar; rotalar yalnız D13.rotalariKaydet ile; setErrorHandler ve setNotFoundHandler yok; hata kodu öneki modül adının büyük harfi; kaynak düzeyi ret 404 <MODÜL>_BULUNAMADI, rota düzeyi rol reddi API_ROL_YETKISIZ. derslerEklentisi seçeneği qrDersAyariAcik değerini app.ts ayarlar().asama2.qrAcik'ten verir."
+  },
+  {
+   "refs": [
+    "A1"
+   ],
+   "do": "Göç klasörü (A1): spec'te ve bölümde göç yerini contracts.json migration_dir ile aynı yaz: apps/server/migrations/<14 haneli UTC>_dersler_<açıklama>/ (migration.sql ve snapshot.json; dosya haritasında apps/server/migrations/??????????????_dersler_* globu bu modülündür). Göç yalnız bu modülün tablolarına dokunur; göç dosyaları spec.files'a değil iş paketine yazılır; klasör kuralı ve CI göç denetimi D12'nindir. Paralel paketler birleşmeden önce ana dala yeniden dayanır, araya göç girdiyse kendi klasörünü silip drizzle-kit generate ile yeniden üretir."
+  }
+ ]
+}

@@ -1,0 +1,121 @@
+##### FILES
+apps/server/src/modules/kimlik/index.ts
+apps/server/src/modules/kimlik/eklenti.ts
+apps/server/src/modules/kimlik/tablolar.ts
+apps/server/src/modules/kimlik/sorgular.ts
+apps/server/src/modules/kimlik/kanca.ts
+apps/server/src/modules/kimlik/yetki.ts
+apps/server/src/modules/kimlik/ozetler.ts
+apps/server/src/modules/kimlik/sabit-sure.ts
+apps/server/src/modules/kimlik/eposta-yolu.ts
+apps/server/src/modules/kimlik/giris-servisi.ts
+apps/server/src/modules/kimlik/oturum-servisi.ts
+apps/server/src/modules/kimlik/basvuru-servisi.ts
+apps/server/src/modules/kimlik/ogrenci-servisi.ts
+apps/server/src/modules/kimlik/teyit-servisi.ts
+apps/server/src/modules/kimlik/cihaz-servisi.ts
+apps/server/src/modules/kimlik/degisim-servisi.ts
+apps/server/src/modules/kimlik/silme-servisi.ts
+apps/server/src/modules/kimlik/yonetim-servisi.ts
+apps/server/src/modules/kimlik/inceleme.ts
+apps/server/src/modules/kimlik/olaylar.ts
+apps/server/src/modules/kimlik/uclar.ts
+apps/server/src/modules/kimlik/kanca.test.ts
+apps/server/src/modules/kimlik/ozetler.test.ts
+apps/server/src/modules/kimlik/yetki.test.ts
+apps/server/src/jobs/kimlik/index.ts
+apps/server/src/jobs/kimlik/kimlik-temizligi.ts
+apps/server/src/jobs/kimlik/giris-oturumu-temizligi.ts
+apps/server/src/jobs/kimlik/hesap-silme-yurutucu.ts
+apps/server/src/jobs/kimlik/inceleme-hesaplari-kurulumu.ts
+apps/server/src/jobs/kimlik/bekleyen-kayit-kapatma.ts
+apps/server/src/cli/yonetici-ekle.ts
+packages/contracts/src/kimlik.ts
+packages/core/src/kimlik/index.ts
+packages/core/src/kimlik/eposta.ts
+packages/core/src/kimlik/eposta.test.ts
+packages/core/src/kimlik/bekleme.ts
+packages/core/src/kimlik/bekleme.test.ts
+packages/core/src/kimlik/oturum-kurallari.ts
+packages/core/src/kimlik/oturum-kurallari.test.ts
+packages/core/src/kimlik/cihaz-etiketi.ts
+packages/core/src/kimlik/cihaz-etiketi.test.ts
+packages/core/src/kimlik/kayit-kodu.ts
+packages/core/src/kimlik/kayit-kodu.test.ts
+apps/server/test/features/kimlik/hoca-basvurusu.feature
+apps/server/test/features/kimlik/hoca-girisi.feature
+apps/server/test/features/kimlik/oturumlar.feature
+apps/server/test/features/kimlik/yetki.feature
+apps/server/test/features/kimlik/ogrenci-kaydi.feature
+apps/server/test/features/kimlik/ilk-kayit-teyidi.feature
+apps/server/test/features/kimlik/cihaz-degisimi.feature
+apps/server/test/features/kimlik/app-attest-yenileme.feature
+apps/server/test/features/kimlik/hesap-silme.feature
+apps/server/test/features/kimlik/yonetim.feature
+apps/server/test/features/kimlik/inceleme-hesaplari.feature
+apps/server/test/features/kimlik/ilk-yonetici.feature
+apps/server/test/features/kimlik/kimlik-isleri.feature
+apps/server/test/features/kimlik/gizlilik.feature
+apps/server/test/steps/kimlik/giris.steps.ts
+apps/server/test/steps/kimlik/ogrenci.steps.ts
+apps/server/test/steps/kimlik/cihaz.steps.ts
+apps/server/test/steps/kimlik/yonetim.steps.ts
+apps/server/test/steps/kimlik/silme.steps.ts
+apps/server/test/steps/kimlik/isler.steps.ts
+apps/server/test/support/kurucular/kimlik.ts
+docker/caddy/sayfalar/hesap-silme.html
+##### TESTS
+0 [behavior] Kod isteği her durumda aynı cevabı verir :: Aktif, onay bekleyen, kod bekleyen, pasif, reddedilmiş, kayıtsız, silinmiş ve inceleme adresleri için gövde, durum kodu ve bekleticiye verilen hedef süre aynı. Sahte postaya yalnız aktif hocaya kod, onay bekleyene "onay bekliyor", kod bekleyene başvuru kodu düşer; pozitif kontrol: aktif hocanın kodu gerçekten gelir ve girişte işler.
+1 [behavior] Adres başına gönderim sınırı sessiz kalır :: Aynı adrese 60 saniye içinde ikinci istekte cevap aynı, ikinci e-posta yok ve giris_kodlari'na satır eklenmez; sahte saat 61. saniyeye geçince yeni kod gelir.
+2 [behavior] Kod 5 dakika geçerli ve tek kullanımlık :: Sahte saatle 299. saniyede giriş olur, 301. saniyede KIMLIK_KOD_GECERSIZ; kullanılmış kod ikinci kez KIMLIK_KOD_GECERSIZ. Değerler KOD_GECERLILIK_SN sabitinden içe alınır.
+3 [behavior] Üç yanlış denemede adresin açık kodları düşer :: İki açık kod varken 3 yanlıştan sonra iki kod da gecersiz, doğru kod da reddedilir; inceleme hocasının sabit kodu 3 yanlışta düşmez.
+4 [behavior] Ardışık yanlışta bekleme uzar ve kendiliğinden kalkar :: 3. yanlıştan sonra 30, sonra 60, 120 saniye, en çok 900 saniye; bekleme sırasında gelen deneme sayılmaz ve KIMLIK_BEKLEME_SURUYOR ile beklemeSaniye alır; sahte saat ilerleyince kalkar. Kayıtsız adreste aynı adımlar görülür (varlık sızmaz).
+5 [behavior] Onaydan önce giriş yok :: kod_bekliyor, onay_bekliyor, reddedildi ve pasif hesaplar giriş yapamaz, giris_oturumlari'na satır yazılmaz; ground control: aynı adımlar aktif hesapta oturum açar.
+6 [behavior] Telefon oturumu 30 günde biter, kullanımla uzamaz :: Her gün istek atılsa da 30. günün sonunda KIMLIK_OTURUM_BITTI (neden suresi_doldu); 29. günde geçerli.
+7 [behavior] Panel oturumu 1 saat işlemsizlikte ve 24 saatte biter :: X-Arka-Plan: 1 istekleri son kullanımı ilerletmez ve 61. dakikada oturum biter; kullanıcı isteği ilerletir; sürekli kullanımda da 24. saatte biter.
+8 [behavior] Dördüncü girişte önce en eski panel oturumu kapanır :: 1 telefon ve 2 panel varken 4. giriş oluşturma anına göre en eski paneli kapatır, panel yoksa en eski telefonu; bildirim e-postası kapanan oturumun etiketini yazar; pozitif kontrol: 3. girişte hiçbir oturum kapanmaz; eşzamanlı iki girişte etkin oturum sayısı 3'ü geçmez.
+9 [behavior] Telefon yenilemesi kendi oturumunun yerine geçer :: Geçerli Bearer ile kodla giriş eski oturumu yenilendi diye kapatır, panel oturumları kapanmaz, bildirimde kapanan oturum satırı yok, dinleyici giris_oturumu_yenilendi olayını eski ve yeni kimlikle alır.
+10 [behavior] Bildirim e-postası gidemezse giriş geri alınmaz :: Sahte posta hata verince oturum geçerli kalır, kimlik.bildirim_gonderilemedi denetim satırı yazılır, oturum Oturumlarım listesinde görünür.
+11 [behavior] Oturumlarım yalnız kendi oturumlarını gösterir ve kapatır :: Başka hocanın oturum kimliğiyle DELETE 404 ve o oturum açık kalır; kapatılan kendi oturumuyla sonraki istek 401 neden kendisi_kapatti.
+12 [behavior] Yönetici oturumları kapatır, pasif hesabın oturumları biter :: Kapatma ve pasiften sonra sonraki istek 401 (neden yonetici ya da pasif); pasif adrese kod e-postası gitmez ama cevap aynı.
+13 [behavior] Hoca başvurusu, doğrulama, onay ve ret :: Başvuru onay_bekliyor'a düşer, onaylanan hoca girer ve hoca rolü taşır, reddedilen giremez; aynı adresle yeniden başvuruda yönetici listesinde sonRetAni dolu görünür.
+14 [behavior] Kapsamlı yönetici kapsamı dışını göremez :: Birim kapsamlı yönetici başka birimin başvurusunu listede görmez, onay isteği 404 alır; tüm kapsamlı yönetici aynı işi yapar (ground control).
+15 [behavior] Son tüm kapsamlı yönetici korunur :: Tek tüm yönetici varken pasif ve rol geri alma KIMLIK_SON_YONETICI (409); ikinci tüm yönetici eklenince ikisi de izinli.
+16 [behavior] Rol geri alınınca açık oturumda yetki hemen düşer :: Yönetici rolü alınan kişinin aynı oturumla sonraki yönetim isteği 403 KIMLIK_YETKI_YOK; hoca uçları çalışmaya devam eder.
+17 [behavior] Öğrenci kaydında eşleşme durumları :: Numara ve isim listedeyse eslesti; IŞIK ile ışık eslesti; Sahin ile Şahin isim_uyusmuyor; listede yoksa listede_yok; şubeye liste uygulanınca bekleyenKayitlariEslestir listede_yok hesabı eslesti yapar.
+18 [behavior] Teyitli numaraya gelen kayıt değişim talebine döner :: Yeni hesap açılmaz; cevap degisim_bekliyor, talep ve kısıtlı oturum döner; kısıtlı oturum tam yetki isteyen rotada KIMLIK_KAPSAM_SINIRLI alır, /ben ve /cikis çalışır.
+19 [behavior] Aynı numarada iki teyitsiz hesap: biri teyit edilince öbürü reddedilir :: İkisi de toplu yolda tek_tek_gerekli alır; biri tek yolla teyitli olur, öbürü reddedildi (numara_baskasinda), cihazı kapandi, oturumu kapalı; D07.yenidenDegerlendir iki hesap için çağrılır.
+20 [behavior] Teyit yetkisi yalnız öğrencinin dersinin hocasında :: Öğrencinin hiçbir etkin liste satırının dersini vermeyen hoca bulunamadi alır, hesap değişmez; liste satırı pasif olan dersin hocası da alamaz.
+21 [behavior] Doğrulanmamış cihaz toplu teyide girmez :: dogrulanamadi cihazlı ve isim_uyusmuyor hesap toplu yolda tek_tek_gerekli, tek yolda teyitli olur.
+22 [behavior] Aynı donanım anahtarı ikinci hesaba bağlanamaz :: Aynı açık anahtarla başka numarayla kayıt KIMLIK_CIHAZ_BAGLI; aynı numarayla yeniden kayıt (kaybolan cevap) aynı kisiId ve yeni oturum anahtarı döner, önceki oturum yenilendi kapanır.
+23 [behavior] Reddedilen kanıt bağlanmaz, kanıtsız telefon etiketle bağlanır :: Sahte doğrulayıcı reddedildi dönünce 403 ve hiçbir satır kalmaz; dogrulanamadi dönünce hesap ve cihaz açılır, dogrulama_sonucu dogrulanamadi.
+24 [behavior] Cihaz değişimi onayı tek işlemdir :: Onayda eski cihaz kapandi (degisim) ve kapanma_ani onay anı, eski oturum kapalı, yeni cihaz etkin, kısıtlı oturum tam olur, D07.yenidenDegerlendir iki cihaz için çağrılır; yanlış QR değeri KIMLIK_DEGER_GECERSIZ, süresi geçmiş değer de; aynı onayın tekrarı 200; yetkisiz hoca 404.
+25 [behavior] Değişim talebini hesabın etkin cihazı reddeder :: Etkin cihazın oturumuyla ret talebi reddedildi yapar, yeni cihaz kapanır, eski cihaz etkin kalır; başka öğrencinin oturumu 404 alır.
+26 [behavior] Öğrenci çıkışı cihazı kapatır :: bekleyenOgeSayisi 0 ile cihaz kapandi (cikis) ve oturum kapalı; 3 ile 409 KIMLIK_GONDERILMEMIS_KAYIT_VAR ve hiçbir şey değişmez.
+27 [behavior] App Attest anahtarı yenilenir, eski anahtar kalır :: Doğru Secure Enclave imzasıyla yeni anahtar eklenir, eskisinin gecersiz_ani dolar, cihazAnahtariGetir ikisini de döner; yanlış imza KIMLIK_IMZA_GECERSIZ; aynı anahtar kimliği tekrarında aynı anahtarId.
+28 [behavior] Hesap silme: bekleyen iş yoksa hemen, varsa sırada :: Öğrenci 0 ile silindi: oturum satırı yok, girilen isim NULL, cihaz kapandi ve model, sürüm, son görülme NULL, açık anahtarlar ve numara duruyor; 2 ile sirada, sonra 0 ile yapildi; dokunulmayan istek 7. günün gecesi işle yapılır; iptal sıradakini kaldırır.
+29 [behavior] Hoca silmesi yakın giriş ister ve adresi siler :: 16 dakikalık oturumla 403 KIMLIK_YENIDEN_GIRIS_GEREKLI; yeni girişten sonra yapılır: e-posta NULL, kodlar ve oturum satırları yok, ad-soyad ve bölüm duruyor, dinleyici hesap_silindi alır; aynı adresle yeni başvuru yeni kişi satırı açar.
+30 [behavior] Silinen öğrenci yeniden kaydolunca yeni hesap ve yeniden teyit :: Yeniden kayıt yeni kisiId ve teyit bekliyor; silinmiş teyitli eski satır kısmi tekil dizine takılmaz, yeni hesap teyit edilebilir.
+31 [behavior] Hocanın yüz yüze başlattığı öğrenci silmesi :: Yetkili hoca için hemen yapildi; öğrencinin dersini vermeyen hoca 404 alır ve hesap değişmez.
+32 [behavior] Başvuru sahibi onaydan önce silebilir :: basvuru_silme koduyla onay bekleyen başvuru silindi, ad-soyad ve adres NULL; aktif hesaba basvuru_silme kodu gitmez.
+33 [behavior] İnceleme hesapları her an çalışır :: Sabit kodla giriş olur, 3 yanlışta kod düşmez ama bekleme uzar, 4. oturum kimseyi kapatmaz, e-posta gitmez, giriş ve yanlış deneme denetime yazılır; deneme numarasıyla kayıt teyitsiz teyitli olur ve ikinci telefon ilkini kapatmaz; silinen deneme hocası aynı gün iş kuyruğundan yeniden kurulur.
+34 [behavior] İlk yönetici komutu :: Boş veritabanında onaylı, tüm kapsamlı yönetici açar ve denetimde yapan komut_satiri; ikinci çalıştırma yeni satır açmaz; pasif hesabı etkinleştirir; @istanbul.edu.tr dışı adresi reddeder.
+35 [behavior] Bekleyen kayıt kapatma :: Kilitten sonra 30 günlük listede_yok hesap kapandi olur, cihazı kapandi (bekleme_bitti); eşleşmiş, teyitli ya da 30 günden genç hesaba dokunmaz; iki kez çalışınca sonuç aynı.
+36 [behavior] Temizlik işleri yalnız eski satırları siler :: 24 saatten eski kodlar ve doğrulanmamış başvurular, 30 günden eski bitmiş oturum satırları silinir; daha yeni satırlar durur (pozitif kontrol); ikinci çalıştırma hiçbir şey silmez.
+37 [behavior] Panel girişinde köken denetimi :: Origin'siz ya da başka kökenli panel girişi 403 KIMLIK_KOKEN_GECERSIZ ve Set-Cookie yok; telefon girişi Origin'siz kabul, çerez kurulmaz.
+38 [behavior] Kişisel veri hiçbir loga, adres satırına ve iş verisine girmez :: Bütün kimlik senaryolarından sonra pino çıktısı, pg-boss iş tablosu ve denetim ayrıntısı taranır: öğrenci numarası, isim, e-posta adresi, 6 haneli kod ve oturum anahtarı yok; pozitif kontrol: bilerek loga verilen numara gizleme ayarıyla maskelenmiş görünür.
+39 [behavior] Liste uygulanırken eşzamanlı kayıt bekleyende kalmaz :: Aynı numara için kayıt işlemi ve liste uygulama işlemi iki bağlantıda aynı anda koşturulur (her iki sırayla); sonunda hesap eslesti, kilitlenme hatası yok (D03-B19 kilit sırası).
+40 [behavior] Aynı numarada eşzamanlı iki teyit tek teyitli hesap bırakır :: İki hoca aynı numaranın iki teyitsiz hesabını aynı anda teyit eder; tam olarak biri teyitli, öbürü reddedildi (numara_baskasinda), kısmi tekil dizin ihlali istemciye 500 olarak dönmez.
+41 [behavior] Sonradan değişen doğrulama sonucu cihaz satırına yazılır :: cihazDogrulamaSonucunuYaz dogrulanamadi ile çağrılınca cihaz özeti değişir ve kimlik.cihaz_dogrulama_degisti denetimi yazılır; aynı sonuçla tekrar çağrı denetim satırı eklemez.
+42 [behavior] Olay komutu bütün personel oturumlarını kapatır :: oturumlariKapat({ tur: personel }, olay_komutu) bütün personel oturumlarını kapatır, sayıyı döner, öğrenci oturumlarına dokunmaz; sonraki personel isteği 401 neden olay_komutu.
+43 [behavior] Dinleyici hatası işlemi geri alır :: Hata veren bir test dinleyicisi kayıtlıyken en eski oturumu kapatacak giriş ve hesap silme işlemi geri alınır: oturum ve hesap satırları önceki halinde; dinleyici kaldırılınca aynı istek başarır.
+44 [behavior] Kopya alanlar tutarlı kalır :: Bütün kimlik senaryolarından sonra cihazlar.inceleme_cihazi kişinin inceleme_hesabi değerine, ogrenci_hesaplari.silinme_ani kişinin silinme_ani değerine eşit; bilerek bozulan kopya bu testi kırmızı yapar.
+45 [property] E-posta normalleştirme :: fast-check: iki kez uygulamak değişmez; büyük küçük harf ile İ, I, ı varyantları aynı adrese iner; istanbul.edu.tr dışı alan, alt alan ve + içeren adres reddedilir; çıktı yalnız [a-z0-9._-], tek @ ve sabit alan adı taşır.
+46 [property] Bekleme süresi tekdüze ve sınırlı :: Ardışık yanlış arttıkça süre azalmaz, 900 saniyeyi geçmez, 3'ün altında 0; sabitler BEKLEME_ILK_SN ve BEKLEME_UST_SN'den içe alınır.
+47 [property] Kapatılacak oturumun seçimi :: Rastgele oturum kümelerinde seçilen her zaman en eski panel, panel yoksa en eski telefon; 3'ten az etkin oturumda ya da inceleme hesabında hiçbiri.
+48 [property] Tarayıcı etiketi :: Bilinen User-Agent örneklerinden Edge, Chrome, Firefox, Safari ve Windows, macOS, Android, iOS çıkar; bilinmeyen ya da 512 karakteri aşan değer "Tarayıcı" olur, çıktı 80 karakteri geçmez.
+49 [property] Kayıt kodu biçimi :: Crockford ayrıştırma büyük küçük harfi, O ile 0'ı, I ve L ile 1'i aynı koda indirir, tireyi atar; üretilen her kod 8 karakter ve 40 bit.
+50 [contract] Rota listesi tam ve yetkili :: kimlik rota listesinde 28 uç, hepsi /v1/kimlik önekli, her birinin yetki alanı dolu; yol parametreleri yalnız uuid; istek şemalarında ogrenciNo, eposta, kod ve adSoyad yalnız gövdede (şema nesnesinden üretilen JSON Schema üzerinden).
+51 [contract] Hata kodları ve genişleyen değerler :: Bütün kodlar KIMLIK_ önekli ve tek HTTP durumuna bağlı; her kod en az bir senaryoda gerçekten döner; cevaplardaki durum, neden ve eşleşme alanları x-extensible-enum taşır.
+52 [mutation] Kurallar mutasyona dayanıklı :: Stryker packages/core/src/kimlik üzerinde; ayrıca elle: timingSafeEqual yerine eşitlik, kısmi dizin koşulundan silinme_ani, en eski oturum seçiminde panel önceliği ve kanca işlemsizlik denetimi bozulunca ilgili senaryo kırmızı olur; dosya md5 ile geri yazılır.
+53 [load] Kanca yük altında hafif kalır :: D15'in ders çıkışı k6 senaryosunda kanca her istekte tek dizinli okuma ve en çok dakikada bir yazma yapar; kanca süresi p95 istek süresinin yüzde 10'unu geçmez (pg_stat_statements ve istek logundan ölçülür).

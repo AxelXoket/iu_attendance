@@ -1,0 +1,1411 @@
+
+
+### Cihaz doğrulama ve hile kuralları
+
+D07 · apps/server/src/modules/dogrulama/ · sözleşme packages/contracts/src/dogrulama.ts · kurallar packages/core/src/dogrulama/ · işler apps/server/src/jobs/dogrulama/
+
+### Amaç ve sınırlar
+
+D07 (dogrulama) telefonun gerçek, uygulamanın bizim olduğunu kayıtta doğrulayan cihaz kanıtı denetimini, App Attest onay sayacını ve her yoklama kaydının yedi etiketini ve tek sunucu kararını (Var, Beklemede, İncelemede, Ret) veren karar motorunu tutar. Kararın tek yazarı D07'dir: ilk kararı kararHesapla ile verir, sonraki her geçişi kararDegistir ile yapar ve kayit_karar_gecmisi tablosuna yazar; kayıt satırındaki sütunları D07'nin verdiği değerle D05 yazar. Kural mantığı packages/core/src/dogrulama içinde saf fonksiyondur ve tek test tablosuyla denenir; saat D04'ün arayüzünden, cihaz, liste ve oturum bilgisi sahiplerinin dış yüzünden gelir. 2'lik ortak sınır, kafa sayısı karşılaştırması ve işareti, rastgele isim ve burada değil işaretleri, dönem kilidindeki karar kapanışı ve Google iptal listesi de bu modüldedir. Doğrulama sonucu yalnız etikettir; doğrulanamayan telefonun kaydı bu yüzden reddedilmez.
+
+İçindeCihaz doğrulama değeri; Android anahtar kanıtı ve App Attest kanıtının doğrulanması, Google iptal listesi; App Attest onay sayacı; yedi kayıt etiketi, dört sunucu kararı ve gerekçe kataloğu; 2'lik ortak sınır; karar geçmişi; kafa sayısı öğesi, karşılaştırma ve oturum işaretleri; rastgele isim ve burada değil; dönem kilidindeki karar kapanışı.
+DışındaKayıt satırı, imza doğrulaması ve "zaten var" (D05); cihaz ve anahtar satırları, cihaz değişimi akışı, App Attest yenileme ucu (D01); pencere, çapa ve saat belgesi (D04); onay, teyit ve inceleme ekranları, denetim tablosu (D09); sayım ve hak (D08); kafa sayısı ve yapıldı sütunları (D02 yazar); QR üretimi ve doğrulaması (D11, Aşama 2). Play Integrity kullanılmaz.
+Okuduğu dış yüzlerD01 ogrenciHesabiGetir, cihazGetir, cihazAnahtariGetir, cihazDogrulamaSonucunuYaz; D02 oturumGetir, oturumlariGetir, oturumSubeleri, dersGetir, dersYetkisi, birimDonemiGetir, kilitDurumu, kafaSayisiniYaz; D03 uyelikDenetle, ogrencininEtkinSatirlari; D04 simdi, pencereSonucu, pencereGetir, esitlemeSaglikliMi; D05 kayitGetir, kararSutunlariniYaz; D06 gondermeSuresiSonu; D08 devamHesaplaIsiKoy; D09 denetimeYaz, duzeltmeleriGetir; D11 qrSonucu, gosterimAraliklari (Aşama 2); D12 islem, kisitAdi; D13 rotalariKaydet, uygulamaHatasi, hizSinifi; D14 isGonder, isTanimla; D15 ayarlar, log, uyariAc.
+ÇağıranlarD01 (değer tüketme, cihaz kanıtı; teyit ve cihaz değişiminde yeniden değerlendirme), D05 (sayaç, ilk karar, ilk geçmiş satırı), D09 (karar değişikliği, işaretler, cihazı doğrulanmamış öğrenciler), D02 kilit adımı, D03 ve D04 dinleyicileri, D06 kuyruk dağıtıcısı. İki yönlü çiftler yalnız sözleşmenin izin verdikleri: D01 ile D07, D05 ile D07.
+Dayanak[Cihaz doğrulaması], [Kayıt etiketleri], [Hile ve sınırlar], [Kafa sayısı], [Hedefler], [İmza doğrulama], [Anahtar ve imza].
+
+Kesin ilkeler
+
+- Doğrulama sonucu yalnız etikettir: doğrulanamayan telefonun kaydı reddedilmez, iPhone'da sayacı artmayan kayıt İncelemede kalır ([Cihaz doğrulaması]).
+
+- Kararı telefonun bildirdiği değil, sunucunun gördüğü kanıt verir; meydan okuma değeri kanıtı o isteğe bağlar.
+
+- Her kaydın tek kararı vardır ve gerekçe koduyla tutulur; sayımı etiket değil karar belirler ([Kayıt etiketleri]).
+
+- Kararlar kayıt geldiğinde ya da ilgili olay olduğunda aynı veritabanı işleminde verilir; gece işleri yalnız süresi dolan ön koşulları çözer ([Şüpheli kayıt]).
+
+- Ham kayıt kanıttır: Ret kararlı kayıt da saklanır ([Veritabanı, Kısıtlar]).
+
+- Kural taşıyan her zaman D04'ün saat arayüzünden gelir; kural kodunda SQL now() ve Date.now() yoktur ([Saat ve sahteler]).
+
+- Kurallar packages/core içinde saf fonksiyondur ve tek test tablosuyla denenir; telefon, sunucu ve panel aynısını kullanır ([Ölçüm], [Mimari]).
+
+### Tablolar
+
+Sekiz tablo D07'nindir ve yalnız D07 yazar. Kayıt satırındaki karar, gerekçe ve etiket sütunları D05'in tablosundadır; değerlerini D07 verir, D05 yazar (D07-A04). Adlar ve kısıt adları ortak kurala uyar; anlar timestamptz, kodlar metin ve CHECK (liste packages/core/src/dogrulama/kodlar.ts'den türer), kimlikler uuidv7().
+
+cihaz_dogrulama_degerleriCihaz bağlama, cihaz değişimi ve App Attest anahtar yenilemesinde kanıta konan tek kullanımlık, 5 dakikalık sunucu değerleri. Değerin kendisi saklanmaz; satır SHA-256 özetiyle bulunur, ilk tüketimde ya da süresi geçince silinir.
+cihaz_kanitlariHer cihaz bağlama, cihaz değişimi ve App Attest anahtar yenilemesinde alınan kanıtın ham hali, sunucunun okuduğu değerler ve sonucu (DOGRULANDI, DOGRULANAMADI, REDDEDILDI). Cihaz doğrulanmadı etiketinin ve ayrı oran ölçümünün dayanağı; iptal listesi bu satırlara işlenir.
+app_attest_sayaclariApp Attest anahtarı başına onay sayacı dizisi: her iPhone kaydının (anahtar, sıra numarası, sayaç) satırı ve kuralı geçip geçmediği. Anahtarın son sayacı en büyük sıra numaralı geçen satırdır; yenilenen anahtarın dizisi sıfırdan başlar, eski anahtarın satırları kalır. Açık anahtar cihaz_anahtarlari tablosundadır (D01).
+android_iptal_listesiGoogle'ın anahtar kanıtı iptal listesinin son başarılı çekilen kopyası; her satır bir sertifika seri numarası. Cihaz bağlamada ve günlük yeniden denetimde kullanılır. Son başarılı çekim anı en büyük son_gorulme_ani'dir.
+ortak_sinir_sayaclari2'lik ortak sınırın (dönem, öğrenci, ders) başına kullanılan hakları ve hakkın kullanıldığı oturumlar. Satır SELECT ... FOR UPDATE ile kilitlenir; eşzamanlı iki işlem son hakkı birlikte alamaz.
+kayit_karar_gecmisiHer kaydın her karar geçişi (otomatik ya da hoca): önceki ve yeni karar, birincil ve uyan öbür gerekçeler, olay, kaynak, yapan. Güncel satır kayıt satırındaki kararın aynısıdır; Hedefler'deki ilk karar ilk_kesin satırından okunur. Kendi beyanı ve İncelemede onayları da burada (kayit_onayi buna katıldı).
+oturum_isaretleriOturum düzeyindeki türlü işaretler (KAFA_SAYISI_ASIMI, Aşama 2'de QR_BELGESIZ_GOSTERIM): ilk çıkış anı, derste görülüp görülmediği, son karşılaştırma değerleri, kesinleşme ve D09'un toplu incelemesi. İşaret kayıt kararlarını değiştirmez.
+rastgele_isim_secimleriRastgele isim seçimleri ve burada değil işaretleri; oturum ve öğrenci başına tek satır. Basışın tekrar anahtarını, işaretin yalnız seçilen öğrenciye ya da işaretli oturumda verilmesini ve aynı gün geri alınmasını sağlar.
+
+cihaz_dogrulama_degerleri: değerin kendisi değil SHA-256 özeti saklanır, ilk tüketimde silinir
+
+| Sütun | Tip | Boş olabilir | Varsayılan | Not | 
+
+| deger_ozeti | bytea | hayır |  | Telefona verilen 32 baytlık değerin SHA-256 özeti; birincil anahtar. Telefon değeri geri getirir, sunucu özetle bulur. | 
+
+| amac | text | hayır |  | KAYIT, CIHAZ_DEGISIMI ya da ANAHTAR_YENILEME; değer yalnız bu amaçla tüketilir. | 
+
+| olusturma_ani | timestamptz | hayır |  | D04.simdi() ile yazılır. | 
+
+| son_gecerlilik_ani | timestamptz | hayır |  | olusturma_ani artı 5 dakika (DEGER_OMRU_MS). | 
+
+Dizinler
+
+- cihaz_dogrulama_degerleri_son_gecerlilik_ani_idx (son_gecerlilik_ani): yeni değer verilirken süresi geçenlerin silinmesi
+
+Kısıtlar
+
+- cihaz_dogrulama_degerleri_deger_ozeti_pk PRIMARY KEY (deger_ozeti)
+
+- cihaz_dogrulama_degerleri_deger_ozeti_ck CHECK (octet_length(deger_ozeti) = 32)
+
+- cihaz_dogrulama_degerleri_amac_ck CHECK (amac IN ('KAYIT','CIHAZ_DEGISIMI','ANAHTAR_YENILEME'))
+
+- cihaz_dogrulama_degerleri_son_gecerlilik_ani_ck CHECK (son_gecerlilik_ani > olusturma_ani)
+
+cihaz_kanitlari: her bağlama ve yenilemenin ham kanıtı, okunan değerleri ve sonucu; etiketin dayanağı
+
+| Sütun | Tip | Boş olabilir | Varsayılan | Not | 
+
+| id | uuid | hayır | uuidv7() | Kanıt kimliği. | 
+
+| cihaz_id | uuid | hayır |  | cihazlar(id) (D01). | 
+
+| anahtar_id | uuid | hayır |  | Kanıtlanan anahtar: Android cihaz anahtarı ya da App Attest anahtarı, cihaz_anahtarlari(id) (D01). Kanıtsız telefonda bağlanan donanım anahtarı. | 
+
+| platform | text | hayır |  | ANDROID ya da IOS. | 
+
+| kanit_turu | text | hayır |  | ANDROID_ANAHTAR_KANITI, APP_ATTEST ya da KANITSIZ (Google servissiz Android, kanıtı isteğe bağlı Android 7, App Attest'i başarısız iPhone). | 
+
+| amac | text | hayır |  | KAYIT, CIHAZ_DEGISIMI ya da ANAHTAR_YENILEME. | 
+
+| sonuc | text | hayır |  | DOGRULANDI, DOGRULANAMADI ya da REDDEDILDI (REDDEDILDI'nin bağlamaya etkisi D07-A01). | 
+
+| gerekce_kodu | text | evet |  | DOGRULANDI dışında zorunlu; kanıt gerekçe kataloğundan (ör. GUVENLIK_DUZEYI_YAZILIM, APP_ATTEST_GELISTIRME_ORTAMI). | 
+
+| ham_kanit | bytea | evet |  | Android sertifika zinciri (DER, sırayla) ya da App Attest kanıt nesnesi (CBOR) aynen; KANITSIZ'da boş. Hesap silmede silinip silinmeyeceği D07-A07. | 
+
+| seri_nolari | text[] | hayır | '{}' | Zincirdeki sertifika seri numaraları (küçük harf onaltılık); iptal listesi denetimi için. | 
+
+| kanit_guvenlik_duzeyi | text | evet |  | Android attestationSecurityLevel: SOFTWARE, TRUSTED_ENVIRONMENT ya da STRONG_BOX. | 
+
+| anahtar_guvenlik_duzeyi | text | evet |  | Android keymasterSecurityLevel; aynı değerler. | 
+
+| dogrulanmis_acilis | text | evet |  | Android verifiedBootState: VERIFIED, SELF_SIGNED, UNVERIFIED ya da FAILED. | 
+
+| cihaz_kilitli | boolean | evet |  | Android rootOfTrust.deviceLocked. | 
+
+| paket_adi | text | evet |  | Kanıttaki uygulama paket adı (Android). | 
+
+| imza_ozeti | bytea | evet |  | Kanıttaki imza sertifikası SHA-256 özeti (Android); birden çoksa eşleşen. | 
+
+| kok | text | evet |  | Zincirin bağlandığı kök: GOOGLE_RSA, GOOGLE_P384 ya da APPLE_APP_ATTEST; bağlanmadıysa boş. | 
+
+| app_attest_ortami | text | evet |  | PRODUCTION ya da DEVELOPMENT; yalnız PRODUCTION doğrulanmış sayılır. | 
+
+| ios_acilis_dogrulama_turu | text | evet |  | iOS 27 kanıt uzantısındaki açılış doğrulama türü (ham değer); iOS 26 ve öncesinde boş. | 
+
+| ios_paket_surumu | text | evet |  | iOS 27 kanıt uzantısındaki paket sürümü (bundle version). | 
+
+| ios_aykirilik | text | evet |  | BEKLENMEYEN_DAGITIM_TURU ya da YAYIMLANMAMIS_PAKET_SURUMU; etiketi ve kararı değiştirmez. | 
+
+| iptal_ani | timestamptz | evet |  | Zincirdeki bir seri numarası iptal listesinde ilk görüldüğü an; liste kalkınca boşalır. | 
+
+| iptal_durumu | text | evet |  | REVOKED ya da SUSPENDED. | 
+
+| olusturma_ani | timestamptz | hayır |  | D04.simdi(). | 
+
+Dizinler
+
+- cihaz_kanitlari_cihaz_id_olusturma_ani_idx (cihaz_id, olusturma_ani DESC): cihazın son kanıtı (cihazDogrulanmadiMi)
+
+- cihaz_kanitlari_anahtar_id_olusturma_ani_idx (anahtar_id, olusturma_ani DESC): imzalayan anahtarın kanıtı (etiket hesabı)
+
+- cihaz_kanitlari_seri_nolari_idx GIN (seri_nolari) WHERE platform = 'ANDROID' AND sonuc = 'DOGRULANDI': iptal listesi yeniden denetimi
+
+Kısıtlar
+
+- cihaz_kanitlari_id_pk PRIMARY KEY (id)
+
+- cihaz_kanitlari_cihaz_id_fk FOREIGN KEY (cihaz_id) REFERENCES cihazlar (id)
+
+- cihaz_kanitlari_anahtar_id_fk FOREIGN KEY (anahtar_id) REFERENCES cihaz_anahtarlari (id)
+
+- cihaz_kanitlari_platform_ck CHECK (platform IN ('ANDROID','IOS'))
+
+- cihaz_kanitlari_kanit_turu_ck CHECK (kanit_turu IN ('ANDROID_ANAHTAR_KANITI','APP_ATTEST','KANITSIZ'))
+
+- cihaz_kanitlari_amac_ck CHECK (amac IN ('KAYIT','CIHAZ_DEGISIMI','ANAHTAR_YENILEME'))
+
+- cihaz_kanitlari_sonuc_ck CHECK (sonuc IN ('DOGRULANDI','DOGRULANAMADI','REDDEDILDI'))
+
+- cihaz_kanitlari_gerekce_kodu_ck CHECK (gerekce_kodu IS NULL OR gerekce_kodu IN (kanıt gerekçe kataloğu))
+
+- cihaz_kanitlari_sonuc_gerekce_kodu_ck CHECK ((sonuc = 'DOGRULANDI') = (gerekce_kodu IS NULL))
+
+- cihaz_kanitlari_kanit_turu_ham_kanit_ck CHECK (kanit_turu <> 'KANITSIZ' OR (ham_kanit IS NULL AND sonuc = 'DOGRULANAMADI'))
+
+- cihaz_kanitlari_iptal_ani_iptal_durumu_ck CHECK ((iptal_ani IS NULL) = (iptal_durumu IS NULL))
+
+- cihaz_kanitlari_iptal_durumu_ck CHECK (iptal_durumu IS NULL OR iptal_durumu IN ('REVOKED','SUSPENDED'))
+
+- cihaz_kanitlari_platform_ios_alanlari_ck CHECK (platform = 'IOS' OR (app_attest_ortami IS NULL AND ios_paket_surumu IS NULL AND ios_aykirilik IS NULL))
+
+- Düzey, açılış, kök, ortam ve aykırılık sütunlarında değer listesi CHECK'i (yukarıdaki notlardaki değerler)
+
+app_attest_sayaclari: her iPhone onayı bir satır; sayaç sıra numarasına göre komşularla denetlenir
+
+| Sütun | Tip | Boş olabilir | Varsayılan | Not | 
+
+| anahtar_id | uuid | hayır |  | App Attest anahtarı, cihaz_anahtarlari(id). | 
+
+| sira_no | bigint | hayır |  | Kaydın cihazdaki sıra numarası (kayıt metninden). | 
+
+| sayac | bigint | hayır |  | Onaydaki sayaç (authenticator data); kanıttaki ilk değer 0. | 
+
+| gecti | boolean | hayır |  | Sayaç komşu geçen onaylara göre kesin artıyor mu; false olan satır komşu denetimine girmez. | 
+
+| olusturma_ani | timestamptz | hayır |  | D04.simdi(); saklama süresi bu anla uygulanır. | 
+
+Dizinler
+
+- app_attest_sayaclari_anahtar_id_sira_no_idx (anahtar_id, sira_no) INCLUDE (sayac) WHERE gecti: önceki ve sonraki geçen onayın bulunması
+
+Kısıtlar
+
+- app_attest_sayaclari_anahtar_id_sira_no_pk PRIMARY KEY (anahtar_id, sira_no)
+
+- app_attest_sayaclari_anahtar_id_fk FOREIGN KEY (anahtar_id) REFERENCES cihaz_anahtarlari (id)
+
+- app_attest_sayaclari_sayac_ck CHECK (sayac >= 0)
+
+- app_attest_sayaclari_sira_no_ck CHECK (sira_no >= 0)
+
+android_iptal_listesi: Google listesinin son başarılı kopyası; son çekimde olmayan satır silinir
+
+| Sütun | Tip | Boş olabilir | Varsayılan | Not | 
+
+| seri_no | text | hayır |  | Sertifika seri numarası, listedeki gibi küçük harf onaltılık. | 
+
+| durum | text | hayır |  | REVOKED ya da SUSPENDED; bilinmeyen durum REVOKED sayılır ve loglanır. | 
+
+| sebep | text | evet |  | Google'ın gerekçesi (ör. KEY_COMPROMISE); dış değer olduğu için CHECK yok, en çok 64 karakter. | 
+
+| ilk_gorulme_ani | timestamptz | hayır |  | Satırın ilk görüldüğü çekim anı. | 
+
+| son_gorulme_ani | timestamptz | hayır |  | Satırın göründüğü son başarılı çekim anı. | 
+
+Dizinler
+
+- android_iptal_listesi_son_gorulme_ani_idx (son_gorulme_ani): son başarılı çekim anı ve listede olmayanların silinmesi
+
+Kısıtlar
+
+- android_iptal_listesi_seri_no_pk PRIMARY KEY (seri_no)
+
+- android_iptal_listesi_seri_no_ck CHECK (seri_no ~ '^[0-9a-f]{1,64}$')
+
+- android_iptal_listesi_durum_ck CHECK (durum IN ('REVOKED','SUSPENDED'))
+
+- android_iptal_listesi_sebep_ck CHECK (sebep IS NULL OR length(sebep) <= 64)
+
+- android_iptal_listesi_son_gorulme_ani_ck CHECK (son_gorulme_ani >= ilk_gorulme_ani)
+
+ortak_sinir_sayaclari: (dönem, öğrenci, ders) başına en çok 2 oturumda hak, satır kilidiyle
+
+| Sütun | Tip | Boş olabilir | Varsayılan | Not | 
+
+| donem_id | uuid | hayır |  | donemler(id) (D02). | 
+
+| ogrenci_id | uuid | hayır |  | kisiler(id) (D01). | 
+
+| ders_id | uuid | hayır |  | dersler(id) (D02); teori ve uygulama birlikte sayılır. | 
+
+| kullanilan | smallint | hayır | 0 | Hak kullanılan oturum sayısı; hiç azalmaz. | 
+
+| kullanilan_oturum_idleri | uuid[] | hayır | '{}' | Hakkın kullanıldığı oturumlar; aynı oturumdaki ikinci kayıt yeni hak harcamaz. | 
+
+| son_degisim_ani | timestamptz | hayır |  | D04.simdi(). | 
+
+Dizinler
+
+- Birincil anahtar dışında dizin yok; satır yalnız tam anahtarla okunur.
+
+Kısıtlar
+
+- ortak_sinir_sayaclari_donem_id_ogrenci_id_ders_id_pk PRIMARY KEY (donem_id, ogrenci_id, ders_id)
+
+- ortak_sinir_sayaclari_donem_id_fk, ortak_sinir_sayaclari_ogrenci_id_fk, ortak_sinir_sayaclari_ders_id_fk
+
+- ortak_sinir_sayaclari_kullanilan_ck CHECK (kullanilan >= 0)
+
+- ortak_sinir_sayaclari_kullanilan_oturum_idleri_ck CHECK (cardinality(kullanilan_oturum_idleri) = kullanilan)
+
+- Üst sınır (ORTAK_SINIR = 2) kodda tek sabittir; CHECK'e yazılmaz, testler sabiti içe alır.
+
+kayit_karar_gecmisi: her geçiş bir satır; güncel satır kayıt satırının kararıdır, ilk_kesin Hedefler içindir
+
+| Sütun | Tip | Boş olabilir | Varsayılan | Not | 
+
+| id | uuid | hayır | uuidv7() | Satır kimliği. | 
+
+| donem_id | uuid | hayır |  | Kaydın dönemi; (donem_id, kayit_id) yoklama_kayitlari'na başvurur. | 
+
+| kayit_id | uuid | hayır |  | Kaydın kimliği (telefonun UUIDv7'si). | 
+
+| oturum_id | uuid | hayır |  | Kaydın oturumu (kayıttan kopya; oturum sorguları için). | 
+
+| ogrenci_id | uuid | hayır |  | Kaydın öğrencisi (kayıttan kopya; teyit ve çakışma sorguları için). | 
+
+| kayit_ulasma_ani | timestamptz | hayır |  | Kaydın sunucuya ulaşma anı (kayıttan kopya); kesinleşme ve kesinti süzgeci. | 
+
+| sira | integer | hayır |  | Kaydın geçiş sırası; 1 ilk karar. | 
+
+| onceki_karar | text | evet |  | Önceki karar; ilk satırda boş. | 
+
+| yeni_karar | text | hayır |  | VAR, BEKLEMEDE, INCELEMEDE ya da RET. | 
+
+| gerekce_kodu | text | evet |  | Birincil gerekçe (gerekçe kataloğu); gerekçesiz Var'da boş. | 
+
+| ek_gerekceler | text[] | hayır | '{}' | Uyan öbür gerekçeler. | 
+
+| olay | text | hayır |  | Geçişi doğuran olay (KAYIT_GELDI, TEYIT_VERILDI, KAFA_SAYISI_GELDI, HOCA_ONAYI ...). | 
+
+| kaynak | text | hayır |  | OTOMATIK ya da HOCA; yeniden değerlendirme yalnız OTOMATIK güncel kararlara dokunur. | 
+
+| yapan_kisi_id | uuid | evet |  | Hoca kaynaklı geçişte hoca, kisiler(id). | 
+
+| islem_id | uuid | evet |  | Toplu işlemin kimliği (D09 toplu onay, burada değil); aynı işlemin satırlarını gruplar. | 
+
+| ani | timestamptz | hayır |  | Geçiş anı, D04.simdi(). | 
+
+| guncel | boolean | hayır | true | Kaydın güncel kararı bu satır mı; yeni geçişte önceki satır false olur. Geçmişin değişen tek alanıdır: güncel kararı (bekleyen kararlar, oturum karşılaştırması, kesinti) D05'e süzgeç dış yüzü açtırmadan tek kısmi dizinle bulmayı sağlar. | 
+
+| ilk_kesin | boolean | hayır | false | Beklemede dışındaki ilk karar satırı; kayıt başına en çok bir. | 
+
+Dizinler
+
+- kayit_karar_gecmisi_donem_id_kayit_id_guncel_uq UNIQUE (donem_id, kayit_id) WHERE guncel
+
+- kayit_karar_gecmisi_donem_id_kayit_id_ilk_kesin_uq UNIQUE (donem_id, kayit_id) WHERE ilk_kesin
+
+- kayit_karar_gecmisi_oturum_id_idx (oturum_id) INCLUDE (ogrenci_id, yeni_karar, kaynak, kayit_ulasma_ani) WHERE guncel: oturum karşılaştırması ve oturum yeniden değerlendirmesi
+
+- kayit_karar_gecmisi_ogrenci_id_kayit_ulasma_ani_idx (ogrenci_id, kayit_ulasma_ani) WHERE guncel: teyit, çakışma
+
+- kayit_karar_gecmisi_gerekce_kodu_oturum_id_idx (gerekce_kodu, oturum_id) WHERE guncel AND yeni_karar IN ('BEKLEMEDE','INCELEMEDE'): süreli ön koşullar ve kesinti
+
+Kısıtlar
+
+- kayit_karar_gecmisi_id_pk PRIMARY KEY (id)
+
+- kayit_karar_gecmisi_donem_id_kayit_id_sira_uq UNIQUE (donem_id, kayit_id, sira)
+
+- kayit_karar_gecmisi_donem_id_kayit_id_fk FOREIGN KEY (donem_id, kayit_id) REFERENCES yoklama_kayitlari (donem_id, id)
+
+- kayit_karar_gecmisi_oturum_id_fk, kayit_karar_gecmisi_ogrenci_id_fk, kayit_karar_gecmisi_yapan_kisi_id_fk
+
+- kayit_karar_gecmisi_yeni_karar_ck CHECK (yeni_karar IN ('VAR','BEKLEMEDE','INCELEMEDE','RET'))
+
+- kayit_karar_gecmisi_onceki_karar_ck CHECK (onceki_karar IS NULL OR onceki_karar IN ('VAR','BEKLEMEDE','INCELEMEDE','RET'))
+
+- kayit_karar_gecmisi_gerekce_kodu_ck CHECK (gerekce_kodu IS NULL OR gerekce_kodu IN (gerekçe kataloğu))
+
+- kayit_karar_gecmisi_ek_gerekceler_ck CHECK (ek_gerekceler <@ ARRAY[gerekçe kataloğu])
+
+- kayit_karar_gecmisi_olay_ck CHECK (olay IN (olay listesi))
+
+- kayit_karar_gecmisi_kaynak_ck CHECK (kaynak IN ('OTOMATIK','HOCA'))
+
+- kayit_karar_gecmisi_kaynak_yapan_kisi_id_ck CHECK ((kaynak = 'HOCA') = (yapan_kisi_id IS NOT NULL))
+
+- kayit_karar_gecmisi_sira_onceki_karar_ck CHECK (sira >= 1 AND (sira = 1) = (onceki_karar IS NULL))
+
+- kayit_karar_gecmisi_ilk_kesin_ck CHECK (NOT (ilk_kesin AND yeni_karar = 'BEKLEMEDE'))
+
+oturum_isaretleri: işaret kararı değiştirmez; ilk işaret anı, derste bilgisi ve kesinleşme burada
+
+| Sütun | Tip | Boş olabilir | Varsayılan | Not | 
+
+| id | uuid | hayır | uuidv7() | İşaret kimliği (isaretIncelendi bununla çağrılır). | 
+
+| donem_id | uuid | hayır |  | donemler(id); saklama ve listeleme. | 
+
+| oturum_id | uuid | hayır |  | oturumlar(id) (D02). | 
+
+| tur | text | hayır |  | KAFA_SAYISI_ASIMI ya da QR_BELGESIZ_GOSTERIM. İkincisi Aşama 2'de, QR_GOSTERIM_KAYDI yeniden değerlendirmesinde D11.gosterimAraliklari geçerli saat belgesi olmadan gösterim bildirince yazılır. | 
+
+| gecerli | boolean | hayır |  | Son hesapta eşik hâlâ aşılıyor mu. | 
+
+| ilk_isaret_ani | timestamptz | hayır |  | Eşiğin ilk aşıldığı an: kafa sayısının girildiği an ile eşiği aşan kaydın ulaşma anının büyüğü. | 
+
+| derste | boolean | hayır |  | ilk_isaret_ani oturum bitişinden önce mi (derste bütün liste okunur, sonra toplu inceleme). | 
+
+| son_kafa_sayisi | integer | evet |  | Son hesaptaki kafa sayısı. | 
+
+| son_kayit_sayisi | integer | evet |  | Son hesaptaki kayıt sayısı. | 
+
+| son_hesap_ani | timestamptz | hayır |  | Son hesabın anı. | 
+
+| kesinlesti_ani | timestamptz | evet |  | Gönderme süresi bitince yazılır; sonra değerler değişmez. | 
+
+| incelendi_ani | timestamptz | evet |  | D09'un toplu incelemeyi kapattığı an. | 
+
+| inceleyen_kisi_id | uuid | evet |  | İncelemeyi kapatan hoca, kisiler(id). | 
+
+Dizinler
+
+- oturum_isaretleri_donem_id_tur_idx (donem_id, tur) WHERE gecerli AND incelendi_ani IS NULL: D09'un işaretli oturum listesi
+
+Kısıtlar
+
+- oturum_isaretleri_id_pk PRIMARY KEY (id)
+
+- oturum_isaretleri_oturum_id_tur_uq UNIQUE (oturum_id, tur)
+
+- oturum_isaretleri_donem_id_fk, oturum_isaretleri_oturum_id_fk, oturum_isaretleri_inceleyen_kisi_id_fk
+
+- oturum_isaretleri_tur_ck CHECK (tur IN ('KAFA_SAYISI_ASIMI','QR_BELGESIZ_GOSTERIM'))
+
+- oturum_isaretleri_incelendi_ani_inceleyen_kisi_id_ck CHECK ((incelendi_ani IS NULL) = (inceleyen_kisi_id IS NULL))
+
+- oturum_isaretleri_son_kafa_sayisi_ck CHECK (son_kafa_sayisi IS NULL OR son_kafa_sayisi >= 0) ve aynısı son_kayit_sayisi için
+
+- oturum_isaretleri_tur_son_kafa_sayisi_ck CHECK (tur <> 'KAFA_SAYISI_ASIMI' OR (son_kafa_sayisi IS NOT NULL AND son_kayit_sayisi IS NOT NULL))
+
+rastgele_isim_secimleri: oturum ve öğrenci başına tek satır; seçimin tekrar anahtarı ve geri alma burada
+
+| Sütun | Tip | Boş olabilir | Varsayılan | Not | 
+
+| id | uuid | hayır | uuidv7() | Satır kimliği. | 
+
+| secim_id | uuid | evet |  | İstemcinin her basışta ürettiği UUIDv7; işaretli oturumda seçimsiz işarette boş. | 
+
+| oturum_id | uuid | hayır |  | oturumlar(id). | 
+
+| donem_id | uuid | hayır |  | donemler(id); saklama. | 
+
+| ogrenci_id | uuid | hayır |  | kisiler(id); numara ya da isim saklanmaz. | 
+
+| kaynak | text | hayır |  | RASTGELE_SECIM ya da ISARETLI_OTURUM. | 
+
+| sira | smallint | evet |  | Basıştaki gösterim sırası (1 ile 3). | 
+
+| secen_kisi_id | uuid | hayır |  | Seçen ya da ilk işaretleyen hoca. | 
+
+| secim_ani | timestamptz | hayır |  | D04.simdi(). | 
+
+| durum | text | hayır |  | SECILDI, SINIFTA_DEGIL ya da GERI_ALINDI. | 
+
+| isaretleyen_kisi_id | uuid | evet |  | Burada değil diyen hoca; geri almayı yalnız o yapar. | 
+
+| isaret_ani | timestamptz | evet |  | Son burada değil anı. | 
+
+| geri_alma_ani | timestamptz | evet |  | Geri alma anı; yeniden işaretlenince boşalır. | 
+
+Dizinler
+
+- rastgele_isim_secimleri_secim_id_idx (secim_id) WHERE secim_id IS NOT NULL: aynı basışın tekrarı
+
+Kısıtlar
+
+- rastgele_isim_secimleri_id_pk PRIMARY KEY (id)
+
+- rastgele_isim_secimleri_oturum_id_ogrenci_id_uq UNIQUE (oturum_id, ogrenci_id)
+
+- rastgele_isim_secimleri_oturum_id_fk, _donem_id_fk, _ogrenci_id_fk, _secen_kisi_id_fk, _isaretleyen_kisi_id_fk
+
+- rastgele_isim_secimleri_kaynak_ck CHECK (kaynak IN ('RASTGELE_SECIM','ISARETLI_OTURUM'))
+
+- rastgele_isim_secimleri_durum_ck CHECK (durum IN ('SECILDI','SINIFTA_DEGIL','GERI_ALINDI'))
+
+- rastgele_isim_secimleri_kaynak_secim_id_ck CHECK ((kaynak = 'RASTGELE_SECIM') = (secim_id IS NOT NULL AND sira IS NOT NULL))
+
+- rastgele_isim_secimleri_kaynak_durum_ck CHECK (kaynak = 'RASTGELE_SECIM' OR durum <> 'SECILDI')
+
+- rastgele_isim_secimleri_durum_isaret_ani_ck CHECK (durum = 'SECILDI' OR (isaret_ani IS NOT NULL AND isaretleyen_kisi_id IS NOT NULL))
+
+- rastgele_isim_secimleri_durum_geri_alma_ani_ck CHECK ((durum = 'GERI_ALINDI') = (geri_alma_ani IS NOT NULL))
+
+### Uç noktalar
+
+Beş uç D07'nindir. Kafa sayısı ayrı uç değildir: ortak kuyruktan POST /v1/esitleme/gonderim ile kafa_sayisi öğesi olarak gelir, D07.kafaSayisiOgesi işler. Hata zarfı, kimlik kancası ve hız sınıfları D13'ündür; başkasının oturumu 404 döner, varlık sızdırılmaz. JSON alanları camelCase, kodlar BÜYÜK_HARF, anlar UTC ISO 8601.
+
+POST /v1/dogrulama/degerkanıta konacak tek kullanımlık, 5 dakikalık değer
+GET /v1/dogrulama/oturumlar/{oturumId}/kafa-sayisikafa sayısı, kayıt sayısı, fark ve işaret
+POST /v1/dogrulama/oturumlar/{oturumId}/rastgele-isimsunucuya ulaşmış kayıtlardan rastgele 3 öğrenci
+POST /v1/dogrulama/oturumlar/{oturumId}/sinifta-degilburada değil: öğrencinin o oturumdaki kayıtları Ret
+DELETE /v1/dogrulama/oturumlar/{oturumId}/sinifta-degil/{ogrenciId}yanlış burada değil işaretini aynı gün geri alma
+Kuyruk öğesi kafa_sayisihocanın ders sonu kafa sayısı ve "ders yapıldı" onayı, ortak kuyruktan
+
+POST /v1/dogrulama/deger: kanıta konacak tek kullanımlık, 5 dakikalık değer
+
+İstemcitelefon
+YetkiGirişsiz (kimlik: yok), IP sınırlı. Değer tek başına yetki vermez; yalnız cihaz kanıtına konur ve D01'in kayıt, cihaz değişimi ya da App Attest yenileme isteğinde tüketilir.
+TekrarEş güçlü değil: her çağrı yeni değer üretir, telefon yeniden denemede yeni değer ister. Aynı işlemde süresi geçmiş en çok 100 satır silinir.
+SınırGirişsiz IP sınıfı (D13.hizSinifi; başlangıç IP başına dakikada 3000, D13-B09). Gövde 64 KiB.
+Hatalar400 doğrulama hatası (D13 ortak zarf), 429 (D13 ortak, Retry-After), 503 SUNUCU_YOGUN
+
+İstek
+
+| Alan | Tip ve kural | 
+
+| amac | metin, zorunlu; KAYIT, CIHAZ_DEGISIMI ya da ANAHTAR_YENILEME (istekte kapalı enum) | 
+
+Cevap
+
+| Alan | Tip | 
+
+| deger | metin; 32 bayt güvenli rastgele değerin base64url hali (43 karakter); yalnız bu cevapta görünür, logda yok | 
+
+| sonGecerlilikAni | metin; UTC ISO 8601, milisaniyeli, Z ile; veriliş anı artı 5 dakika | 
+
+- Değer crypto.randomBytes(32) ile üretilir; satıra yalnız SHA-256 özeti, amaç ve son geçerlilik yazılır.
+
+- Meydan okuma metni packages/core/src/dogrulama/meydan-okuma.ts'deki sabit biçimdir: sürüm öneki, amaç, değer, öğrenci numarası, isSystemUser, Secure Enclave açık anahtarı ve cihaz kimliği; Android setAttestationChallenge'a ve iPhone attestKey clientDataHash'ine bu metnin SHA-256'sı girer. Telefon aynı fonksiyonu kullanır.
+
+GET /v1/dogrulama/oturumlar/{oturumId}/kafa-sayisi: kafa sayısı, kayıt sayısı, fark ve işaret
+
+İstemcitelefon, panel
+YetkiHoca oturumu (telefonda Bearer, panelde çerez ve Origin). Oturumun dersinin hocası olmalı (D02.dersYetkisi); değilse ya da oturum yoksa 404 DOGRULAMA_OTURUM_BULUNAMADI.
+TekrarGET, veri değiştirmez; işaret satırını da yazmaz (yazma anları Durumlar ve kurallar bölümünde).
+SınırGirişli oturum sınıfı (D13.hizSinifi; başlangıç oturum başına dakikada 120). Gövde 64 KiB.
+HatalarDOGRULAMA_OTURUM_BULUNAMADI (404), 401 ve 403 (D13 ortak)
+
+İstek
+
+| Alan | Tip ve kural | 
+
+| oturumId | yol; UUID | 
+
+Cevap
+
+| Alan | Tip | 
+
+| oturumId | UUID | 
+
+| kafaSayisi | tam sayı | null | 
+
+| yapildi | boolean | null; "Ders yapıldı mı?" cevabı (D02) | 
+
+| kayitSayisi | tam sayı | null; kafa sayısı ya da yapılmadı cevabı gelmeden null | 
+
+| elleEklenenSayisi | tam sayı | null; kayıt sayısının içindeki Elle eklendi düzeltmeli öğrenciler, aynı kurala bağlı | 
+
+| fark | tam sayı | null; kayıt sayısı eksi kafa sayısı | 
+
+| isaret | boolean; eşik aşılıyor mu (kesinleşmeden canlı hesap, sonra donmuş değer) | 
+
+| isaretAni | metin | null; eşiğin ilk aşıldığı an | 
+
+| derste | boolean | null; işaret oturum bitişinden önce mi çıktı | 
+
+| incelendi | boolean; D09 toplu incelemeyi kapattı mı | 
+
+| kesinlesti | boolean; gönderme süresi bitti mi | 
+
+| kesinlesmeAni | metin; gönderme süresinin sonu (D06.gondermeSuresiSonu) | 
+
+| eksikOlabilir | boolean; kesinleşmeden true, ekranda "kayıtların bir kısmı henüz gelmemiş olabilir" | 
+
+- Kayıt sayısı: güncel kararı Ret olmayan en az bir kaydı bulunan öğrenciler ile oturumun etkin Elle eklendi düzeltmesi olan öğrencilerin birleşimi (D09.duzeltmeleriGetir). Kesinleşince yalnız gönderme süresinin sonuna kadar ulaşmış kayıtlar sayılır.
+
+- İşaret: d = kayıt sayısı eksi kafa sayısı; d > 3 ve 1000 x d > 50 x kafa sayısı (yüzde onda bir birimli tam sayı). Sabitler packages/core/src/dogrulama/sabitler.ts'de.
+
+POST /v1/dogrulama/oturumlar/{oturumId}/rastgele-isim: sunucuya ulaşmış kayıtlardan rastgele 3 öğrenci
+
+İstemcitelefon
+YetkiHoca oturumu (telefonda Bearer, panelde çerez ve Origin). Oturumun dersinin hocası olmalı (D02.dersYetkisi); değilse ya da oturum yoksa 404 DOGRULAMA_OTURUM_BULUNAMADI.
+TekrarAynı secimId aynı öğrencileri döndürür (rastgele_isim_secimleri.secim_id); oturum başına işlem kilidi iki basışın aynı öğrenciyi seçmesini önler.
+SınırGirişli oturum sınıfı (D13.hizSinifi; başlangıç oturum başına dakikada 120). Gövde 64 KiB.
+HatalarDOGRULAMA_OTURUM_BULUNAMADI (404), 401 ve 403 (D13 ortak), DOGRULAMA_OTURUM_IPTAL (409), DOGRULAMA_OTURUM_GUNU_GECTI (409), DOGRULAMA_DONEM_KILITLI (409), DOGRULAMA_SECIM_KIMLIGI_CAKISIYOR (409)
+
+İstek
+
+| Alan | Tip ve kural | 
+
+| oturumId | yol; UUID | 
+
+| secimId | UUIDv7, zorunlu; istemci her basışta üretir, tekrar anahtarı | 
+
+Cevap
+
+| Alan | Tip | 
+
+| secimId | UUID | 
+
+| ogrenciler | dizi, en çok 3 öğe: { ogrenciId: UUID, adSoyad: metin (liste satırındaki isim), ogrenciNo: metin }; aday kalmadıysa boş | 
+
+- Adaylar: oturumda güncel kararı Ret olmayan kaydı bulunan ve o oturumda daha önce seçilmemiş öğrenciler; seçim crypto.randomInt ile, adet RASTGELE_ISIM_ADEDI (3). İsim D03.ogrencininEtkinSatirlari'ndaki liste satırından.
+
+- Cevap aday sayısını ve kayıt sayısını taşımaz; kafa sayısından önce de çağrılabilir (D07-B06). İnternet yoksa düğme çalışmaz, kuyruk öğesi yoktur ([Rastgele isim]).
+
+- İsim ve numara yalnız bu cevapta; logda iç kimlik ve rota kalıbı.
+
+POST /v1/dogrulama/oturumlar/{oturumId}/sinifta-degil: burada değil: öğrencinin o oturumdaki kayıtları Ret
+
+İstemcitelefon, panel
+YetkiHoca oturumu (telefonda Bearer, panelde çerez ve Origin). Oturumun dersinin hocası olmalı (D02.dersYetkisi); değilse ya da oturum yoksa 404 DOGRULAMA_OTURUM_BULUNAMADI.
+TekrarÖğrenci zaten işaretliyse hiçbir şey yazmadan aynı cevap döner.
+SınırGirişli oturum sınıfı (D13.hizSinifi; başlangıç oturum başına dakikada 120). Gövde 64 KiB.
+HatalarDOGRULAMA_OTURUM_BULUNAMADI (404), 401 ve 403 (D13 ortak), DOGRULAMA_OGRENCI_KAYDI_YOK (404), DOGRULAMA_OGRENCI_SECILMEDI (409), DOGRULAMA_OTURUM_GUNU_GECTI (409), DOGRULAMA_DONEM_KILITLI (409)
+
+İstek
+
+| Alan | Tip ve kural | 
+
+| oturumId | yol; UUID | 
+
+| ogrenciId | UUID, zorunlu; öğrencinin iç kimliği (numara değil) | 
+
+Cevap
+
+| Alan | Tip | 
+
+| ogrenciId | UUID | 
+
+| durum | SINIFTA_DEGIL (genişleyen enum) | 
+
+| isaretAni | metin | 
+
+| kayitlar | dizi: { donemId, kayitId, karar: RET, gerekce: YOKLAMADA_SINIFTA_DEGIL } | 
+
+- İzin: öğrenci bu oturumda seçilmiş ya da oturumun KAFA_SAYISI_ASIMI işareti geçerli; oturumun İstanbul günü bitmemiş; birim-dönem kilitli değil.
+
+- Etki: öğrencinin o oturumdaki Ret olmayan bütün kayıtları kararDegistir ile Ret YOKLAMADA_SINIFTA_DEGIL (kaynak HOCA, aynı islem_id); son durum Yok (D08). Denetime dogrulama.sinifta_degil_isaretlendi (kim, ne zaman).
+
+DELETE /v1/dogrulama/oturumlar/{oturumId}/sinifta-degil/{ogrenciId}: yanlış burada değil işaretini aynı gün geri alma
+
+İstemcitelefon, panel
+YetkiHoca oturumu ve oturumun dersinin hocası (değilse 404); ayrıca işareti koyan hoca olmalı (rastgele_isim_secimleri.isaretleyen_kisi_id).
+TekrarZaten geri alınmışsa aynı cevap döner.
+SınırGirişli oturum sınıfı (D13.hizSinifi; başlangıç oturum başına dakikada 120). Gövde 64 KiB.
+HatalarDOGRULAMA_OTURUM_BULUNAMADI (404), 401 ve 403 (D13 ortak), DOGRULAMA_ISARET_YOK (404), DOGRULAMA_ISARETI_BASKA_HOCA_KOYDU (409), DOGRULAMA_OTURUM_GUNU_GECTI (409), DOGRULAMA_DONEM_KILITLI (409)
+
+İstek
+
+| Alan | Tip ve kural | 
+
+| oturumId | yol; UUID | 
+
+| ogrenciId | yol; UUID | 
+
+Cevap
+
+| Alan | Tip | 
+
+| ogrenciId | UUID | 
+
+| durum | GERI_ALINDI | 
+
+| kayitlar | dizi: { donemId, kayitId, karar, gerekce }; geri gelen kararlar | 
+
+- Her kayıt için burada değil satırından önceki geçmiş satırına bakılır: kaynağı HOCA ise o karar geri gelir (yeni satır kaynak HOCA, yapan geri alan hoca), OTOMATIK ise kayıt güncel bağlamla yeniden hesaplanır (yeni satır kaynak OTOMATIK, böylece sonraki olaylar yine uygulanır). Kimin geri aldığı denetime dogrulama.sinifta_degil_geri_alindi ile yazılır.
+
+Kuyruk öğesi kafa_sayisi: hocanın ders sonu kafa sayısı ve "ders yapıldı" onayı, ortak kuyruktan
+
+| Alan | Tip ve kural | 
+
+| oturumId | UUID, zorunlu | 
+
+| kafaSayisi | tam sayı, 0 ile 5000 arası | 
+
+| zarf (D06) | öğe kimliği, sıra numarası, saat belgesi ve gönderen D06'nın zarfında (packages/contracts/src/esitleme.ts) | 
+
+- Gövde şeması packages/contracts/src/dogrulama.ts'de (KafaSayisiGovdesi); D06.ogeTuruKaydet('kafa_sayisi', kafaSayisiOgesi) ile kaydolur. Aynı öğenin tekrarını D06 zaten var der.
+
+- Gönderen dersin hocası değilse sonuç ret DOGRULAMA_YETKISIZ_HOCA; oturum yoksa DOGRULAMA_OTURUM_BULUNAMADI, iptalse DOGRULAMA_OTURUM_IPTAL, birim-dönem kilitliyse DOGRULAMA_DONEM_KILITLI.
+
+- Geçerli öğe aynı işlemde: D02.kafaSayisiniYaz(tx, oturumId, kafaSayisi, true); dogrulama.kafa_sayisi_girildi olayı (önceki ve yeni değer); yenidenDegerlendir(oturum, KAFA_SAYISI_GELDI) ile AYAR_KESINLESMEDI ve dilimdeki kararlar son ayara göre; karşılaştırma ve işaret.
+
+- Hocanın oturumu derste internetsizken biterse öğe kuyrukta kalır, girişten sonra gider ([Kararlar, Hoca oturumu]). Kafa sayısı dönem kilidine kadar düzeltilebilir; sonra gelen öğe öncekinin yerine geçer, karşılaştırma baştan hesaplanır.
+
+### İşler
+
+android_iptal_listesi_cekHer gün 05:40 Europe/Istanbul (cron 40 5 * * *, tz açık), missed: once, aynı anda tek (stately), 3 yeniden deneme artan aralıkla, süre aşımı 10 dakika. Google'ın anahtar kanıtı iptal listesini ayarlardaki adresten (https://android.googleapis.com/attestation/status) HTTPS ile, en çok 20 MiB ve 30 saniyede çeker, Zod ile denetler. Başarılıysa satırları ekler ya da günceller, bu çekimde olmayanları siler. Yeni iptal ya da askıya alma görülen seri numarasını taşıyan Android kanıtlarına iptal_ani ve iptal_durumu yazar, D01.cihazDogrulamaSonucunuYaz ile cihazı DOGRULANAMADI (IPTAL_LISTESINDE) yapar, dogrulama.cihaz_iptal_listesinde olayını yazar; askıya alma kalkınca tersini yapar. Çekim başarısızsa eski liste kalır; son başarılı çekim 7 günden eskiyse D15.uyariAc. Sonraki kayıtlar etkilenir, geçmiş etiketler değişmez. Tekrar: Aynı liste iki kez işlenince tablo, kanıt satırları ve D01 sonuçları değişmez; iptal ve kalkma olayları yalnız durum değişince yazılır. İş verisi boştur.
+bekleyen_kararlari_cozHer gün 04:50 Europe/Istanbul, gece inceleme sıralamasından (05:10) önce; missed: once, stately, 3 yeniden deneme, süre aşımı 30 dakika; her oturum kendi işleminde. Gönderme süresi biten oturumların kapanışı: (1) güncel kararı Beklemede QR_GOSTERIM_BEKLENIYOR olan kayıtları İncelemede QR_GOSTERIM_GELMEDI yapar (Aşama 2); (2) AYAR_KESINLESMEDI kaydı kalan oturumlar için pencere_beklemede_kesinlestir işini koyar; (3) CIHAZ_DEGISIMI_BEKLIYOR kayıtlarında talebi artık beklemeyen cihazları yeniden değerlendirir; (4) bitişi son 21 gün içinde olan, kafa sayısı girilmiş ve gönderme süresi bitmiş oturumların karşılaştırmasını kesinleştirir (kesinlesti_ani), eşik aşılmışsa işareti açar; 21 gün, 7 günlük süreye işçinin iki haftalık kesintisini ekler. Oturumlar kayit_karar_gecmisi'nin güncel Beklemede dizininden ve D02.oturumlariGetir'den, süre D06.gondermeSuresiSonu'ndan bulunur. Tekrar: Yalnız güncel kararı süreli bir ön koşul bekleyen ya da karşılaştırması kesinleşmemiş, gönderme süresi bitmiş oturumlara dokunur; ikinci çalışma değiştirecek bir şey bulamaz. İş verisi boştur.
+pencere_beklemede_kesinlestirOlayla: D04'ün oturum kapandı dinleyicisi (pencere değişikliği olan oturumlar) ve bekleyen_kararlari_coz koyar; singletonKey oturum kimliği, 3 yeniden deneme. İş verisi { oturumId }. yenidenDegerlendir(tx, { oturumId }, PENCERE_DEGISTI ya da AYAR_KESINLESTI): ayar kesinleşmemişse değişim dilimindeki otomatik kararları Beklemede AYAR_KESINLESMEDI yapar; kesinleşmişse (kafa sayısı geldi ya da gönderme süresi bitti) dilimdekileri Ret PENCERE_DISINDA, son pencerenin içine düşenleri Var yapar. Kafa sayısı geldiğinde aynı hesap kafa_sayisi öğesinin işleminde yapılır; iş, kafa sayısı gelmeyen ya da pencere değişikliği sonradan ulaşan oturumlar içindir. Tekrar: Oturumun pencereye bağlı otomatik kararlarını son pencere ve kesinleşme durumuyla baştan hesaplar; aynı girdiyle sonuç aynıdır, değişmeyen karara satır yazılmaz.
+
+Dinleyici ve kayıt bağları: D07 ortak listeleri düzenlemez, kendi eklentisinde kaydolur
+
+| Nereye | Ne kaydolur | Ne yapar | 
+
+| D06.ogeTuruKaydet | 'kafa_sayisi', kafaSayisiOgesi | Ortak kuyruktan gelen kafa sayısı öğesini işler. | 
+
+| D02.kilitAdimiKaydet | donemKilidiKararKapanisi | Dönem kilidi işleminde, aynı işlemde karar kapanışı. | 
+
+| D03.listeDegisikligiDinleyicisiKaydet | (tx, değişiklik) => yenidenDegerlendir | Liste uygulanınca değişen öğrencilerin o şubeyi kapsayan oturumlardaki kayıtlarını LISTE_DEGISTI nedeniyle yeniden değerlendirir. | 
+
+| D04.oturumKapandiDinleyicisiKaydet | (tx, oturumlar) => isGonder('pencere_beklemede_kesinlestir') | Pencere değişikliği olan ya da AYAR_KESINLESMEDI kaydı bulunan oturum için işi koyar; öbürlerine dokunmaz. | 
+
+| D04.kesintiKapandiDinleyicisiKaydet | (tx, kesinti) => yenidenDegerlendir | Sapma eşiğin altındaysa kesintide ulaşan SAAT_ESITLEMESI_BOZUK kayıtlarını KESINTI_KAPANDI nedeniyle aynı işlemde yeniden değerlendirir. | 
+
+| D12.saklamaIsleyicisiKaydet | 'dogrulama', saklamaIsleyicisi | Saklama süresi dolan dönemin karar geçmişini, işaretlerini, seçimlerini ve ortak sınır satırlarını, o dönemden eski sayaç satırlarını siler; kanıtı saklama_islemleri'ne D12 yazar. | 
+
+| D13.rotalariKaydet | DOGRULAMA_ROTALARI | Beş ucu kimlik türü ve hız sınıfıyla rota tablosuna ekler. | 
+
+| jobs/dogrulama/index.ts | üç iş tanımı | worker.ts toplar; kuyruk, zamanlama ve politika D14.isTanimla ile. | 
+
+### Durumlar ve kurallar
+
+Karar önceliği: Ret, sonra Beklemede, sonra İncelemede, sonra Var. Sınıf içinde birincil gerekçe katalogdaki ilk uyan koddur; uyan öbür gerekçeler geçmişin ek_gerekceler alanına yazılır. Tek istisna: birimin son gününden sonra ulaşan kayıtta Ret kuralı yoksa karar İncelemede SON_GUNDEN_SONRA olur ve donar. Ortak sınıra en son bakılır: hak yalnız başka hiçbir kural uymayan, Var olacak Saat doğrulanamadı ya da Yedek kodlu kayıtta kullanılır. Kural packages/core/src/dogrulama/karar.ts'de tek fonksiyondur (kararVer); sunucu, telefon ve panel aynısını kullanır ([Otomatik kabul kuralı]).
+
+Gerekçe kataloğu: 41 kod, her biri tek karara bağlı; sınıf içindeki sıra önceliktir
+
+| Kod | Karar | Kaynak | Aşama | Açık işaret | Ne zaman | 
+
+| TEYIT_REDDEDILDI | RET | OTOMATIK | 1 | hayır | Öğrencinin ilk kayıt teyidi reddedildi ya da aynı numarayı isteyen hesaplardan seçilmeyen hesap. | 
+
+| HESAP_SILINMIS | RET | OTOMATIK | 1 | hayır | Hesap silinmiş ve kaydın doğrulanmış saati silme anından sonra. | 
+
+| CIHAZ_ONAYLANMADI | RET | OTOMATIK | 1 | hayır | İmzalayan cihaz hiç etkinleşmedi: değişim talebi reddedildi ya da düştü. | 
+
+| ESKI_CIHAZ | RET | OTOMATIK | 1 | hayır | İmzalayan cihaz değişim ya da çıkışla kapanmış, kaydın doğrulanmış saati kapanmadan sonra. | 
+
+| OTURUM_IPTAL | RET | OTOMATIK | 1 | hayır | Oturum iptal edilmiş; kayıt eski programla verilmiş. | 
+
+| LISTEDE_DEGIL | RET | OTOMATIK | 1 | hayır | Oturumun başladığı anda öğrencinin oturumun şubelerinden hiçbirinde etkin liste satırı yok. | 
+
+| ULASMA_ANINI_ASIYOR | RET | OTOMATIK | 1 | hayır | Kayıt saati pay düşülünce de ulaşma anını aşıyor ve kayıt eşitleme sağlıklıyken ulaştı. | 
+
+| PENCERE_DISINDA | RET | OTOMATIK | 1 | hayır | Kayıt, öğrenci lehine pay uygulandıktan sonra da kesinleşmiş pencerenin dışında. | 
+
+| QR_OTURUM_UYUSMUYOR | RET | OTOMATIK | 2 | hayır | QR başka bir oturuma ait. | 
+
+| QR_HOCA_YETKISIZ | RET | OTOMATIK | 2 | hayır | QR'ı üreten anahtarın sahibi o dersin hocası değil. | 
+
+| QR_MAC_GECERSIZ | RET | OTOMATIK | 2 | hayır | QR'daki doğrulama kodu hocanın anahtarıyla tutmuyor. | 
+
+| YEDEK_KOD_YANLIS | RET | OTOMATIK | 2 | hayır | Yedek kod hiçbir geçerli dilimle eşleşmiyor. | 
+
+| QR_GECIKME_ASIMI | RET | OTOMATIK | 2 | hayır | Gecikme pay düşülünce de 30 saniyeyi aşıyor. | 
+
+| YOKLAMADA_SINIFTA_DEGIL | RET | HOCA | 1 | hayır | Rastgele isim ya da işaretli oturum okumasında burada değil. | 
+
+| KENDI_BEYANI_REDDEDILDI | RET | HOCA | 1 | hayır | Hoca Kendi beyanı kaydını reddetti. | 
+
+| HOCA_REDDETTI | RET | HOCA | 1 | hayır | Hoca İncelemede kaydı reddetti. | 
+
+| TEYIT_BEKLIYOR | BEKLEMEDE | OTOMATIK | 1 | evet | Öğrencinin ilk kayıt teyidi gelmedi; süresizdir. | 
+
+| CIHAZ_DEGISIMI_BEKLIYOR | BEKLEMEDE | OTOMATIK | 1 | evet | Kaydı imzalayan cihaz değişim onayı bekliyor. | 
+
+| AYAR_KESINLESMEDI | BEKLEMEDE | OTOMATIK | 1 | evet | Kayıt ders içi ayar değişikliğinin dilimine düşüyor ve oturumun ayarı kesinleşmedi. | 
+
+| QR_GOSTERIM_BEKLENIYOR | BEKLEMEDE | OTOMATIK | 2 | evet | Hoca telefonunun QR gösterim kaydı gelmedi. | 
+
+| SON_GUNDEN_SONRA | INCELEMEDE | OTOMATIK | 1 | hayır | Kayıt birimin devamsızlık işleme son günü bittikten sonra ulaştı; karar donar, sayım yalnız düzeltmeyle değişir. | 
+
+| KAPANMIS_CIHAZ_SAAT_BELIRSIZ | INCELEMEDE | OTOMATIK | 1 | evet | Kapanmış cihazdan ya da silinmiş hesaptan gelen kaydın saati kapanma anına göre kurulamadı. | 
+
+| SAYAC_ARTMADI | INCELEMEDE | OTOMATIK | 1 | evet | App Attest sayacı sıra numarasına göre önceki geçen onaydan büyük ya da sonrakinden küçük değil. | 
+
+| CAPALAR_AYRISIYOR | INCELEMEDE | OTOMATIK | 1 | evet | İki çapanın saat aralıkları paydan fazla ayrışıyor. | 
+
+| SAAT_ESITLEMESI_BOZUK | INCELEMEDE | OTOMATIK | 1 | evet | Kayıt saati ulaşma anını aşıyor ama sunucu saat eşitlemesi bozukken ulaştı. | 
+
+| HATALI_SURUM | INCELEMEDE | OTOMATIK | 1 | evet | Kayıt hatalı ilan edilen sürümden ve ilanın başlangıcından sonra ulaştı. | 
+
+| ESKI_PROGRAM | INCELEMEDE | OTOMATIK | 1 | evet | Kayıt yalnız oturumun program değişikliğinden önceki penceresine düşüyor. | 
+
+| CAKISAN_OTURUM | INCELEMEDE | OTOMATIK | 1 | evet | Öğrencinin saatleri çakışan başka bir oturumda daha önce ulaşmış, Ret olmayan kaydı var. | 
+
+| QRLI_DERSTE_QRSIZ | INCELEMEDE | OTOMATIK | 2 | evet | QR'lı derste QR'sız kayıt (D07-A02). | 
+
+| QR_GECIKME_BELIRSIZ | INCELEMEDE | OTOMATIK | 2 | evet | Gecikme normal sınırla (10 saniye, yedek kodda 20) ret sınırı arasında. | 
+
+| QR_ONCE_OKUTULMUS | INCELEMEDE | OTOMATIK | 2 | evet | Okutma QR görünmeden önce görünüyor. | 
+
+| QR_GOSTERIM_DISI | INCELEMEDE | OTOMATIK | 2 | evet | Dilim gösterim aralıklarının ya da pencerenin dışında. | 
+
+| QR_GOSTERIM_GELMEDI | INCELEMEDE | OTOMATIK | 2 | evet | Gönderme süresi bitti, QR gösterim kaydı gelmedi. | 
+
+| QR_HOCA_SAATI_YOK | INCELEMEDE | OTOMATIK | 2 | evet | Hoca telefonunun geçerli saat belgesi yoktu. | 
+
+| QR_ANAHTAR_IPTAL | INCELEMEDE | OTOMATIK | 2 | evet | QR anahtarı iptal edilmiş. | 
+
+| QR_CAPALARI_ESKI | INCELEMEDE | OTOMATIK | 2 | evet | İki çapa da eski; gecikme kanıtlanamadı (D11-B20 sahibin kararına bağlı). | 
+
+| YEDEK_KOD_SINIR | INCELEMEDE | OTOMATIK | 2 | evet | Yanlış yedek kod deneme sınırı aşıldı. | 
+
+| ORTAK_SINIR_ASILDI | INCELEMEDE | OTOMATIK | 1 | evet | Saat doğrulanamadı ya da Yedek kodlu kayıt, öğrencinin o derste dönemlik 2 otomatik kabul hakkı dolmuşken geldi. | 
+
+| ORTAK_SINIRLA_KABUL | VAR | OTOMATIK | 1 | hayır | Saat doğrulanamadı ya da Yedek kodlu kayıt ortak sınırdan hak aldı. | 
+
+| HOCA_ONAYLADI | VAR | HOCA | 1 | hayır | Hoca İncelemede kaydı onayladı. | 
+
+| KENDI_BEYANI_ONAYLANDI | VAR | HOCA | 1 | hayır | Hoca Kendi beyanı kaydını onayladı; karar zaten Var'dı. | 
+
+Açık işaret: D08'in KARAR BEKLİYOR ve AKSİS özetinin geçici kalması için sonucu değiştirebilecek kararlar; onay bekleyen Kendi beyanı (etiket var, karar Var, gerekçe boş) da açık işarettir ([Dönem sonu]). Gerekçesiz Var düz geçerli kayıttır. Aşama 2 kodları baştan katalogda ve CHECK listesinde durur, Aşama 1'de üretilmez. Liste packages/core/src/dogrulama/kodlar.ts'dedir; CHECK kısıtları ve sözleşmedeki genişleyen enumlar oradan türer.
+
+Etiketler: yedi ayrı evet/hayır sütunu, kayıt geldiğinde bir kez hesaplanır
+
+| Etiket | Sütun (D05 tablosu) | Ne zaman konur | 
+
+| QR'sız | etiket_qrsiz | Kayıt QR kanıtı taşımıyor; Aşama 1'de her kayıt. | 
+
+| Kendi beyanı | etiket_kendi_beyani | Kaydın saatinde oturumda süre seçilmemiş (D04.pencereSonucu, sureSecildi false); karar Var, onaya kadar geçici sayılır. | 
+
+| Saat doğrulanamadı | etiket_saat_dogrulanamadi | Saat sonucu DOGRULANAMADI: iki çapa da kurulamadı; 2'lik ortak sınıra girer. | 
+
+| Cihaz doğrulanmadı | etiket_cihaz_dogrulanmadi | İmzalayan anahtarın kanıtı DOGRULANDI değil ya da kayıt geldiğinde iptal listesinde; iPhone'da Secure Enclave imzası ve geliştirme ortamı App Attest kanıtı da. | 
+
+| İkinci profil | etiket_ikinci_profil | Android cihaz satırında isSystemUser false (D01.cihazGetir). | 
+
+| Yedek kodlu | etiket_yedek_kodlu | Aşama 2: kayıt yedek kodla alındı (D11.qrSonucu); 2'lik ortak sınıra girer, Doğrulanmış almaz. | 
+
+| Doğrulanmış | etiket_dogrulanmis | Aşama 2: QR doğrulama kodu tutuyor, gecikme ret sınırının altında, yedek kod değil. | 
+
+Yeniden değerlendirme: olay yalnız kendi kapsamındaki otomatik kararları baştan hesaplatır, hoca kararına dokunmaz
+
+| Olay | Çağıran | Kapsam | 
+
+| KAYIT_GELDI | D05 (kararHesapla, kararGecmisineYaz) | Yalnız gelen kayıt. | 
+
+| TEYIT_VERILDI, TEYIT_REDDEDILDI | Teyidi yazan işlem (D01.ogrenciTeyitEt, D09 teyit ucu) | Öğrencinin açık dönemlerdeki otomatik kararlı kayıtları. | 
+
+| CIHAZ_DEGISIMI_ONAYLANDI, CIHAZ_DEGISIMI_REDDEDILDI | D01 cihaz değişimi onay ve ret uçları | Değişimdeki eski ve yeni cihazın kayıtları. | 
+
+| LISTE_DEGISTI | D03 liste dinleyicisi | Değişen öğrencilerin o şubeyi kapsayan oturumlardaki kayıtları. | 
+
+| PENCERE_DEGISTI | pencere_beklemede_kesinlestir (D04 dinleyicisinden) | Oturumun pencereye bağlı otomatik kararları. | 
+
+| KAFA_SAYISI_GELDI | kafaSayisiOgesi, aynı işlem | Oturumun pencereye bağlı otomatik kararları. | 
+
+| AYAR_KESINLESTI | pencere_beklemede_kesinlestir (bekleyen_kararlari_coz koyar) | Gönderme süresi biten oturumun AYAR_KESINLESMEDI kayıtları. | 
+
+| QR_GOSTERIM_KAYDI | D11 dinleyicisi (Aşama 2, D07-A08) | Oturumun QR kayıtları. | 
+
+| KESINTI_KAPANDI | D04 kesinti dinleyicisi | Kesinti aralığında ulaşan SAAT_ESITLEMESI_BOZUK kayıtları. | 
+
+| BEKLEME_SURESI_DOLDU | bekleyen_kararlari_coz | Süresi dolan QR_GOSTERIM_BEKLENIYOR kayıtları. | 
+
+| HOCA_ONAYI, HOCA_REDDI, KENDI_BEYANI_ONAYI, KENDI_BEYANI_REDDI | D09 onay uçları (kararDegistir) | İstekteki kayıtlar; beklenen eski karar uymazsa DOGRULAMA_KARAR_DEGISTI. | 
+
+| SINIFTA_DEGIL, SINIFTA_DEGIL_GERI_ALINDI | D07 uçları (kararDegistir) | Öğrencinin o oturumdaki kayıtları. | 
+
+- Yalnız güncel kararının kaynağı OTOMATIK olan kayıtlara dokunulur; hoca kararı yalnız hocanın yeni kararıyla ya da burada değil geri almasıyla değişir.
+
+- Kilitli birim-dönemin kayıtları atlanır.
+
+- Etiketler yeniden hesaplanmaz; kural aynı kararVer fonksiyonudur, bağlam (teyit, liste, pencere, kesinleşme, cihaz) güncel halinden okunur.
+
+- Ortak sınır tüketilen oturum listesine uyar: hak almış oturumun kaydı yeniden hak harcamaz ve İncelemede'ye düşmez.
+
+- Otomatik VAR yeniden değerlendirmede İncelemede'ye çevrilmez; VAR yalnız AYAR_KESINLESMEDI ile Beklemede'ye, PENCERE_DISINDA ya da LISTEDE_DEGIL ile Ret'e geçebilir (son kararı sunucu hocanın ayarına göre verir, [Kararlar, Ders içinde değişiklik]).
+
+- Sonuç güncel kararla aynıysa satır yazılmaz; bağlam her çağrıda oturum ve öğrenci başına toplu okunur.
+
+- Kayıtlar (donem_id, kayit_id) sırasıyla işlenir ve her kayıt kararDegistir'in kayıt kilidini alır; aynı öğrenciye eşzamanlı iki olay (ör. teyit ve liste) kilitlenmeye girmez.
+
+Cihaz kanıtı: bütün ölçütler tutarsa DOGRULANDI, uygulama bizim değilse REDDEDILDI, öbür her durumda DOGRULANAMADI
+
+| Kod | Sonuç | Ne zaman | 
+
+| KANIT_YOK | DOGRULANAMADI | Telefon kanıt vermedi (Google servissiz Android, kanıtı isteğe bağlı Android 7, App Attest'i başarısız iPhone). | 
+
+| ZINCIR_GECERSIZ | DOGRULANAMADI | Zincir çözülemiyor, imzalar ya da geçerlilik tarihleri tutmuyor. | 
+
+| KOK_TANINMADI | DOGRULANAMADI | Zincir Google'ın iki kökünden ya da Apple App Attest kökünden birine bağlanmıyor. | 
+
+| IPTAL_LISTESINDE | DOGRULANAMADI | Zincirdeki bir seri numarası iptal listesinde (REVOKED ya da SUSPENDED). | 
+
+| MEYDAN_OKUMA_UYMUYOR | DOGRULANAMADI | Kanıttaki meydan okuma (Android attestationChallenge, iPhone nonce) beklenen metnin özetinden türemiyor. | 
+
+| ANAHTAR_UYMUYOR | DOGRULANAMADI | Kanıtlanan açık anahtar telefonun bağladığı anahtar değil. | 
+
+| PAKET_UYMUYOR | REDDEDILDI | Android kanıtındaki paket adı bizim değil (D07-A01). | 
+
+| IMZA_SERTIFIKASI_UYMUYOR | REDDEDILDI | Kanıttaki imza sertifikası özeti ayarlardakiyle aynı değil (D07-A01). | 
+
+| UYGULAMA_KIMLIGI_UYMUYOR | REDDEDILDI | App Attest rpIdHash bizim App ID'mizin özeti değil (D07-A01). | 
+
+| GUVENLIK_DUZEYI_YAZILIM | DOGRULANAMADI | Android kanıtının ya da anahtar deposunun güvenlik düzeyi SOFTWARE. | 
+
+| ACILIS_DOGRULANMAMIS | DOGRULANAMADI | verifiedBootState VERIFIED değil. | 
+
+| ONYUKLEYICI_ACIK | DOGRULANAMADI | deviceLocked false. | 
+
+| APP_ATTEST_GECERSIZ | DOGRULANAMADI | App Attest nesnesi Apple kuralına uymuyor (sayaç 0 değil, anahtar kimliği ya da biçim tutmuyor). | 
+
+| APP_ATTEST_GELISTIRME_ORTAMI | DOGRULANAMADI | App Attest kanıtı geliştirme ortamından (aaguid appattestdevelop). | 
+
+- Android sırası: zincir (ZINCIR_GECERSIZ, KOK_TANINMADI, IPTAL_LISTESINDE), bağlama (MEYDAN_OKUMA_UYMUYOR, ANAHTAR_UYMUYOR), uygulama (PAKET_UYMUYOR, IMZA_SERTIFIKASI_UYMUYOR), cihaz durumu (GUVENLIK_DUZEYI_YAZILIM, ACILIS_DOGRULANMAMIS, ONYUKLEYICI_ACIK); ilk tutmayanın kodu yazılır. Uygulama kimliği yalnız Google köküne bağlı geçerli zincirde okunur.
+
+- iPhone sırası: zincir ve kök (Apple App Attest kökü), nonce (MEYDAN_OKUMA_UYMUYOR), anahtar kimliği (ANAHTAR_UYMUYOR), rpIdHash (UYGULAMA_KIMLIGI_UYMUYOR), sayaç ve biçim (APP_ATTEST_GECERSIZ), ortam (APP_ATTEST_GELISTIRME_ORTAMI). Yalnız üretim ortamı doğrulanmış sayılır ([Anahtar ve imza]).
+
+- Zincir Node'un X509Certificate'iyle, Android KeyDescription @peculiar/asn1-android ile, App Attest node-app-attest ile okunur; kökler kokler.ts'de sabittir: Google'ın eski RSA kökü ve Şubat 2026 P-384 kökü, Apple App Attest kökü; değişiklik yeni sunucu sürümüyle gelir ([İmza doğrulama]).
+
+- iOS 27 alanları (açılış doğrulama türü, paket sürümü) kanıtta ve onayda okunur; yayin-bilgisi.json'daki listeye uymayan değer etiketi ve kararı değiştirmez, ios_aykirilik yazılır ve dogrulama.ios_beklenmeyen_alan olayı denetime düşer; iOS 26 ve öncesinde alanın gelmemesi normaldir.
+
+- Kanıtsız telefon da bir satır alır (KANITSIZ, DOGRULANAMADI, KANIT_YOK); böylece her cihazın etiket dayanağı tek sorguyla bulunur.
+
+- Testlerde doğrulayıcı tek arayüzün (CihazDogrulayici) arkasında sahtelenir: "donanım anahtarı" ya da "doğrulanamadı"; gerçek doğrulayıcı kayıtlı örneklerle ayrı denenir, ağ açılmaz ([Saat ve sahteler]).
+
+Durum makinesi kayit_karari: ilk karar kararHesapla, sonrakiler kararDegistir; kilitten sonra geçiş yok
+
+Durumlar: YOK, VAR, BEKLEMEDE, INCELEMEDE, RET
+
+| Kimden | Kime | Kim | Ne zaman | 
+
+| YOK | VAR | kararHesapla (D05 gönderimi ya da makbuz okutması) | Hiçbir Ret, Beklemede ya da İncelemede kuralı uymadı; Saat doğrulanamadı ya da Yedek kodlu kayıt ortak sınırdan hak aldıysa gerekçe ORTAK_SINIRLA_KABUL. | 
+
+| YOK | BEKLEMEDE | kararHesapla | Ret kuralı yok, bir ön koşul eksik: TEYIT_BEKLIYOR, CIHAZ_DEGISIMI_BEKLIYOR, AYAR_KESINLESMEDI ya da QR_GOSTERIM_BEKLENIYOR. | 
+
+| YOK | INCELEMEDE | kararHesapla | Ret ve Beklemede kuralı yok, bir şüphe kuralı uydu; son günden sonra ulaşan kayıt da SON_GUNDEN_SONRA ile buraya gelir. | 
+
+| YOK | RET | kararHesapla | Bir Ret kuralı uydu (ör. LISTEDE_DEGIL, PENCERE_DISINDA, ULASMA_ANINI_ASIYOR); kayıt saklanır. | 
+
+| BEKLEMEDE | VAR | yenidenDegerlendir (OTOMATIK) | Ön koşul geldi (teyit, cihaz değişimi onayı, ayarın kesinleşmesi, QR gösterim kaydı) ve başka kural uymadı. | 
+
+| BEKLEMEDE | INCELEMEDE | yenidenDegerlendir ya da bekleyen_kararlari_coz | Ön koşul geldi ve bir şüphe kuralı uydu; ya da QR gösterim kaydı gönderme süresi sonuna kadar gelmedi (QR_GOSTERIM_GELMEDI). | 
+
+| BEKLEMEDE | RET | yenidenDegerlendir | Teyit reddedildi (TEYIT_REDDEDILDI), değişim reddedildi ya da düştü (CIHAZ_ONAYLANMADI), ayar kesinleşti ve kayıt pencere dışında (PENCERE_DISINDA) ya da başka bir Ret kuralı. | 
+
+| VAR | BEKLEMEDE | pencere_beklemede_kesinlestir | Ders içi değişiklik ulaştı, otomatik Var kayıt değişim diliminde ve ayar kesinleşmedi (AYAR_KESINLESMEDI). | 
+
+| VAR | RET | yenidenDegerlendir ya da pencere_beklemede_kesinlestir | Otomatik Var kayıt: ayar kesinleşti ve kayıt son pencerenin dışında (PENCERE_DISINDA) ya da liste satırının tarihi kaydı dışarıda bıraktı (LISTEDE_DEGIL). | 
+
+| RET | VAR | yenidenDegerlendir | Otomatik Ret (PENCERE_DISINDA ya da LISTEDE_DEGIL): pencere uzatıldı ya da liste satırı eklendi veya düzeldi. | 
+
+| INCELEMEDE | VAR | yenidenDegerlendir (KESINTI_KAPANDI) | SAAT_ESITLEMESI_BOZUK kayıt: kesinti kapandı, sapma eşiğin altında ve başka kural uymuyor. | 
+
+| INCELEMEDE | RET | yenidenDegerlendir (KESINTI_KAPANDI) | SAAT_ESITLEMESI_BOZUK kayıt: kesinti kapandı, sapma eşiğin altında ve kayıt ulaşma anını aşıyor (ULASMA_ANINI_ASIYOR). | 
+
+| INCELEMEDE | VAR | D09 onayı (kararDegistir, HOCA) | Hoca onayladı (HOCA_ONAYLADI); SON_GUNDEN_SONRA kayıt onaylanamaz. | 
+
+| INCELEMEDE | RET | D09 reddi (kararDegistir, HOCA) | Hoca reddetti (HOCA_REDDETTI). | 
+
+| VAR | VAR | D09 Kendi beyanı onayı (kararDegistir, HOCA) | Kendi beyanı etiketli otomatik Var kayıt onaylandı; karar aynı, gerekçe KENDI_BEYANI_ONAYLANDI. | 
+
+| VAR | RET | D09 Kendi beyanı reddi (kararDegistir, HOCA) | Kendi beyanı etiketli kayıt reddedildi (KENDI_BEYANI_REDDEDILDI); son durum Yok. | 
+
+| VAR, RET | RET, VAR | D09 (kararDegistir, HOCA) | Hoca kendi kararını kilitten önce değiştirdi: HOCA_ONAYLADI ile HOCA_REDDETTI, KENDI_BEYANI_ONAYLANDI ile KENDI_BEYANI_REDDEDILDI arasında iki yönde. | 
+
+| VAR, BEKLEMEDE, INCELEMEDE | RET | POST sinifta-degil (kararDegistir, HOCA) | Burada değil (YOKLAMADA_SINIFTA_DEGIL). | 
+
+| RET | VAR, BEKLEMEDE, INCELEMEDE | DELETE sinifta-degil | Aynı gün geri alma: önceki hoca kararı geri gelir ya da otomatik karar güncel bağlamla yeniden hesaplanır. | 
+
+| VAR, BEKLEMEDE, INCELEMEDE, RET | aynı (donar) | donemKilidiKararKapanisi (D02 kilit işlemi) | Birimin son günü bitti: geçiş yazılmaz, onaysız Kendi beyanı ve açık kararlar için denetim olayı yazılır; kilitten sonra hiçbir geçiş yoktur. | 
+
+Durum makinesi oturum_isareti: eşik aşılınca açılır, kesinleşmeden kalkabilir, gönderme süresinin sonunda donar
+
+Durumlar: YOK, ACIK, KALKTI, INCELENDI, KESINLESTI
+
+| Kimden | Kime | Kim | Ne zaman | 
+
+| YOK | ACIK | kafaSayisiOgesi, kararGecmisineYaz, kararDegistir ya da bekleyen_kararlari_coz | Kafa sayısı girilmiş oturumda kayıt sayısı eşiği ilk kez aştı; ilk_isaret_ani ve derste yazılır. | 
+
+| ACIK | KALKTI | kararDegistir ya da kafaSayisiOgesi | Kesinleşmeden önce fark eşiğin altına indi (burada değil, hoca reddi, kafa sayısı düzeltmesi); gecerli false, ilk işaret anı korunur. | 
+
+| KALKTI | ACIK | aynı yazma anları | Fark yeniden eşiği aştı. | 
+
+| ACIK | INCELENDI | D09 isaretIncelendi | Hoca oturumun kayıtlarını toplu inceledi; incelendi_ani ve inceleyen yazılır. | 
+
+| ACIK, KALKTI, INCELENDI | KESINLESTI | bekleyen_kararlari_coz | Gönderme süresi bitti; son değerler o ana kadar ulaşmış kayıtlarla yazılır ve donar (kesinlesti_ani). | 
+
+Durum makinesi rastgele_isim_satiri: yalnız seçilen ya da işaretli oturumdaki öğrenci işaretlenir, aynı gün geri alınır
+
+Durumlar: YOK, SECILDI, SINIFTA_DEGIL, GERI_ALINDI
+
+| Kimden | Kime | Kim | Ne zaman | 
+
+| YOK | SECILDI | POST rastgele-isim | Öğrenci bu basışta seçildi (kaynak RASTGELE_SECIM, secim_id ve sira dolu). | 
+
+| SECILDI | SINIFTA_DEGIL | POST sinifta-degil | Hoca seçilen öğrenci için burada değil dedi; oturum günü bitmemiş. | 
+
+| YOK | SINIFTA_DEGIL | POST sinifta-degil | Seçim yok ama oturumun kafa sayısı işareti geçerli (kaynak ISARETLI_OTURUM). | 
+
+| SINIFTA_DEGIL | GERI_ALINDI | DELETE sinifta-degil | Aynı gün, işaretleyen hoca geri aldı. | 
+
+| GERI_ALINDI | SINIFTA_DEGIL | POST sinifta-degil | Aynı gün yeniden işaretlendi; geri_alma_ani boşalır. | 
+
+Durum makinesi cihaz_dogrulama_degeri: değer tek kullanımlık; tüketim ya da 5 dakika satırı siler
+
+Durumlar: VERILDI, TUKETILDI, SURESI_GECTI
+
+| Kimden | Kime | Kim | Ne zaman | 
+
+| VERILDI | TUKETILDI | dogrulamaDegeriniTuket (D01) | İlk tüketimde satır silinir; amaç ya da süre tutmazsa değer yine yanar ve DOGRULAMA_DEGER_GECERSIZ döner. | 
+
+| VERILDI | SURESI_GECTI | POST /v1/dogrulama/deger (temizlik) | 5 dakika doldu; yeni değer verilirken aynı işlemde silinir. | 
+
+Durum makinesi cihaz_kaniti: iptal listesi yalnız sonraki kayıtları etkiler, askıya alma kalkınca geri döner
+
+Durumlar: DOGRULANDI, DOGRULANAMADI, REDDEDILDI, IPTAL_LISTESINDE
+
+| Kimden | Kime | Kim | Ne zaman | 
+
+| (yok) | DOGRULANDI, DOGRULANAMADI ya da REDDEDILDI | cihazKanitiniDogrula | Kayıt, cihaz değişimi ya da anahtar yenilemesinde ölçütlere göre; REDDEDILDI'nin bağlamaya etkisi D07-A01. | 
+
+| DOGRULANDI | IPTAL_LISTESINDE | android_iptal_listesi_cek | Zincirdeki bir seri numarası listede göründü; iptal_ani yazılır, D01 sonucu DOGRULANAMADI olur, sonraki kayıtlar Cihaz doğrulanmadı. | 
+
+| IPTAL_LISTESINDE | DOGRULANDI | android_iptal_listesi_cek | Askıya alma (SUSPENDED) listeden kalktı; iptal alanları boşalır, sonraki kayıtlar yeniden doğrulanmış. | 
+
+Değişmezler: 18 kural her zaman doğrudur; Testler bölümündeki senaryo ve özellik testleri bunları korur
+
+- Her yoklama kaydının tam bir güncel karar geçmişi satırı vardır; o satırın karar ve gerekçesi kayıt satırındakiyle aynıdır.
+
+- Kayıt kararı yalnız iki yoldan doğar: ilk karar kararHesapla ile, sonraki her geçiş kararDegistir ile; D05.kararSutunlariniYaz'ı yalnız D07 çağırır.
+
+- Kaynağı HOCA olan karara otomatik yeniden değerlendirme dokunmaz.
+
+- Kilitli birim-dönemin kayıtlarında hiçbir karar geçişi olmaz; birimin son gününden sonra ulaşan kayıt, Ret kuralı yoksa, İncelemede SON_GUNDEN_SONRA olarak donar.
+
+- Etiketler kayıt geldiği anda bilinen kanıt ve ayarla bir kez hesaplanır ve sonra değişmez.
+
+- Doğrulama sonucu yalnız etikettir: Cihaz doğrulanmadı ve İkinci profil kararı değiştirmez, hiçbir kayıt cihaz kanıtı yüzünden Ret almaz.
+
+- Ret kararlı kayıt silinmez; kanıt olarak saklanır.
+
+- Bir (dönem, öğrenci, ders) için ortak sınırdan en çok ORTAK_SINIR (2) oturumda, aynı oturumda en çok bir kez hak kullanılır; kullanılan hak geri verilmez.
+
+- Ortak sınırdan hak yalnız başka hiçbir kural uymayan, Var olacak Saat doğrulanamadı ya da Yedek kodlu kayıtta kullanılır.
+
+- Bir cihaz doğrulama değeri en çok bir kez tüketilir; 5 dakikadan eski ya da amacı uymayan değer kabul edilmez; değerin kendisi veritabanında ve logda yoktur.
+
+- Aynı App Attest anahtarıyla imzalı geçen onaylarda sayaç sıra numarasıyla kesin artar; artmayan kayıt reddedilmez, İncelemede SAYAC_ARTMADI olur.
+
+- Kafa sayısı ya da yapılmadı cevabı gelmeden D07 uçları oturumun kayıt sayısını döndürmez.
+
+- Gönderme süresi bittikten sonra karşılaştırma ve işaret donar; sonra gelen kayıt onları değiştirmez.
+
+- Burada değil yalnız o oturumda seçilmiş öğrenciye ya da işareti geçerli oturumdaki öğrenciye, oturum günü bitmeden verilir; geri alma yalnız işaretleyen hocanın, aynı gün içindedir.
+
+- Süresiz Beklemede yalnız TEYIT_BEKLIYOR'dur; öbür Beklemede gerekçeleri en geç gönderme süresinin sonunda çözülür.
+
+- Kural taşıyan her zaman D04.simdi() ile okunur; kural kodunda SQL now() ve Date.now() yoktur.
+
+- Loglarda, iş verisinde ve adres satırında öğrenci numarası, isim, doğrulama değeri ve anahtar yoktur; yalnız iç kimlik.
+
+- Ham kanıt değiştirilmez (hesap silmede yalnız D07-A07 kararıyla bütünüyle silinebilir); iptal listesi yalnız iptal_ani ve iptal_durumu alanlarını doldurur ya da boşaltır.
+
+Dış yüz: index.ts on iki işlev açar, sözleşmedeki listeyle birebir; saf kurallar packages/core içinde
+
+| Ad | İmza | Amaç | 
+
+| dogrulamaDegeriniTuket | dogrulamaDegeriniTuket(tx: Tx, degerId: string, beklenenAmac: DogrulamaAmaci): Promise<{ tamam: true } | { tamam: false; kod: 'DOGRULAMA_DEGER_GECERSIZ' }> | D01'in kayıt, cihaz değişimi ve App Attest yenileme işlemleri çağırır. degerId telefonun aldığı base64url değerin kendisidir; satır SHA-256 özetiyle bulunur ve her durumda silinir; süresi geçmiş ya da amacı uymayan değer DOGRULAMA_DEGER_GECERSIZ döner. | 
+
+| cihazKanitiniDogrula | cihazKanitiniDogrula(tx: Tx, kanit: CihazKaniti): Promise<KanitSonucu> | Android anahtar kanıtını ve App Attest kanıtını tek arayüzün (CihazDogrulayici) arkasında doğrular, meydan okumayı değer, öğrenci numarası, isSystemUser ve Secure Enclave açık anahtarından yeniden kurar, cihaz_kanitlari satırını çağıranın işleminde yazar. Hata atmaz: REDDEDILDI de bir sonuçtur ve gerekçesiyle döner; telefona dönecek kod D01'in sözleşmesindedir (D07-A01). Sonucu D01 kendi cihazDogrulamaSonucunuYaz işleviyle cihaz satırına yazar. | 
+
+| appAttestSayaciniDenetle | appAttestSayaciniDenetle(tx: Tx, anahtarId: CihazAnahtariId, sayac: number, siraNo: bigint): Promise<'GECTI' | 'ARTMADI'> | D05 App Attest onayı taşıyan her yeni kayıtta, kaydın geri dönüş noktası içinde çağırır. Anahtar kilidi altında aynı anahtarın bir önceki ve bir sonraki sıra numaralı geçen onayına bakar, boşluk kabul edilir, satırı yazar; aynı (anahtar, sıra) yeniden gelirse saklı sonucu döner. | 
+
+| kararHesapla | kararHesapla(tx: Tx, kayitTaslagi: KayitTaslagi, baglam: KararBaglami): Promise<KararSonucu> | D05 yeni kaydı eklemeden önce çağırır. Bağlamı sahiplerinin dış yüzünden toplar, kararVer ile etiketleri, kararı, birincil ve öbür gerekçeleri, geç geldi işaretini hesaplar; Var olacak Saat doğrulanamadı ya da Yedek kodlu kayıtta ortak sınırdan hakkı aynı işlemde kullanır. Kayıt satırına yazmaz. | 
+
+| kararGecmisineYaz | kararGecmisineYaz(tx: Tx, kayitAnahtari: KayitAnahtari, karar: KararSonucu, kaynak: KararKaynagi): Promise<void> | D05 kayıt satırını ekledikten hemen sonra, aynı geri dönüş noktasında çağırır; ilk geçmiş satırını (sira 1, guncel) yazar. Kafa sayısı girilmiş oturumda karşılaştırmayı yeniler, eşik ilk kez aşıldıysa işareti açar. Yalnız ilk karar içindir; ikinci çağrı tekil kısıta takılır. | 
+
+| kararDegistir | kararDegistir(tx: Tx, kayitAnahtari: KayitAnahtari, yeniKarar: YeniKarar, kaynak: KararKaynagi): Promise<KararDegisimi> | İlk karardan sonraki her geçişin tek yolu: D09 onay ve retleri, burada değil ve yeniden değerlendirme bunu kullanır. Önce kayıt anahtarından türetilen işlem kilidini (pg_advisory_xact_lock) alır, sonra güncel geçmiş satırını okur; böylece aynı kayda eşzamanlı iki geçiş sıraya girer ve ikincisi birincinin sonucunu görür. Geçiş durum makinesinde yoksa DOGRULAMA_GECIS_GECERSIZ, beklenen eski karar güncel kararla aynı değilse DOGRULAMA_KARAR_DEGISTI, birim-dönem kilitliyse DOGRULAMA_DONEM_KILITLI, hoca dersin hocası değilse DOGRULAMA_YETKISIZ_HOCA döner. Sonra önceki satırı guncel = false yapar, yeni satırı yazar, D05.kararSutunlariniYaz ve D08.devamHesaplaIsiKoy'u aynı işlemde çağırır. Karar aynıysa yazmaz. Hoca kaynaklı geçişin denetim olayını çağıran yazar. | 
+
+| donemKilidiKararKapanisi | donemKilidiKararKapanisi(tx: Tx, birimId: BirimId, donemId: DonemId): Promise<{ onaysizKendiBeyani: number; kararsiz: number }> | D02'nin donem_kilidi işlemi kilitAdimiKaydet ile kayıtlı adımı aynı işlemde çağırır. Kararları değiştirmez; onaysız Kendi beyanı için dogrulama.onaysiz_kilitlendi, açık Beklemede ve İncelemede için dogrulama.kararsiz_kilitlendi olayını oturum başına yazar. | 
+
+| yenidenDegerlendir | yenidenDegerlendir(tx: Tx, suzgec: YenidenSuzgec, neden: YenidenNeden): Promise<{ incelenen: number; degisen: number }> | Bir olaydan sonra süzgece uyan kayıtların otomatik kararlarını aynı kurallarla baştan hesaplar, değişenleri kararDegistir yoluyla yazar. Hoca kararına, kilitli döneme ve etiketlere dokunmaz. Süzgeç: kayıt anahtarları, oturum, öğrenci ve şube, cihaz ya da gerekçe ve ulaşma aralığı. | 
+
+| oturumIsaretleri | oturumIsaretleri(tx: Tx, suzgec: IsaretSuzgeci): Promise<OturumIsareti[]> | D09'un işaretli oturum listesi, D08 ve D10 okur: tür, geçerli mi, ilk işaret anı, derste mi, son karşılaştırma, kesinleşme ve inceleme bilgisi. | 
+
+| isaretIncelendi | isaretIncelendi(tx: Tx, isaretId: Uuid, hoca: { kisiId: KisiId }): Promise<OturumIsareti> | D09'un toplu inceleme kapatma ucu çağırır; incelendi_ani ve inceleyen_kisi_id yazar. Zaten incelenmişse değiştirmeden döner; hoca dersin hocası değilse DOGRULAMA_YETKISIZ_HOCA. | 
+
+| cihazDogrulanmadiMi | cihazDogrulanmadiMi(tx: Tx, cihazId: CihazId): Promise<boolean> | Cihazın son kanıtı DOGRULANDI değilse ya da iptal listesine düştüyse true; D09'un ilk kayıt teyidi listesi bu öğrencileri ayrı ve işaretli gösterir. | 
+
+| kafaSayisiOgesi | kafaSayisiOgesi(tx: Tx, oge: KuyrukOgesi<KafaSayisiGovdesi>): Promise<OgeSonucu> | kafa_sayisi kuyruk öğesinin işleyicisi. Göndereni dersin hocası olarak doğrular, D02.kafaSayisiniYaz ile değeri ve yapıldı onayını yazdırır, denetim olayını yazar, aynı işlemde oturumun pencereye bağlı kararlarını son ayara göre çözer, karşılaştırmayı hesaplayıp işareti açar. | 
+
+- Tipler packages/contracts/src/dogrulama.ts'de: KayitAnahtari, KayitTaslagi, KararBaglami, KararSonucu, YeniKarar, KararKaynagi, KararDegisimi, CihazKaniti, KanitSonucu, YenidenSuzgec, YenidenNeden, IsaretSuzgeci, OturumIsareti, KafaSayisiGovdesi. Tx D12'nin işlem tipi; KuyrukOgesi ve OgeSonucu D06'nın.
+
+- KayitTaslagi: anahtar (donemId, kayitId), oturumId, ogrenciId, cihazId, imzaAnahtariId, imzaTuru (a, i, s), siraNo (metin), gelisYolu (TELEFON, MAKBUZ), ulasmaAni, saat (durum, altMs, ustMs, telefonSaatiMs, esitlemeBozukkenUlasti), uygulamaSurumu, guncellemeKimligi, platform, iosAlanlari, qr (Aşama 2). KararBaglami: sayac (GECTI, ARTMADI, YOK).
+
+- KararSonucu: karar, gerekce, ekGerekceler, etiketler (yedi boolean), gecGeldi, ortakSinirKullanildi, kararAni ve oturumOzeti (kafaSayisi, kafaSayisiAni, bitis; kararGecmisineYaz oturumu yeniden okumasın diye, D05 yorumlamaz). YeniKarar: karar, gerekce, beklenenKarar. KararKaynagi: { tur: OTOMATIK, olay } ya da { tur: HOCA, kisiId, olay, islemId }.
+
+- CihazKaniti: cihazId, anahtarId, platform, amac, meydanOkuma (deger, ogrenciNo, isSystemUser, seAcikAnahtar, cihazId) ve kanıt: { tur: ANDROID_ANAHTAR_KANITI, zincir, acikAnahtar }, { tur: APP_ATTEST, anahtarKimligi, kanitNesnesi } ya da { tur: KANITSIZ }. KanitSonucu: kanitId, sonuc, gerekce, guvenlikDuzeyi, dogrulanmisAcilis, appAttestOrtami, iosAlanlari.
+
+- Saf kurallar packages/core/src/dogrulama'dan herkesin içe aktarabileceği fonksiyonlardır ve dış yüz sayılmaz: kararVer, izinliGecis, etiketleriHesapla, ortakSinirKarari, kafaSayisiKarsilastir, sayacDenetle, androidKanitiDegerlendir, appAttestKanitiDegerlendir, meydanOkumaMetni ve kodlar.ts ile sabitler.ts sabitleri.
+
+- Dış yüz yalnız çağıranın işlemini kullanır, havuzdan bağlantı istemez; index.ts yüklenirken başka modülü çağırmaz.
+
+Denetim olayları: D07 kendi uçlarının ve işlerinin olaylarını D09.denetimeYaz ile yazar, onay olaylarını D09 yazar
+
+- dogrulama.kafa_sayisi_girildi: oturum, önceki ve yeni kafa sayısı, giren hoca.
+
+- dogrulama.sinifta_degil_isaretlendi ve dogrulama.sinifta_degil_geri_alindi: oturum, öğrencinin iç kimliği, etkilenen kayıtlar, hoca.
+
+- dogrulama.onaysiz_kilitlendi ve dogrulama.kararsiz_kilitlendi: birim, dönem, oturum ve kayıt kimlikleri (oturum başına bir olay).
+
+- dogrulama.cihaz_iptal_listesinde ve dogrulama.cihaz_iptal_kalkti: cihaz ve kanıt kimliği, durum.
+
+- dogrulama.ios_beklenmeyen_alan: cihaz ya da kayıt kimliği ve aykırılık kodu (değerin metni değil).
+
+- Hocanın onay ve retleri (Kendi beyanı, İncelemede) için olayı D09 yazar; D07 kendi uçlarının ve işlerinin olaylarını yazar. Olay türleri packages/contracts/src/dogrulama.ts'de.
+
+### Hata kodları
+
+DOGRULAMA_ önekli 13 kod: başkasının oturumu 404, durum çatışması 409, kuyruk öğesinde ret, dış yüzde sonuç
+
+| Kod | Nerede | HTTP ya da sonuç | Ne zaman | 
+
+| DOGRULAMA_OTURUM_BULUNAMADI | dört oturum ucu, kafa_sayisi öğesi | 404; öğede ret | Oturum yok ya da çağıran o dersin hocası değil (varlık sızdırılmaz). | 
+
+| DOGRULAMA_OTURUM_IPTAL | rastgele isim, kafa_sayisi öğesi | 409; öğede ret | Oturum iptal edilmiş. | 
+
+| DOGRULAMA_OTURUM_GUNU_GECTI | rastgele isim, burada değil, geri alma | 409 | Oturumun İstanbul günü bitti. | 
+
+| DOGRULAMA_DONEM_KILITLI | oturum uçları, kafa_sayisi öğesi, kararDegistir | 409; öğede ret; dış yüz sonucu | Birim-dönem kilitli; kararlar donmuş. | 
+
+| DOGRULAMA_SECIM_KIMLIGI_CAKISIYOR | rastgele isim | 409 | Aynı secimId başka bir oturum için kullanılmış. | 
+
+| DOGRULAMA_OGRENCI_KAYDI_YOK | burada değil | 404 | Öğrencinin bu oturumda kaydı yok. | 
+
+| DOGRULAMA_OGRENCI_SECILMEDI | burada değil | 409 | Öğrenci bu oturumda seçilmedi ve oturumun kafa sayısı işareti geçerli değil. | 
+
+| DOGRULAMA_ISARET_YOK | geri alma | 404 | Geri alınacak burada değil işareti yok. | 
+
+| DOGRULAMA_ISARETI_BASKA_HOCA_KOYDU | geri alma | 409 | İşareti başka hoca koydu; geri almayı yalnız o yapar. | 
+
+| DOGRULAMA_YETKISIZ_HOCA | kafa_sayisi öğesi, kararDegistir, isaretIncelendi | öğede ret; dış yüz sonucu | Kaynak hoca o dersin hocası değil (D09 uçları önce 404 verir; bu ikinci denetimdir). | 
+
+| DOGRULAMA_DEGER_GECERSIZ | dogrulamaDegeriniTuket | dış yüz sonucu (D01 kendi ucunda 400 olarak döner) | Değer yok, kullanılmış, süresi geçmiş ya da amacı uymuyor. | 
+
+| DOGRULAMA_KARAR_DEGISTI | kararDegistir | dış yüz sonucu (D09 öğe sonucu "zaten karar verilmiş") | Beklenen eski karar güncel kararla aynı değil. | 
+
+| DOGRULAMA_GECIS_GECERSIZ | kararDegistir | dış yüz sonucu | İstenen geçiş durum makinesinde yok (ör. Kendi beyanı etiketsiz kayda KENDI_BEYANI_REDDEDILDI, SON_GUNDEN_SONRA kayda onay). | 
+
+Kodlar packages/contracts/src/dogrulama.ts'de, hatalar.ts yalnız birleştirir; zarf, 400, 401, 403, 413, 429 ve 503 D13'ün ortak kodlarıdır. Kapsama testi her kodun en az bir senaryoda döndüğünü denetler. Cevaplardaki karar, gerekçe, etiket ve durum alanları genişleyen enumdur (x-extensible-enum).
+
+### Testler
+
+Her özellik önce kırmızı davranış senaryosuyla yazılır ([Testler]). Kural testleri packages/core'da Vitest ve fast-check ile, deneme sayısı açık ([Birim ve özellik testleri]); senaryolar Türkçe Gherkin, gerçek PostgreSQL ve sahte saatle; cihaz doğrulayıcı sahtedir. Sabitler testlere içe aktarılır, yeniden yazılmaz; yokluk iddia eden her test pozitif kontrolüyle gelir ve her iddia için kodu bilerek bozup testin kırmızıya döndüğü bir kez görülür.
+47 test: kurallar özellik testiyle, uçlar ve işler davranış senaryosuyla, bütçe ve mutasyon eşikli
+
+| Test | Tür | Neyi gösterir | 
+
+| Karar tablosu: her satır beklenen karar, gerekçe ve etiketleri verir | behavior | packages/core/src/dogrulama/karar-tablosu.ts'deki tek tablo kararVer ile aynen sonuç verir; her gerekçe kodu ve her etiket en az bir satırda; telefon ve panel aynı tabloyu koşar. | 
+
+| Öncelik özelliği | property | fast-check (10.000 deneme): rastgele uyan kural kümesinde karar en yüksek sınıftır (Ret, Beklemede, İncelemede, Var), birincil gerekçe sınıf içindeki ilk katalog kodudur, öbür uyanların hepsi ek gerekçelerdedir; son günden sonra Ret yoksa İncelemede SON_GUNDEN_SONRA. | 
+
+| Ortak sınır özelliği | property | fast-check (10.000 deneme) rastgele kayıt dizilerinde (etiketli, etiketsiz, aynı oturuma tekrar, önce Beklemede) bir (dönem, öğrenci, ders) için ORTAK_SINIRLA_KABUL alan farklı oturum sayısı ORTAK_SINIR'ı geçmez, kullanilan azalmaz, aynı oturum ikinci hak harcamaz, başka kural uyan kayıt hak harcamaz. | 
+
+| Kafa sayısı eşiği | property | 0 ile 5000 arası her kafa sayısı ve 0 ile 6000 arası kayıt sayısı için isaret, d > 3 ve 1000d > 50K tanımıyla BigInt üzerinden karşılaştırılır; sınır örnekleri (K=60 ve kayıt 63, 64; K=0 ve kayıt 3, 4) tabloda ayrıca. | 
+
+| App Attest sayacı sıra numarasına göre | property | Kesin artan (sıra, sayaç) dizisinin her varış permütasyonunda bütün onaylar geçer; diziye tek bir artmayan onay eklenince yalnız o onay ARTMADI olur, komşuları geçer; boşluklu dizi geçer. | 
+
+| Geçiş tablosu | behavior | izinliGecis yalnız durum makinesindeki geçişlere izin verir: otomatik VAR'dan INCELEMEDE'ye, kaynağı HOCA olan karardan otomatik geçişe, etiketsiz kayda Kendi beyanı onayına ya da reddine izin yoktur ve kararDegistir bunlarda DOGRULAMA_GECIS_GECERSIZ döner; beklenen eski karar uymayınca DOGRULAMA_KARAR_DEGISTI; her izinli geçiş en az bir satırda denenir. | 
+
+| Meydan okuma metni bayt bayt sabit | contract | meydanOkumaMetni sabit örnek girdilerde kayıtlı bayt dizisini (onaltılık) aynen üretir; telefon testleri aynı örnekleri koşar; alanların sırası değişirse kırmızı. | 
+
+| Android kanıt ölçütü tablosu | behavior | Her ölçütün tek başına tutmadığı satır DOGRULANAMADI ve o ölçütün kodunu, hepsi tutunca DOGRULANDI, paket ya da imza tutmayınca REDDEDILDI verir; birden çoğu tutmayınca ilk sıradakinin kodu yazılır. | 
+
+| Kural saat okumaz | property | Aynı girdi ve aynı simdi ile kararVer'in çıktısı sistem saati (vi.setSystemTime) ve TZ (UTC, Europe/Istanbul) değişse de aynıdır. | 
+
+| Değer tek kullanımlık ve 5 dakikalık | behavior | Alınan değer ilk tüketimde kabul, ikincide DOGRULAMA_DEGER_GECERSIZ; sahte saat 5 dakika 1 milisaniye ilerleyince red, 4 dakika 59 saniyede kabul (pozitif kontrol); başka amaçla tüketme red ve değer yanar. | 
+
+| Süresi geçen değerler temizlenir | behavior | Yeni değer verilirken süresi geçmiş satırlar silinir, süresi geçmemiş satır kalır (pozitif kontrol); bir çağrıda en çok 100 satır silinir. | 
+
+| Sahte doğrulayıcı: donanım anahtarı | behavior | Sahte doğrulayıcı "donanım anahtarı" dönünce cihaz_kanitlari DOGRULANDI yazılır ve o cihazın kaydında etiket_cihaz_dogrulanmadi false olur. | 
+
+| Kanıtsız telefon bağlanır, kaydı sayılır | behavior | Sahte doğrulayıcı "doğrulanamadı" dönünce bağlama sürer, kayıt Var ve etiket_cihaz_dogrulanmadi true; kayıt bu yüzden Ret ya da İncelemede almaz. | 
+
+| Gerçek doğrulayıcı kayıtlı örneklerle | contract | ornek-kanitlar.json'daki kayıtlı Android zincirleri (TEE, StrongBox, yazılım anahtarı, kilidi açık önyükleyici, eski RSA kök, P-384 kök, yabancı kök) ve App Attest nesneleri (üretim, geliştirme, başka App ID) ağ açmadan beklenen sonuç ve gerekçeyi verir. | 
+
+| Geliştirme ortamı App Attest kanıtı | behavior | aaguid appattestdevelop olan kanıt DOGRULANAMADI APP_ATTEST_GELISTIRME_ORTAMI; o cihazın kayıtları Cihaz doğrulanmadı etiketiyle sayılır. | 
+
+| iOS 27 beklenmeyen alanı | behavior | Yayımlanmamış paket sürümü taşıyan kanıt etiketi ve kararı değiştirmez, ios_aykirilik yazılır, dogrulama.ios_beklenmeyen_alan denetime düşer; alan hiç gelmezse (iOS 26) olay yazılmaz (pozitif kontrol). | 
+
+| İptal listesi ileriye etkilidir | behavior | Liste cihazın zincirindeki seri numarasını içerince iptal_ani yazılır, sonra ulaşan kayıt Cihaz doğrulanmadı olur, önce ulaşmış kayıtların etiketleri ve kararları aynı kalır; askıya alma kalkınca sonraki kayıtlar yeniden doğrulanmış. | 
+
+| İptal listesi çekilemezse | behavior | Sahte HTTP hata dönünce tablo değişmez; son başarılı çekim 7 gün 1 dakika önceyse D15.uyariAc çağrılır, 6 gün 23 saatte çağrılmaz (pozitif kontrol); 20 MiB'yi aşan cevap reddedilir. | 
+
+| İptal listesi işi iki kez | behavior | Aynı listeyle iki çalışmada satırlar, kanıt satırları ve denetim olayları değişmez; ikinci çalışma olay yazmaz. | 
+
+| Listede olmayan derse yoklama | behavior | Kayıt saklanır, gönderim sonucu kabul, karar Ret LISTEDE_DEGIL (önce kırmızı yazılır, [Başlangıç]); liste satırı eklenince aynı işlemde yeniden karar Var. | 
+
+| Ulaşma anını aşan kayıt | behavior | Eşitleme sağlıklıyken Ret ULASMA_ANINI_ASIYOR; eşitleme bozukken İncelemede SAAT_ESITLEMESI_BOZUK; kesinti sapma eşiğin altında kapanınca yeniden değerlendirilir, üstündeyse İncelemede kalır. | 
+
+| Teyit bekleyen öğrenci | behavior | Teyitsiz öğrencinin kaydı Beklemede TEYIT_BEKLIYOR; teyit verilince aynı işlemde Var ve ilk_kesin satırı teyit anında yazılır; teyit reddinde Ret TEYIT_REDDEDILDI; ham kayıt kalır. | 
+
+| Ders içi erken kapatma | behavior | Erken kapatma ulaşınca dilimdeki kayıtlar Beklemede AYAR_KESINLESMEDI, dilimden önceki kayıtlar Var kalır; kafa sayısı gelince aynı işlemde dilimdekiler Ret PENCERE_DISINDA; sonradan uzatma gelirse Ret'ler Var'a döner. | 
+
+| Kafa sayısı hiç gelmezse | behavior | Gönderme süresi bitince bekleyen_kararlari_coz pencere_beklemede_kesinlestir işini koyar, iş son bilinen ayara göre karar verir; ikinci çalışma hiçbir şey değiştirmez. | 
+
+| Sayacı artmayan iPhone kaydı | behavior | Sayaç önceki geçen onaydan büyük değilse kayıt saklanır, İncelemede SAYAC_ARTMADI, reddedilmez; aynı kayıt yeniden gelince sayaca bakılmadan zaten var. | 
+
+| Makbuzla sırasız gelen iPhone kayıtları | behavior | Sıra 5 makbuzla, sıra 3 ve 4 telefondan sonra gelince hepsi geçer; eski anahtarla imzalı bekleyen kayıt anahtar yenilendikten sonra eski anahtarın dizisinde denetlenir. | 
+
+| 2'lik ortak sınır uçtan uca | behavior | Aynı derste iki Saat doğrulanamadı kaydı Var ORTAK_SINIRLA_KABUL, üçüncüsü İncelemede ORTAK_SINIR_ASILDI; aynı oturuma ikinci kayıt hak harcamaz; Kendi beyanı dersinde de aynı. | 
+
+| Son hak eşzamanlı alınamaz | behavior | Aynı öğrencinin iki ayrı oturumuna ait iki etiketli kayıt iki bağlantıdan aynı anda gönderilince, hakkı 1 kalmışken yalnız biri Var alır, öbürü İncelemede. | 
+
+| Kendi beyanı | behavior | Süre seçilmemiş derste kayıt Var ve etiket_kendi_beyani; toplu onay kararı değiştirmez, geçmişe KENDI_BEYANI_ONAYLANDI satırı yazılır; ret Ret KENDI_BEYANI_REDDEDILDI; kilitte onaysızlar için oturum başına dogrulama.onaysiz_kilitlendi. | 
+
+| Kafa sayısından önce sayı yok | behavior | Kafa sayısı girilmeden karşılaştırma ucu kayitSayisi null döner; kafa sayısı öğesi ulaşınca aynı uç sayıyı döner (pozitif kontrol); yapılmadı cevabından sonra da döner; rastgele isim cevabında sayı alanı yoktur. | 
+
+| Kafa sayısı işareti ve derste | behavior | Kayıt sayısı kafa sayısını eşiğin üstünde aşınca işaret satırı açılır; ilk işaret anı oturum bitişinden önceyse derste true, sonra gelen kayıtla aşılınca false; işaret hiçbir kaydın kararını değiştirmez. | 
+
+| Kesinleşmeden sonra gelen kayıt | behavior | Gönderme süresi bittikten sonra gelen kayıt kendi kararını alır ve gec_geldi true; karşılaştırma ve işaret değişmez. | 
+
+| Rastgele isim seçimi | behavior | Seçim yalnız güncel kararı Ret olmayan kaydı bulunan öğrencilerden ve tekrarsız yapılır; aynı secimId ikinci istekte aynı öğrencileri döndürür; aday kalmayınca boş liste. | 
+
+| Burada değil | behavior | Seçilen öğrencinin o oturumdaki Ret olmayan bütün kayıtları Ret YOKLAMADA_SINIFTA_DEGIL olur, denetime kim ve ne zaman yazılır; seçilmemiş öğrenci DOGRULAMA_OGRENCI_SECILMEDI alır, aynı öğrenci işaretli oturumda kabul edilir (pozitif kontrol). | 
+
+| Burada değil geri alma | behavior | Aynı gün aynı hoca geri alınca hoca kaynaklı önceki karar geri gelir, otomatik önceki karar yeniden hesaplanır; ertesi gün DOGRULAMA_OTURUM_GUNU_GECTI, başka hoca DOGRULAMA_ISARETI_BASKA_HOCA_KOYDU. | 
+
+| Hatalı sürüm | behavior | Hatalı ilan edilen sürümün başlangıçtan sonra ulaşan kaydı İncelemede HATALI_SURUM; başlangıçtan önce ulaşmış kayıt değişmez; başka sürüm etkilenmez (pozitif kontrol). | 
+
+| Çakışan oturum | behavior | Saatleri çakışan iki oturuma aynı öğrenciden gelen ikinci kayıt İncelemede CAKISAN_OTURUM, ilk kayıt Var kalır. | 
+
+| Eski cihaz ve silinen hesap | behavior | Değişimle kapanan cihazın kapanmadan önce imzalanan kaydı normal karar, sonrası Ret ESKI_CIHAZ, saati belirsiz olanı İncelemede KAPANMIS_CIHAZ_SAAT_BELIRSIZ; silinen hesapta aynı kural HESAP_SILINMIS ile. | 
+
+| Kilit ve son gün | behavior | Kilitli dönemde kararDegistir DOGRULAMA_DONEM_KILITLI döner, yeniden değerlendirme kayıtları atlar; son günden sonra ulaşan kayıt İncelemede SON_GUNDEN_SONRA; kilit işlemi geri alınırsa kilit olayları da yazılmamış olur. | 
+
+| Hoca kararı korunur | property | fast-check durum makinesi testi Cucumber içinde (300 deneme): rastgele olay dizilerinde (teyit, liste, pencere, kafa sayısı, kesinti) kaynağı HOCA olan hiçbir karar otomatik olayla değişmez. | 
+
+| Geçmiş ile kayıt satırı aynı | property | Aynı rastgele olay dizilerinin sonunda her kaydın güncel geçmiş satırı ile kayıt satırındaki karar ve gerekçe aynıdır; her kaydın tam bir güncel ve en çok bir ilk_kesin satırı vardır. | 
+
+| Uç yetkileri | contract | Rota tablosundan üretilen senaryo: değer ucu kimliksiz 200; öbür dört uç kimliksiz 401, öğrenci oturumuyla 403, başka hocanın oturumunda 404 DOGRULAMA_OTURUM_BULUNAMADI. | 
+
+| Sözleşme ve genişleyen enum | contract | Cevap şemalarında karar, gerekçe, etiket, durum ve hata kodu alanları x-extensible-enum taşır, enum anahtarı taşımaz; istek şemaları kapalıdır; her DOGRULAMA_ kodu en az bir senaryoda gerçekten döner. | 
+
+| kafa_sayisi kuyruk öğesi | behavior | Dersin hocası olmayan gönderenin öğesi ret DOGRULAMA_YETKISIZ_HOCA; iptal oturumda ret; aynı öğe iki kez gelince D06 zaten var der ve değer bir kez yazılır; geçerli öğe dogrulama.kafa_sayisi_girildi yazar. | 
+
+| Kayıt başına sorgu bütçesi | load | Sorgu sayan işlem sarmalayıcısıyla (Aşama 1): kararHesapla tek şubeli etiketsiz kayıtta en çok 10, en kötü durumda (üç şube, etiketli kayıt, aynı gün başka kayıt) en çok 16; kararGecmisineYaz en çok 3; appAttestSayaciniDenetle en çok 4 SQL ifadesi. Bütçe aşılırsa kırmızı. Ders çıkışı yük testinde (D15) karar yolu dahil gönderme ucunun süresi ayrıca raporlanır. | 
+
+| Mutasyon | mutation | Haftalık Stryker koşusunda packages/core/src/dogrulama için kırma eşiği %90; kararVer, ortakSinirKarari, kafaSayisiKarsilastir ve sayacDenetle'de hayatta kalan mutant yok. | 
+
+| Kişisel veri sızmaz | behavior | Senaryolardan sonra loglar ve pg-boss iş verisi taranır: öğrenci numarası, isim, doğrulama değeri ve anahtar yok; bilerek değer içeren bir log satırının süzgece takıldığı pozitif kontrol olarak görülür. | 
+
+Dosyalar: modülün yazacağı her dosya (göçler Drizzle ile üretilir)
+
+- apps/server/src/modules/dogrulama/index.ts
+
+- apps/server/src/modules/dogrulama/eklenti.ts
+
+- apps/server/src/modules/dogrulama/tablolar.ts
+
+- apps/server/src/modules/dogrulama/rotalar.ts
+
+- apps/server/src/modules/dogrulama/deger.ts
+
+- apps/server/src/modules/dogrulama/dogrulayici.ts
+
+- apps/server/src/modules/dogrulama/kanit-android.ts
+
+- apps/server/src/modules/dogrulama/kanit-app-attest.ts
+
+- apps/server/src/modules/dogrulama/kokler.ts
+
+- apps/server/src/modules/dogrulama/sayac.ts
+
+- apps/server/src/modules/dogrulama/baglam.ts
+
+- apps/server/src/modules/dogrulama/karar.ts
+
+- apps/server/src/modules/dogrulama/yeniden.ts
+
+- apps/server/src/modules/dogrulama/kafa-sayisi.ts
+
+- apps/server/src/modules/dogrulama/rastgele-isim.ts
+
+- apps/server/src/modules/dogrulama/kilit.ts
+
+- apps/server/src/modules/dogrulama/iptal-listesi.ts
+
+- apps/server/src/modules/dogrulama/yayin-bilgisi.ts
+
+- apps/server/src/modules/dogrulama/dinleyiciler.ts
+
+- apps/server/src/modules/dogrulama/saklama.ts
+
+- apps/server/src/jobs/dogrulama/index.ts
+
+- apps/server/src/jobs/dogrulama/android-iptal-listesi-cek.ts
+
+- apps/server/src/jobs/dogrulama/bekleyen-kararlari-coz.ts
+
+- apps/server/src/jobs/dogrulama/pencere-beklemede-kesinlestir.ts
+
+- apps/server/test/features/dogrulama/cihaz-dogrulama.feature
+
+- apps/server/test/features/dogrulama/karar-kurallari.feature
+
+- apps/server/test/features/dogrulama/ortak-sinir.feature
+
+- apps/server/test/features/dogrulama/bekleyen-kararlar.feature
+
+- apps/server/test/features/dogrulama/kafa-sayisi.feature
+
+- apps/server/test/features/dogrulama/rastgele-isim.feature
+
+- apps/server/test/features/dogrulama/donem-kilidi.feature
+
+- apps/server/test/features/dogrulama/iptal-listesi.feature
+
+- apps/server/test/features/dogrulama/hile-senaryolari.feature
+
+- apps/server/test/features/dogrulama/yetki.feature
+
+- apps/server/test/features/dogrulama/ornek-kanitlar.json
+
+- apps/server/test/steps/dogrulama/cihaz-dogrulama.steps.ts
+
+- apps/server/test/steps/dogrulama/karar.steps.ts
+
+- apps/server/test/steps/dogrulama/kafa-sayisi.steps.ts
+
+- apps/server/test/steps/dogrulama/rastgele-isim.steps.ts
+
+- apps/server/test/steps/dogrulama/isler.steps.ts
+
+- apps/server/test/support/kurucular/dogrulama.ts
+
+- packages/contracts/src/dogrulama.ts
+
+- packages/core/src/dogrulama/index.ts
+
+- packages/core/src/dogrulama/kodlar.ts
+
+- packages/core/src/dogrulama/sabitler.ts
+
+- packages/core/src/dogrulama/karar.ts
+
+- packages/core/src/dogrulama/gecisler.ts
+
+- packages/core/src/dogrulama/etiketler.ts
+
+- packages/core/src/dogrulama/ortak-sinir.ts
+
+- packages/core/src/dogrulama/kafa-sayisi.ts
+
+- packages/core/src/dogrulama/sayac.ts
+
+- packages/core/src/dogrulama/android-olcut.ts
+
+- packages/core/src/dogrulama/app-attest-olcut.ts
+
+- packages/core/src/dogrulama/meydan-okuma.ts
+
+- packages/core/src/dogrulama/karar-tablosu.ts
+
+- packages/core/src/dogrulama/karar.test.ts
+
+- packages/core/src/dogrulama/gecisler.test.ts
+
+- packages/core/src/dogrulama/ortak-sinir.test.ts
+
+- packages/core/src/dogrulama/kafa-sayisi.test.ts
+
+- packages/core/src/dogrulama/sayac.test.ts
+
+- packages/core/src/dogrulama/olcut.test.ts
+
+- packages/core/src/dogrulama/meydan-okuma.test.ts
+
+Göçler tablolar.ts'den Drizzle ile apps/server/migrations/<UTC zaman>_dogrulama_<açıklama>/ altında üretilir ve yalnız D07 tablolarına dokunur (sözleşmedeki migration_dir); kısmi dizinler, GIN dizini ve katalogdan türeyen CHECK listeleri göç SQL'inde gözden geçirilir. Kayıt satırındaki karar ve etiket sütunlarının göçü D05'indir (D07-A04).
+
+### Netleştirilenler
+
+Envanter boşlukları: 28 tanesi karara bağlandı, D07-B11 ve D07-B25 sahibe soruldu (D07-A01, D07-A02)
+
+| Boşluk | Karar | Neden | 
+
+| D07-B01 | Öncelik Ret, Beklemede, İncelemede, Var; sınıf içinde katalog sırası (Durumlar ve kurallar, Gerekçe kataloğu). Birincil gerekçe kayıt satırına, uyan öbürleri kayit_karar_gecmisi.ek_gerekceler'e yazılır. Tek istisna: birimin son gününden sonra ulaşan kayıtta Ret kuralı yoksa İncelemede SON_GUNDEN_SONRA, Beklemede kuralları uygulanmaz. Katalogda 41 kod var; Aşama 2 kodları baştan CHECK listesinde. | Ret kesin geçersizliktir; Beklemede eksik ön koşuldur ve ön koşul gelince karar baştan hesaplandığından şüphe kuralları o anda uygulanır ([Şüpheli kayıt]). Tek fonksiyon ve tek test tablosu telefon, sunucu ve panelin aynı kaydı aynı göstermesini sağlar ([Otomatik kabul kuralı]). Kilitten sonra hiçbir ön koşul çözülmeyeceği için Beklemede yerine donmuş İncelemede yazılır. | 
+
+| D07-B02 | Olay ve kapsam tablosu Durumlar ve kurallar bölümünde: teyit (öğrencinin kayıtları), cihaz değişimi onayı ya da reddi (iki cihazın kayıtları), liste değişikliği, pencere değişikliği ve ayarın kesinleşmesi (oturumun kayıtları), kafa sayısı (aynı işlemde), QR gösterim kaydı (Aşama 2), kesinti kapanışı. Hatalı sürüm ilanı yalnız sonra ulaşan kayıtları etkiler. Yeniden değerlendirme yalnız kaynağı OTOMATIK güncel kararlara dokunur; kaynak geçmiş satırında tutulur. Aynı olay iki kez işlenirse satır yazılmaz. | Hocanın onayını otomatik hesap geri çevirirse hocanın işi kaybolur ve öğrenciye çelişkili bildirim gider. Kapsam olay başına sınırlı olunca işlem kısa kalır. | 
+
+| D07-B03 | İmzası doğrulanan ve biçimi geçerli her kayıt saklanır; kural ihlali (LISTEDE_DEGIL, ULASMA_ANINI_ASIYOR, PENCERE_DISINDA, OTURUM_IPTAL, ESKI_CIHAZ, HESAP_SILINMIS) Ret kararı ve gerekçe koduyla ifade edilir. Saklanmadan dönen gönderim reddi yalnız kimlik ve bütünlük hatalarıdır ve D05'indir: imza doğrulanmıyor, bozuk biçim, aynı kimliğe farklı içerik, başka öğrenciye bağlı cihaz. Davranış senaryolarında her ret beklentisinin biçimi ayrı yazılır. | Ham kayıt kanıttır ([Cihaz doğrulaması]); öğrenci gerekçeli Ret'i makbuzda görüp sorun bildirebilir ([Kayıt ve makbuz]); Hedefler paydası Ret kararlı kayıtların saklandığını varsayıyor ([Hedefler]). Aynı soru D05-B05 ve D06-B05 ile sahibe gidiyor; D07 iki seçimde de çalışır (D07-A03). | 
+
+| D07-B04 | Sayaç (dönem, öğrenci, ders) satırında, SELECT ... FOR UPDATE ile kilitli (yoksa önce ON CONFLICT DO NOTHING ile eklenir). Hak yalnız başka kural uymayan, Var olacak Saat doğrulanamadı ya da Yedek kodlu kayıtta kullanılır; iki etiketi taşıyan kayıt bir hak kullanır. Plan'daki "toplam en çok 2'si" oturum başına okunur: hak bir oturumda bir kez kullanılır (kullanilan_oturum_idleri), aynı oturumdaki ikinci kayıt o hakkı paylaşır ve devamı değiştirmez. Sıra varış sırasıdır; Beklemede kayıt hakkı beklemesi çözülünce kullanır. Verilen otomatik kabul geri alınmaz, sonradan Ret olan kayıt hakkı geri vermez. Ders düzeyidir (teori ve uygulama birlikte), Kendi beyanı dersinde de işler. | Kararlar kayıt geldiğinde verilir; Var'dan İncelemede'ye dönüş öğrenciye çelişkili bildirim gönderir. Satır kilidi yalnız tek öğrencinin işlemlerini sıraya sokar, ders çıkışı yükünü etkilemez. Sınırın amacı saati kanıtlanamayan yoklamayla kazanılan devamı sınırlamaktır ([Otomatik kabul kuralı]); aynı oturumdaki ikinci kayıt devama bir şey eklemediği için ikinci hak harcatmak öğrenciyi boşuna cezalandırırdı, İncelemede'ye almak da hocaya boş iş çıkarırdı. | 
+
+| D07-B05 | Kayıt sayısı: oturumda güncel kararı Ret olmayan kaydı bulunan farklı öğrenciler ile etkin Elle eklendi düzeltmesi olan öğrencilerin birleşimi. d = kayıt sayısı eksi kafa sayısı; işaret d > 3 ve 1000 x d > 50 x kafa sayısı. Birlikte işlenen şubelerde oturum ve karşılaştırma tektir. İlk işaret anı eşiğin ilk aşıldığı an; derste, bu an oturum bitişinden önceyse. İşaret kararları değiştirmez. Kafa sayısı dönem kilidine kadar düzeltilebilir, her öğe denetime yazılır, karşılaştırma baştan hesaplanır. | Tam sayı kuralı telefon, sunucu ve panelde aynı sonucu verir ([Birim ve özellik testleri]). Hedefler işaretli oturumu İncelemede kararından ayrı sayıyor ([Hedefler]); işaret kararı değiştirseydi iki ölçü karışırdı. Derste ve sonra ayrımı hocaya farklı iş verir ([Kafa sayısı]). | 
+
+| D07-B06 | D07'nin karşılaştırma ucu kafa sayısı ya da yapılmadı cevabı gelmeden kayitSayisi, elleEklenenSayisi ve fark alanlarını null döner; rastgele isim yalnız seçilen isimleri döner, aday sayısını döndürmez. Aynı kural D05'in oturum kayıt listesi ucu ve D09'un onay listeleri için hizalama isteği olarak yazıldı (D07-A04). | Hoca kafa sayısını kayıt sayısını görmeden girer ([Kafa sayısı], [Hoca ve yönetici]). Yalnız istemci gizlerse sayı ağ cevabından okunur. | 
+
+| D07-B07 | Gönderim işlemi oturum satırına ya da oturum başına bir sayaç satırına yazmaz. Karşılaştırma okurken sayılır: kayit_karar_gecmisi'nin yalnız güncel satırlı oturum dizini üstünden. İşaret satırı yalnız şu anlarda yazılır: kafa sayısı geldiğinde, kafa sayısı girilmiş oturuma yeni kayıt geldiğinde eşik ilk kez aşılırsa (tek ekleme), karar değişikliği sayıyı değiştirdiğinde ve gece kesinleştirmesinde. GET ucu yazmaz; derste bilgisi zamanlardan türetilir. | Ders çıkışında yüz öğrenci aynı oturuma gönderir; tek satırı güncellemek kilit sırası yaratır ([Ölçeklenme yolu]). D13'ün GET veri değiştirmez kuralı envanterdeki derste_goruldu yazımını engelliyordu. | 
+
+| D07-B08 | Sunucu seçer: her basışta RASTGELE_ISIM_ADEDI (3) öğrenci, crypto.randomInt ile, güncel kararı Ret olmayan kaydı bulunanlardan, o oturumda daha önce seçilenler hariç; aynı secimId aynı seçimi döndürür. Burada değil: seçilmiş öğrenciye ya da kafa sayısı işareti geçerli oturumdaki öğrenciye, oturumun İstanbul günü bitene kadar; öğrencinin o oturumdaki Ret olmayan bütün kayıtları Ret YOKLAMADA_SINIFTA_DEGIL. Aynı gün yalnız işaretleyen hoca geri alır; hoca kaynaklı önceki karar geri gelir, otomatik olan yeniden hesaplanır. İşaretleme çevrimiçidir, kuyruk öğesi yoktur; sonraki günlerde D09'un düzeltme yolu. | Plan düğmenin internetsiz çalışmadığını söylüyor ([Rastgele isim]) ve sözleşmede bu iş için kuyruk öğesi türü yok; envanterin "kuyruktan gider" önerisi bu yüzden alınmadı. Sunucu seçimi hocanın yönlendirmesini önler; geri alma yanlış duyulan isimde haksız Yok'u düzeltir. | 
+
+| D07-B09 | Android kanıtı DOGRULANDI için hepsi: zincir imzaları geçerli ve Google'ın iki kökünden birine bağlı, hiçbir seri numarası iptal listesinde değil, attestationChallenge beklenen meydan okuma özeti, kanıtlanan anahtar telefonun bağladığı anahtar, attestationSecurityLevel ve keymasterSecurityLevel TRUSTED_ENVIRONMENT ya da STRONG_BOX, verifiedBootState VERIFIED, deviceLocked true, paket adı ve imza özeti ayarlardakiyle aynı. İlk tutmayanın kodu yazılır; paket ya da imza tutmazsa REDDEDILDI (D07-A01). Okunan bütün değerler cihaz_kanitlari'na yazılır. | Etiket kaydı reddetmediğinden sıkı ölçütün bedeli yalnız etikettir ([Cihaz doğrulaması]); kilidi açık telefonun doğrulanmış görünmesi başka telefona bağlı hesap engelini zayıflatır ([Hile ve sınırlar]). Değerler saklandığından ölçüt değişirse yeniden değerlendirme yapılabilir; ayrı oran ölçümü gerekçe kodlarına dayanır ([Hedefler]). | 
+
+| D07-B10 | POST /v1/dogrulama/deger 32 bayt güvenli rastgele değer verir; satır SHA-256 özetiyle, amaç ve 5 dakikalık sonla durur, ilk tüketimde silinir, süresi geçenler yeni değer verilirken en çok 100'er silinir. Meydan okuma metni packages/core/src/dogrulama/meydan-okuma.ts'deki sabit biçimdir; Android setAttestationChallenge'a ve iPhone attestKey clientDataHash'ine bu metnin SHA-256'sı girer. Uç girişsiz ve IP sınırlıdır; kanıtı D01'in kayıt, değişim ve yenileme istekleri taşır. | Meydan okumasız kanıt başka telefona taşınıp tekrar oynatılabilir; isSystemUser ve Secure Enclave anahtarı kanıta bağlanmazsa yolda değiştirilebilir; kararı sunucunun gördüğü kanıt verir ([Cihaz doğrulaması]). Özetle saklama, sızan tablonun kullanılabilir değer vermemesini sağlar. | 
+
+| D07-B12 | app_attest_sayaclari her iPhone kaydının (anahtar, sıra numarası, sayaç, geçti) satırını tutar. Kural: aynı anahtarın sıra numarası daha küçük en yakın geçen satırının sayacından büyük ve daha büyük en yakın geçen satırının sayacından küçük; boşluk kabul; ilk onayın alt sınırı 0. Aynı anahtarın eşzamanlı onayları anahtardan türetilen işlem kilidiyle (pg_advisory_xact_lock) sıraya girer. Tutmayan satır gecti = false yazılır ve komşu denetimine girmez. Aynı (anahtar, sıra) yeniden gelirse saklı sonuç döner. | Makbuz okutmayla sıra numarası büyük kayıt küçükten önce gelebilir ([İmza doğrulama]); yalnız son sayaçla karşılaştırma geç gelen eski kaydı haksız işaretlerdi. Dizi anahtar başına olduğundan yenilenen anahtar sıfırdan başlar, eski anahtarın satırları bekleyen kayıtlar için kalır. | 
+
+| D07-B13 | İmzalayan cihazın durumu D01.cihazGetir'den okunur. Cihaz değişim onayı bekliyorsa Beklemede CIHAZ_DEGISIMI_BEKLIYOR; onayda normal kural, ret ya da düşmede Ret CIHAZ_ONAYLANMADI. Cihaz değişim ya da çıkışla kapanmışsa: kaydın saat aralığının üst ucu kapanma anından önceyse normal karar, alt ucu sonraysa Ret ESKI_CIHAZ, saat doğrulanamadıysa ya da aralık kapanma anını kesiyorsa İncelemede KAPANMIS_CIHAZ_SAAT_BELIRSIZ. Hesap silmeyle kapanan cihazda aynı kural HESAP_SILINMIS ile işler (D12-B18). Değişim sürerken etkin eski cihazın kayıtları normaldir. | Eski telefonda bekleyen kayıtlar değişim onaylanınca birlikte karara bağlanır ([Kenar durumlar]): kapanmadan önce imzalanan kayıt normal kuralla değerlendirilir. Öğrencinin kendi eski cihazı başka öğrenciye bağlı cihaz değildir; o durum D05'in gönderim reddidir. D05-B17'nin "kapanmadan sonraki kayıt saklanmadan ret" önerisi sahibe giden D05-B05'e bağlı; D07 kayıt saklanırsa Ret verir. | 
+
+| D07-B14 | TEYIT_BEKLIYOR süresizdir, teyitle çözülür, kilitte donar. AYAR_KESINLESMEDI kafa sayısı geldiğinde aynı işlemde ya da gönderme süresi bitince son bilinen ayara göre Var ya da Ret PENCERE_DISINDA olur (D04-B03 ile aynı). QR_GOSTERIM_BEKLENIYOR (Aşama 2) gönderme süresi bitince İncelemede QR_GOSTERIM_GELMEDI. CIHAZ_DEGISIMI_BEKLIYOR talep onaylanınca ya da düşünce çözülür; gece işi talebi artık beklemeyen cihazları yakalar. Teyit reddi ve numara çakışmasında kaybeden hesabın kayıtları Ret TEYIT_REDDEDILDI. | Bitmeyen Beklemede dönem sonu özetini KARAR BEKLİYOR ve geçici bırakır ([Dönem sonu]). Ayarda son kararı sunucu hocanın ayarına göre kendisi verir ([Kararlar, Ders içinde değişiklik]), bu yüzden süre sonunda hocaya iş çıkarılmaz; QR beklemesinde ise gecikmenin dayanağı hiç gelmediği için hoca karar verir. Envanterin "ikisi de İncelemede" önerisi ayar için D04-B03 ile hizalandı. | 
+
+| D07-B15 | D04.pencereSonucu DEGISIM_DILIMI döner: kayıt planlanan ya da önceki bir pencere sürümünün içinde ama son pencerenin dışında (D07-A05). Ayar kesinleşmemişse (kafa sayısı gelmedi ve gönderme süresi bitmedi) karar Beklemede AYAR_KESINLESMEDI; kesinleşmişse Ret PENCERE_DISINDA. Değişiklik ulaşınca D04'ün oturum kapandı dinleyicisi pencere_beklemede_kesinlestir işini koyar ve dilimdeki önce Var almış otomatik kararlar da Beklemede'ye alınır; kafa sayısı gelince aynı işlemde son ayara göre karar verilir. | Plan Beklemede'yi sunucu kararı olarak tanımlıyor ve kafa sayısını karar olayları arasında sayıyor ([Kayıt etiketleri], [Şüpheli kayıt]); hocanın kuyruğu sırayla gittiğinden kafa sayısı ulaştığında önceki ayar değişiklikleri de ulaşmıştır ([Kayıt ve makbuz]). Pencere hesabı D04'ün, karar eşlemesi D07'nin. | 
+
+| D07-B16 | Birimin son günü bittikten (kilit anı) sonra ulaşan kayıt, Ret kuralı yoksa İncelemede SON_GUNDEN_SONRA alır ve donar: onay listeleri kapalı, sayım yalnız D09'un denetim kaydı bırakan düzeltmesiyle değişir; bu gerekçe açık işaret sayılmaz. 7 günden geç ama son günden önce gelen geçerli kayıt normal kararını alır ve gec_geldi işareti taşır; sonradan değişenler listesi D09'undur. | Plan son günden sonra kaydın yalnız saklandığını, sayımın denetimli düzeltmeyle değiştiğini söylüyor ([Gönderme süresi]). Ret seçilmez, kayıt geçerli. Envanterin "hoca onayı" önerisi D09-B23'ün kilitten sonra onay listelerini kapatma önerisiyle çelişiyordu; düzeltme yolu ikisini birleştirir. | 
+
+| D07-B17 | Kilit adımı D02'nin donem_kilidi işleminde, aynı veritabanı işleminde çalışır (kilitAdimiKaydet). Kararlar o haliyle donar: onaysız Kendi beyanı sayılmış kalır ve oturum başına dogrulama.onaysiz_kilitlendi, açık İncelemede ve Beklemede sayılmadan kalır ve oturum başına dogrulama.kararsiz_kilitlendi yazılır. Kilitten sonra kararDegistir DOGRULAMA_DONEM_KILITLI döner, yeniden değerlendirme kilitli kayıtları atlar. | Plan onaysız Kendi beyanının sayılmış haliyle kilitlendiğini ve denetime yazıldığını söylüyor ([Kayıt etiketleri]); açık işaret kilidi durdurmaz, son günden sonrası düzeltmeyle ([Gönderme süresi]). Olay oturum başına yazılır ki büyük birimde tek işlem on binlerce denetim satırı yazmasın; olay kayıt kimliklerini taşır. | 
+
+| D07-B18 | Hatalı sürüm listesi yayin-bilgisi.json içindedir (CI yazar, şema D13'ün, D07 yalnız okur ve dosyanın değişim zamanına bakıp önbelleğe alır); her girdi platform, uygulama sürümü, isteğe bağlı updateId, başlangıç anı ve kısa gerekçe taşır. Kaydı üreten sürüm imzalı kayıt metninden okunur (D13-B29). Ulaşma anı başlangıçtan sonra olan eşleşen kayıt İncelemede HATALI_SURUM; önceki kayıtlar değişmez. Aynı dosya iOS 27 denetimi için yayımlanmış paket sürümlerini ve izinli dağıtım türlerini taşır (D07-A06). | Plan kuralı o sürümün yeni kayıtları için koyuyor ([Güncelleme ilkesi]) ve hatalı güncellemenin etkilediği kayıtların sunucuda görünmesini istiyor ([Güncelleme]). İstek başlığı gönderen sürümü gösterir, kaydı üreteni değil; makbuz okutmada gönderen hocanın telefonudur. | 
+
+| D07-B19 | D05, D04'ün packages/core/src/saat fonksiyonlarıyla çapaları kurar ve kayıt satırına yazar; kararHesapla bu sonucu (DOGRULANDI, DOGRULANAMADI, CAPALAR_AYRISIYOR ya da ULASMA_ANINI_ASIYOR; alt ve üst sınır; telefon saati; eşitleme bozukken ulaştı mı) KayitTaslagi içinde alır, D04.pencereSonucu'nu kendisi çağırır. Eşleme: DOGRULANAMADI etiket ve ortak sınır; CAPALAR_AYRISIYOR İncelemede; ULASMA_ANINI_ASIYOR Ret, eşitleme bozukken İncelemede SAAT_ESITLEMESI_BOZUK; pencere sonucu öğrenci lehine payla (D04-B01). Saat doğrulanamadı kaydında pencereyi D04 telefon saatiyle denetler. Sebep D04'ün çapa durum sütunlarında kalır. | Çapa ve pencere D04'ün, etiket ve karar D07'nin; aynı kural iki modülde yazılmaz ([İkinci çapa], [Zayıf nokta]). Android'de oran %2'yi aşarsa sebep ölçümle ayrılır; ölçüm tek sorguyla yapılır ([Ölçüm]). | 
+
+| D07-B20 | Kendi beyanı etiketi kaydın saatinde geçerli olan ve kayıt geldiği anda bilinen ayara göre konur, sonra değişmez. Karar Var'dır, onaya kadar geçici sayılır. Onay kararDegistir ile Var'dan Var'a geçiştir (KENDI_BEYANI_ONAYLANDI, kaynak HOCA); ret Ret KENDI_BEYANI_REDDEDILDI, son durum Yok (D08). Hoca kilide kadar kendi kararını değiştirebilir, olayı D09 yazar. Onay bekleyen Kendi beyanı: etiket var, karar Var, gerekçe boş. | Plan kararı Var, reddi Yok diye tanımlıyor ([Kayıt etiketleri]). Etiketler kayıt geldiği andaki kanıtla bir kez hesaplanır (D07-B30); D04-B11'in "son ayar" önerisi etiketi sonradan değiştirmeyi gerektirdiği için alınmadı, son ayar karara pencere yoluyla yansır. | 
+
+| D07-B21 | Üyelik oturumun başladığı anda D03.uyelikDenetle ile oturumun şubelerinin her biri için sorulur; biri yeter. Değilse Ret LISTEDE_DEGIL, ham kayıt saklanır. Liste satırı eklenir, yeniden etkinleşir ya da tarihi değişirse D03 dinleyicisi aynı işlemde yenidenDegerlendir'i o öğrencilerin o şubedeki kayıtları için çağırır. Geç kayıtta önceki oturumların sayımı D08'indir. | Yanlış dosya kayıt kaybettirmez ([Hoca ve yönetici, Liste yükleme kuralları]); sunucunun reddettiği kayıt liste düzelince geri gelmeseydi kaybettirirdi. Ret yalnız listesinde olmadığı derse yoklama içindir ([Hile ve sınırlar]). | 
+
+| D07-B22 | Kayıt saatleri çakışan iki oturumda aynı öğrenciden ikinci ulaşan kayıt İncelemede CAKISAN_OTURUM; ilk ulaşan değişmez. Çakışma oturumların başlangıç ve bitişinden (D02) ve öğrencinin aynı gündeki güncel Ret olmayan kayıtlarından (kayit_karar_gecmisi) bulunur. D04-B24 ikinci kayda Ret ve kayıt saatine göre sıra öneriyor; sahip Ret derse yalnız katalogda bu kodun sınıfı değişir (D07-A03). | Kural telefonda uygulanır; ikinci kayıt ancak değiştirilmiş uygulamadan ya da eski programdan gelir ve çift anadal ile yandal çakışmaları meşru olabilir ([Kararlar, Çakışan dersler]). Varış sırası kararı sonradan çevirmez; kayıt saatine göre sıra, önce Var almış kaydı İncelemede'ye çevirmeyi gerektirirdi. | 
+
+| D07-B23 | android_iptal_listesi_cek her gün 05:40'ta çeker; başarısızsa son başarılı liste kullanılır, 7 günden eskiyse D15.uyariAc. Yeni iptal ya da askıya alma görülen seri numarasını taşıyan kanıtlara iptal_ani yazılır, D01 cihaz sonucu DOGRULANAMADI olur; o andan sonra ulaşan kayıtlar Cihaz doğrulanmadı, geçmiş kararlar ve etiketler değişmez; askıya alma kalkınca tersine döner. Kökler kokler.ts'de sabittir, değişiklik yeni sunucu sürümüyle gelir. | Plan iptal listesi dışında Google'a sorulmamasını istiyor ([Cihaz doğrulaması]); kayıt başına canlı sorgu buna aykırı. 05:40, D14-B05'teki gece işleri sırasına uyar (03:00 ile 04:00 arası boş). | 
+
+| D07-B24 | Karar telefona iki yoldan iner: gönderim cevabında kayıt başına karar ve gerekçe (D05 kararHesapla sonucunu döndürür) ve sonraki her değişiklikte öğrencinin kendi kayıtları indirmesi (D05 indirme kaynağı; sürümü D05.kararSutunlariniYaz içinde D06.ogrenciDurumuDegisti artırır). D07 ortak sayaç satırına yazmaz. | Öğrenci kararı makbuzda görür ([Kayıt ve makbuz]); sorun bildirme süresi kararın telefona ulaşmasıyla başlar. Sözleşme öğrencinin kendi durumunu GET /v1/esitleme/degisiklikler içinde indiriyor; öğrenci başına sürüm ders çıkışında sıcak satır yaratmaz. | 
+
+| D07-B26 | Yerleşim sözleşmeyle kesinleşti: ayrı modül apps/server/src/modules/dogrulama. Doğrulayıcı tek arayüzün (CihazDogrulayici) arkasında D07'de; D01 kayıt, değişim ve yenileme işlemlerinden cihazKanitiniDogrula'yı çağırır. Etiket ve karar kuralları packages/core/src/dogrulama'da saf fonksiyon; D05 gönderim işleminde çağırır. Kafa sayısı değeri ve yapıldı oturum satırında (D02.kafaSayisiniYaz); karşılaştırma, işaret ve rastgele isim D07'de. | Modüller yalnız dış yüzle konuşur ([Mimari]); sözleşmenin modül kararı D07'yi ayrı alan modülü yaptı. Kafa sayısı sütunu veri modeli gereği oturumda kalır ([Veri modeli]). | 
+
+| D07-B27 | Yapılmadı cevabı oturum düzeyindedir (D02'nin yapildi sütunu); kayıt kararları değişmez, sayım (D08) bu oturumu dışlar. Hoca sonra yapıldı derse hiçbir karar yeniden hesaplanmaz. | Plan yapılmadı denen dersin kayıtlarının ve saatlerinin sayılmadığını söylüyor ([Kararlar, Onaysız ders]); kararı değiştirmek fikir değişince geri almayı gerektirir ve kanıtı bulandırır. | 
+
+| D07-B28 | Yenileme ucu D01'indir (POST /v1/kimlik/cihaz/app-attest-yenile). Akış: telefon ANAHTAR_YENILEME değeri alır; D01 isteğin Secure Enclave imzasını doğrular, dogrulamaDegeriniTuket ve yeni anahtar satırından sonra cihazKanitiniDogrula'yı (ANAHTAR_YENILEME) çağırır. Yeni anahtarın sayaç dizisi sıfırdan başlar; eski anahtarın satırları kalır, bekleyen kayıtlar onlarla denetlenir. Günde birden fazla yenileme engellenmez; kanıt satırlarından sayılır ve D15'in uyarısına gider. | Plan ve teknik yenilemeyi Secure Enclave imzasıyla aynı hesaba bağlıyor ([Kenar durumlar], [Anahtar ve imza]); izlenmeyen sınırsız yenileme kötüye kullanımı görünmez kılar. | 
+
+| D07-B29 | İlk kesin karar kayit_karar_gecmisi'nde ilk_kesin = true satırıdır: Beklemede dışındaki ilk karar, bir kez yazılır (kısmi tekil dizin). Her geçiş (önceki, yeni, birincil ve ek gerekçeler, olay, kaynak, yapan, an) satır olarak kalır; güncel satır guncel = true. Kayda (dönem, kimlik) çiftiyle başvurur. | Hedefler payı ilk kararı Var olan kayıtlarla tanımlıyor ([Hedefler]); kayıt satırı yalnız güncel kararı tutar ([Veri modeli]). Ölçüm ayrı ham olay tablosu olmadan kayıt ve geçmiş tablolarından tek sorguyla yapılır ([Ölçüm], [Dönem alanı]). | 
+
+| D07-B30 | Etiketler kayıt geldiği andaki kanıt ve ayarla bir kez hesaplanır, değişmez; iptal listesi, anahtar yenilemesi ya da cihaz kaydındaki değişiklik yalnız sonraki kayıtları etkiler. Kararlar D07-B02'deki olaylarla değişebilir. Yeni etiket varsayılanı false olan yeni sütundur; eski kayıtlar false kalır. | Etiketler sayımı belirlemez ([Kayıt etiketleri]) ama ölçümler ve hocanın listesi onlara dayanır; geriye dönük değişen etiket ölçümleri ve itiraz kanıtını bozardı. Yeni sütun tabloyu yeniden yazmaz ([Mimari]). | 
+
+Çelişkiler: 5 çelişkinin hepsi çözüldü; D07-C01'in bağlama kısmı sahibin kararına bağlı
+
+| Çelişki | Çözüm | 
+
+| D07-C01 | Doğrulama sonucu ile bağlama ayrıldı: donanım kanıtı yoksa ya da ölçütü tutmuyorsa sonuç DOGRULANAMADI ve kayıtlar yalnız etiket alır (plan); kanıt geçerli ama paket adı, imza sertifikası ya da App ID bizim değilse sonuç REDDEDILDI döner ve bağlamanın reddi önerilir (teknik). Yoklama kaydı hiçbir durumda cihaz kanıtı yüzünden reddedilmez. Bağlamanın reddi plan'ın "yalnız etiket" cümlesini daralttığı için sahibin kararı: D07-A01. | 
+
+| D07-C02 | Sayaç anahtar başına bir dizidir (app_attest_sayaclari, her onay bir satır); veri modelindeki "her anahtarın son sayacı" bu dizinin en büyük sıra numaralı geçen satırıdır, "eskisi de kalır" korunur. Sıra numarasına göre denetim ile veri modeli birlikte tutar; teknik.html#kod-veri-modeli satırına "sayaç dizisi" sözcüğünün eklenmesi önerilir. | 
+
+| D07-C03 | Beklemede'nin dört sebebi var: TEYIT_BEKLIYOR, CIHAZ_DEGISIMI_BEKLIYOR, AYAR_KESINLESMEDI ve Aşama 2'de QR_GOSTERIM_BEKLENIYOR. plan.html#gun-kayit-etiketleri'deki tanım iki örnek sayıyor; katalog dördünü içerir, tanım satırına cihaz değişimi ve QR gösterim kaydının eklenmesi önerilir. Her sebebin bitişi D07-B14'te. | 
+
+| D07-C04 | Karşılaştırma ve işaret gönderme süresinin sonunda o ana kadar ulaşmış kayıtlarla kesinleşir ve donar (kesinlesti_ani). Sonra gelen geçerli kayıt kendi kararıyla sayılır ([Gönderme süresi]) ama karşılaştırmayı değiştirmez; D09'un sonradan değişenler listesinde görünür. İki cümle birlikte tutar. | 
+
+| D07-C05 | Play Integrity tasarlanmadı: Android doğrulaması donanım anahtar kanıtıdır ([Cihaz doğrulaması]). Gerekirse sonra eklenir: CihazKaniti birleşimine yeni bir kanıt türü ve cihaz_kanitlari.kanit_turu listesine yeni değer olarak, yalnız ekleyerek. | 
+
+### Açık noktalar
+
+D07-A01 sahibin kararı
+(D07-B11) Android ya da iPhone kanıtı donanımca geçerli ama paket adı, imza sertifikası ya da App ID bizim değilse (sanal kopyalama, yeniden paketlenmiş uygulama) telefonun hesaba bağlanması reddedilsin mi, yoksa bağlanıp kayıtları Cihaz doğrulanmadı etiketiyle mi sayılsın?
+Öneri: Bağlama reddedilsin: kanıt uygulamanın bizim olmadığını olumlu biçimde gösteriyor, kanıtsız telefondan farklı bir durum ve "değiştirilmiş uygulama cihaz doğrulamasıyla zorlaşır" amacına uyuyor ([Hile ve sınırlar]). D07 iki seçimde aynı kodla çalışır: cihazKanitiniDogrula REDDEDILDI döner, kararı D01'in kayıt ucu uygular; etiket seçilirse eşleme DOGRULANAMADI olur. Yoklama kaydı hiçbir seçimde reddedilmez.
+D07-A02 sahibin kararı
+(D07-B25) Aşama 2'de bir ders ne zaman QR'lı sayılır ve QR sonuçları hangi karara eşlenir?
+Öneri: Derste hocanın açtığı QR'lı ayarı (D02 sütunu, gelecekteki oturumlara kopyalanır); o oturumda QR gösterim kaydı hiç yoksa oturum Aşama 1 kuralıyla değerlendirilir (D02-B47). Eşleme gerekçe kataloğundaki Aşama 2 kodlarıyla (D11-B23): MAC tutmayan, başka oturumun ya da yetkisiz anahtarın QR'ı ve 30 saniyeyi aşan gecikme Ret; 10 (yedek kodda 20) ile 30 saniye arası, önce okutulmuş, gösterim dışı, hoca saati yok ve anahtar iptal İncelemede; gösterim kaydı gelene kadar Beklemede ([Değişme ve kabul]). İki çapası da eski QR kaydının 2'lik ortak sınıra sayılması önerilir (D11-B20). Aşama 1 kodu ayarı false varsayılanla taşır.
+D07-A03 sahibin kararı
+Başka modüllerde sahibe giden şu kararlar D07'nin gerekçe sınıflarını değiştirir: D04-B02 (pencere dışı kayıt), D04-B03 (ders içi ayar değişikliği), D04-B24 (çakışan oturum), D05-B05 ve D06-B05 (gönderim reddi ile Ret), D09-B23 (kilitten sonra yazma), D09-B14 ve D01-B21 (teyit reddi), D12-B18 (silinen hesabın sonraki kaydı). Hangileri öneriyle kalsın?
+Öneri: Hepsi önerileriyle kalsın; D07 bu önerilerle tasarlandı ve sahip başka seçerse yalnız packages/core/src/dogrulama/kodlar.ts'deki sınıf ve öncelik değişir, tablo ya da uç değişmez. Tek fark D04-B24'te: D04 envanteri ikinci kayda Ret öneriyor, D07 İncelemede öneriyor (D07-B22 gerekçesi); sahip birini seçmeli.
+D07-A04 modül hizalaması
+D05 ve D09 hizalaması: kayıt satırının karar sütunları, çağrı sırası ve sayıların gizlenmesi.
+Öneri: D05 yoklama_kayitlari'nda karar, gerekce_kodu, karar_ani, yedi etiket_* sütunu ve gec_geldi'yi tutar ve yalnız D07'nin verdiği değerle yazar; CHECK listeleri kodlar.ts'den türer. Kayıt başına sıra, kaydın geri dönüş noktası içinde: appAttestSayaciniDenetle (yalnız App Attest onayında), kararHesapla, satırın eklenmesi, kararGecmisineYaz, ilk karar için D08.devamHesaplaIsiKoy; sayılan kayıt dizinine takılan kayıt yeniden yazılırken bu sıra aynı geri dönüş noktasından baştan çağrılır, böylece ortak sınır hakkı iki kez sayılmaz. kararSutunlariniYaz sayılan kaydı yeniden seçer ve D06.ogrenciDurumuDegisti'yi çağırır. D05'in oturum kayıt listesi ucu ve D09'un onay listeleri kafa sayısı ya da yapılmadı cevabı gelmeden o oturumun sayılarını ve listesini döndürmez (D07-B06).
+D07-A05 modül hizalaması
+D04 hizalaması: pencere sonucu ve dinleyiciler.
+Öneri: pencereSonucu(tx, kayitSaati, oturumId) şunları döner: sonuc ICINDE, DISINDA, DEGISIM_DILIMI (önceki bir pencere sürümünde, son pencerede değil) ya da ESKI_PROGRAM (yalnız program değişikliğinden önceki pencerede); sureSecildi (kaydın saatinde süre seçili miydi); ayarDegisikligiVar. oturumKapandiDinleyicisiKaydet dinleyicisi kapanan oturumlar için ve kapanmış pencere sonradan değişince { oturumId, degisiklikVar } ile çağrılır. kesintiKapandiDinleyicisiKaydet dinleyicisi { baslangic, bitis, sapmaEsigiAltinda } alır. D04 ESKI_PROGRAM döndürmezse eski programla çevrimdışı verilen kayıt DISINDA olur ve Ret alır; öğrenciyi kayırmak için değil, hocaya sormak için bu değer istenir.
+D07-A06 modül hizalaması
+D13 ve D15 hizalaması: yayin-bilgisi.json alanları, ayarlar ve dışarı çıkış.
+Öneri: yayin-bilgisi.json şemasına (packages/contracts/src/api.ts) eklemeyle: hataliSurumler [{ platform, uygulamaSurumu, guncellemeKimligi, baslangicAni, gerekce }], iosPaketSurumleri ve iosDagitimTurleri; CI yazar (D15). Ayarlar (D15.ayarlar): androidPaketAdi, androidImzaOzetleri, appAttestUygulamaKimligi, iptalListesiAdresi, yayinBilgisiYolu. Google iptal listesi adresi sunucunun dışarı çıkış listesine girer (D15-B10). packages/contracts/src/dogrulama.ts kod listelerini packages/core/src/dogrulama/kodlar.ts'den alır; paket bağımlılığı D15'in.
+D07-A07 modül hizalaması
+D01 hizalaması: meydan okuma girdileri, çağrı sırası ve hesap silmede kanıt ayrıntıları.
+Öneri: Kayıt, değişim ve yenileme istekleri değeri, öğrenci numarasını, isSystemUser'ı ve Secure Enclave açık anahtarını taşır; D01 önce dogrulamaDegeriniTuket, sonra cihaz ve anahtar satırlarını yazar, sonra cihazKanitiniDogrula'yı çağırır ve sonucu cihazDogrulamaSonucunuYaz ile yazar. Teyit ve cihaz değişimi kararını yazan işlem aynı işlemde yenidenDegerlendir çağırır (D01-B23). D12-B20 (sahip) kanıt ayrıntılarının hesap silmede silinmesini kabul ederse D07 dış yüzüne eklemeyle cihazKanitAyrintilariniSil(tx, cihazId) eklenir ve D01'in silme işlemi aynı işlemde çağırır; karar gelene kadar ayrıntılar saklama süresine kadar kalır ([Saklama süresi]).
+D07-A08 modül hizalaması
+D11 hizalaması (Aşama 2): gösterim kaydı gelince QR kayıtlarının yeniden değerlendirilmesi.
+Öneri: D07 D11'i okur (qrSonucu, gosterimAraliklari); D11'in D07'yi çağırması sözleşmede olmayan iki yönlü bir çift olurdu. D11 dış yüzüne eklemeyle gosterimKaydiDinleyicisiKaydet(dinleyici) eklenir; D07 kaydolur ve oturumun QR kayıtları için yenidenDegerlendir'i QR_GOSTERIM_KAYDI nedeniyle çağırır.
+D07-A09 modül hizalaması
+D02 hizalaması: oturum alanları ve süzgeç.
+Öneri: oturumGetir: dersId, donemId, birimId, durum (iptal dahil), tarih, baslangic, bitis, kafaSayisi, kafaSayisiAni, yapildi, şube kimlikleri ve Aşama 2'de QR ayarı. oturumlariGetir süzgeci: oturum kimlikleri, bitiş aralığı, kafa sayısı girilmiş mi. Böylece kararHesapla kayıt başına tek oturum okumasıyla yetinir ve sorgu bütçesi tutar.
+

@@ -1,0 +1,653 @@
+// Builds spec/D04.json and frag/D04.html from one source so the two cannot drift.
+// Run: node build.js
+'use strict';
+const fs = require('fs'), path = require('path');
+const B = path.join(__dirname, '..');
+
+// ------------------------------------------------------------------ shared lists
+const ILK_CAPA = ['gecerli', 'once_yeniden_baslatma', 'belge_7_gunden_eski', 'belge_yok', 'belge_gecersiz', 'ozne_uyusmuyor', 'istek_suresi_asildi', 'sure_gecersiz'];
+const IKINCI_CAPA = ['gecerli', 'sonra_yeniden_baslatma', 'kayit_7_gunden_eski', 'paket_imzasiz', 'okutma_yolu', 'esitleme_bozuk', 'gonderilmedi', 'belge_gecersiz', 'ozne_uyusmuyor', 'istek_suresi_asildi', 'sure_gecersiz'];
+const q = a => a.map(x => `'${x}'`).join(', ');
+const ORNEK_BELGE = 'AXNiLTIwMjdiAQGSj258Gns-mkAbLD1OX2AAAQIDBAUGBwgJCgsMDQ4PAAABoQqlywCCm42nPdGk06qxixd-TUa6lZUqU7A8KP6pwHOqquHSag';
+
+// ------------------------------------------------------------------ tables
+const tables = [
+  {
+    name: 'oturum_pencereleri',
+    purpose: 'Her ders oturumunun yoklama penceresi, oturumla bire bir: açılış, plandaki ve geçerli kapanış, en geç kapanış, süre ayarı ve kaynağı, kapanışın işlendiği an, telefona inen sürüm. Planlanan pencere ve uygulanmış ders içi değişikliklerden baştan hesaplanan özet satırdır; değişikliklerin kendisi pencere_degisiklikleri tablosundadır. Satır oturumun üretildiği işlemde açılır, hiç silinmez.',
+    columns: [
+      { name: 'oturum_id', type: 'uuid', null: false, default: '', note: 'Birincil anahtar; oturumlar.id (D02) yabancı anahtarı. Oturumla bire bir.' },
+      { name: 'donem_id', type: 'uuid', null: false, default: '', note: 'Oturumun dönemi (donemler.id, D02).' },
+      { name: 'ders_id', type: 'uuid', null: false, default: '', note: 'Oturumun dersi (dersler.id, D02); yetki denetimi ve hoca indirmesi için.' },
+      { name: 'acilis_ani', type: 'timestamptz', null: false, default: '', note: 'Pencerenin açıldığı an: oturumun başlangıcı (UTC). Ders içi değişiklik açılışı değiştirmez; yalnız D02 program değişikliği dinleyici yoluyla taşır.' },
+      { name: 'ders_bitis_ani', type: 'timestamptz', null: false, default: '', note: 'Oturumun bitişi (UTC): süre seçilmeyen derste kapanış ve her değişikliğin üst sınırı.' },
+      { name: 'planlanan_sure_dk', type: 'integer', null: true, default: '', note: 'Ders ayarındaki süre (dersler.yoklama_suresi_dk) pencere hesaplandığı andaki değeriyle; NULL ders boyunca demektir.' },
+      { name: 'planlanan_kapanis_ani', type: 'timestamptz', null: false, default: '', note: 'Plandaki kapanış: süre varsa en erken(acilis_ani + planlanan_sure_dk, ders_bitis_ani), yoksa ders_bitis_ani. Telefonların dersten önce indirdiği pencere budur.' },
+      { name: 'kapanis_ani', type: 'timestamptz', null: false, default: '', note: 'Geçerli kapanış: plan ve uygulanmış bütün değişikliklerin basma anı sırasıyla baştan hesabı (core pencereHesapla).' },
+      { name: 'en_gec_kapanis_ani', type: 'timestamptz', null: false, default: '', note: 'Plan ve ara pencerelerin en geç kapanışı; pencereSonucu dilimde sonucunun sınırı. Değişiklik yoksa planlanan_kapanis_ani ile aynı.' },
+      { name: 'sure_dk', type: 'integer', null: true, default: '', note: 'Geçerli süre (dakika, açılıştan ölçülür); NULL ders boyunca açık demektir, kayıtlar Kendi beyanı olur (D07).' },
+      { name: 'sure_kaynagi', type: 'text', null: false, default: "'ders'", note: 'ders: süre ders ayarından; oturum: bu oturumda pencere_suresi uygulandı.' },
+      { name: 'degisiklik_sayisi', type: 'integer', null: false, default: '0', note: 'Uygulanmış ders içi değişiklik sayısı.' },
+      { name: 'kapandi_ani', type: 'timestamptz', null: true, default: '', note: 'Kapanışın işlendiği an (oturum_pencere_kapat ya da kapatan değişiklik). NULL: açılmamış, açık ya da uzatmayla yeniden açılmış. Kararlar bu sütuna değil anlara bakar; telefona inmez, sürüm almaz.' },
+      { name: 'surum', type: 'bigint', null: false, default: '', note: 'Telefona inen alanlardan (acilis_ani, kapanis_ani, sure_dk, planlanan_kapanis_ani, degisiklik_sayisi) biri değiştiği işlemin D06.surumAl(tx) değeri; JSON\'da metin.' },
+      { name: 'olusturma_ani', type: 'timestamptz', null: false, default: '', note: 'Saat arayüzünden yazılır, veritabanı varsayılanı yok.' },
+      { name: 'guncelleme_ani', type: 'timestamptz', null: false, default: '', note: 'Saat arayüzünden yazılır.' },
+    ],
+    indexes: [
+      'oturum_pencereleri_oturum_id_pk: PRIMARY KEY (oturum_id); pencereSonucu, pencereGetir ve indirme bu anahtarla okur',
+      'oturum_pencereleri_kapanis_ani_idx: (kapanis_ani) WHERE kapandi_ani IS NULL; oturum_pencere_kapat taraması',
+    ],
+    constraints: [
+      'oturum_pencereleri_oturum_id_fk: FOREIGN KEY (oturum_id) REFERENCES oturumlar (id)',
+      'oturum_pencereleri_donem_id_fk: FOREIGN KEY (donem_id) REFERENCES donemler (id); dizinsiz, bilerek (D12-B15)',
+      'oturum_pencereleri_ders_id_fk: FOREIGN KEY (ders_id) REFERENCES dersler (id); dizinsiz, bilerek (D12-B15)',
+      'oturum_pencereleri_anlar_ck: CHECK (acilis_ani < ders_bitis_ani AND acilis_ani <= kapanis_ani AND kapanis_ani <= en_gec_kapanis_ani AND acilis_ani <= planlanan_kapanis_ani AND planlanan_kapanis_ani <= en_gec_kapanis_ani AND en_gec_kapanis_ani <= ders_bitis_ani)',
+      'oturum_pencereleri_sure_dk_ck: CHECK ((sure_dk IS NULL OR sure_dk BETWEEN 1 AND 1440) AND (planlanan_sure_dk IS NULL OR planlanan_sure_dk BETWEEN 1 AND 1440))',
+      "oturum_pencereleri_sure_kaynagi_ck: CHECK (sure_kaynagi IN ('ders', 'oturum'))",
+      'oturum_pencereleri_degisiklik_sayisi_ck: CHECK (degisiklik_sayisi >= 0)',
+    ],
+  },
+  {
+    name: 'pencere_degisiklikleri',
+    purpose: 'Hocanın ders içi süre değişikliği ve erken kapatma işlemlerinin değişmez kaydı (kanıt). Kuyruktan gelen öğenin kimliği birincil anahtardır, tekrar gönderim tek satır kalır. Yalnız ham girdi saklanır (tür, süre, çapalar, basma aralığı, ulaşma anı); her değişikliğin pencereye etkisi okurken core pencereHesapla ile hesaplanır, bu yüzden satır hiç güncellenmez.',
+    columns: [
+      { name: 'id', type: 'uuid', null: false, default: '', note: 'Telefonun ürettiği UUIDv7 öğe kimliği (z.uuidv7()); tekrar gönderme anahtarı, sunucu üretmez.' },
+      { name: 'donem_id', type: 'uuid', null: false, default: '', note: 'Oturumun dönemi; saklama silmesi dönemle yapılır.' },
+      { name: 'oturum_id', type: 'uuid', null: false, default: '', note: 'oturum_pencereleri.oturum_id yabancı anahtarı.' },
+      { name: 'tur', type: 'text', null: false, default: '', note: 'pencere_suresi ya da erken_kapatma.' },
+      { name: 'yeni_sure_dk', type: 'integer', null: true, default: '', note: 'Yalnız pencere_suresi: açılıştan ölçülen yeni süre (dakika); NULL ders boyunca demektir. erken_kapatma satırında her zaman NULL.' },
+      { name: 'kisi_id', type: 'uuid', null: false, default: '', note: 'İşlemi yapan hoca (kisiler.id, D01); öğenin hesabı, oturumun kişisiyle aynı olduğunu D06 denetler.' },
+      { name: 'kurulum_id', type: 'uuid', null: false, default: '', note: 'Öğeyi gönderen uygulama kurulumu (kurulumlar.id, D06).' },
+      { name: 'sira_no', type: 'bigint', null: false, default: '', note: 'Kurulumun sıra numarası; JSON\'da metin.' },
+      { name: 'giris_oturumu_id', type: 'uuid', null: true, default: '', note: 'Öğeyi getiren giriş oturumu (iz). Yabancı anahtar yok: biten giriş oturumları silinir (D12-B24).' },
+      { name: 'ilk_capa_belgesi', type: 'text', null: true, default: '', note: 'İşlem anının ilk çapası: hoca telefonunun saat belgesi, aynen (110 karakter).' },
+      { name: 'ilk_capa_istek_ms', type: 'integer', null: true, default: '', note: 'İlk belge isteğinin süresi (ms).' },
+      { name: 'ilk_capa_gecen_ms', type: 'bigint', null: true, default: '', note: 'İlk belgenin alınmasından işleme geçen süre (ms).' },
+      { name: 'ilk_capa_durumu', type: 'text', null: false, default: '', note: 'İlk çapa durum kodu (IlkCapaDurumu, packages/contracts/src/saat.ts).' },
+      { name: 'ikinci_capa_belgesi', type: 'text', null: true, default: '', note: 'Gönderimden hemen önce alınan belge, aynen.' },
+      { name: 'ikinci_capa_istek_ms', type: 'integer', null: true, default: '', note: 'İkinci belge isteğinin süresi (ms).' },
+      { name: 'ikinci_capa_gecen_ms', type: 'bigint', null: true, default: '', note: 'İşlemden ikinci belgenin alınmasına geçen süre (ms).' },
+      { name: 'ikinci_capa_durumu', type: 'text', null: false, default: '', note: 'İkinci çapa durum kodu (IkinciCapaDurumu).' },
+      { name: 'telefon_saati_ani', type: 'timestamptz', null: true, default: '', note: 'Telefon saatinin gösterdiği an; yalnız not.' },
+      { name: 'telefon_saat_dilimi', type: 'text', null: true, default: '', note: 'Telefonun saat dilimi adı (en çok 64 karakter); yalnız not.' },
+      { name: 'basma_ani_alt', type: 'timestamptz', null: false, default: '', note: 'İşlemin gerçek anını kapsayan aralığın alt ucu.' },
+      { name: 'basma_ani_ust', type: 'timestamptz', null: false, default: '', note: 'Aralığın üst ucu; uygulama sırası ve erken kapatmanın kapanış anı bu değerdir (öğrenci lehine).' },
+      { name: 'basma_ani_kaynagi', type: 'text', null: false, default: '', note: 'iki_capa, ilk_capa, ikinci_capa ya da ulasma_ani (çapa kurulamadı).' },
+      { name: 'ulasma_ani', type: 'timestamptz', null: false, default: '', note: 'Gönderimin sunucuya ulaştığı an (saat arayüzü, paket başına bir kez okunur).' },
+      { name: 'esitleme_bozukken_ulasti', type: 'boolean', null: false, default: 'false', note: 'Ulaştığında işleyen sürecin eşitlemesi bozuktu.' },
+      { name: 'gec_ulasti', type: 'boolean', null: false, default: 'false', note: 'Gönderme süresinin sonundan (D06.gondermeSuresiSonu) sonra ulaştı; etkilenen karar değişiklikleri sonradan değişenlere düşer.' },
+      { name: 'uygulandi', type: 'boolean', null: false, default: '', note: 'false: birimin kilit anından (son günün bitişi) sonra ya da kilitli dönemde ulaştı; yalnız saklandı, pencere değişmedi.' },
+      { name: 'uygulanmama_nedeni', type: 'text', null: true, default: '', note: 'son_gun_gecti ya da donem_kilitli; uygulandi true iken NULL.' },
+    ],
+    indexes: [
+      'pencere_degisiklikleri_id_pk: PRIMARY KEY (id)',
+      'pencere_degisiklikleri_oturum_id_idx: (oturum_id); yeniden hesap ve GET ucu',
+      'pencere_degisiklikleri_kurulum_id_sira_no_uq: UNIQUE (kurulum_id, sira_no); D06 defterinin arkasında ikinci güvence',
+    ],
+    constraints: [
+      'pencere_degisiklikleri_oturum_id_fk: FOREIGN KEY (oturum_id) REFERENCES oturum_pencereleri (oturum_id)',
+      'pencere_degisiklikleri_donem_id_fk: FOREIGN KEY (donem_id) REFERENCES donemler (id)',
+      'pencere_degisiklikleri_kisi_id_fk: FOREIGN KEY (kisi_id) REFERENCES kisiler (id)',
+      'pencere_degisiklikleri_kurulum_id_fk: FOREIGN KEY (kurulum_id) REFERENCES kurulumlar (id)',
+      "pencere_degisiklikleri_tur_ck: CHECK (tur IN ('pencere_suresi', 'erken_kapatma'))",
+      "pencere_degisiklikleri_yeni_sure_dk_ck: CHECK ((tur = 'erken_kapatma' AND yeni_sure_dk IS NULL) OR (tur = 'pencere_suresi' AND (yeni_sure_dk IS NULL OR yeni_sure_dk BETWEEN 1 AND 1440)))",
+      'pencere_degisiklikleri_basma_ani_ck: CHECK (basma_ani_alt <= basma_ani_ust)',
+      "pencere_degisiklikleri_basma_ani_kaynagi_ck: CHECK (basma_ani_kaynagi IN ('iki_capa', 'ilk_capa', 'ikinci_capa', 'ulasma_ani'))",
+      `pencere_degisiklikleri_ilk_capa_durumu_ck: CHECK (ilk_capa_durumu IN (${q(ILK_CAPA)}))`,
+      `pencere_degisiklikleri_ikinci_capa_durumu_ck: CHECK (ikinci_capa_durumu IN (${q(IKINCI_CAPA)}))`,
+      'pencere_degisiklikleri_sureler_ck: CHECK (coalesce(ilk_capa_istek_ms, 0) >= 0 AND coalesce(ilk_capa_gecen_ms, 0) >= 0 AND coalesce(ikinci_capa_istek_ms, 0) >= 0 AND coalesce(ikinci_capa_gecen_ms, 0) >= 0)',
+      "pencere_degisiklikleri_uygulandi_ck: CHECK ((uygulandi AND uygulanmama_nedeni IS NULL) OR (NOT uygulandi AND uygulanmama_nedeni IN ('son_gun_gecti', 'donem_kilitli')))",
+      'pencere_degisiklikleri_telefon_saat_dilimi_ck: CHECK (telefon_saat_dilimi IS NULL OR char_length(telefon_saat_dilimi) <= 64)',
+      'Yetki: göç, yoklama_api ve yoklama_isci rollerinden bu tabloda UPDATE ve DELETE yetkisini geri alır (REVOKE); satır yalnız eklenir, saklama silmesini sahip rol yapar (D12-B03).',
+    ],
+  },
+  {
+    name: 'saat_esitleme_kesintileri',
+    purpose: 'Sunucu saat eşitlemesinin bozuk görüldüğü aralıklar. Satırı süreç içi saat_esitleme_denetimi açar ve kapatır; bu aralıkta belge verilmez, ulaşma anını aşan kayıt ret yerine İncelemede kalır (karar D07). Kesinti kapanınca aynı işlemde yeniden değerlendirme işi kuyruğa girer.',
+    columns: [
+      { name: 'id', type: 'uuid', null: false, default: 'uuidv7()', note: 'Sunucu üretir.' },
+      { name: 'baslangic_ani', type: 'timestamptz', null: false, default: '', note: 'Açan sürecin bozuk okumayı gördüğü an (saat arayüzü).' },
+      { name: 'bitis_ani', type: 'timestamptz', null: true, default: '', note: 'Kapanış anı; NULL kesinti sürüyor demektir.' },
+      { name: 'neden', type: 'text', null: false, default: '', note: 'Açılış nedeni: dosya_yok, dosya_okunamadi, senkron_degil, sapma_esigi_asildi, dosya_eski, saat_sicradi (duvar saati iç sayaca göre eşikten fazla sıçradı).' },
+      { name: 'ilk_sapma_ms', type: 'integer', null: true, default: '', note: 'Açılıştaki ölçülen sapma (ms, işaretli); ölçülemediyse NULL.' },
+      { name: 'en_buyuk_sapma_ms', type: 'integer', null: true, default: '', note: 'Kesinti boyunca görülen en büyük mutlak sapma; hiç ölçülemediyse NULL.' },
+      { name: 'sapma_esigi_ms', type: 'integer', null: false, default: '', note: 'Açılışta geçerli eşik (ayar, başlangıç değeri 100).' },
+      { name: 'son_bozuk_okuma_ani', type: 'timestamptz', null: false, default: '', note: 'Herhangi bir sürecin son bozuk okuması; bozuk süreçler en çok 10 saniyede bir yazar. Kapanış koşulu buna bakar.' },
+      { name: 'acan_surec', type: 'text', null: false, default: '', note: 'Açan sürecin adı (makine adı ve süreç numarası, en çok 128 karakter); kişisel veri yok.' },
+      { name: 'kapatan_surec', type: 'text', null: true, default: '', note: 'Kapatan sürecin adı.' },
+      { name: 'yeniden_degerlendirme_ani', type: 'timestamptz', null: true, default: '', note: 'esitleme_sonrasi_yeniden_degerlendir işinin dinleyicileri bitirdiği an.' },
+    ],
+    indexes: [
+      'saat_esitleme_kesintileri_id_pk: PRIMARY KEY (id)',
+      'saat_esitleme_kesintileri_bitis_ani_uq: UNIQUE ((bitis_ani IS NULL)) WHERE bitis_ani IS NULL; aynı anda en çok bir açık kesinti',
+      'saat_esitleme_kesintileri_baslangic_ani_idx: (baslangic_ani); kesintiAraliklari aralık sorgusu',
+    ],
+    constraints: [
+      'saat_esitleme_kesintileri_anlar_ck: CHECK (bitis_ani IS NULL OR bitis_ani >= baslangic_ani)',
+      "saat_esitleme_kesintileri_neden_ck: CHECK (neden IN ('dosya_yok', 'dosya_okunamadi', 'senkron_degil', 'sapma_esigi_asildi', 'dosya_eski', 'saat_sicradi'))",
+      'saat_esitleme_kesintileri_sapma_ck: CHECK ((en_buyuk_sapma_ms IS NULL OR en_buyuk_sapma_ms >= 0) AND sapma_esigi_ms > 0)',
+      'saat_esitleme_kesintileri_surec_ck: CHECK (char_length(acan_surec) <= 128 AND (kapatan_surec IS NULL OR char_length(kapatan_surec) <= 128))',
+    ],
+  },
+];
+
+// ------------------------------------------------------------------ endpoints
+const endpoints = [
+  {
+    method: 'POST', path: '/v1/saat/belge', client: 'telefon',
+    auth: 'Bearer oturum anahtarı, kök kanca (D01.oturumDogrula, D13): öğrenci (özne: oturumun cihazId değeri) ya da personel (hoca, yönetici; özne: kisiId). Panel çerezi kabul edilmez, rota tablosunda kimlik oturum ve istemci telefon. Girişsiz istek 401.',
+    request: { deger: 'string; base64url, dolgusuz, tam 16 bayt (22 karakter); telefonun bu istek için ürettiği rastgele değer. Fazla alan atılır (strip).' },
+    response: { belge: 'string; base64url, 110 karakter (82 bayt, sürüm 1): sürüm, kid, özne türü ve kimliği, gelen değer, sunucu saati (UTC ms), HMAC-SHA256. Biçim: Uç noktalar, Saat belgesi biçimi.' },
+    errors: ['400 kök doğrulama hatası (deger 16 bayt değil; zarf D13)', '401 kök kanca (oturum yok, bitmiş ya da cihaz kapanmış)', '403 kök kanca (rol uymuyor)', '429 kök hız sınırı, Retry-After ile', '503 SAAT_ESITLEME_BOZUK, Retry-After 60 (telefon gönderimi durdurmaz: ilk çapası sağlam kayıtları ikinci çapasız gönderir, ötekileri bekletir)'],
+    idempotency: 'Durumsuz: belge üretimi veritabanına yazmaz ve okumaz, değer saklanmaz; istekteki tek veritabanı işi kökteki oturum doğrulamasıdır (D13-B05). Aynı değerle iki istek iki geçerli belge alır; telefon yalnız kendi son değerini taşıyan ve 10 saniye içinde gelen belgeyi kullanır.',
+    rate_limit: "D13.hizSinifi('saat_belgesi'): doğrulanmış cihaz ya da oturum başına dakikada 30 (D13-B09); IP sınırı yok.",
+  },
+  {
+    method: 'GET', path: '/v1/saat/pencereler/{oturumId}', client: 'panel',
+    auth: 'Personel oturumu (panel çerezi; hoca telefonunun Bearer anahtarı da geçer): dersin hocası (D02.dersYetkisi) ya da kapsamı dersin birimini içeren yönetici (D01.yetkiDenetle). Yetkisi olmayana 404 döner, varlık sızdırılmaz; öğrenci oturumu 403.',
+    request: { oturumId: 'yol parametresi; UUIDv7 (z.uuidv7())' },
+    response: {
+      oturumId: 'string (UUID)', donemId: 'string (UUID)', dersId: 'string (UUID)',
+      acilisAni: 'string; UTC ISO 8601, milisaniyeli ve Z ile (D13-B15)', planlananKapanisAni: 'string', kapanisAni: 'string', enGecKapanisAni: 'string', dersBitisAni: 'string',
+      planlananSureDk: 'number | null', sureDk: 'number | null (null ders boyunca)', sureSecildi: 'boolean', sureKaynagi: 'string: ders, oturum (x-extensible-enum)',
+      acik: 'boolean; saat arayüzüne göre acilisAni <= şimdi < kapanisAni', kapandiAni: 'string | null',
+      degisiklikler: 'dizi, basma anı sırasıyla: { id, tur, yeniSureDk, kisiId, basmaAniAlt, basmaAniUst, basmaAniKaynagi, ulasmaAni, uygulandi, uygulanmamaNedeni, gecUlasti, oncekiKapanisAni, sonrakiKapanisAni, etkili }; son dördü okurken core pencereHesapla ile hesaplanır',
+    },
+    errors: ['400 kök doğrulama hatası (oturumId biçimi)', '401 kök kanca', '403 kök kanca (öğrenci oturumu)', '404 SAAT_PENCERE_BULUNAMADI (oturum yok ya da yetki yok)', '429 kök hız sınırı'],
+    idempotency: 'Yalnız okur; GET veri değiştirmez (D13-B08).',
+    rate_limit: 'Girişli genel sınıf: oturum başına dakikada 120 (D13-B09).',
+  },
+];
+
+// ------------------------------------------------------------------ queue items (owned item schemas, they arrive through D06)
+const queue_items = [
+  {
+    tur: 'pencere_suresi',
+    gelis: 'POST /v1/esitleme/gonderim; D06 dağıtır (ogeTuruKaydet), işleyici D04 degisiklik-isleyicisi.ts',
+    kimlik: 'Hoca giriş oturumu (Bearer). Öğe hesabı oturumun kişisiyle aynı olmalı (D06-B09); farklıysa D06 tekrar_dene verir.',
+    govde: { oturumId: 'UUIDv7', yeniSureDk: 'tam sayı, 1 ile ders süresi (dakika, aşağı yuvarlanmış) arası ya da null (ders boyunca)' },
+    zarf: 'Öğe kimliği (UUIDv7), sıra numarası ve işlem anı çapası (IlkCapaAlanlari: belge, belgeIstegiMs, belgedenOlayaMs, capaDurumu, telefonSaatiMs, saatDilimi; şeması packages/contracts/src/saat.ts) D06 zarfında; paketin ikinci çapası (belge, istekSuresiMs ve öğe başına olaydanBelgeyeMs ya da yokNedeni) D06 bağlamında gelir.',
+    sonuclar: 'kabul (uygulandi true ya da false), zaten_var, ret: SAAT_OGE_GECERSIZ, SAAT_OTURUM_BULUNAMADI, SAAT_YETKI_YOK, SAAT_SURE_GECERSIZ, SAAT_OGE_KIMLIGI_CAKISMASI. İşleyici tekrar_dene döndürmez; geçici veritabanı hatasında D06 geri dönüş noktası kuralı geçer.',
+  },
+  {
+    tur: 'erken_kapatma',
+    gelis: 'POST /v1/esitleme/gonderim; işleyici aynı dosyada',
+    kimlik: 'pencere_suresi ile aynı.',
+    govde: { oturumId: 'UUIDv7' },
+    zarf: 'pencere_suresi ile aynı.',
+    sonuclar: 'pencere_suresi ile aynı; SAAT_SURE_GECERSIZ dönmez.',
+  },
+];
+
+// ------------------------------------------------------------------ jobs
+const jobs = [
+  {
+    name: 'oturum_pencere_kapat',
+    schedule: "Her dakika: cron '* * * * *', tz Europe/Istanbul, pg-boss zamanlaması, işçide; aynı anda tek iş (pg-boss tek çalışma politikası), 3 yeniden deneme. Kaçırılan dakikalar için ayrıca bir şey gerekmez: ilk çalışma birikmiş bütün pencereleri kapatır (D14-B06).",
+    idempotency: 'Koşullu güncelleme: kapandi_ani IS NULL AND kapanis_ani <= şimdi; ikinci çalışma aynı satırı bulmaz. Dinleyiciler kapanış geçişi başına bir kez çağrılır, kendileri de tekrar güvenlidir.',
+    does: "Saat arayüzünden şimdi okunur. 500 satırlık partilerle, her parti tek işlemde: kapanis_ani şimdiden küçük ya da eşit, kapandi_ani boş satırlar FOR UPDATE SKIP LOCKED ile seçilir, kapandi_ani = şimdi yazılır (RETURNING), her satır için kayıtlı oturumKapandi dinleyicileri (neden 'sure_doldu') aynı işlemde kayıt sırasıyla çağrılır. Telefona inen alan değişmediği için sürüm alınmaz (D06-B19). Bir dinleyici hata verirse parti geri alınır ve iş yeniden dener.",
+  },
+  {
+    name: 'saat_esitleme_denetimi',
+    schedule: 'pg-boss işi değil: her API sürecinde 5 saniyede bir süreç içi zamanlayıcı (ayar SAAT_ESITLEME_DENETIM_ARALIGI_MS); saat modülünün Fastify eklentisi onReady anında bir kez eşzamanlı okur, dinlemeye ondan sonra geçer, onClose ile durdurur. İşçi sürecinde çalışmaz.',
+    idempotency: 'Açık kesinti en çok bir satırdır (kısmi tekil dizin, ON CONFLICT DO NOTHING). Kapanış koşullu UPDATE ... RETURNING ile tek sürece düşer, yeniden değerlendirme işi singletonKey = kesinti kimliğiyle bir kez kuyruğa girer.',
+    does: "D15.saatEsitlemeDurumu() okunur ve infra/saat duvarSaatiFarkiMs() ile duvar saatinin iç sayaca göre farkı alınır. Sağlıklı okuma: dosya okundu, senkron true, mutlak sapma eşikten (başlangıç 100 ms) büyük değil, ölçüm 120 saniyeden eski değil ve fark bir önceki okumadan eşikten fazla oynamadı (oynadıysa neden saat_sicradi: makine uykudan dönünce ya da saat adım atınca dosyanın 30 saniyelik yazma aralığını beklemeden yakalanır; aynı denetim her saatBelgesiVer çağrısında da yapılır). Bozuk okumada süreç hemen BOZUK olur (belge durur); açık kesinti yoksa açılır, varsa son_bozuk_okuma_ani ve en_buyuk_sapma_ms en çok 10 saniyede bir güncellenir. Art arda iki sağlıklı okumada süreç SAGLIKLI olur; açık kesintinin son_bozuk_okuma_ani 15 saniyeden eskiyse satır kapatılır ve aynı işlemde D14.isGonder ile esitleme_sonrasi_yeniden_degerlendir kuyruğa girer. Veritabanı yazılamazsa durum bellekte sürer, hata loglanır, sonraki okumada yeniden denenir.",
+  },
+  {
+    name: 'esitleme_sonrasi_yeniden_degerlendir',
+    schedule: 'Olayla: kesinti satırının kapandığı işlemde D14.isGonder ile, singletonKey kesinti kimliği; işçide, 3 yeniden deneme, artan bekleme.',
+    idempotency: 'Dinleyiciler aynı kesinti için iki kez çağrılsa da sonuç değişmez (D07 aynı girdiyle aynı kararı verir); yeniden_degerlendirme_ani yalnız boşsa yazılır.',
+    does: 'Kesinti satırını okur; ulasmaAnlariGuvenilir = en_buyuk_sapma_ms biliniyor ve sapma_esigi_ms değerini aşmıyor. Kayıtlı kesintiKapandi dinleyicilerini { kesintiId, baslangicAni, bitisAni, enBuyukSapmaMs, sapmaEsigiMs, ulasmaAnlariGuvenilir } ile tek işlemde çağırır: D07 aralıkta esitleme_bozukken_ulasti işaretli kayıtları güvenilirse olağan kurallarla yeniden değerlendirir, değilse İncelemede bırakır (D04-B19). Sonra yeniden_degerlendirme_ani yazılır.',
+  },
+];
+
+// ------------------------------------------------------------------ state machines
+const state_machines = [
+  {
+    name: 'Pencere (oturum_pencereleri satırı)',
+    states: ['PLANLANDI', 'ACIK', 'KAPANDI'],
+    transitions: [
+      { from: 'PLANLANDI', to: 'PLANLANDI', by: 'D02 dinleyicisi (pencereleriHesapla)', when: 'Açılmamış oturumun programı ya da dersin süresi değişti; plan ve geçerli pencere baştan hesaplanır, telefona inen alan değiştiyse sürüm artar.' },
+      { from: 'PLANLANDI', to: 'ACIK', by: 'zaman (saat arayüzü)', when: 'şimdi >= acilis_ani. Yazma yok; telefon da sunucu da anlardan bilir.' },
+      { from: 'ACIK', to: 'KAPANDI', by: 'oturum_pencere_kapat', when: "kapanis_ani <= şimdi ve kapandi_ani boş: kapandi_ani yazılır, oturumKapandi dinleyicileri aynı işlemde (neden 'sure_doldu')." },
+      { from: 'PLANLANDI', to: 'KAPANDI', by: 'oturum_pencere_kapat', when: 'Açılmadan kapatılmış pencerenin (kapanis_ani = acilis_ani) anı geldi.' },
+      { from: 'ACIK', to: 'KAPANDI', by: 'erken_kapatma ya da pencere_suresi öğesi', when: 'Yeniden hesaplanan kapanış ulaşma anından küçük ya da eşit: kapandi_ani aynı işlemde yazılır; pencereDegisti ve oturumKapandi (neden öğe türü) dinleyicileri çağrılır.' },
+      { from: 'ACIK', to: 'ACIK', by: 'pencere_suresi öğesi', when: 'Kapanış ileri ya da geri alındı ama ulaşma anından sonra kalıyor; pencereDegisti.' },
+      { from: 'KAPANDI', to: 'ACIK', by: 'pencere_suresi öğesi (uzatma)', when: 'Yeniden hesaplanan kapanış ulaşma anından sonra: kapandi_ani boşaltılır, pencereDegisti çağrılır; iş sonra yeniden kapatır ve oturumKapandi yeniden çağrılır (D04-A02).' },
+      { from: 'KAPANDI', to: 'KAPANDI', by: 'geç ulaşan değişiklik', when: 'Kapanış değişti ama yine geçmişte; yalnız pencereDegisti, oturumKapandi yeniden çağrılmaz.' },
+    ],
+  },
+  {
+    name: 'Pencere değişikliği öğesi (pencere_suresi, erken_kapatma)',
+    states: ['ULASTI', 'REDDEDILDI', 'ZATEN_VAR', 'UYGULANDI', 'SAKLANDI'],
+    transitions: [
+      { from: 'ULASTI', to: 'REDDEDILDI', by: 'işleyici', when: 'Gövde şemaya uymuyor, oturum yok, gönderen dersin hocası değil, süre sınır dışında ya da aynı kimlik başka içerikle geldi; satır yazılmaz, öğe sonucu ret.' },
+      { from: 'ULASTI', to: 'ZATEN_VAR', by: 'işleyici', when: 'Aynı kimlik aynı içerikle (tür, oturum, süre, ilk çapa belgesi, kurulum, sıra) daha önce yazılmış.' },
+      { from: 'ULASTI', to: 'UYGULANDI', by: 'işleyici', when: 'Ulaşma anı birimin kilit anından önce ve birim dönemi kilitli değil: satır yazılır, pencere aynı işlemde baştan hesaplanır, denetim kaydı yazılır.' },
+      { from: 'ULASTI', to: 'SAKLANDI', by: 'işleyici', when: 'Ulaşma anı kilit anına eşit ya da sonra, ya da birim dönemi kilitli: satır uygulandi=false ile yazılır, pencere değişmez, denetim kaydı yazılır, öğe sonucu kabul.' },
+    ],
+  },
+  {
+    name: 'Saat eşitlemesi (API süreci başına, bellekte)',
+    states: ['BASLANGIC', 'SAGLIKLI', 'BOZUK'],
+    transitions: [
+      { from: 'BASLANGIC', to: 'SAGLIKLI', by: 'açılışta eşzamanlı ilk okuma', when: 'Durum dosyası sağlıklı; yazma yok.' },
+      { from: 'BASLANGIC', to: 'BOZUK', by: 'açılışta ilk okuma', when: 'Dosya yok ya da okunamıyor, senkron değil, sapma eşiği aşıldı ya da ölçüm 120 saniyeden eski; açık kesinti yoksa açılır.' },
+      { from: 'SAGLIKLI', to: 'BOZUK', by: 'saat_esitleme_denetimi', when: 'Tek bozuk okuma yeter; belge hemen durur, açık kesinti yoksa satır açılır.' },
+      { from: 'SAGLIKLI', to: 'BOZUK', by: 'saatBelgesiVer', when: 'Duvar saatinin iç sayaca göre farkı son okumadan beri eşikten fazla oynadı (saat_sicradi): belge verilmez, satırı bir sonraki okuma açar.' },
+      { from: 'BOZUK', to: 'BOZUK', by: 'saat_esitleme_denetimi', when: 'Bozuk okuma sürüyor; son_bozuk_okuma_ani ve en_buyuk_sapma_ms en çok 10 saniyede bir güncellenir.' },
+      { from: 'BOZUK', to: 'SAGLIKLI', by: 'saat_esitleme_denetimi', when: 'Art arda iki sağlıklı okuma; açık kesintinin son_bozuk_okuma_ani 15 saniyeden eskiyse satır bu süreçte kapanır ve yeniden değerlendirme işi aynı işlemde kuyruğa girer.' },
+    ],
+  },
+  {
+    name: 'Eşitleme kesintisi (saat_esitleme_kesintileri satırı)',
+    states: ['ACIK', 'KAPANDI', 'YENIDEN_DEGERLENDIRILDI'],
+    transitions: [
+      { from: 'ACIK', to: 'KAPANDI', by: 'sağlıklı okuma gören süreç (art arda en az iki)', when: 'son_bozuk_okuma_ani 15 saniyeden eski: hiçbir süreç bozuk görmüyor. Açan süreç çökmüş olsa da satır böyle kapanır.' },
+      { from: 'KAPANDI', to: 'YENIDEN_DEGERLENDIRILDI', by: 'esitleme_sonrasi_yeniden_degerlendir', when: 'kesintiKapandi dinleyicileri bitti; yeniden_degerlendirme_ani yazıldı.' },
+    ],
+  },
+];
+
+// ------------------------------------------------------------------ invariants
+const invariants = [
+  'Her ders oturumunun tam bir pencere satırı vardır; satır oturumun üretildiği işlemde yazılır ve hiç silinmez.',
+  'acilis_ani <= kapanis_ani <= en_gec_kapanis_ani <= ders_bitis_ani ve planlanan_kapanis_ani <= en_gec_kapanis_ani her an geçerlidir (CHECK kısıtı).',
+  'Ders içi hiçbir değişiklik açılış anını değiştirmez.',
+  'Geçerli pencere, plan ve uygulanmış değişikliklerden tek fonksiyonla (core pencereHesapla) baştan hesaplanır; aynı değişiklik kümesi her varış sırasında aynı kapanışı, en geç kapanışı ve süreyi verir.',
+  'Bir değişiklik pencereyi basma anı üst ucundan geriye kısaltamaz: yeni kapanış en az en erken(önceki kapanış, basma anı üst ucu) olur.',
+  'Kararlar kapandi_ani sütununa değil anlara dayanır; kapatma işi gecikse de kayıt kararları değişmez.',
+  'Kural taşıyan her an (ulaşma, kapanış işleme, kesinti, şimdi) saat arayüzünden gelir; modül, iş ve çekirdek kodunda SQL now() ve Date.now() yoktur, gerçek duvar saatini yalnız infra/saat okur.',
+  'Eşitleme bozuk olan süreç hiçbir belge vermez: ne POST /v1/saat/belge ne X-Saat-Belgesi başlığı.',
+  'saatBelgesiVer ve saatBelgesiDogrula veritabanına dokunmaz; tek kullanımlık değer sunucuda saklanmaz. Belge ucunda istek başına tek sorgu kökteki oturum doğrulamasıdır.',
+  'MAC karşılaştırması sabit sürelidir (timingSafeEqual); saat belgesi anahtarı yalnız bu iş için kullanılır, loga, cevaba ya da iş verisine girmez.',
+  'Kayıt saati aralığı gerçek anı kapsar: iç sayaç kayması 100 ppm içinde, belge isteği 10 saniyeyi ve geçen süre 7 günü aşmadıkça (fast-check ile kanıtlanır).',
+  'Telefondan ham iç sayaç değeri alınmaz; çapalar yalnız iki olay arası süreleri taşır.',
+  'pencere_degisiklikleri yalnız eklenir; uygulama rollerinin bu tabloda UPDATE ve DELETE yetkisi yoktur.',
+  'Aynı anda en çok bir açık eşitleme kesintisi vardır.',
+  'Her kapanış geçişi oturumKapandi dinleyicilerini bir kez çağırır; uzatmayla yeniden açılan pencere yeni bir kapanış geçişi doğurur. Dinleyiciler aynı olayla iki kez çağrılsa da sonuç değişmez.',
+  'Uygulanan ya da saklanan her değişiklik aynı işlemde denetim kaydına yazılır (D09.denetimeYaz); pencere değiştiyse pencereDegisti dinleyicileri de aynı işlemde çağrılır.',
+  'Telefona inen bir alan her değiştiğinde surum yeni değer alır; yalnız kapandi_ani değişikliği sürüm almaz.',
+  'Çapası kurulamayan hoca işleminin anı ulaşma anıdır; bu yalnız uzatmayı etkileyebilir, kısaltma geçmişe işlemez (sonuç öğrenci lehine).',
+];
+
+// ------------------------------------------------------------------ exports
+const exportsList = [
+  { name: 'simdi (Saat arayüzü)', signature: 'interface Saat { simdi(): number } // UTC milisaniye; tanım packages/core/src/saat/saat.ts. Sunucu: infra/saat sistemSaati(): Saat. Test: test/support/sahte-saat.ts pgBossSaati(testClock): Saat & { kur(an: string): void; ilerlet(ms: number): void }', purpose: 'Kural taşıyan her anın tek kaynağı. Bileşim kökleri (app.ts, server.ts, worker.ts) modüllere parametreyle verir; testlerde pg-boss TestClock ile tek nesneden yürür (uzun sıçramada setTime, açık işlem varken ilerletilmez).' },
+  { name: 'saatBelgesiVer', signature: "saatBelgesiVer(tx: Islem | null, ozne: SaatOznesi, tekKullanimlikDeger: string): { belge: string } | { verilemez: 'ESITLEME_BOZUK' | 'DEGER_GECERSIZ' }; SaatOznesi = { tur: 'ogrenci_cihazi'; cihazId: CihazId } | { tur: 'personel'; kisiId: KisiId }", purpose: 'Belgeyi etkin anahtarla üretir. Eşzamanlı, veritabanına dokunmaz; tx dış yüz biçimi için durur, kullanılmaz, null verilebilir. Önce süreç durumuna ve duvar saati sıçramasına bakar, bozuksa verilemez döner. Belge ucu ve D13 kökündeki X-Saat-Belgesi kancası çağırır; verilemez dönerse kanca başlığı koymaz.' },
+  { name: 'saatBelgesiDogrula', signature: "saatBelgesiDogrula(belge: string): { gecerli: true; kid: string; ozne: SaatOznesi; deger: string; sunucuSaatiMs: number; anahtarEleGecirildi: boolean } | { gecerli: false; neden: 'BICIM' | 'SURUM' | 'KID_BILINMIYOR' | 'MAC' }", purpose: 'Kayıttaki, paketteki ve hoca işlemindeki belgeyi doğrular: biçim, sürüm, kid ile anahtar (eski kid de), sabit süreli MAC. D05, D07 ve D11 çağırır; sonuç core saatSonucu fonksiyonuna verilir.' },
+  { name: 'pencereleriHesapla', signature: 'pencereleriHesapla(tx: Islem, oturumlar: readonly OturumPlani[]): Promise<void>; OturumPlani = { oturumId: OturumId; donemId: DonemId; dersId: DersId; baslangicAni: string; bitisAni: string; yoklamaSuresiDk: number | null }', purpose: 'D02 oturum üretiminde ve yeniden üretiminde aynı işlemde çağrılır (oturumUretimDinleyicisiKaydet ile kayıtlı). Satır yoksa açar; açılmamış pencerenin planını yeni değerlerle baştan hesaplar; açılmış pencerenin planına dokunmaz (uyarı loglar). Bir çağrıda tek sürüm alır (D06.surumAl).' },
+  { name: 'pencereGetir', signature: "pencereGetir(tx: Islem, oturumId: OturumId): Promise<Pencere | null>; Pencere = { oturumId; donemId; dersId; acilisAni: string; kapanisAni: string; planlananKapanisAni: string; enGecKapanisAni: string; dersBitisAni: string; sureDk: number | null; sureSecildi: boolean; sureKaynagi: 'ders' | 'oturum'; degisiklikSayisi: number; kapandiAni: string | null }", purpose: 'Geçerli pencere; birincil anahtarla tek okuma. D07 Kendi beyanı (sureSecildi false) ve Beklemede çözümü için, D11 gösterim için okur.' },
+  { name: 'pencereSonucu', signature: "pencereSonucu(tx: Islem, kayitSaati: SaatAraligi, oturumId: OturumId): Promise<{ sonuc: 'icinde' | 'dilimde' | 'disinda'; pencere: Pencere }>; SaatAraligi = { altMs: number; ustMs: number }", purpose: 'Kaydın saat aralığını pencereyle karşılaştırır (core pencereIcindeMi): [alt, üst] ile [açılış, kapanış) kesişirse icinde; değilse ve [açılış, en geç kapanış) ile kesişirse dilimde (ders içi kısaltmanın kestiği dilim); hiçbiriyle kesişmiyorsa disinda. Kararı D07 verir.' },
+  { name: 'esitlemeSaglikliMi', signature: 'esitlemeSaglikliMi(): boolean', purpose: 'Bu sürecin bellekteki eşitleme durumu; denetimin başlamadığı süreçte false. D05 ve D07 ulaşma anıyla birlikte paket başına bir kez okur: false ise kayıt esitleme_bozukken_ulasti işaretlenir ve ulaşma anı denetiminden ret verilmez.' },
+  { name: 'kesintiAraliklari', signature: 'kesintiAraliklari(tx: Islem, aralik: { altAni: string; ustAni: string }): Promise<Array<{ kesintiId: string; baslangicAni: string; bitisAni: string | null; enBuyukSapmaMs: number | null }>>', purpose: 'Verilen aralıkla kesişen eşitleme kesintileri (açık olan dahil); D07 ve işletim ekranları okur.' },
+  { name: 'oturumKapandiDinleyicisiKaydet', signature: "oturumKapandiDinleyicisiKaydet(dinleyici: { ad: string; calistir(tx: Islem, olay: OturumKapandiOlayi): Promise<void> }): void; OturumKapandiOlayi = { donemId; oturumId; dersId; kapanisAni: string; kapandiAni: string; neden: 'sure_doldu' | 'erken_kapatma' | 'pencere_suresi' }", purpose: 'Kapanış geçişinde aynı işlemde, kayıt sırasıyla çağrılır: D07 (pencere_beklemede_kesinlestir, yenidenDegerlendir), D08 (devam_hesapla), D11 (projeksiyon_baglanti_kapat). Aynı ad iki kez kaydedilemez; kayıt API ve işçi süreçlerinin ikisinde de yapılır.' },
+  { name: 'kesintiKapandiDinleyicisiKaydet', signature: 'kesintiKapandiDinleyicisiKaydet(dinleyici: { ad: string; calistir(tx: Islem, olay: KesintiKapandiOlayi): Promise<void> }): void; KesintiKapandiOlayi = { kesintiId: string; baslangicAni: string; bitisAni: string; enBuyukSapmaMs: number | null; sapmaEsigiMs: number; ulasmaAnlariGuvenilir: boolean }', purpose: 'esitleme_sonrasi_yeniden_degerlendir işinde çağrılır; D07 aralıkta eşitleme bozukken ulaşan kayıtları yeniden değerlendirir.' },
+  { name: 'pencereDegistiDinleyicisiKaydet (sözleşmeye ek, D04-A05)', signature: "pencereDegistiDinleyicisiKaydet(dinleyici: { ad: string; calistir(tx: Islem, olay: PencereDegistiOlayi): Promise<void> }): void; PencereDegistiOlayi = { donemId; oturumId; dersId; degisiklikId: string; tur: 'pencere_suresi' | 'erken_kapatma'; oncekiKapanisAni: string; sonrakiKapanisAni: string; oncekiSureSecildi: boolean; sonrakiSureSecildi: boolean; enGecKapanisAni: string; ulasmaAni: string; gecUlasti: boolean }", purpose: 'Ders içi değişiklik pencereyi değiştirdiği işlemde çağrılır; D07 o oturumun kayıtlarını aynı işlemde yeniden karara bağlar (plan.html#kararlar-supheli-kayit: ayar değişikliği bir karar olayıdır).' },
+  { name: 'saatSonucu (packages/core/src/saat)', signature: "saatSonucu(g: { ilk: { belge: BelgeDogrulamaSonucu; istekSuresiMs: number; belgedenOlayaMs: number } | { telefonBildirimi: 'once_yeniden_baslatma' | 'belge_7_gunden_eski' | 'belge_yok' }; ikinci: { belge: BelgeDogrulamaSonucu; istekSuresiMs: number; olaydanBelgeyeMs: number } | { yokNedeni: 'sonra_yeniden_baslatma' | 'paket_imzasiz' | 'okutma_yolu' | 'esitleme_bozuk' | 'gonderilmedi' }; beklenenOzne: SaatOznesi; telefonSaatiMs: number | null; ulasmaAniMs: number; esitlemeSaglikli: boolean }): SaatSonucu; SaatSonucu = { ilkCapaDurumu: IlkCapaDurumu; ikinciCapaDurumu: IkinciCapaDurumu; durum: 'dogrulandi' | 'capalar_ayrisiyor' | 'dogrulanamadi'; kaynak: 'iki_capa' | 'ilk_capa' | 'ikinci_capa' | 'telefon_saati' | 'yok'; aralik: SaatAraligi | null; tahminMs: number | null; payMs: number | null; ulasmaAniniAsiyor: boolean; esitlemeBozukkenUlasti: boolean; eleGecmisAnahtar: boolean }", purpose: 'Kayıt ve hoca işlemi için tek saat hesabı (D07-B19 sonuç nesnesi). Saf: anahtar ve saat dışarıdan; özne denetimi içinde olduğu için çağıran unutamaz. D05 sonucu kayıt sütunlarına yazar, D07 karara ve etikete eşler.' },
+  { name: 'capaAraligi (packages/core/src/saat)', signature: "capaAraligi(g: { belgeSaatiMs: number; istekSuresiMs: number; gecenMs: number; yon: 'ileri' | 'geri' }): SaatAraligi & { tahminMs: number; payMs: number }", purpose: 'Tek çapanın aralığı: ileri (ilk çapa) [S + g - k(g), S + g + q + k(g + q)], geri (ikinci çapa) [S - g - k(g), S - g + q + k(g + q)], k(x) = tavan(x / 10000) yani 100 ppm, pay = q + k(g). D11 QR gecikmesinde de kullanır.' },
+  { name: 'pencereHesapla, pencereIcindeMi, pencereDurumu (packages/core/src/saat)', signature: "pencereHesapla(g: { acilisMs: number; dersBitisMs: number; dersSuresiDk: number | null; degisiklikler: readonly { id: string; tur: 'pencere_suresi' | 'erken_kapatma'; yeniSureDk: number | null; basmaUstMs: number; kurulumId: string; siraNo: number }[] }): { planlananKapanisMs: number; kapanisMs: number; enGecKapanisMs: number; sureDk: number | null; sureSecildi: boolean; etkiler: { id: string; oncekiKapanisMs: number; sonrakiKapanisMs: number; etkili: boolean }[] }; pencereIcindeMi(a: SaatAraligi, p: { acilisMs: number; kapanisMs: number; enGecKapanisMs: number }): 'icinde' | 'dilimde' | 'disinda'; pencereDurumu(tahminMs: number, p: { acilisMs: number; kapanisMs: number }): { acik: boolean; kalanMs: number }", purpose: 'Telefon (düğme ve sayaç), sunucu (karar girdisi) ve panel aynı pencere kuralını kullanır; Intl kullanmaz, UTC milisaniyeyle hesaplar.' },
+  { name: 'belgeCoz, belgeImzaGirdisi, sabitler (packages/core/src/saat)', signature: "belgeCoz(metin: string): BelgeAlanlari | { hata: 'BICIM' | 'SURUM' }; belgeImzaGirdisi(a: BelgeAlanlari): Uint8Array; KAYMA_PPM = 100; BELGE_EN_COK_YAS_MS = 604800000; BELGE_ISTEK_EN_COK_MS = 10000; BELGE_BAYT = 82; BELGE_KARAKTER = 110; DEGER_BAYT = 16", purpose: 'Telefon kendi değerini ve sunucu saatini belgeden okur; sunucu MAC girdisini buradan alır. base64url kodlayıcı Buffer ve atob kullanmaz (Hermes).' },
+  { name: 'istanbulTarihi, istanbulAni, istanbulGunSonuAni (infra/saat, sözleşmeye ek)', signature: 'istanbulTarihi(anMs: number): string; istanbulAni(tarih: string, saat: string): number; istanbulGunSonuAni(tarih: string): number', purpose: 'D14-B08 ve D14-B09 için tek İstanbul dönüşüm yardımcısı (Node ICU ile Intl yalnız sunucuda); gün sonu ertesi günün 00:00 İstanbul anıdır (dışlayıcı).' },
+  { name: 'duvarSaatiFarkiMs (infra/saat, modül içi)', signature: 'duvarSaatiFarkiMs(): number // gerçek duvar saati eksi process.hrtime iç sayacı, ms', purpose: 'Sıçrama denetimi için; yalnız saat modülü kullanır. Sahte saat bunu etkilemez, testte değer enjekte edilir.' },
+];
+
+// ------------------------------------------------------------------ files
+const files = [
+  'packages/core/src/saat/index.ts',
+  'packages/core/src/saat/saat.ts',
+  'packages/core/src/saat/sabitler.ts',
+  'packages/core/src/saat/tipler.ts',
+  'packages/core/src/saat/base64url.ts',
+  'packages/core/src/saat/belge.ts',
+  'packages/core/src/saat/capa.ts',
+  'packages/core/src/saat/sonuc.ts',
+  'packages/core/src/saat/pencere.ts',
+  'packages/core/src/saat/belge.test.ts',
+  'packages/core/src/saat/capa.test.ts',
+  'packages/core/src/saat/sonuc.test.ts',
+  'packages/core/src/saat/pencere.test.ts',
+  'packages/core/src/saat/belge-ornekleri.json',
+  'packages/contracts/src/saat.ts',
+  'apps/server/src/infra/saat/index.ts',
+  'apps/server/src/infra/saat/sistem-saati.ts',
+  'apps/server/src/infra/saat/istanbul.ts',
+  'apps/server/src/infra/saat/istanbul.test.ts',
+  'apps/server/src/modules/saat/index.ts',
+  'apps/server/src/modules/saat/eklenti.ts',
+  'apps/server/src/modules/saat/tablolar.ts',
+  'apps/server/src/modules/saat/anahtarlar.ts',
+  'apps/server/src/modules/saat/belge-servisi.ts',
+  'apps/server/src/modules/saat/pencere-servisi.ts',
+  'apps/server/src/modules/saat/degisiklik-isleyicisi.ts',
+  'apps/server/src/modules/saat/indirme-kaynagi.ts',
+  'apps/server/src/modules/saat/esitleme-durumu.ts',
+  'apps/server/src/modules/saat/kesinti-servisi.ts',
+  'apps/server/src/modules/saat/dinleyiciler.ts',
+  'apps/server/src/modules/saat/rotalar.ts',
+  'apps/server/src/modules/saat/saklama.ts',
+  'apps/server/src/modules/saat/sozlesme.test.ts',
+  'apps/server/src/jobs/saat/index.ts',
+  'apps/server/src/jobs/saat/oturum-pencere-kapat.ts',
+  'apps/server/src/jobs/saat/saat-esitleme-denetimi.ts',
+  'apps/server/src/jobs/saat/esitleme-sonrasi-yeniden-degerlendir.ts',
+  'apps/server/test/features/saat/saat-belgesi.feature',
+  'apps/server/test/features/saat/pencere-plani.feature',
+  'apps/server/test/features/saat/pencere-degisikligi.feature',
+  'apps/server/test/features/saat/pencere-kapatma.feature',
+  'apps/server/test/features/saat/esitleme-kesintisi.feature',
+  'apps/server/test/features/saat/pencere-indirme.feature',
+  'apps/server/test/features/saat/pencere-ucu.feature',
+  'apps/server/test/features/saat/saat-kurallari-kayit.feature',
+  'apps/server/test/steps/saat/belge-adimlari.ts',
+  'apps/server/test/steps/saat/pencere-adimlari.ts',
+  'apps/server/test/steps/saat/esitleme-adimlari.ts',
+  'apps/server/test/support/kurucular/saat.ts',
+  'apps/server/test/support/sahte-saat.ts',
+];
+
+// ------------------------------------------------------------------ tests
+const tests = [
+  { name: 'Çapa aralığı gerçek anı kapsar', kind: 'property', asserts: 'fast-check, numRuns 10000 açıkça: sunucu saati istek ile cevap arasındaki herhangi bir anda, iç sayaç kayması -100 ile +100 ppm, istek süresi 0 ile 10000 ms, geçen süre 0 ile 7 gün; ileri (ilk çapa) ve geri (ikinci çapa) aralığı gerçek anı her zaman içerir.' },
+  { name: 'Pay plan formülüne uyar', kind: 'behavior', asserts: 'payMs = istekSuresiMs + tavan(geçen / 10000); 1 gün için kayma 8640 ms (günde yaklaşık 9 saniye), 7 gün için 60480 ms (haftada yaklaşık 1 dakika). Sabitler (KAYMA_PPM, BELGE_EN_COK_YAS_MS) testte içe aktarılır, yeniden yazılmaz.' },
+  { name: '7 gün sınırı iki çapada da geçerli', kind: 'behavior', asserts: 'Geçen süre 604800000 ms iken çapa geçerli; 604800001 ms iken ilk çapa belge_7_gunden_eski, ikinci çapa kayit_7_gunden_eski. İkisi de bozuksa durum dogrulanamadi, kaynak telefon_saati, aralık telefon saatinin tek anı.' },
+  { name: '10 saniyeden uzun belge isteği çapa kurmaz', kind: 'behavior', asserts: 'istekSuresiMs 10000 geçerli, 10001 istek_suresi_asildi; negatif ya da tam sayı olmayan süre sure_gecersiz.' },
+  { name: 'İki çapanın birleşimi', kind: 'behavior', asserts: 'Kesişen aralıklarda sonuç kesişim, durum dogrulandi, kaynak iki_capa ve pay iki paydan küçüğü; kesişmeyenlerde durum capalar_ayrisiyor ve aralık iki aralığı kapsayan en dar aralık.' },
+  { name: 'Ulaşma anı denetimi', kind: 'behavior', asserts: 'aralik.altMs ulaşma anından büyükse ulasmaAniniAsiyor true, eşitse false; esitlemeSaglikli false verildiğinde sonuç esitlemeBozukkenUlasti true taşır (karar eşlemesi D07 testinde).' },
+  { name: 'Başka öznenin belgesi çapa kurmaz', kind: 'behavior', asserts: 'Cihaz A için verilmiş belge B cihazının kaydında ozne_uyusmuyor; personel belgesindeki kişi işlemi yapan hocadan farklıysa aynı sonuç. Kontrol: aynı belge kendi öznesinde gecerli.' },
+  { name: 'Pencere sınırı öğrenci lehine ve yarı açık', kind: 'property', asserts: 'fast-check numRuns 10000 ve sınır tablosu: [alt, üst] ile [açılış, kapanış) kesişirse icinde; üst ucu açılışa değen kayıt icinde, alt ucu kapanışa eşit kayıt icinde değil; yalnız kısaltılan dilimdeyse dilimde, hiçbiriyle kesişmiyorsa disinda.' },
+  { name: 'Pencere hesabı varış sırasından bağımsız', kind: 'property', asserts: 'fast-check numRuns 5000: rastgele 1 ile 6 değişikliğin her permütasyonu aynı kapanışı, en geç kapanışı ve süreyi verir; açılış <= kapanış <= en geç kapanış <= ders bitişi her zaman tutar.' },
+  { name: 'Değişiklik geçmişe işlemez', kind: 'property', asserts: 'Her adımda yeni kapanış >= en erken(önceki kapanış, basma üst ucu). Örnekler: plan 09:15 iken 09:12 anında 5 dakika seçilirse kapanış 09:12; 09:30 anında 10 dakika seçilirse kapanış 09:15 kalır; 09:30 anında 45 dakika seçilirse 09:45.' },
+  { name: 'Saat dilimi bağımsızlığı', kind: 'behavior', asserts: 'packages/core/src/saat testleri TZ=UTC ve TZ=Europe/Istanbul ile iki kez koşar, sonuçlar aynı; infra/saat İstanbul yardımcıları 00:00 ve 02:59 sınır örneklerinde iki ortamda aynı.' },
+  { name: 'Belge biçimi kayıtlı örnekle aynı', kind: 'contract', asserts: `Anahtar 32 bayt 0x07, kid sb-2027b, özne türü 1 ve 01928f6e-7c1a-7b3e-9a40-1b2c3d4e5f60, değer 000102030405060708090a0b0c0d0e0f, sunucu saati 1791180000000 (2026-10-05T06:00:00.000Z) için belge belge-ornekleri.json'daki ${ORNEK_BELGE.length} karakterle aynı; belgeCoz alanları geri verir; Buffer ve atob silinmiş ortamda da aynı sonuç.` },
+  { name: 'Saat belgesi ucu', kind: 'behavior', asserts: 'Öğrenci cihazı ve hoca 16 baytlık değerle 200 alır; belge kendi değerini, kendi öznesini (cihaz ya da kişi) ve sahte saatin anını taşır, saatBelgesiDogrula geçerli der. 15 ya da 17 baytlık değer 400, oturumsuz istek 401.' },
+  { name: 'Eşitleme bozukken belge verilmez', kind: 'behavior', asserts: 'Sahte durum dosyası senkron değil yapılınca uç 503 SAAT_ESITLEME_BOZUK ve Retry-After döner, X-Saat-Belgesi başlığı hiçbir cevapta yok; iki sağlıklı okumadan sonra belge yeniden verilir. Kontrol: sağlıklı durumda başlık var.' },
+  { name: 'Belge üretimi veritabanına dokunmaz', kind: 'behavior', asserts: 'Sorgu sayan sürücü sarmalayıcısıyla: belge ucunda istek başına tam 1 sorgu (kökteki oturum doğrulaması), X-Saat-Belgesi taşıyan başka bir uçta belge yüzünden ek sorgu 0; veritabanı nesnesi verilmeden kurulan belge servisi belge üretir ve doğrular. Kontrol: GET /v1/saat/pencereler aynı sayaçta 1 den fazla sorgu gösterir.' },
+  { name: 'Duvar saati sıçraması belgeyi hemen durdurur', kind: 'behavior', asserts: 'Enjekte edilen duvarSaatiFarkiMs bir okumadan ötekine 500 ms oynayınca saatBelgesiVer verilemez döner, süreç BOZUK olur ve sonraki denetim saat_sicradi nedenli kesinti açar; fark sabitken (kontrol) belge verilir.' },
+  { name: 'Eski kid doğrulanır, yabancı kid ve bozuk MAC reddedilir', kind: 'behavior', asserts: 'Etkin kid değişince eski kid\'li belge geçerli; anahtar listesinde olmayan kid KID_BILINMIYOR; tek bit değişmiş belge MAC; ele geçirildi işaretli kid\'de anahtarEleGecirildi true.' },
+  { name: 'Oturum üretimi pencere açar', kind: 'behavior', asserts: 'D02 dinleyicisi 15 dakikalık derste 09:00 ile 11:00 oturumu için açılış 09:00, planlanan ve geçerli kapanış 09:15 yazar; süre seçilmemiş derste kapanış 11:00 ve sureSecildi false; aynı oturum ikinci kez gelirse tek satır ve aynı sürüm.' },
+  { name: 'Ders ayarı yalnız açılmamış pencereleri değiştirir', kind: 'behavior', asserts: 'Süre 15\'ten 10\'a inince gelecek oturumların planı 09:10 olur ve sürüm artar; açılmış oturumun planı değişmez; oturumda pencere_suresi uygulanmışsa geçerli süre korunur.' },
+  { name: 'Erken kapatma basma anında kapatır', kind: 'behavior', asserts: 'Plan 09:15; hoca 09:08\'de çapalı erken kapatır, öğe 10:30\'da ulaşır: kapanış 09:08:00.400, en geç kapanış 09:15; 09:10 kaydı dilimde, 09:05 kaydı icinde, 09:20 kaydı disinda; pencereDegisti bir kez çağrılır, denetim kaydı yazılır.' },
+  { name: 'Ters sırada ulaşan değişiklikler', kind: 'behavior', asserts: '09:05 anında 10 dakika ve 09:07 anında 20 dakika ters sırayla ulaşınca kapanış 09:20; düz sırayla da 09:20.' },
+  { name: 'Aynı öğe iki kez', kind: 'behavior', asserts: 'Aynı kimlik ve içerik ikinci kez zaten_var, satır sayısı 1; aynı kimlik başka süreyle ret SAAT_OGE_KIMLIGI_CAKISMASI, pencere ve sürüm değişmez.' },
+  { name: 'Başka hocanın dersi', kind: 'behavior', asserts: 'Dersin hocası olmayan personelin pencere_suresi öğesi ret SAAT_YETKI_YOK, pencere ve sürüm değişmez; kontrol: dersin hocasının aynı öğesi kabul.' },
+  { name: 'Süre sınırları', kind: 'behavior', asserts: '0, ders süresinden uzun ve tam olmayan dakika ret SAAT_SURE_GECERSIZ; 1 ve ders süresi kabul; null ders boyunca demektir ve sureSecildi false olur.' },
+  { name: 'Kilitten sonra ulaşan değişiklik yalnız saklanır', kind: 'behavior', asserts: 'Birimin kilit anından sonra ulaşan erken kapatma uygulandi false ve son_gun_gecti ile yazılır, pencere ve sürüm değişmez, öğe sonucu kabul; gönderme süresinden sonra ama kilitten önce ulaşan uygulanır ve gecUlasti true olur.' },
+  { name: 'Çapası kurulamayan hoca işlemi', kind: 'behavior', asserts: 'İki çapası bozuk kısaltma ulaşma anıyla işlenir (basma_ani_kaynagi ulasma_ani); ders bittikten sonra ulaştıysa pencere değişmez; aynı koşulda uzatma uygulanır.' },
+  { name: 'Kapanış işi tekrar güvenli ve now() kullanmaz', kind: 'behavior', asserts: 'Sahte saat 09:16\'ya alınınca oturum_pencere_kapat kapandi_ani yazar, oturumKapandi dinleyicisi bir kez çağrılır; iş ikinci kez koşunca yeni çağrı yok. Sahte saat 09:14\'teyken, gerçek saat çok ileride olsa da pencere kapanmaz.' },
+  { name: 'Uzatma kapanmış pencereyi yeniden açar', kind: 'behavior', asserts: '09:30 anında 45 dakikaya uzatma kapandi_ani değerini boşaltır; 09:46\'da iş yeniden kapatır ve dinleyici ikinci kez çağrılır.' },
+  { name: 'Dinleyici hatası kapanışı geri alır', kind: 'behavior', asserts: 'Hata fırlatan kayıtlı dinleyiciyle parti geri alınır, kapandi_ani boş kalır, iş yeniden dener; dinleyici düzelince tek kapanış olur.' },
+  { name: 'Tek açık kesinti ve tek yeniden değerlendirme', kind: 'behavior', asserts: 'İki sahte API süreci aynı bozuk dosyayı okur: tek açık satır; ikisi de iki sağlıklı okuma görünce satır bir kez kapanır, esitleme_sonrasi_yeniden_degerlendir bir kez kuyruğa girer, kesintiKapandi dinleyicisi tek olay alır. Açan süreç durdurulsa da öbür süreç satırı kapatır.' },
+  { name: 'Kesinti sonrası güvenilirlik bilgisi', kind: 'behavior', asserts: 'En büyük sapma 80 ms ve eşik 100 iken ulasmaAnlariGuvenilir true; 400 ms ya da bilinmiyorken false.' },
+  { name: 'Pencereler indirmesinin kapsamı', kind: 'behavior', asserts: 'Öğrenciye yalnız şubesinin oturumlarının açılış, kapanış ve sureSecildi alanları iner; hocaya ayrıntı da iner; başka şubenin penceresi inmez (negatif kontrol); değişiklikten sonra yalnız yeni sürümlü satır iner.' },
+  { name: 'Pencere ucu yetkisi', kind: 'behavior', asserts: 'Dersin hocası 200 ve değişiklik geçmişini basma sırasıyla, etkileriyle görür; başka hoca 404 SAAT_PENCERE_BULUNAMADI; öğrenci oturumu 403.' },
+  { name: 'Belge ucu hız sınırı', kind: 'behavior', asserts: 'Aynı cihazdan bir dakikada 31. istek 429; başka cihaz etkilenmez.' },
+  { name: 'Kayıt saat kuralları uçtan uca (@butunlesik)', kind: 'behavior', asserts: 'D05, D06 ve D07 hazır olunca koşar: 09:07 kaydı Var; 7 günden eski belgeli ve sonrasında yeniden başlatılmış kayıt Saat doğrulanamadı; ulaşma anından ileri tarihli kayıt Ret, eşitleme bozukken İncelemede (plan.html#baslangic).' },
+  { name: 'Sözleşme listeleri CHECK kısıtlarıyla aynı', kind: 'contract', asserts: 'Göçlerle kurulmuş veritabanındaki CHECK değer listeleri packages/contracts/src/saat.ts sabitleriyle (içe aktarılarak) aynı; bilerek bir değer eksiltilince test kırmızı.' },
+  { name: 'Cevap şemaları genişleyen enum taşır', kind: 'contract', asserts: 'Öğe sonucu, çapa durumları, pencere sonucu ve sureKaynagi alanları x-extensible-enum ile üretilir; kapalı enum kalan alan testi kırmızıya çevirir.' },
+  { name: 'Dinleyiciler iki süreçte aynı', kind: 'contract', asserts: 'app.ts ve worker.ts ile kurulan süreçlerde oturumKapandi ve kesintiKapandi kayıtlarının adları aynı; bir kayıt bilerek çıkarılınca test kırmızı.' },
+  { name: 'pencere_degisiklikleri yalnız eklenir', kind: 'behavior', asserts: 'yoklama_api rolüyle UPDATE ve DELETE izin hatası verir; INSERT ve SELECT çalışır.' },
+  { name: 'Ders çıkışı yükü', kind: 'load', asserts: 'D15 k6 ders çıkışı profili: 20.000 telefon 1 dakikada, telefon başına bir belge isteği ve gönderim; belge ucunda p95 < 100 ms, p99 < 300 ms, 5xx yok; pg_stat_statements belge isteği başına oturum doğrulaması dışında sorgu göstermez.' },
+  { name: 'Saat çekirdeği mutasyon testi', kind: 'mutation', asserts: 'Stryker haftalık işi packages/core/src/saat için en az yüzde 90 öldürme eşiğiyle koşar (iş D15\'in, eşik bu modülün); kayma payını sıfırlayan, sınırı < yerine <= yapan ve sıralamayı ters çeviren mutantlar öldürülür.' },
+];
+
+// ------------------------------------------------------------------ resolved gaps
+const resolved_gaps = [
+  { gap: 'D04-B01', decision: 'Öğrenci lehine kesişim: kaydın saat aralığı [alt, üst] pencereyle [açılış, kapanış) kesişirse icinde. Kural core pencereIcindeMi içinde tek fonksiyon ve tek sınır tablosuyla.', why: 'Plan payı aynı yönde uyguluyor: kayıt ulaşma anını ancak pay düşülünce de aşarsa reddediliyor (plan.html#gun-saati-degistirmek-neden-ise-yaramaz). Pay haftada yaklaşık 1 dakikayla sınırlı olduğundan 15 dakikalık pencerede hile alanı küçük; telefon, sunucu ve panel aynı sonucu verir.' },
+  { gap: 'D04-B02', decision: "D04 pencere dışı kayda pencereSonucu ile 'disinda' der; kararı D07 verir (D07-B19 önerisi: Ret, gerekçe pencere_disinda). Ham kayıt kanıt olarak kalır, öğrenci sorun bildirebilir.", why: 'Kayıt kararının tek yetkilisi D07 (sözleşme kararı). Sağlam uygulama pencere dışında düğmeyi kapattığından bu sonuç ancak saat oynanınca ya da çapa bozukken çıkar.' },
+  { gap: 'D04-B03', decision: "Değişiklik uygulandığı işlemde pencereDegisti olayı gider ve D07 o oturumun kayıtlarını aynı işlemde yeniden karara bağlar. pencereSonucu kısaltılan dilimdeki kayda 'dilimde' der: geçerli pencereyle kesişmiyor ama [açılış, en geç kapanış) ile kesişiyor. D07 bunu Beklemede (ayar_kesinlesmedi) yapar; kesinleşmeyi (kafa sayısı ya da gönderme süresi, D07-B14 ve D07-B15) D07 izler ve son pencereye göre karar verir. D04 ayrı bir kesinleşti sütunu tutmaz.", why: 'Plandaki iki cümle birlikte tutulur: kayıt beklemede kalır, son kararı sunucu hocanın ayarına göre verir (plan.html#kararlar), ve karar ilgili olayın işleminde verilir (plan.html#kararlar-supheli-kayit). Kesinleşme olayı (kafa sayısı öğesi) D07\'ye geldiğinden D04\'te ikinci bir bayrak iki doğruluk kaynağı olurdu.' },
+  { gap: 'D04-B04', decision: 'Geçerli an basma anıdır. Hoca işlemi kayıttaki gibi ilk çapa (belge, istek süresi, belgeden işleme geçen süre) taşır, paket ikinci çapayı ekler; core saatSonucu aralığı kurar. Çapa kurulamaz, çapalar ayrışır ya da aralık ulaşma anını aşarsa aralık [ulaşma anı, ulaşma anı] olur (basma_ani_kaynagi ulasma_ani).', why: 'Bütün kuyruk yazmaları aynı saat belgesiyle gider (plan.html#kararlar, Ortak kuyruk); günler sonra ulaşan erken kapatma ancak basma anıyla anlamlıdır. Ulaşma anı hep geç olduğundan yalnız uzatmayı etkileyebilir, kısaltma geçmişe işlemez: bozuk çapada sonuç öğrenci lehine kalır.' },
+  { gap: 'D04-B05', decision: 'Değişiklikler basma anı üst ucuna, eşitlikte (kurulum, sıra numarası, kimlik) sırasına göre uygulanır; pencere her kabul edilen değişiklikte plan ve bütün uygulanmış geçmişten baştan hesaplanır, oturum satırı FOR UPDATE ile kilitlenir.', why: 'Sonuç varış sırasından bağımsız olur (D06-B09 ile aynı sıra anahtarı); permütasyon özelliği fast-check ile kanıtlanır, eşzamanlı iki öğe aynı oturumda sıralanır.' },
+  { gap: 'D04-B06', decision: 'pencere_suresi: hedef = süre varsa en erken(açılış + süre, ders bitişi), null ise ders bitişi; yeni kapanış = en geç(hedef, en erken(önceki kapanış, basma üst ucu)). erken_kapatma: yeni kapanış = en geç(açılış, en erken(önceki kapanış, basma üst ucu)). Süre tam dakika, 1 ile ders süresi (dakika, aşağı yuvarlanmış) arası; null ders boyunca.', why: 'Süre plandaki tanımıyla açılıştan ölçülür (plan.html#kararlar, Yoklama penceresi); erken kapatma tasarımdaki pencere şimdi kapanır cümlesine uyar (tasarim.html#dlg-close). Geçmişe işlememe kuralının ürün yönü D04-A02 ile sahibe sunuldu.' },
+  { gap: 'D04-B07', decision: 'D04 tarafı: dersler.yoklama_suresi_dk NULL ise pencere ders boyunca açıktır, sunucu varsayılan uydurmaz. Yeni dersin varsayılanı ürün kararıdır ve alan D02\'nin: açık nokta D04-A01.', why: 'Varsayılan, takip etmeyen hocanın öğrencilerini ya kapatır ya da onay yüküne sokar; plan yalnız öneri 15 dakika diyor.' },
+  { gap: 'D04-B08', decision: 'Uygulanan öneri: ders bitişine kadar uzatma serbest, kapanmış pencere de uzatmayla yeniden açılır (kapandi_ani boşalır, iş yeniden kapatır). Ürün onayı açık nokta D04-A02.', why: 'Telefon pencereyi indirilen anlardan hesapladığından internetli telefonlar yeni pencereyi alır; internetsiz telefon için planın yolu var: hoca kaydı olmayanı elle ekler (plan.html#kararlar, Telafi dersi).' },
+  { gap: 'D04-B09', decision: 'İlk sürümde değişiklik yalnız hoca telefonunun ortak kuyruğundan gelir (pencere_suresi, erken_kapatma); sözleşme D04\'e panel yazma ucu vermiyor. Panelden yapılması açık nokta D04-A03.', why: 'Plan bu iki işi telefonun hoca modunda sayıyor (plan.html#hoca); panel ucu eklemek sözleşme değişikliğidir.' },
+  { gap: 'D04-B10', decision: 'Derste varsayılan süre (dersler.yoklama_suresi_dk, D02 yazar); oturumda geçerli süre ve kaynağı (oturum_pencereleri.sure_dk, sure_kaynagi); ders içi değişiklik yalnız o oturumun penceresi. Ders ayarı değişince D02 yalnız açılmamış oturumları yeniden üretir ve dinleyiciyle D04\'e verir.', why: 'Plandaki ders ayarında sözüne ve teknikteki oturum satırının ayar değişiklikleri alanına birlikte uyar; açılmış oturumun penceresi geriye dönük değişmez (D02-B14, D02-B26).' },
+  { gap: 'D04-B11', decision: 'Kendi beyanı, karar anındaki son pencere ayarına göre sunucuda konur: pencereGetir().sureSecildi false ise. D07 eşler.', why: 'Plan son kararı hocanın ayarına göre sunucuya bırakıyor (plan.html#kararlar); etiketler sunucuda hesaplanır, telefonun bildiği eski ayar not değeridir.' },
+  { gap: 'D04-B12', decision: 'Sabit ikili yerleşim, sürüm 1, 82 bayt, base64url dolgusuz 110 karakter: [0] sürüm, [1..8] kid (ASCII, 0x00 ile doldurulur), [9] özne türü (1 öğrenci cihazı, 2 personel kişi), [10..25] özne UUID, [26..41] tek kullanımlık değer, [42..49] sunucu saati (UTC ms, büyük sonlu 64 bit), [50..81] ilk 50 baytın HMAC-SHA256 değeri. Kayıtlı örnek bayt testi var.', why: 'Belge imzalı kayıt metnine aynen girer ve makbuz QR\'ına taşınır; kısa, yeniden biçimlendirmeye kapalı ve Node yerleşik kriptosuyla doğrulanır (yeni paket yok). Sürüm baytı ileride yer bırakır; kid D15\'in anahtar dosyasındaki adla aynıdır, eşleme tablosu gerekmez.' },
+  { gap: 'D04-B13', decision: 'Ayrı uç POST /v1/saat/belge (sözleşme GET yerine POST): gövdede 16 baytlık değer, Bearer oturumla, durumsuz; belge üretimi veritabanına dokunmaz, istekteki tek sorgu kökteki oturum doğrulamasıdır; cihaz ya da oturum başına dakikada 30. Öteki cevaplar X-Saat-Istegi başlığına karşılık X-Saat-Belgesi taşır; başlığı D13 kökü saatBelgesiVer ile koyar. Eşitleme bozukken uç 503 SAAT_ESITLEME_BOZUK döner, başlık konmaz. İstemci zaman aşımı bu istekte 10 saniyedir.', why: 'Ders çıkışında 20.000 telefonun 1 dakikada gelmesi (teknik.html#testler-kalite) belge yolunu ucuz tutmayı gerektirir; değerin tazeliğini telefon denetlediğinden (plan.html#gun-saati-degistirmek-neden-ise-yaramaz) sunucunun saklaması gereksiz.' },
+  { gap: 'D04-B14', decision: 'Belge özne türü ve kimliği taşır: öğrencide cihaz kimliği, personelde kişi kimliği (giriş oturumu kimliği değil).', why: 'Hoca işleri derste internetsizken oturum bitse de girişten sonra gider (plan.html#kararlar, Hoca oturumu); belge giriş oturumuna bağlansaydı tam bu işlerin çapası bozulurdu ve D01 eski oturumun kişisini bulacak bir dış yüz vermiyor. Hoca kendi derslerinin yetkilisi olduğundan cihaz düzeyinde bağ bir koruma eklemez; D11-B14 önerisi buna göre düzeltilmeli (D04-A05).' },
+  { gap: 'D04-B15', decision: 'Çapa aralığı: ileri (ilk çapa) [S + g - k(g), S + g + q + k(g + q)], geri (ikinci çapa) [S - g - k(g), S - g + q + k(g + q)], k(x) = tavan(x / 10000) (100 ppm), pay = q + k(g). İki çapa geçerliyse kesişim; kesişmiyorsa capalar_ayrisiyor ve kapsayan aralık; pencere ve ulaşma denetimi bu aralıkla.', why: 'Sunucu saatini istek ile cevap arasında bilinmeyen bir anda yazdığından gerçek an bir aralıktır; ulaşma denetimi (alt > ulaşma anı), ayrışma (aralıklar kesişmiyor) ve pencere denetimi aralıkta tek anlamlı olur. Kesişim Aşama 2\'nin payı küçük olanı kuralından da dar. 200.000 rastgele durumda aralığın gerçek anı kapsadığı denendi.' },
+  { gap: 'D04-B16', decision: `Kayıtta (D05 kayıt metni): belge aynen, belgeIstegiMs, belgedenKayitMs, ilk çapa bildirimi, telefonSaati ve saatDilimi (not). Pakette (D06): ikinci belge, istek süresi, öğe başına olaydanBelgeyeMs ya da yokNedeni. Sunucu her çapada belgeyi (biçim, kid, MAC), özneyi, istek süresinin 0 ile 10000 ms ve geçen sürenin 0 ile 7 gün arasında olduğunu denetler. Durum kodları IlkCapaDurumu: ${ILK_CAPA.join(', ')}; IkinciCapaDurumu: ${IKINCI_CAPA.join(', ')}. saatSonucu alanları D05 kayıt sütunlarında durur (D04-A05).`, why: 'Saati doğrulanamayan oranın sebebi (önce ya da sonra yeniden başlatma, 7 günden eski belge) kayıtlardan tek sorguyla ayrılmalı (plan.html#gun-zayif-nokta, plan.html#kararlar-olcum); ham sayaç telefondan çıkmaz.' },
+  { gap: 'D04-B17', decision: '7 gün sınırı ikinci çapada kayıttan belgeye geçen süreye de uygulanır; aşan ikinci çapa kayit_7_gunden_eski olur.', why: 'Planın 7 gün kuralının gerekçesi payın büyümesidir ve iki çapada aynıdır; yalnız ilk çapası da bozuk ve 7 günden geç gönderilen kaydı etkiler.' },
+  { gap: 'D04-B18', decision: 'Bağlayıcı karara göre süreç içi SNTP ölçümü yok: saat_esitleme_denetimi her API sürecinde 5 saniyede bir D15.saatEsitlemeDurumu() okur. Bozuk: dosya yok ya da okunamıyor, senkron değil, mutlak sapma 100 ms üstü ya da ölçüm 120 saniyeden eski (D15-B21); ayrıca duvar saati iç sayaca göre eşikten fazla sıçradıysa (makine uykudan dönüşü, saat adımı; dosyanın 30 saniyelik yazma aralığını beklemeden). Tek bozuk okuma belgeyi durdurur, iki sağlıklı okuma açar; aralıklar saat_esitleme_kesintileri tablosunda. Eşik ve süreler ayardır.', why: 'İki ölçüm aynı soruya farklı cevap verebilirdi (sözleşme kararı: saat eşitlemesinin tek kaynağı). Envanterin SNTP önerisi bu kararla kalktı.' },
+  { gap: 'D04-B19', decision: 'Ulaşma anı eşitleme bozukken de saat arayüzünden yazılır, kayıt esitleme_bozukken_ulasti işaretlenir (D05). Kesinti kapanınca esitleme_sonrasi_yeniden_degerlendir kesintiKapandi dinleyicilerini çağırır: en büyük sapma biliniyor ve eşiği aşmıyorsa ulaşma anları güvenilirdir, D07 kayıtları olağan kurallarla yeniden değerlendirir; değilse İncelemede kalır.', why: 'Kesinti aralığı tabloda durduğundan etkilenen kayıtlar tek sorguyla bulunur; hocanın yükü gerçekten belirsiz kalan kayıtlarla sınırlı kalır.' },
+  { gap: 'D04-B20', decision: "Anahtar D15\'in secrets dosyasında amaç saat_belgesi altında kid ile durur; D04 yeni belgeyi gizliAnahtar('saat_belgesi') ile etkin kidle, doğrulamayı gizliAnahtar('saat_belgesi', kid) ile yapar. kid 1 ile 8 karakter [a-z0-9-] olmalı, değilse süreç açılmaz. Eski kid en az bütün birimlerin dönem kilidine kadar yalnız doğrulamada kalır; ele geçirildi işaretli kidle doğrulanan belge anahtarEleGecirildi true döner, D07 İncelemede alır (D15-B08).", why: 'Kayıtlar dönem kilidine kadar ulaşabildiğinden eski belge o güne dek doğrulanmalı (teknik.html#sunucu-ayarlar); döndürme takvimi ve yedek D15\'in işi (teknik.html#dagitim-ayrinti-korunacak-anahtarlar).' },
+  { gap: 'D04-B21', decision: 'Yerel program saatinden UTC ana çevirme D02\'nin oturum üretimindedir (D02-B39); D04 yalnız UTC anlar alır. Saat dilimi kuralı değişirse D02 başlamamış oturumları yeniden üretir, dinleyici pencereleri aynı işlemde yeniden hesaplar ve sürüm artar. infra/saat ayrıca D14-B08\'in istediği İstanbul yardımcılarını verir.', why: 'packages/core Intl kullanmaz (teknik.html#kod); çevirme tek yerde kalmalı, telefonun saat dilimi verisine bağlanmamalı (plan.html#kararlar).' },
+  { gap: 'D04-B22', decision: 'oturum_pencere_kapat dakikada bir; kapandi_ani yalnız görünür durum ve olay içindir, kararlar anlara dayanır. Süre seçilmeyen derste kapanış ders bitişidir. Kapanış geçişi oturumKapandi dinleyicilerini aynı işlemde çağırır (D07, D08, D11).', why: 'Gecikme kararı değiştirmez ve iş kaç kez çalışırsa çalışsın sonuç aynıdır (teknik.html#sunucu-arka-plan, D14-B06).' },
+  { gap: 'D04-B23', decision: 'İptal kararı oturumun D02 durumuna bakarak D07\'nin işidir (envanter önerisi: Ret, iptal geri alınırsa yeniden değerlendirme); D04 iptal edilen oturumun penceresini silmez. Saati kaydırılan açılmamış oturumda D02 dinleyicisi pencereyi yeni anlara taşır; eski programla gelen kaydın kanıtı D02\'nin oturum_degisiklikleri geçmişidir, kararı D07 verir.', why: 'Program değişikliği internet varken iner, internetsizken eski program geçerlidir, son karar sunucudadır (plan.html#gun-kenar-durumlar); program geçmişini ikinci kez D04\'te tutmak iki geçmiş olurdu.' },
+  { gap: 'D04-B24', decision: 'D04\'ün payı pencere anlarıdır; telefondaki tek pencere kuralı core pencereDurumu ile çakışan açık pencereleri görür. Çakışmanın tespiti D02 (D02-B28), ikinci kaydın kararı D07 (D07-B22: İncelemede, cakisan_oturum).', why: 'Çift anadal ve yandal arasındaki çakışma meşru olabilir ve hocalara gösterilir (plan.html#kararlar, Çakışan dersler); karar tek yerde kalmalı.' },
+  { gap: 'D04-B25', decision: 'Birlikte işlenen şubelerin oturumu tektir ve tek dersi vardır; süre o dersin ayarından gelir, hoca oturumda pencere_suresi ile değiştirebilir. Farklı kodlu iki dersin birlikte işlenmesi D02-B42\'ye bağlı; o modelde de oturumun tek dersi olduğundan kural değişmez.', why: 'Tek yoklama, tek pencere (plan.html#kararlar, Birlikte işlenen şubeler); ikinci bir birleştirme ayarı gereksiz.' },
+  { gap: 'D04-B26', decision: 'Kayıtlardaki kural aynen: birimin kilit anından (son günün bitişi, D02 birim dönemi) önce ulaşan değişiklik uygulanır; gönderme süresinden sonra ulaştıysa gecUlasti true olur ve etkilenen karar değişiklikleri sonradan değişenlere düşer. Kilit anından sonra ya da kilitli dönemde ulaşan yalnız saklanır (uygulandi false).', why: 'Plan geç kayda bu iki sınırı koyuyor (plan.html#kararlar-gonderme-suresi); aynı kural hoca işine de uygulanınca dönem sonu çıktısı geriye dönük kendiliğinden değişmez.' },
+  { gap: 'D04-B27', decision: 'packages/core/src/saat D04\'ündür: saatSonucu, capaAraligi, pencereHesapla, pencereIcindeMi, pencereDurumu, belgeCoz, belgeImzaGirdisi ve sabitler; girdiler UTC milisaniye ve tam sayı süre, saat dışarıdan. İlk teslim bu çekirdek ve testleridir.', why: 'Telefon, sunucu ve panel aynı kuralı aynı testlerle kullanır (plan.html#kararlar, Ortak kurallar); D05, D06, D07 ve D11 aynı hesabı ayrı yazmaz.' },
+  { gap: 'D04-B28', decision: 'Sözleşmeyle kapandı: tek modül saat (apps/server/src/modules/saat/, önek /v1/saat); pencere değişiklik uçları ortak kuyruğun pencere_suresi ve erken_kapatma öğeleri oldu, GET /v1/pencereler/{oturumId} yolu GET /v1/saat/pencereler/{oturumId} oldu. oturumlar tablosu D02\'de kalır, pencere ayrı tabloda oturumla bire bir.', why: 'Sözleşme kararları: Ders oturumu ve pencere, Ortak kuyruk tek uçtan gelir, Uç yolu öneki.' },
+];
+
+const contradictions_resolved = [
+  { id: 'D04-C01', resolution: 'Genel kural (pencere hesaplanan saatle çalışır) ilk çapa sağlamken geçerlidir; ilk çapa bozukken telefonun pencereyi telefon saatiyle açması planın Zayıf nokta istisnasıdır. Sunucu her kayıtta pencereyi yeniden denetler: ikinci çapayla ya da ikisi de bozuksa telefon saatiyle (D07-B19). Plan metnine iki yer arasında bağlantı eklenmesi D04-A04\'te sahibe önerildi.' },
+  { id: 'D04-C02', resolution: 'Değişiklik ulaştığı işlemde pencereDegisti olayıyla etkilenen kararlar aynı işlemde yeniden verilir; kısaltılan dilimdeki kayıt bu işlemde Beklemede olur (pencereSonucu dilimde) ve ayar kesinleşince son pencereye göre karara bağlanır (D07). Böylece hem kayıtlar beklemede hem kararlar ilgili olayda aynı işlemde cümleleri birlikte tutar.' },
+  { id: 'D04-C03', resolution: 'Belge cihaz yerine özne taşır: öğrencide cihaz kimliği, personelde kişi kimliği. Hocada tanınan cihaz kaydı tutulmaz kararı (teknik.html#sunucu-kimlik) korunur. Plan cümlesindeki cihaz kimliği ifadesinin hocada kişi kimliği diye tamamlanması D04-A04\'te.' },
+  { id: 'D04-C04', resolution: 'Süre derste varsayılan (D02), oturumda geçerli ve değişiklik geçmişli (D04); ders içi değişiklik yalnız o oturumu etkiler, ders ayarı yalnız açılmamış oturumlara yansır (D04-B10).' },
+  { id: 'D04-C05', resolution: 'Belge isteğinde istemci zaman aşımı 10 saniyedir (core sabiti BELGE_ISTEK_EN_COK_MS, fetch yardımcısında uç başına zaman aşımı); 30 saniye öteki istekler için kalır. Başka cevaba iliştirilen belgede istek 10 saniyeyi aşmışsa telefon yalnız belgeyi atar, cevabın kendisi geçerlidir; sunucu 10 saniyeyi aşan istek süreli çapayı istek_suresi_asildi sayar.' },
+];
+
+const open_points = [
+  { id: 'D04-A01', question: 'Yeni açılan dersin yoklama süresi varsayılanı ne olsun: seçim zorunlu ve 15 dakika hazır işaretli mi, sessizce 15 dakika mı, süre seçilmedi mi?', recommendation: 'Ders açılırken seçim zorunlu, 15 dakika hazır işaretli, ders boyunca ayrı seçenek (alan D02\'nin dersler.yoklama_suresi_dk, ekran panelin). Böylece plandaki öneri uygulanır ve Kendi beyanı yalnız bilerek seçilir; D04 NULL değerini ders boyunca diye okur, başka varsayılan uydurmaz.', needs_owner: true },
+  { id: 'D04-A02', question: 'Ders içi değişikliğin zaman kuralları onaylansın mı: (1) değişiklik pencereyi basıldığı andan geriye kısaltamaz (09:12\'de 5 dakika seçilirse pencere 09:12\'de kapanır, 09:05 ile 09:12 arasındaki kayıtlar içeride kalır); (2) ders bitişine kadar uzatma serbest ve kapanmış pencere uzatmayla yeniden açılır.', recommendation: 'İkisini de onaylayın. Birincisi tasarımdaki pencere şimdi kapanır cümlesiyle aynı ve öğrenciyi hocanın sonradan verdiği karardan korur; ikincisi geç başlayan derste işe yarar, internetsiz kalan öğrenciyi hoca elle ekler. Reddedilirse tek değişiklik core pencereHesapla içindeki en geç(...) adımıdır.', needs_owner: true },
+  { id: 'D04-A03', question: 'Süre değişikliği ve erken kapatma panelden de yapılabilsin mi?', recommendation: 'İlk sürümde yalnız hoca telefonundan (plan.html#hoca böyle sayıyor). İstenirse sözleşmeye panel ucu eklenir (POST /v1/saat/pencereler/{oturumId}/degisiklikler, çerez ve Origin denetimiyle, basma anı ulaşma anı); işleyici aynı kalır.', needs_owner: true },
+  { id: 'D04-A04', question: 'Plan ve teknik metinlerinde küçük düzeltmeler yapılsın mı?', recommendation: 'plan.html#gun-saati-degistirmek-neden-ise-yaramaz: pencere ve sayaç cümlesine ilk çapa bozukken telefon saati istisnasının bağlantısı; aynı paragrafta cihaz kimliğini yerine cihaz kimliğini (hocada kişi kimliğini). teknik.html#sunucu-mimari modül listesine saat; teknik.html#kod-veri-modeli Oturumlar satırına pencere ve kapandı bilgisinin saat modülünün oturum_pencereleri tablosunda olduğu; teknik.html#sunucu-arka-plan birkaç dakikada bir yerine her dakika.', needs_owner: true },
+  { id: 'D04-A05', question: 'Sözleşmeye eklenecekler ve komşu modüllerden beklenenler bütünleştirmede işlensin mi?', recommendation: "contracts.json D04 dış yüzüne pencereDegistiDinleyicisiKaydet ve infra/saat İstanbul yardımcıları eklenir; D07 yenidenDegerlendir fonksiyonunu bu dinleyiciye kaydeder. Beklenenler: D02 dinleyiciye OturumPlani alanlarını verir ve oturumlariGetir süzgeci hoca kişisi ve şube listesini kabul eder; D05 kayıt satırına saatSonucu alanlarını (ilk ve ikinci çapa durumu, kayit_ani_alt, kayit_ani_ust, pay_ms, saat kaynağı, esitleme_bozukken_ulasti) ekler; D06 çapa metnine ikinci belge istek süresini ve öğe başına olaydanBelgeyeMs ya da yokNedeni alanını koyar, işleyici bağlamına kurulum, sıra, öğe kimliği, kişi, giriş oturumu, ulaşma anı ve ikinci çapayı verir, kişi paketlerinde de (imzasız) ikinci çapayı geçirir ve ulaşma anını esitlemeSaglikliMi ile paket başına bir kez okur; D13 başlıkları X-Saat-Istegi ve X-Saat-Belgesi adıyla yazar ve kancada özneyi istekteki kimlikten alır, cihaz imzasıyla doğrulanan gönderimde özneyi D06 isteğe yazar; D15 saat_belgesi kidlerini 1 ile 8 karakter [a-z0-9-] tutar, ayar şemasına SAAT_ESITLEME_ESIK_MS (100), SAAT_ESITLEME_DOSYA_YASI_MS (120000), SAAT_ESITLEME_DENETIM_ARALIGI_MS (5000) ekler; D11-B14 hocada kişi kimliğine göre düzeltilir.", needs_owner: false },
+  { id: 'D04-A06', question: 'Göç klasörünün dosya sahipliği tutarsız: migration_dir D04\'e <UTC zaman>_saat_<açıklama> alt klasörünü veriyor, file_ownership ise apps/server/migrations/* globunu yalnız D12\'ye veriyor.', recommendation: 'file_ownership tablosuna her modül için apps/server/migrations/*_<modül>_* globu eklenir; D12 klasörün ve CI denetiminin sahibi kalır. Bu yüzden göç dosyası bu belgenin files listesinde yok, yeri Amaç ve sınırlar satırında yazılı.', needs_owner: false },
+];
+
+const registrations = [
+  "D06.ogeTuruKaydet('pencere_suresi', pencereSuresiOgesi) ve D06.ogeTuruKaydet('erken_kapatma', erkenKapatmaOgesi); işleyici (tx, oge, baglam) => OgeSonucu",
+  "D06.indirmeKaynagiKaydet('pencereler', pencereIndirmeKaynagi): (tx, { kisiId, tur, surumden: string | null, surumeKadar: string, adet: number, oturumIdler?: OturumId[] }) => { satirlar }; öğrenciye { oturumId, acilisAni, kapanisAni, sureSecildi, surum }, hocaya ayrıca { sureDk, planlananKapanisAni, degisiklikSayisi }",
+  'D02.oturumUretimDinleyicisiKaydet(pencereleriHesapla)',
+  "D12.saklamaIsleyicisiKaydet('yoklama_kayitlari', donemPencereDegisiklikleriniSil): saklama süresi dolan dönemin pencere_degisiklikleri satırlarını sahip rolle siler; oturum_pencereleri ve kesintiler kişisel veri taşımadığından kalır (veri sınıfı adı D12 listesinden)",
+  'D13.rotalariKaydet(app, SAAT_ROTALARI) (rota listesi packages/contracts/src/saat.ts)',
+  'D14.isTanimla(oturum_pencere_kapat), D14.isTanimla(esitleme_sonrasi_yeniden_degerlendir); jobs/saat/index.ts, worker.ts toplar',
+  'Fastify eklentisi onReady ve onClose: saat_esitleme_denetimi zamanlayıcısı, yalnız API süreci',
+];
+
+const dis_yuz_kullanimi = [
+  'D01: kökteki oturum kancası (istekteki tur, kisiId, oturumId, cihazId okunur), yetkiDenetle (GET ucunda yönetici kapsamı), ogrenciHesabiGetir (indirme kapsamı; numara loga girmez)',
+  'D02: oturumGetir, dersGetir, dersYetkisi, oturumlariGetir, birimDonemiGetir (kilit anı), oturumUretimDinleyicisiKaydet',
+  'D03: ogrencininEtkinSatirlari (öğrenci indirme kapsamı)',
+  'D06: surumAl [yaprak], ogeTuruKaydet, indirmeKaynagiKaydet, gondermeSuresiSonu',
+  'D09: denetimeYaz [yaprak]; olay türleri saat.pencere_suresi_degisti, saat.erken_kapatildi, saat.pencere_degisikligi_saklandi, saat.oge_kimligi_cakismasi',
+  'D12: veritabani, islem, kisitAdi, saklamaIsleyicisiKaydet, testVeritabaniHazirla',
+  'D13: rotalariKaydet, uygulamaHatasi, hizSinifi, istekKimligi',
+  'D14: isGonder, isTanimla',
+  'D15: ayarlar, gizliAnahtar, log, saatEsitlemeDurumu',
+];
+
+const spec = {
+  id: 'D04',
+  module: 'saat',
+  summary: "Saat modülü (D04) yoklama penceresinin ve saat kanıtının sunucu tarafıdır: her ders oturumunun pencere satırı, hocanın ders içi süre değişikliği ve erken kapatma geçmişi, saat belgesinin üretimi ve doğrulaması, sunucu saat eşitlemesinin izlenmesi ve kesinti kaydı. Pencere oturumun üretildiği işlemde D02\'nin dinleyicisiyle açılır; ders içi değişikliklerden basma anı sırasıyla baştan hesaplanır, bu yüzden aynı değişiklikler hangi sırayla ulaşırsa ulaşsın aynı pencereyi verir ve hiçbir değişiklik pencereyi basıldığı andan geriye kısaltamaz. Saat belgesi kid ve HMAC-SHA256 taşıyan 82 baytlık sabit ikili bir metindir (base64url 110 karakter), veritabanına dokunmadan üretilir ve eşitleme bozukken ne uçtan ne başlıktan verilir. Çapa aralığı, pay, 7 gün ve pencere kuralları packages/core/src/saat içinde saf fonksiyondur; telefon, sunucu ve panel aynı fonksiyonu aynı testlerle kullanır. Modül karar vermez: pencere ve saat sonucunu D07\'ye verir, kapanış, pencere değişikliği ve kesinti olaylarını kayıtlı dinleyicilere aynı işlemde iletir.",
+  tables, endpoints, jobs, state_machines, invariants, exports: exportsList, files, tests, resolved_gaps, contradictions_resolved, open_points,
+  queue_items, registrations, dis_yuz_kullanimi,
+};
+
+fs.mkdirSync(path.join(B, 'spec'), { recursive: true });
+fs.writeFileSync(path.join(B, 'spec', 'D04.json'), JSON.stringify(spec, null, 2) + '\n');
+
+// ================================================================== fragment
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const c = s => `<code>${esc(s)}</code>`;
+const row = (k, v) => `    <div class="row"><div class="k">${k}</div><div>${v}</div></div>`;
+const tbl = (head, rows) => `<div class="tablo"><table>\n<tr>${head.map(h => `<th>${h}</th>`).join('')}</tr>\n${rows.map(r => `<tr>${r.map(x => `<td>${x}</td>`).join('')}</tr>`).join('\n')}\n</table></div>`;
+const P = (id, t) => `<a href="plan.html#${id}">${t}</a>`;
+const T = (id, t) => `<a href="teknik.html#${id}">${t}</a>`;
+
+const h = [];
+h.push(`<section id="saat">`);
+h.push(`<h2>Yoklama penceresi ve saat <span class="tag">D04</span> <span class="tag mute">saat</span></h2>`);
+h.push(`<p class="lead">${esc(spec.summary)}</p>`);
+
+// ---------- Amaç ve sınırlar
+h.push(`<h3>Amaç ve sınırlar</h3>`);
+h.push(`<div class="rows">`);
+h.push(row('Yapar', `Her ders oturumunun yoklama penceresi (açılış, kapanış, süre ayarı); hocanın ders içi süre değişikliği ve erken kapatması; saat belgesi, çapa ve pay kuralları; sunucu saat eşitlemesinin izlenmesi. Dayandığı kararlar: ${P('kararlar', 'Kararlar, Yoklama penceresi ve Ders içinde değişiklik')}, ${P('gun-saati-degistirmek-neden-ise-yaramaz', 'Saati değiştirmek neden işe yaramaz')}, ${P('gun-ikinci-capa', 'İkinci çapa')}, ${P('gun-zayif-nokta', 'Zayıf nokta')}, ${T('sunucu-arka-plan', 'Arka plan işleri')}, ${T('sunucu-ayarlar', 'Ayarlar')}.`));
+h.push(row('Yapmaz', `Kayıt kararı ve etiketleri (D07; D04 yalnız pencere ve saat sonucunu verir), kayıt satırı ve saat sütunlarının yazımı (D05), ders, program ve oturum üretimi ile yerel saatten UTC çevirmesi (D02), gönderim paketi ve indirme ucu (D06), anahtar dosyası ve chrony (D15), ${c('X-Saat-Belgesi')} başlığını koyan kök kanca (D13).`));
+h.push(row('Ölçülen sonuç', `Saati doğrulanamayan kayıt oranı ve sebebi (hedef en çok yüzde 2, Android ve iPhone ayrı: ${P('hedefler', 'Hedefler')}): kayıt sütunlarındaki çapa durumlarından tek sorguyla (${P('kararlar-olcum', 'Ölçüm')}), sebep önce ya da sonra yeniden başlatma, 7 günden eski belge diye ayrılır. Ders çıkışında belge ucunun süresi yük testinde ölçülür (${T('testler-kalite', 'Kalite kapıları')}).`));
+h.push(row('Kod yeri',`${c('apps/server/src/modules/saat/')} (dış yüz ${c('index.ts')}), ${c('apps/server/src/infra/saat/')} (saat arayüzü, İstanbul yardımcıları), ${c('apps/server/src/jobs/saat/')}, ${c('packages/core/src/saat/')} (saf kurallar), ${c('packages/contracts/src/saat.ts')}. Göç ${c('apps/server/migrations/<UTC zaman>_saat_<açıklama>/')}, yalnız bu üç tabloya dokunur (dosya sahipliği notu: D04-A06).`));
+h.push(row('Okuduğu dış yüzler', `<ul>${dis_yuz_kullanimi.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`));
+h.push(row('Kaydoldukları', `<ul>${registrations.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`));
+h.push(row('Verdiği dış yüz', `${['simdi (Saat)', 'saatBelgesiVer', 'saatBelgesiDogrula', 'pencereleriHesapla', 'pencereGetir', 'pencereSonucu', 'esitlemeSaglikliMi', 'kesintiAraliklari', 'oturumKapandiDinleyicisiKaydet', 'kesintiKapandiDinleyicisiKaydet'].map(c).join(', ')}; sözleşmeye ek ${c('pencereDegistiDinleyicisiKaydet')} ve İstanbul yardımcıları (D04-A05). Çekirdekte ${['saatSonucu', 'capaAraligi', 'pencereHesapla', 'pencereIcindeMi', 'pencereDurumu', 'belgeCoz'].map(c).join(', ')}. İmzalar: Durumlar ve kurallar, Dış yüz.`));
+h.push(`</div>`);
+
+// ---------- Tablolar
+h.push(`<h3>Tablolar</h3>`);
+h.push(`<p>Üç tablo, ad ve kısıt kuralı ortak kurallara göre (${T('veritabani', 'Veritabanı')}). Anlar ${c('timestamptz')}, kural taşıyan her an saat arayüzünden yazılır; durum listeleri metin ve CHECK, değerleri ${c('packages/contracts/src/saat.ts')} sabitlerinden.</p>`);
+const TABLO_OZETI = {
+  oturum_pencereleri: 'oturum başına tek satır; geçerli pencere, plan ve kapanış durumu',
+  pencere_degisiklikleri: 'hocanın süre değişikliği ve erken kapatması, yalnız eklenen kanıt',
+  saat_esitleme_kesintileri: 'saat eşitlemesinin bozuk olduğu aralıklar, en çok bir açık satır',
+};
+for (const t of tables) {
+  h.push(`<details>`);
+  h.push(`<summary>${c(t.name)}: ${esc(TABLO_OZETI[t.name])} (${t.columns.length} sütun)</summary>`);
+  h.push(`<p>${esc(t.purpose)}</p>`);
+  h.push(tbl(['Sütun', 'Tip', 'Boş olabilir', 'Varsayılan', 'Not'], t.columns.map(col => [c(col.name), esc(col.type), col.null ? 'evet' : 'hayır', col.default ? c(col.default) : '', esc(col.note)])));
+  h.push(`<p>Dizinler:</p>`);
+  h.push(`<ul>${t.indexes.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`);
+  h.push(`<p>Kısıtlar ve yetki:</p>`);
+  h.push(`<ul>${t.constraints.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`);
+  h.push(`</details>`);
+}
+
+// ---------- Uç noktalar
+h.push(`<h3>Uç noktalar</h3>`);
+h.push(`<p>İki uç; iki yazma işi uç değil, ortak kuyruğun öğesi olarak ${c('POST /v1/esitleme/gonderim')} ile gelir (sözleşme kararı: ortak kuyruk tek uçtan gelir). Şemalar, rota listesi ${c('SAAT_ROTALARI')}, ${c('SAAT_')} hata kodları, durum listeleri ve denetim olay türleri ${c('packages/contracts/src/saat.ts')} içinde. Zaman alanları UTC ISO 8601 metin, süreler tam sayı milisaniye.</p>`);
+h.push(`<div class="rows">`);
+for (const e of endpoints) {
+  h.push(row(c(`${e.method} ${e.path}`), `<span class="tag mute">${esc(e.client)}</span><br><strong>Kimlik:</strong> ${esc(e.auth)}<br><strong>Tekrar:</strong> ${esc(e.idempotency)}<br><strong>Sınır:</strong> ${esc(e.rate_limit)}`));
+}
+h.push(`</div>`);
+for (const e of endpoints) {
+  h.push(`<details>`);
+  h.push(`<summary>${c(`${e.method} ${e.path}`)} istek, cevap ve hatalar</summary>`);
+  h.push(tbl(['Yön', 'Alan', 'Tip ve kural'], [
+    ...Object.entries(e.request).map(([k, v]) => ['istek', c(k), esc(v)]),
+    ...Object.entries(e.response).map(([k, v]) => ['cevap', c(k), esc(v)]),
+  ]));
+  h.push(`<p>Hatalar: ${e.errors.map(esc).join('; ')}.</p>`);
+  h.push(`</details>`);
+}
+h.push(`<p><strong>Kuyruk öğeleri.</strong> Gövde şeması ve iş kuralı D04\'ün, dağıtım D06\'nın (${P('kararlar', 'Ortak kuyruk')}).</p>`);
+h.push(`<details>`);
+h.push(`<summary>${c('pencere_suresi')} ve ${c('erken_kapatma')}: gövde, zarf, kimlik ve sonuçlar</summary>`);
+h.push(tbl(['Öğe', 'Gövde', 'Zarf ve bağlam', 'Kimlik', 'Sonuçlar'], queue_items.map(x => [c(x.tur), Object.entries(x.govde).map(([k, v]) => `${c(k)}: ${esc(v)}`).join('<br>'), esc(x.zarf), esc(x.kimlik), esc(x.sonuclar)])));
+h.push(`<p>İşleyici sırası, tek işlemde: gövde doğrulanır; ${c('D02.oturumGetir')} ve ${c('D02.dersYetkisi')}; pencere satırı ${c('FOR UPDATE')} kilitlenir (yoksa ${c('pencereleriHesapla')} ile açılır); aynı kimlik denetlenir; süre sınırı; çapalar ${c('saatBelgesiDogrula')} ve ${c('saatSonucu')} ile (beklenen özne personel kişisi); kilit anı ${c('D02.birimDonemiGetir')}, geçlik ${c('D06.gondermeSuresiSonu')}; satır eklenir; uygulanıyorsa pencere baştan hesaplanır, telefona inen alan değiştiyse ${c('D06.surumAl')}, kapanış geçişi olduysa ${c('kapandi_ani')} ve ${c('oturumKapandi')}, pencere değiştiyse ${c('pencereDegisti')}; her durumda ${c('D09.denetimeYaz')}.</p>`);
+h.push(`</details>`);
+h.push(`<details>`);
+h.push(`<summary>Saat belgesi biçimi: 82 bayt, sürüm 1, base64url 110 karakter</summary>`);
+h.push(tbl(['Bayt', 'Alan', 'Açıklama'], [
+  ['0', 'sürüm', '1; bilinmeyen sürüm doğrulamada SURUM'],
+  ['1 ile 8', 'kid', 'D15 anahtar adı, ASCII [a-z0-9-], 1 ile 8 karakter, sağdan 0x00 ile doldurulur'],
+  ['9', 'özne türü', '1 öğrenci cihazı, 2 personel kişi'],
+  ['10 ile 25', 'özne kimliği', 'cihaz ya da kişi UUID değeri, 16 bayt'],
+  ['26 ile 41', 'değer', 'telefonun gönderdiği 16 baytlık tek kullanımlık değer, aynen'],
+  ['42 ile 49', 'sunucu saati', 'UTC milisaniye, işaretsiz, büyük sonlu 64 bit'],
+  ['50 ile 81', 'MAC', 'ilk 50 baytın HMAC-SHA256 değeri, saat belgesi anahtarıyla'],
+]));
+h.push(`<p>Kayıtlı örnek (anahtar 32 bayt 0x07, kid ${c('sb-2027b')}, özne 1 ve ${c('01928f6e-7c1a-7b3e-9a40-1b2c3d4e5f60')}, değer ${c('000102030405060708090a0b0c0d0e0f')}, saat 2026-10-05T06:00:00.000Z):</p>`);
+h.push(`<pre><code>${ORNEK_BELGE}</code></pre>`);
+h.push(`</details>`);
+
+// ---------- İşler
+h.push(`<h3>İşler</h3>`);
+h.push(`<div class="rows">`);
+for (const j of jobs) h.push(row(c(j.name), `<strong>Zaman:</strong> ${esc(j.schedule)}<br><strong>Tekrar:</strong> ${esc(j.idempotency)}<br><strong>Yaptığı:</strong> ${esc(j.does)}`));
+h.push(`</div>`);
+
+// ---------- Durumlar ve kurallar
+h.push(`<h3>Durumlar ve kurallar</h3>`);
+h.push(`<p><strong>Çapa aralığı.</strong> S belgedeki sunucu saati, q belge isteğinin süresi, g iki olay arası süre (ms), k(x) = tavan(x / 10000), yani milyonda 100 (${P('gun-saati-degistirmek-neden-ise-yaramaz', 'kayma payı')}):</p>`);
+h.push(`<pre><code>ilk çapa  (olay belgeden sonra):  [S + g - k(g),  S + g + q + k(g + q)]
+ikinci çapa (olay belgeden önce): [S - g - k(g),  S - g + q + k(g + q)]
+pay = q + k(g)        örnek (İstanbul saatiyle): S = 09:00:00.000, q = 300, g = 7 dakika
+                      aralık 09:06:59.958 ile 09:07:00.343, pay 342 ms
+                      1 gün için k = 8640 ms, 7 gün için k = 60480 ms</code></pre>`);
+h.push(`<ul>`);
+h.push(`<li>Çapa geçerli değilse durum kodu yazılır: belge bozuk, özne başka, istek 10 saniyeden uzun, süre negatif ya da 7 günden uzun (iki çapada da). Telefonun kendi bildirdiği önce yeniden başlatma, 7 günden eski belge ve sonra yeniden başlatma aynen geçer.</li>`);
+h.push(`<li>İki çapa geçerliyse kesişim (pay küçük olanın payı); kesişmiyorsa ${c('capalar_ayrisiyor')} ve kapsayan aralık. Yalnız biri geçerliyse o. İkisi de bozuksa ${c('dogrulanamadi')}: aralık telefon saatinin tek anıdır, ${P('gun-zayif-nokta', 'Zayıf nokta')} ve 2\'lik ortak sınır D07\'nin.</li>`);
+h.push(`<li>Ulaşma anı denetimi: aralığın alt ucu ulaşma anından büyükse ${c('ulasmaAniniAsiyor')}; eşitleme bozukken sonuç ${c('esitlemeBozukkenUlasti')} taşır, D07 ret yerine İncelemede verir (${P('gun-saati-degistirmek-neden-ise-yaramaz', 'karar')}).</li>`);
+h.push(`</ul>`);
+h.push(`<p><strong>Pencere hesabı.</strong> A açılış, B ders bitişi, C kapanış, p basma anı üst ucu; değişiklikler p, kurulum, sıra, kimlik sırasıyla:</p>`);
+h.push(`<pre><code>plan:            C0 = süre varsa en erken(A + süre, B), yoksa B
+pencere_suresi:  C  = en geç(hedef, en erken(C, p))   hedef = süre varsa en erken(A + süre, B), yoksa B
+erken_kapatma:   C  = en geç(A, en erken(C, p))
+en geç kapanış:  plan ve her adımdaki C değerlerinin en büyüğü
+örnek (İstanbul saatiyle): plan 09:15; basma üst ucu 09:08:00.400 olan erken kapatma 10:30\'da ulaşır
+       C = 09:08:00.400, en geç kapanış 09:15; 09:12\'de 5 dakika seçilseydi C = 09:12</code></pre>`);
+h.push(tbl(['pencereSonucu', 'Koşul ([alt, üst] kayıt aralığı)', 'D07 eşlemesi (öneri)'], [
+  [c('icinde'), 'alt &lt; C ve üst &gt;= A', 'olağan karar (Var ya da öbür kurallar)'],
+  [c('dilimde'), 'icinde değil, alt &lt; en geç kapanış ve üst &gt;= A', `Beklemede (ayar_kesinlesmedi), kesinleşince son pencereye göre (${P('kararlar', 'Ders içinde değişiklik')})`],
+  [c('disinda'), 'hiçbiriyle kesişmiyor', 'Ret, pencere_disinda (D07-B19)'],
+]));
+h.push(`<p><strong>Eşitleme.</strong> Her API süreci kendi durumunu bellekte tutar: tek bozuk okuma belgeyi durdurur, art arda iki sağlıklı okuma açar; kesinti satırı tüm süreçler için tektir ve son bozuk okumadan 15 saniye sonra kapanır (${T('altyapi-servisler', 'Servisler')}). Eşik 100 ms ve dosya yaşı 120 saniye başlangıç değeridir, ayardan okunur.</p>`);
+h.push(`<details>`);
+h.push(`<summary>Durum makineleri: pencere, değişiklik öğesi, süreç eşitlemesi, kesinti satırı</summary>`);
+for (const sm of state_machines) {
+  h.push(`<p><strong>${esc(sm.name)}</strong>: ${sm.states.map(c).join(', ')}</p>`);
+  h.push(tbl(['Önce', 'Sonra', 'Yapan', 'Ne zaman'], sm.transitions.map(t => [c(t.from), c(t.to), esc(t.by), esc(t.when)])));
+}
+h.push(`</details>`);
+h.push(`<p><strong>Değişmezler.</strong></p>`);
+h.push(`<ul>${invariants.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`);
+h.push(`<details>`);
+h.push(`<summary>Dış yüz: ${exportsList.length} imza, TypeScript</summary>`);
+h.push(tbl(['Ad', 'İmza', 'Amaç'], exportsList.map(x => [esc(x.name), c(x.signature), esc(x.purpose)])));
+h.push(`</details>`);
+
+// ---------- Hata kodları
+h.push(`<h3>Hata kodları</h3>`);
+h.push(`<p>Zarf ve kök kodlar (400 doğrulama, 401, 403, 429, 503 ${c('SUNUCU_YOGUN')}) D13 kataloğundadır; aşağıdakiler bu modülün ${c('SAAT_')} kodları.</p>`);
+h.push(tbl(['Kod', 'Nerede', 'Ne zaman'], [
+  [c('SAAT_ESITLEME_BOZUK'), '503 ve Retry-After 60; POST /v1/saat/belge', 'Bu sürecin eşitlemesi bozuk ya da duvar saati sıçradı. SUNUCU_YOGUN gibi bütün işi bekletmez: telefon eldeki belgeyle sürer, ilk çapası sağlam kayıtları ikinci çapasız gönderir, yalnız ikinci çapaya muhtaç kayıtları bekletir.'],
+  [c('SAAT_PENCERE_BULUNAMADI'), '404; GET /v1/saat/pencereler/{oturumId}', 'Oturum yok ya da çağıranın yetkisi yok; varlık sızdırılmaz.'],
+  [c('SAAT_OGE_GECERSIZ'), 'öğe sonucu ret', 'pencere_suresi ya da erken_kapatma gövdesi şemaya uymuyor.'],
+  [c('SAAT_OTURUM_BULUNAMADI'), 'öğe sonucu ret', 'Öğedeki oturum bilinmiyor.'],
+  [c('SAAT_YETKI_YOK'), 'öğe sonucu ret', 'Gönderen personel dersin hocası değil (D02.dersYetkisi).'],
+  [c('SAAT_SURE_GECERSIZ'), 'öğe sonucu ret', 'yeniSureDk 1 ile ders süresi arasında tam dakika değil.'],
+  [c('SAAT_OGE_KIMLIGI_CAKISMASI'), 'öğe sonucu ret', 'Aynı öğe kimliği başka içerikle geldi; kayıtlı satır değişmez, gelen öğe denetim kaydına yazılır.'],
+  [c('SAAT_DEGISIKLIK_SAKLANDI'), 'öğe sonucu kabul ile gerekçe', 'Kilit anından sonra ya da kilitli dönemde ulaştı; yalnız saklandı, pencere değişmedi.'],
+  [c('SAAT_KID_GECERSIZ'), 'açılış hatası, süreç açılmaz', 'Etkin kid 1 ile 8 karakter [a-z0-9-] değil. Anahtar yoksa D15 ayar şeması süreci zaten durdurur.'],
+  ['BICIM, SURUM, KID_BILINMIYOR, MAC', 'iç değer, HTTP değil', 'saatBelgesiDogrula sonucu; çapa durumu belge_gecersiz olur.'],
+]));
+
+// ---------- Testler
+h.push(`<h3>Testler</h3>`);
+const kinds = {};
+for (const t of tests) kinds[t.kind] = (kinds[t.kind] || 0) + 1;
+h.push(`<p>${tests.length} test: ${Object.entries(kinds).map(([k, n]) => `${n} ${k}`).join(', ')}. Davranış senaryoları ${c('apps/server/test/features/saat/')} altında Türkçe Gherkin, gerçek PostgreSQL ve sahte saatle (${T('testler', 'Testler')}); çekirdek Vitest ve fast-check, deneme sayısı açık (${T('testler-birim', 'Birim ve özellik testleri')}); yük ve mutasyon ${T('testler-kalite', 'Kalite kapıları')} işlerinde. Her testin bir kontrolü var: ya ters örnek ya da bilerek bozulan sürümde kırmızı.</p>`);
+h.push(`<details>`);
+h.push(`<summary>Test listesi: adı, türü ve denetlediği</summary>`);
+h.push(tbl(['Test', 'Tür', 'Denetler'], tests.map(t => [esc(t.name), `<span class="tag mute">${esc(t.kind)}</span>`, esc(t.asserts)])));
+h.push(`</details>`);
+
+// ---------- Netleştirilenler
+h.push(`<h3>Netleştirilenler</h3>`);
+h.push(`<p>Envanterin 28 boşluğu ve 5 çelişkisi; 25 boşluk karara bağlandı, 3 ürün sorusu (B07, B08, B09) açık noktaya taşındı ve D04 tarafındaki davranışı yazıldı.</p>`);
+h.push(`<details>`);
+h.push(`<summary>Boşluklar: karar ve gerekçe</summary>`);
+h.push(tbl(['Boşluk', 'Karar', 'Neden'], resolved_gaps.map(g => [c(g.gap), esc(g.decision), esc(g.why)])));
+h.push(`</details>`);
+h.push(`<details>`);
+h.push(`<summary>Çelişkiler: nasıl çözüldü</summary>`);
+h.push(tbl(['Çelişki', 'Çözüm'], contradictions_resolved.map(x => [c(x.id), esc(x.resolution)])));
+h.push(`</details>`);
+
+// ---------- Açık noktalar
+h.push(`<h3>Açık noktalar</h3>`);
+h.push(`<div class="callout warn">`);
+h.push(`<ul>${open_points.map(o => `<li><strong>${esc(o.id)}</strong> <span class="tag ${o.needs_owner ? 'warn' : 'mute'}">${o.needs_owner ? 'sahibin kararı' : 'bütünleştirme'}</span> ${esc(o.question)} <em>Öneri:</em> ${esc(o.recommendation)}</li>`).join('\n')}</ul>`);
+h.push(`</div>`);
+h.push(`</section>`);
+
+fs.mkdirSync(path.join(B, 'frag'), { recursive: true });
+fs.writeFileSync(path.join(B, 'frag', 'D04.html'), h.join('\n') + '\n');
+console.log('wrote spec and frag; tests', tests.length, 'gaps', resolved_gaps.length, 'open', open_points.length);

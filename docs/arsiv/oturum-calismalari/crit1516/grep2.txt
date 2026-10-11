@@ -1,0 +1,56 @@
+## D01-P16 [a14] Kimlik işleri ve zamanlama :: isler dizisi
+Beş iş yazılır ve isler dizisinde D14.isTanimla ile tanımlanır: temizlik ve silme yürütücü D01-P12 ile D01-P14'ün iç işlevlerini çağıran ince işlerdir, bekleyen kayıt kapatma ve inceleme hesapları kurulumu kendi kuralını taşır; bileşim kökünü beklemez. zamanlama.test.ts D14 çizelge kuralını ve kuyruk tanımlarının kuyruklar.ts'ten geldiğini denetler; işçi süreciyle koşan iş senaryoları D01-P20'dedir.
+NEEDS ['D14.isTanimla', 'D02.kilitliBirimDonemleri', 'D02.denemeDersiniKur', 'D03.denemeListesiniKur', 'D03.numaraIleEslestir', 'D03.listeKovaAnahtari', 'D03.ogrencininEtkinSatirlari', 'D07.yenidenDegerlendir', 'D07.dogrulamaTeyitAnahtari', 'D12.danismaKilidi', 'D15.ayarlar', 'D15.uyariAc']
+
+## D02-P14 [a10] Dönem kilidi :: donem_kilidi
+Kilit anının uygulanması (kayıtlı adımlar sira ile, sonra arşiv, ders başına KILIT işi, denetim ve sürüm), kilitler listesi ve donem_kilidi işleyicisi yazılır; test dosyası sahte kilit adımlarıyla geçici test veritabanında koşar, takvim ve kilit senaryoları uçtan uca pakette koşar.
+NEEDS ['D06.surumAl', 'D06.surumDamgasiIste', 'D08.devamHesaplaIsiKoy', 'D08.DEVAM_NEDENLERI', 'D13.uygulamaHatasi']
+
+## D02-P15 [a10] Deneme dersi ve hesap olayları :: deneme_dersi
+Eş güçlü denemeDersiniKur (inceleme dönemi, birimsiz deneme dersi, şube 1, 14 günlük oturum, yazım hattındaki devir kuralı), deneme_dersi_oturumlari işleyicisi ve yazım hattındaki hocasizDersKurali'ni çağıran derslerKimlikDinleyicisi yazılır; ders servisini beklemez. Test dosyası sayaç casusu ve D12 bölüm casusuyla geçici test veritabanında koşar.
+NEEDS ['D01.kisiGetir', 'D01.KimlikDinleyicisi', 'D01.KimlikOlayi', 'D12.donemBolumuAc', 'D06.surumDamgasiIste', 'D15.log']
+
+## D02-P18 [a16] Takvim yenileme işi ve iş tanımları :: D02-P18
+takvim_oturumlarini_yenile işinin olay ve gece onarımı çalışması yazım hattıyla yazılır, üç iş isTanimla ile isler dizisinde tanımlanır; isler.test.ts diziyi D14'ün çizelge doğrulayıcısından geçirir ve işi geçici test veritabanında iki kez çalıştırır.
+NEEDS ['D14.isTanimla', 'D15.log']
+
+## D03-P16 [a19] Saklama ve deneme listesi senaryoları :: D02.isler
+Saklama anonimleştirmesi D12.saklamaIsleyicisiniCalistir ile gerçek rolle, kilit damgası D02'nin donem_kilidi işiyle, deneme listesi D02.denemeDersiniKur'un açtığı şubede, denetim olay türleri ve birim alanı D09.denetimeYaz ile modül dünyasında sınanır; bileşim kökünü beklemez. Saklama damgası mutasyonu iki saklama senaryosunu kırmızıya döndürür.
+NEEDS ['D15.TestDunyasi', 'D12.saklamaIsleyicisiniCalistir', 'D02.isler', 'D02.denemeDersiniKur', 'D09.denetimeYaz']
+
+## D04-P12 [a17] Kapanış ve yeniden değerlendirme işleri :: isler dizisi
+Dakikalık, partili ve satır başına geri dönüş noktalı oturum_pencere_kapat (son adımda bir kez surumAl), imleçli esitleme_sonrasi_yeniden_degerlendir ve isler dizisi yazılır; işler dinleyici kayıt defterini ve kuyruk tanımlarını kullanır, eklentiyi beklemez. pencere-kapatma.feature sahte saat, sahte dinleyici ve D14 iki kez çalıştırma yardımcısıyla denetler.
+NEEDS ['D14.isTanimla', 'D14.isiCalistirVeBekle', 'D12.islem', 'D06.surumAl', 'D15.uyariAc', 'D15.log', 'D15.TestDunyasi']
+
+## D07-P18 [a14] Bekleyen kararlar ve pencere kesinleştirme işleri :: isler dizisi
+bekleyen_kararlari_coz'un dört adımlı gece kapanışını (yenidenDegerlendir, işaret kesinleştirmesi kafa-sayisi.ts'ten, pencere işini isGonder ile koyma), pencere_beklemede_kesinlestir'i ve üç işi D14.isTanimla ile toplayan isler dizisini jobs/dogrulama/index.ts'te yazar. bekleyen-kararlar.feature kafa sayısı gelmeyen oturumu, süresi dolan değişim talebini ve üç işin aynı veriyle ikinci çalışmada satır, olay ve iş yazmadığını sınar. İşleri D14'ün worker.ts'i toplar; eklenti bu paketi beklemez.
+NEEDS ['D14.isGonder', 'D14.isTanimla', 'D14.isiCalistirVeBekle', 'D02.oturumSayfasi', 'D02.birimDonemiGetir', 'D02.OTURUM_TURLERI', 'D06.gondermeSuresiSonu', 'D04.simdi', 'D15.TestDunyasi']
+
+## D07-P20 [a15] Uç ve kayıt bağı senaryoları :: isler dizisi
+Uçtan uca: bileşim kökü uygulamaKur ile kurulan uygulamada yetki.feature beş ucun kimliksiz, öğrenci, başka hoca ve yönetici cevaplarını, karşılaştırma ucunun kafa sayısından önce sayı vermediğini ve basış sınırını, kayit-baglari.feature açılışta D06, D02, D03, D04, D11, D12 ve D09 kayıtlarını, D14 çizelgesini (D07-P18'in isler dizisi) ve D05 gönderimi, D09 isteği ve D01 teyidi boyunca katman sırasını sınar. Bileşim kökünü yalnız bu paket ve D07-P21 bekler.
+NEEDS ['D13.uygulamaKur', 'D15.TestDunyasi']
+
+## D12-P18 [a16] Kurulum ve yapılandırma senaryoları, geliştirme ve deneme kümeleri :: kur adım
+Geliştirme ve deneme Compose ile pg_hba dosyaları, geliştirme sırrı üreticisi, boş kümede üretim pg_hba ile kurulum senaryosu ve docker compose config denetimleri yazılır. Deneme kümesi dosyaları burada olduğundan aylık deneme (P21) yetki senaryolarını ve iş kuyruğu kur adımını beklemez; yapılandırma denetimi pgbackrest.conf için P13'ü bekler.
+NEEDS ['D15.TestDunyasi']
+
+## D12-P19 [a18] Şema ve yetki denetimleri :: kuyruklariKur
+D12-B11'in katalog testi: göçlerle kurulmuş test veritabanının kataloğunda TABLO_ISARETLERI'yle iki yönlü şema kuralları ve rol yetkisi senaryoları yazılır, her şema kuralı bir kez bozulup senaryonun kırmızıya döndüğü görülür ve özgün baytlar md5 ile geri yazılır. Yalnız iki gerçek bekleme vardır: pgboss yetki senaryosu D14'ün kur adımını (kuyruklariKur) çalıştırır, saklama rolü senaryosu D09.denetimeYaz'ı çağırır. Hiçbir paket bunu beklemez. Katalog bütün modüllerin işaretli tablolarını içerdiğinde anlamlıdır.
+NEEDS ['D15.TestDunyasi', 'D09.denetimeYaz', 'D14.kuyruklariKur']
+
+## D13-P08 [a6] apiKur, rota kaydı ve senaryo düzeneği ile hata zarfı senaryoları :: kur.ts
+apiKur kök kancaları belirtilen sırayla kurar, rotalariKaydet beyanları TUM_ROTALAR ve örtük kodlarla denetleyip rotaları kaydeder ve tamlık için not eder; index.ts'e rotalariKaydet, apiKur ve hizSinifi satırları eklenir (yayın bilgisi paketine bağlılığı yalnız index.ts satırlarının sırasıdır, aynı aşamada iki paket o dosyaya yazmaz). Ortak adımlar ve deneme eklentisi uygulamayı apiKur ve deneme rotalarıyla kurar, bileşim kökünü beklemez ve sonraki senaryo paketlerinin adım dağarcığını sağlar; hata zarfı senaryoları ve yakalayıcı mutasyonu denetler.
+NEEDS ['D04.simdi', 'D14.IS_KUYRUGU_HATA_KODLARI']
+
+## D14-P07 [a5] İş kuyruğu dış yüzü, iş sağlığı ve test kuyruğu yardımcıları :: kur.ts
+isKuyruguKur (rol, şema sürümü ve tanım denetimi, dış yüz bağlama, isleriBaslat, durdur, ikinci kurulum hatası), isGonder ve isSagligi dış yüz işlevleri, isTanimla'nın dış yüzden verilmesi, tek sorguluk isSagligi ve test kuyruğu yardımcıları (isKuyrugunuBosalt, isiCalistirVeBekle, kuyruktakiIsler, zamanlamaliOrnekAc; test kuyruklarını politika ile açar, kur.ts'i beklemez) ile test kuyruğu tanımları yazılır. Spec dosya listesine eklenen test/support/is-kuyrugu.test.ts D12 test veritabanında 3 işlik zeminle boşaltmayı, ayrı zamanlamalı örneğin ortak örneği bozmadığını ve 'completed' ile 'failed' sonuçlarını denetler. Modüller isGonder, isTanimla ve test yardımcılarını bu paketten alır; uygulamanın tamamını ve D14 senaryolarını beklemez.
+NEEDS ['D12.Islem', 'D12.veritabaniKur', 'D12.testVeritabaniHazirla', 'D12.testVeritabaniAdi', 'D13.UygulamaHatasi', 'D04.simdi']
+
+## D14-P14 [a15] E-posta gönderim temizliği işi ve zamanlama senaryoları :: isler dizisi
+1.000'lik partili temizlik (her parti ayrı D12.islem) ve eposta_gonderim_temizligi tanımı jobs/is-kuyrugu/index.ts isler dizisiyle yazılır. eposta-temizlik.feature saklama sabitinden bir gün eski ve yeni satırla silmeyi ve 'aynı veriyle iki kez çalışırsa' adımını; zamanlama.feature ve eklenen zamanlama-adimlari.ts zamanlamaliOrnekAc ve TestClock ile kaçan günlük işin bir kez çalışmasını ve İstanbul saatli tetiklemeyi sınar. Koruyucu bozma burada denenir: tz kaldırılınca 'Zamanlama İstanbul saatiyle' kırmızı.
+NEEDS ['D12.islem', 'D12.Islem', 'D15.TestDunyasi', 'D04.simdi']
+
+## D15-P08 [a13] Yayın, log arşivi ve anahtar döndürme betikleri :: yayinla
+yayinla.sh imza, sürüm etiketi, İstanbul saati penceresi, yedek, göç ve servis sırasıyla geri dönüşlü yayını, log-arsivi.sh İstanbul gününe göre günlük arşivi, log-bul.sh arşiv aramasını, anahtar.sh iki adımlı döndürmeyi (süreçleri sırayla yeniden başlatıp kumeOzeti karşılaştırarak) ortak.sh üstünden yapar. makine-betikleri.test.ts sahte docker ve cosign ile imza tutmazsa hiçbir şeyin değişmediğini, her adım bozulunca geri dönüşü, bakim.json silinmesini, systemd-analyze ile zamanlayıcıların İstanbul saatini ve 'Anahtar döndürme iki adımda' testinin anahtar.sh çağrı sırası yarısını (hazirla, yeniden başlatma, özet denetimi, etkinleştir; özet tutmazsa yeni kid silinir) denetler. anahtar.sh bu test dosyasında sınandığından anahtar senaryolarından buraya alındı; Compose dosyasını beklemez, docker sahtedir.
+NEEDS []
+

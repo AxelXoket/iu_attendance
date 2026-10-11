@@ -1,0 +1,1378 @@
+{
+ "id": "L5",
+ "area": "Ortak tasarım değişkeni (token) hattı, renk araçları ve tasarım sisteminin denetimi",
+ "summary": "Tasarımın tek kaynağı, W3C Design Tokens topluluk grubunun 28 Ekim 2025'te ilk kararlı sürüm olarak yayımladığı DTCG 2025.10 biçiminde bir .tokens.json dosyası olur; renkler OKLCH, süreler {value, unit}, eğriler dört sayılık cubicBezier olarak yazılır. Belirtimde yay türü yok, yaylar stiffness, damping, mass adlı üç sayı değişkeniyle tutulur. Dosyayı Terrazzo 2.7.1 okur: panele @terrazzo/plugin-css ile CSS değişkenleri (legacyHex ile hex), telefona kısa bir yerel eklentiyle hex dizeleri ve sayılar taşıyan tokens.native.ts üretir; React Native 0.86 oklch() dizesini kabul etmediği için telefona yalnız hex gider. Style Dictionary 5.6 daha yaygın ama kendi belgesine göre 2025.10 desteği bitmedi (süre ve hareket türleri yapımda), bu yüzden ikinci sırada. Terrazzo'nun yerleşik kuralları derlemede kontrastı (a11y/min-contrast, AA), sRGB sınırını (core/max-gamut) ve biçimi denetler, kural kırılırsa derleme durur. Zaten seçili Vitest 5'teki testler ikinci ve bağımsız kapıdır: iki çıktının aynı hex değerlerini taşıdığını, her kontrast çiftini ve kırık beyaz kuralını Terrazzo'nun da içte kullandığı colorjs.io ile ölçer. İki kişilik ekip için Storybook gerekmez; panelde ve telefonda yalnız geliştirme derlemesinde açılan birer /katalog ekranı bütün bileşenleri bütün durumlarıyla gösterir ve yan yana karşılaştırılır. Panelde bu ekran Vitest 5 tarayıcı kipinde toMatchScreenshot ve axe-core ile, telefonda Maestro 2.11 akışında assertScreenshot ile denetlenir; yeni test çalıştırıcı ya da ücretli bulut hizmeti eklenmez. Chromatic, Argos ve Percy ücretli bulut hizmeti olduğu, Detox Jest istediği (teknik.html Jest'i dışlıyor), lost-pixel ve Theo arşivlendiği için reddedildi.",
+ "needs": [
+  "Telefon ve panelde aynı renk, aralık, köşe, süre ve eğri değerleri tek kaynaktan gelmeli; elle kopyalanan değer olmamalı.",
+  "Renkler OKLCH ile yazılabilmeli (kırık beyaz ve gece mavisi alt tonu açıklık ve doygunlukla ayarlanabilsin), telefona hex olarak inmeli.",
+  "Hareket değerleri (süre, cubic-bezier, yay ayarları ve her birinin azaltılmış hareket karşılığı) aynı dosyada durmalı ve iki platforma aynı sayılarla gitmeli.",
+  "Her metin ve zemin çifti 4,5:1, büyük metin, arayüz parçaları ve odak göstergesi 3:1 eşiğini derlemede ve CI'da otomatik geçmeli; eşik altı değer birleştirilmemeli.",
+  "Sahibin kırık beyaz kuralı (bg.page için OKLCH L 0,955 ile 0,985, doygunluk en çok 0,012, ton 200 ile 290, kremaya kaymama) bir testle korunmalı.",
+  "Bütün bileşenler bütün durumlarıyla (normal, üzerine gelme, basılı, odak, devre dışı, hata, yükleniyor) tek ekranda görülmeli ve ekran görüntüsüyle karşılaştırılabilmeli.",
+  "Yeni araç sayısı az olmalı: seçili Vitest 5, Biome, pnpm ve Node 26 düzenine uymalı, Jest eklenmemeli, ücretli bulut hizmetine bağlanmamalı."
+ ],
+ "candidates": [
+  {
+   "id": "L5-C01",
+   "category": "Token biçimi",
+   "package": "yok: W3C DTCG 2025.10 dosya biçimi (npm paketi değil)",
+   "repo": "design-tokens/community-group",
+   "verdict": "gerekmez",
+   "version": "2025.10",
+   "released": "2025-10-28",
+   "stars": "2141",
+   "role": "Bütün tasarım değişkenlerinin (renk, aralık, köşe, yazı, süre, eğri, gölge) tek kaynak dosyasının biçimi: .tokens.json.",
+   "why": "Biçim için kütüphane gerekmez: düz JSON, okuyan ve doğrulayan Terrazzo. W3C Design Tokens topluluk grubu 28 Ekim 2025'te 2025.10'u ilk kararlı sürüm olarak yayımladı (Final Community Group Report). Tanımlı türler: color, dimension, fontFamily, fontWeight, duration, cubicBezier, number ve strokeStyle, border, transition, shadow, gradient, typography bileşikleri. Kendi biçimimizi uydurmak yerine bunu kullanmak, araç değişse bile dosyayı korur (Terrazzo da Style Dictionary de aynı dosyayı okur).",
+   "compat": "Renk: {\"colorSpace\": \"oklch\", \"components\": [L, C, H], \"alpha\": 1, \"hex\": \"#...\"}; L 0 ile 1, C 0 ve üstü, H 0 ile 360 arası; hex alanı isteğe bağlı yedek. Süre: {\"value\": 200, \"unit\": \"ms\"}, birim yalnız ms ya da s. Eğri: [x1, y1, x2, y2], x değerleri 0 ile 1 arası, y serbest. transition bileşiği duration, delay, timingFunction taşır. Yay türü yok: 2022'de açılan #158 konusu belirtime girmedi. Yaylar stiffness, damping, mass adlı üç number değişkeniyle tutulur; Terrazzo'nun core/required-children kuralı her yay grubunda bu üçünü zorunlu kılar.",
+   "modern": "Rengi CSS Color 4 uzaylarıyla (oklch, display-p3 dahil) yazan ilk kararlı sürüm. Depo etkin: 8 Eylül 2026'da uyumluluk test paketi eklendi.",
+   "risks": "W3C standardı değil, topluluk grubu raporu; yeni sürümler ayrı belirtim olarak gelir. Yay adlandırması bizim kuralımız; belirtime yay türü girerse taşımak gerekir. Önerilen uzantı .tokens.json ya da .tokens.",
+   "sources": [
+    {
+     "url": "https://www.w3.org/community/design-tokens/2025/10/28/design-tokens-specification-reaches-first-stable-version/",
+     "title": "Design Tokens specification reaches first stable version",
+     "publisher": "W3C Design Tokens Community Group",
+     "date": "2025-10-28"
+    },
+    {
+     "url": "https://www.w3.org/community/reports/design-tokens/CG-FINAL-format-20251028/",
+     "title": "Design Tokens Format Module 2025.10",
+     "publisher": "W3C Design Tokens Community Group",
+     "date": "2025-10-28"
+    },
+    {
+     "url": "https://www.w3.org/community/reports/design-tokens/CG-FINAL-color-20251028/",
+     "title": "Design Tokens Color Module 2025.10",
+     "publisher": "W3C Design Tokens Community Group",
+     "date": "2025-10-28"
+    },
+    {
+     "url": "https://lists.w3.org/Archives/Public/public-design-tokens-log/2022Jul/0049.html",
+     "title": "Animation description by Bezier curve alone is inadequate (#158)",
+     "publisher": "W3C public-design-tokens-log",
+     "date": "2022-07"
+    },
+    {
+     "url": "https://github.com/design-tokens/community-group/commits/main.atom",
+     "title": "community-group commit akışı",
+     "publisher": "GitHub",
+     "date": "2026-09-08"
+    }
+   ]
+  },
+  {
+   "id": "L5-C02",
+   "category": "Token biçimi",
+   "package": "design-tokens-format-module",
+   "repo": "",
+   "verdict": "reddedildi",
+   "version": "0.11.2",
+   "released": "2025-05-12",
+   "stars": "ölçülmedi",
+   "role": "DTCG biçimi için TypeScript tür tanımları.",
+   "why": "Son sürüm 12 Mayıs 2025 (16 ay önce), yani 2025.10 kararlı sürümünden önce; yeni renk nesnesini kapsadığı belgelenmemiş. Terrazzo'nun @terrazzo/token-types paketi (2.7.1, 11 Ağustos 2026) aynı işi güncel biçimle görüyor ve derleme aracıyla zaten geliyor.",
+   "compat": "Yalnız tür tanımı, çalışma zamanı yok; Terrazzo ile birlikte gereksiz.",
+   "modern": "2025.10 öncesi taslağa göre yazılmış, hâlâ 0.x.",
+   "risks": "Eski taslak alan adlarıyla yanlış tür denetimi.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/design-tokens-format-module",
+     "title": "design-tokens-format-module npm kaydı",
+     "publisher": "npm",
+     "date": "2025-05-12"
+    },
+    {
+     "url": "https://registry.npmjs.org/@terrazzo%2Ftoken-types",
+     "title": "@terrazzo/token-types npm kaydı",
+     "publisher": "npm",
+     "date": "2026-08-11"
+    }
+   ]
+  },
+  {
+   "id": "L5-C03",
+   "category": "Token derleme aracı",
+   "package": "@terrazzo/cli",
+   "repo": "terrazzoapp/terrazzo",
+   "verdict": "seçildi",
+   "version": "2.7.1",
+   "released": "2026-08-11",
+   "stars": "465",
+   "role": "DTCG dosyasını okur, panel için tokens.css ve telefon için tokens.native.ts üretir; aynı adımda kontrast, gamut ve biçim kurallarını denetler (komut: tz build).",
+   "why": "DTCG 2025.10 için yazılmış ayrıştırıcı (@terrazzo/parser): renk nesnesi, süre, cubicBezier ve transition türlerini tam okur. Yerleşik kurallar derlemede çalışır ve \"error\" düzeyindeki kural derlemeyi durdurur: a11y/min-contrast (AA ya da AAA, foreground/background çiftleri, largeText), core/max-gamut (srgb), core/colorspace (yalnız oklch), core/required-modes (her hareket değerinin azaltılmış hareket modu olsun), core/required-children (her yayda stiffness, damping, mass), core/valid-* biçim kuralları. Style Dictionary'nin 2025.10 desteği ise hâlâ açık bir iş (#1590). Geçen yıl PR'lar ortalama 2,8 günde kapanmış; üç bakımcı (drwpow, Sidnioulz, davejsdev).",
+   "compat": "Yalnız derleme anında Node'da çalışır (planda Node 26), uygulamaya girmez. Panel için resmi @terrazzo/plugin-css var; telefon için resmi React Native eklentisi yok ve npm'de topluluk eklentisi de bulunmadı, bu yüzden kısa bir yerel eklenti yazılır (Terrazzo'nun \"Custom\" eklenti arayüzü). CLI kendi vite ve vite-node bağımlılığını getiriyor; kurulumda vite'ın panelin Vite 8'iyle aynı sürüme çözüldüğü denetlenmeli.",
+   "modern": "2.0.0 17 Mart 2026'da çıktı, 2.7.1 11 Ağustos 2026; Cobalt UI'ın devamı, DTCG 2025.10'u ilk tam destekleyen araçlardan. Haftalık yaklaşık 115 bin indirme.",
+   "risks": "Küçük topluluk (465 yıldız). Geçen yıl issue kapanma ortalaması 43 gün. Telefon çıktısını kendimiz yazıp test ediyoruz. Sürümler sık, paket sürümü sabitlenmeli.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@terrazzo%2Fcli",
+     "title": "@terrazzo/cli npm kaydı",
+     "publisher": "npm",
+     "date": "2026-08-11"
+    },
+    {
+     "url": "https://terrazzo.app/docs/linting/",
+     "title": "Terrazzo lint kuralları",
+     "publisher": "Terrazzo",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://terrazzo.app/docs/integrations/js/",
+     "title": "Terrazzo JS/TS eklentisi",
+     "publisher": "Terrazzo",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://github.com/terrazzoapp/terrazzo/releases",
+     "title": "Terrazzo sürümleri",
+     "publisher": "GitHub",
+     "date": "2026-07-26"
+    },
+    {
+     "url": "https://issues.ecosyste.ms/api/v1/hosts/GitHub/repositories/terrazzoapp%2Fterrazzo",
+     "title": "terrazzoapp/terrazzo issue istatistiği",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/terrazzoapp%2Fterrazzo",
+     "title": "terrazzoapp/terrazzo depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C04",
+   "category": "Token derleme aracı",
+   "package": "style-dictionary",
+   "repo": "style-dictionary/style-dictionary",
+   "verdict": "ikinci",
+   "version": "5.6.0",
+   "released": "2026-10-03",
+   "stars": "4850",
+   "role": "Aynı işi yapabilecek en yaygın araç: token dosyasından CSS, JS ve platform dosyaları üretir.",
+   "why": "En çok kullanılan araç (haftalık yaklaşık 2,7 milyon indirme), bakımı düzenli (5.6.0, 3 Ekim 2026; geçen yıl issue kapanma ortalaması 19 gün). Ama kendi belgesi \"2025.10 henüz tam desteklenmiyor, v5'te sürüyor\" diyor; #1590 4 Kasım 2025'ten beri açık: renk modülü ve dimension tamam, süre ve hareket türleri yapımda, resolver bekliyor. Tasarımın büyük kısmı hareket değeri olduğu için ikinci. Terrazzo bir gün durursa geçiş kolay, ikisi de aynı DTCG dosyasını okur.",
+   "compat": "Node 22 ve üstü ister (planda Node 26). İçte colorjs.io ve tinycolor2 kullanır. React Native çıktısı yine ayar ister.",
+   "modern": "v4 (28 Haziran 2024) DTCG $value/$type desteğini getirdi, v5 16 Mayıs 2025; 2025.10 uyumu sürüyor.",
+   "risks": "Ana bakımcı tek kişi (jorenbroekema). 2025.10 geçişi büyük sürüm gerektirebilir, bakımcı bunu konu içinde soruyor.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/style-dictionary",
+     "title": "style-dictionary npm kaydı",
+     "publisher": "npm",
+     "date": "2026-10-03"
+    },
+    {
+     "url": "https://styledictionary.com/info/dtcg/",
+     "title": "Style Dictionary DTCG desteği",
+     "publisher": "Style Dictionary",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://github.com/style-dictionary/style-dictionary/issues/1590",
+     "title": "Support for DTCG v2025.10 (#1590)",
+     "publisher": "GitHub",
+     "date": "2025-11-04"
+    },
+    {
+     "url": "https://issues.ecosyste.ms/api/v1/hosts/GitHub/repositories/style-dictionary%2Fstyle-dictionary",
+     "title": "style-dictionary/style-dictionary issue istatistiği",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C05",
+   "category": "Token derleme aracı",
+   "package": "@tokens-studio/sd-transforms",
+   "repo": "tokens-studio/sd-transforms",
+   "verdict": "reddedildi",
+   "version": "2.0.3",
+   "released": "2025-12-10",
+   "stars": "251",
+   "role": "Figma eklentisi Tokens Studio dosyalarını Style Dictionary için çeviren dönüşümler.",
+   "why": "Figma ve Tokens Studio kullanmıyoruz, tasarım kodda ve DTCG dosyasında yaşıyor. Yalnız Style Dictionary 5 ile çalışır. Son sürüm 10 Aralık 2025 (9 ay önce), depo o günden beri itilmemiş. Figma eklentisinin deposunda 338 açık konu var.",
+   "compat": "Eş bağımlılık style-dictionary ^5; Terrazzo ile kullanılmaz.",
+   "modern": "Tokens Studio biçimi DTCG dışında kendi alanlarını taşır.",
+   "risks": "Figma iş akışına bağımlılık.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@tokens-studio%2Fsd-transforms",
+     "title": "@tokens-studio/sd-transforms npm kaydı",
+     "publisher": "npm",
+     "date": "2025-12-10"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/tokens-studio%2Fsd-transforms",
+     "title": "tokens-studio/sd-transforms depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/tokens-studio%2Ffigma-plugin",
+     "title": "tokens-studio/figma-plugin depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C06",
+   "category": "Token derleme aracı",
+   "package": "@specifyapp/cli",
+   "repo": "",
+   "verdict": "reddedildi",
+   "version": "1.2.0",
+   "released": "2023-12-07",
+   "stars": "ölçülmedi",
+   "role": "Specify bulut platformundan token çeken komut satırı aracı.",
+   "why": "Bulut hizmetine bağlı, lisans alanı UNLICENSED, son sürüm 7 Aralık 2023 (33 ay önce). Kodda yaşayan iki kişilik bir sistem için gereksiz.",
+   "compat": "Specify hesabı ister; yerel dosyadan çalışan bir hat değil.",
+   "modern": "2023 sonundan beri yeni sürüm yok.",
+   "risks": "Hizmet değişirse hat kırılır; değerler üçüncü tarafta durur.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@specifyapp%2Fcli",
+     "title": "@specifyapp/cli npm kaydı",
+     "publisher": "npm",
+     "date": "2023-12-07"
+    }
+   ]
+  },
+  {
+   "id": "L5-C07",
+   "category": "Token derleme aracı",
+   "package": "theo",
+   "repo": "salesforce-ux/theo",
+   "verdict": "reddedildi",
+   "version": "8.1.5",
+   "released": "2020-01-27",
+   "stars": "1989",
+   "role": "Salesforce'un eski token dönüştürücüsü.",
+   "why": "Depo arşivlenmiş, son sürüm 27 Ocak 2020 (80 ay önce). DTCG biçimini bilmez.",
+   "compat": "DTCG 2025.10 dosyasını okuyamaz.",
+   "modern": "Bakımı bitmiş.",
+   "risks": "Güvenlik ve uyum düzeltmesi gelmez.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/theo",
+     "title": "theo npm kaydı",
+     "publisher": "npm",
+     "date": "2020-01-27"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/salesforce-ux%2Ftheo",
+     "title": "salesforce-ux/theo depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C08",
+   "category": "Token derleme aracı",
+   "package": "@cobalt-ui/cli",
+   "repo": "",
+   "verdict": "reddedildi",
+   "version": "1.12.0",
+   "released": "2024-11-24",
+   "stars": "ölçülmedi",
+   "role": "Terrazzo'nun önceki adı.",
+   "why": "npm'de \"This package is no longer maintained. Please upgrade to @terrazzo/cli.\" uyarısıyla kullanımdan kalkmış; son sürüm 24 Kasım 2024 (22 ay önce).",
+   "compat": "Yerini @terrazzo/cli aldı.",
+   "modern": "Kullanımdan kalktı.",
+   "risks": "Yeni belirtim desteği gelmez.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@cobalt-ui%2Fcli",
+     "title": "@cobalt-ui/cli npm kaydı",
+     "publisher": "npm",
+     "date": "2024-11-24"
+    }
+   ]
+  },
+  {
+   "id": "L5-C09",
+   "category": "Panel çıktısı (CSS değişkenleri)",
+   "package": "@terrazzo/plugin-css",
+   "repo": "terrazzoapp/terrazzo",
+   "verdict": "seçildi",
+   "version": "2.7.1",
+   "released": "2026-08-11",
+   "stars": "465 (Terrazzo deposu)",
+   "role": "Panel için tokens.css üretir: her değer bir CSS özel özelliği; açık/koyu tema ve azaltılmış hareket modları seçicilerle yazılır.",
+   "why": "Terrazzo'nun resmi CSS çıktısı. legacyHex: true ile renkleri hex verir; böylece panel ve telefon birebir aynı dizeyi kullanır ve eşlik testi basitleşir. Modlar @media (prefers-color-scheme: dark), [data-theme] ya da prefers-reduced-motion seçicisiyle yazılabilir; azaltılmış hareketteki süreler tarayıcı ayarına göre kendiliğinden devreye girer. variableName ile değişken adları belirlenir.",
+   "compat": "Vite 8 panel tokens.css dosyasını doğrudan içe alır; çalışma zamanı kodu yok.",
+   "modern": "Varsayılan çıktı oklch(); gamut dışı renklerde @media (color-gamut: p3) yedekleri üretir. Biz sRGB içinde kaldığımız için hex seçiyoruz.",
+   "risks": "Süre, cubicBezier ve transition çıktısının biçimi belgede ayrıntılı değil; ilk kurulumda üretilen dosya gözle ve testle denetlenmeli.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@terrazzo%2Fplugin-css",
+     "title": "@terrazzo/plugin-css npm kaydı",
+     "publisher": "npm",
+     "date": "2026-08-11"
+    },
+    {
+     "url": "https://terrazzo.app/docs/integrations/css/",
+     "title": "Terrazzo CSS eklentisi",
+     "publisher": "Terrazzo",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C10",
+   "category": "Panel çıktısı (CSS değişkenleri)",
+   "package": "@terrazzo/plugin-tailwind",
+   "repo": "terrazzoapp/terrazzo",
+   "verdict": "ikinci",
+   "version": "2.7.1",
+   "released": "2026-08-11",
+   "stars": "465 (Terrazzo deposu)",
+   "role": "Panel Tailwind 4 kullanırsa aynı DTCG dosyasından Tailwind teması üretir.",
+   "why": "Panelin stil yöntemi henüz seçilmedi; Tailwind 4 seçilirse hat değişmeden bu eklenti eklenir. Düz CSS ya da CSS Modules seçilirse gereksiz.",
+   "compat": "Eş bağımlılık tailwindcss ^4 ve @terrazzo/plugin-css ^2.7.1.",
+   "modern": "Tailwind 4 temasını hedefler.",
+   "risks": "Tailwind seçimi başka alanın kararı.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@terrazzo%2Fplugin-tailwind",
+     "title": "@terrazzo/plugin-tailwind npm kaydı",
+     "publisher": "npm",
+     "date": "2026-08-11"
+    }
+   ]
+  },
+  {
+   "id": "L5-C11",
+   "category": "Panel çıktısı (CSS değişkenleri)",
+   "package": "@terrazzo/plugin-css-in-js",
+   "repo": "terrazzoapp/terrazzo",
+   "verdict": "reddedildi",
+   "version": "2.7.1",
+   "released": "2026-08-11",
+   "stars": "465 (Terrazzo deposu)",
+   "role": "CSS değişkenlerine JS içinden başvuru (Linaria, StyleX, Vanilla Extract gibi araçlar için).",
+   "why": "Panel CSS değişkenlerini doğrudan okuyabildiği sürece JS katmanı gereksiz; CSS-in-JS kütüphanesi planda yok.",
+   "compat": "Ek çalışma zamanı ya da derleme eklentisi ister.",
+   "modern": "Güncel ama bizim ihtiyacımız dışında.",
+   "risks": "Gereksiz soyutlama.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@terrazzo%2Fplugin-css-in-js",
+     "title": "@terrazzo/plugin-css-in-js npm kaydı",
+     "publisher": "npm",
+     "date": "2026-08-11"
+    }
+   ]
+  },
+  {
+   "id": "L5-C12",
+   "category": "Telefon çıktısı (TypeScript sabitleri)",
+   "package": "yok: yerel Terrazzo eklentisi (tokens.native.ts)",
+   "repo": "",
+   "verdict": "gerekmez",
+   "version": "-",
+   "released": "-",
+   "stars": "-",
+   "role": "Telefon için tokens.native.ts yazar: renkler sRGB hex dizesi, aralık ve köşeler sayı, süreler milisaniye, eğriler [x1, y1, x2, y2], yaylar {stiffness, damping, mass}; azaltılmış hareket modu ayrı nesne.",
+   "why": "Hazır bir React Native eklentisi yok: @terrazzo/plugin-js renkleri DTCG nesnesi ({colorSpace, components}) olarak veriyor, hex değil; npm'de \"terrazzo react-native\" araması topluluk eklentisi döndürmedi. Kısa bir yerel eklenti (Terrazzo'nun \"Custom\" arayüzü, renk çevirisi colorjs.io ile) yeni kütüphane eklemeden işi görür ve Vitest ile test edilir.",
+   "compat": "Çıktı düz TypeScript sabitleri; React Native 0.86 bunları StyleSheet ve hareket kütüphanesine doğrudan verir. Çalışma zamanında renk çevirisi yapılmaz.",
+   "modern": "Terrazzo 2.x eklenti arayüzü üzerine yazılır.",
+   "risks": "Eklentinin bakımı bizde; eşlik testi (CSS ile aynı hex) bunu güvenceye alır.",
+   "sources": [
+    {
+     "url": "https://terrazzo.app/docs/integrations/js/",
+     "title": "Terrazzo JS/TS eklentisi",
+     "publisher": "Terrazzo",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://registry.npmjs.org/-/v1/search?text=terrazzo%20react-native&size=8",
+     "title": "npm araması: terrazzo react-native",
+     "publisher": "npm",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C13",
+   "category": "Telefon çıktısı (TypeScript sabitleri)",
+   "package": "@terrazzo/plugin-js",
+   "repo": "terrazzoapp/terrazzo",
+   "verdict": "reddedildi",
+   "version": "2.7.1",
+   "released": "2026-08-11",
+   "stars": "465 (Terrazzo deposu)",
+   "role": "Token değerlerini JS ve .d.ts olarak verir.",
+   "why": "Renkleri DTCG nesnesi olarak bırakıyor ({\"colorSpace\": \"srgb\", \"components\": [1, 1, 1]}); telefonda kullanmak için uygulama içinde çalışma zamanı çevirisi gerekirdi. Belgede React Native geçmiyor. Seçenekleri yalnız filename, contexts, properties.",
+   "compat": "Çıktı Node ve sunucu tarafı içindir (\"Use DTCG tokens in Node.js\").",
+   "modern": "Güncel ama hedefi farklı.",
+   "risks": "Uygulamaya renk kütüphanesi sokar.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@terrazzo%2Fplugin-js",
+     "title": "@terrazzo/plugin-js npm kaydı",
+     "publisher": "npm",
+     "date": "2026-08-11"
+    },
+    {
+     "url": "https://terrazzo.app/docs/integrations/js/",
+     "title": "Terrazzo JS/TS eklentisi",
+     "publisher": "Terrazzo",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C14",
+   "category": "Telefon çıktısı (TypeScript sabitleri)",
+   "package": "@terrazzo/plugin-swift",
+   "repo": "terrazzoapp/terrazzo",
+   "verdict": "reddedildi",
+   "version": "0.3.3",
+   "released": "2026-07-26",
+   "stars": "465 (Terrazzo deposu)",
+   "role": "iOS için Swift renk dosyası üretir.",
+   "why": "Uygulama React Native; stil JS katmanında, Swift dosyası kullanılmaz. Haftalık 50 indirme, 0.x.",
+   "compat": "Yerel iOS koduna yöneliktir.",
+   "modern": "Erken sürüm.",
+   "risks": "Gereksiz.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@terrazzo%2Fplugin-swift",
+     "title": "@terrazzo/plugin-swift npm kaydı",
+     "publisher": "npm",
+     "date": "2026-07-26"
+    }
+   ]
+  },
+  {
+   "id": "L5-C15",
+   "category": "Telefonda renk biçimi",
+   "package": "react-native",
+   "repo": "facebook/react-native",
+   "verdict": "gerekmez",
+   "version": "0.86.3 (SDK 57 ile; en son 0.87.1)",
+   "released": "2026-06-09 (0.86.0)",
+   "stars": "ölçülemedi (ecosyste.ms 404)",
+   "role": "Telefon renklerini yerleşik ayrıştırıcısıyla okur; ek kütüphane yok.",
+   "why": "React Native belgesi (0.87) hex (#rgb, #rrggbb, #rgba, #rrggbbaa), rgb/rgba, hsl/hsla, hwb, renk sayısı ve küçük harfli adlı renkleri kabul ediyor; color(), display-p3, lab(), lch(), oklab(), oklch() desteklenmiyor. 0.87'de olmayan şey 0.86'da da yok. Bu yüzden OKLCH yalnız kaynak dosyada kalır, telefona derlemede hex dizesi gider; uygulamaya renk kütüphanesi girmez.",
+   "compat": "Expo SDK 57 react-native 0.86.3 ve react 19.2.3 paketliyor.",
+   "modern": "Geniş gamut (display-p3) dizeleri React Native'e girmedi; kırık beyaz, gri ve gece mavisi tonları zaten sRGB içinde kaldığı için kayıp yok.",
+   "risks": "React Native ileride oklch() kabul etse bile hex çalışmaya devam eder, değişiklik gerekmez.",
+   "sources": [
+    {
+     "url": "https://reactnative.dev/docs/colors",
+     "title": "Color Reference (0.87)",
+     "publisher": "React Native",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://unpkg.com/expo@57.0.26/bundledNativeModules.json",
+     "title": "Expo SDK 57 paketli modül sürümleri",
+     "publisher": "Expo (unpkg)",
+     "date": "2026-09-29"
+    },
+    {
+     "url": "https://registry.npmjs.org/react-native",
+     "title": "react-native npm kaydı",
+     "publisher": "npm",
+     "date": "2026-08-26"
+    }
+   ]
+  },
+  {
+   "id": "L5-C16",
+   "category": "Renk hesabı (derleme ve test)",
+   "package": "colorjs.io",
+   "repo": "color-js/color.js",
+   "verdict": "seçildi",
+   "version": "0.7.1",
+   "released": "2026-07-24",
+   "stars": "2307",
+   "role": "Yerel eklentide OKLCH değerini sRGB hex'e çevirir; testlerde WCAG 2.1 kontrast oranını ve sRGB sınırını hesaplar.",
+   "why": "Terrazzo 2.7.1'in ayrıştırıcısı (@terrazzo/parser, @terrazzo/token-tools) ve Style Dictionary 5.6.0 bu kütüphaneye bağımlı; eklenti ve testler de aynı motoru kullanırsa derleme ile test aynı yuvarlamayı yapar, \"testte geçti, CSS'te bir ton farklı\" durumu oluşmaz. contrastWCAG21 (ya da contrast(renk, \"WCAG21\")) yanında APCA, Weber, Michelson, Lstar, DeltaPhi yöntemleri var; toGamut varsayılan olarak CSS Color 4 gamut eşleme algoritmasını kullanır. Bağımlılığı yok. Lea Verou ve Chris Lilley'nin başlattığı proje; geçen yıl issue kapanma ortalaması 27,6 gün.",
+   "compat": "Yalnız derleme ve Vitest sırasında Node'da çalışır; panele ve telefona girmez.",
+   "modern": "CSS Color 4 ve 5 belgelerini izler; 0.6.0 24 Aralık 2025, 0.7.0 11 Temmuz 2026, 0.7.1 24 Temmuz 2026. Haftalık yaklaşık 11 milyon indirme.",
+   "risks": "Hâlâ 0.x: küçük sürümlerde API değişebilir. Sürüm sabitlenmeli ve Terrazzo'nun çözdüğü sürümle aynı tutulmalı (pnpm tek kopya).",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/colorjs.io",
+     "title": "colorjs.io npm kaydı",
+     "publisher": "npm",
+     "date": "2026-07-24"
+    },
+    {
+     "url": "https://github.com/color-js/color.js/blob/main/docs/contrast.md",
+     "title": "Color.js: Contrast",
+     "publisher": "Color.js",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://github.com/color-js/color.js/blob/main/docs/gamut-mapping.md",
+     "title": "Color.js: Gamut mapping",
+     "publisher": "Color.js",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://registry.npmjs.org/@terrazzo%2Fparser",
+     "title": "@terrazzo/parser npm kaydı",
+     "publisher": "npm",
+     "date": "2026-08-11"
+    },
+    {
+     "url": "https://issues.ecosyste.ms/api/v1/hosts/GitHub/repositories/color-js%2Fcolor.js",
+     "title": "color-js/color.js issue istatistiği",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C17",
+   "category": "Renk hesabı (derleme ve test)",
+   "package": "culori",
+   "repo": "Evercoder/culori",
+   "verdict": "ikinci",
+   "version": "4.0.2",
+   "released": "2025-06-27",
+   "stars": "1235",
+   "role": "colorjs.io yerine kullanılabilecek küçük, işlevsel renk kütüphanesi: wcagContrast, toGamut, clampChroma, formatHex, renk körlüğü süzgeçleri (filterDeficiencyDeuter ve diğerleri).",
+   "why": "API sade, bağımlılığı yok, renk körlüğü benzetimi yerleşik. Ama Terrazzo artık colorjs.io kullanıyor; testte ikinci bir motor yuvarlama farkı doğurabilir. Son sürüm 27 Haziran 2025 (15 ay önce); depo Temmuz 2026'da itilmiş ama yeni sürüm yok. Geçen yıl yalnız 3 issue açılmış, tek bakımcı (danburzo).",
+   "compat": "Node ve tarayıcıda çalışır.",
+   "modern": "CSS Color 4 uzaylarını ve gamut eşlemeyi destekler; sürüm temposu yavaş.",
+   "risks": "Tek bakımcı, uzun sürüm arası.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/culori",
+     "title": "culori npm kaydı",
+     "publisher": "npm",
+     "date": "2025-06-27"
+    },
+    {
+     "url": "https://github.com/Evercoder/culori/blob/main/docs/api.md",
+     "title": "culori API",
+     "publisher": "culori",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://issues.ecosyste.ms/api/v1/hosts/GitHub/repositories/Evercoder%2Fculori",
+     "title": "Evercoder/culori issue istatistiği",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C18",
+   "category": "Renk hesabı (derleme ve test)",
+   "package": "apca-w3",
+   "repo": "Myndex/apca-w3",
+   "verdict": "reddedildi",
+   "version": "0.1.9",
+   "released": "2022-07-04",
+   "stars": "211",
+   "role": "APCA kontrast değeri (WCAG 3 taslağı için önerilen yöntem).",
+   "why": "Planın ölçüsü WCAG 2.2 AA: 4,5:1 ve 3:1 oranları; APCA bunun yerine geçmez. Lisans (\"W3 License for Compliant Code Only\") kodu yalnız web üzerinden sunulan içerik için WCAG kapsamında kullanmaya izin veriyor; telefon uygulaması bu kapsamın dışında. Son npm sürümü 4 Temmuz 2022 (51 ay önce), depo Mayıs 2026'da itilmiş ama yayımlanmamış.",
+   "compat": "Saf JS, ama lisans telefon uygulamasını kapsamıyor.",
+   "modern": "APCA WCAG 3 taslağında; WCAG 3 yayımlanmış standart değil.",
+   "risks": "Lisans ihlali; WCAG 2.2 denetiminde kanıt sayılmaz.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/apca-w3",
+     "title": "apca-w3 npm kaydı",
+     "publisher": "npm",
+     "date": "2022-07-04"
+    },
+    {
+     "url": "https://github.com/Myndex/apca-w3/blob/master/LICENSE.md",
+     "title": "apca-w3 LICENSE",
+     "publisher": "Myndex",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C19",
+   "category": "Renk hesabı (derleme ve test)",
+   "package": "@texel/color",
+   "repo": "texel-org/color",
+   "verdict": "reddedildi",
+   "version": "1.1.11",
+   "released": "2026-01-07",
+   "stars": "533",
+   "role": "Çok hızlı OKLCH dönüşümü ve gamut eşleme.",
+   "why": "Hız ve küçük paket için yazılmış (yalnız OKLCH'den sRGB'ye yaklaşık 3,5 kB); bizim işimiz derleme anında birkaç yüz renk, hız gerekmiyor. Belgesindeki özellikler dönüşüm, renk farkı, gamut eşleme ve dizeleştirme; WCAG kontrast işlevi yok, testte ayrıca yazmak gerekirdi. Haftalık yaklaşık 7,6 bin indirme.",
+   "compat": "Bağımlılıksız; Node ve tarayıcıda çalışır.",
+   "modern": "Güncel ve iyi tasarlanmış, hedefi canvas ve üretken grafik.",
+   "risks": "Kontrastı kendimiz yazarsak hata yüzeyi büyür.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@texel%2Fcolor",
+     "title": "@texel/color npm kaydı",
+     "publisher": "npm",
+     "date": "2026-01-07"
+    },
+    {
+     "url": "https://github.com/texel-org/color",
+     "title": "texel-org/color README",
+     "publisher": "GitHub",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C20",
+   "category": "Renk hesabı (derleme ve test)",
+   "package": "chroma-js",
+   "repo": "gka/chroma.js",
+   "verdict": "reddedildi",
+   "version": "3.2.0",
+   "released": "2025-11-28",
+   "stars": "10591",
+   "role": "Eski ve çok yaygın renk kütüphanesi.",
+   "why": "En çok yıldızlı seçenek, ama Terrazzo ile aynı motor değil (yuvarlama farkı riski) ve testte ikinci bir motor tutmanın getirisi yok. Lisansı birleşik (BSD-3-Clause ve Apache-2.0).",
+   "compat": "Node ve tarayıcıda çalışır.",
+   "modern": "3.0.0 17 Ağustos 2024, son sürüm 28 Kasım 2025.",
+   "risks": "İki renk motoru arasında tutarsızlık.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/chroma-js",
+     "title": "chroma-js npm kaydı",
+     "publisher": "npm",
+     "date": "2025-11-28"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/gka%2Fchroma.js",
+     "title": "gka/chroma.js depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C21",
+   "category": "Token ve kontrast testleri",
+   "package": "vitest",
+   "repo": "vitest-dev/vitest",
+   "verdict": "seçildi",
+   "version": "5.0.3",
+   "released": "2026-09-30",
+   "stars": "17177",
+   "role": "Üretilen tokens.css ve tokens.native.ts dosyalarını sınar: her değişken iki platformda aynı hex mi, her kontrast çifti eşiği geçiyor mu, kırık beyaz kuralı (bg.page OKLCH L 0,955 ile 0,985, doygunluk en çok 0,012, ton 200 ile 290) korunuyor mu, her hareket deseninin azaltılmış karşılığı var mı.",
+   "why": "teknik.html'de birim testleri için Vitest 5 zaten seçili; yeni çalıştırıcı eklenmez. Terrazzo'nun a11y/min-contrast kuralı derlemede ilk kapı, Vitest testi ikinci ve bağımsız kapı: kontrast colorjs.io ile ölçülür, eşikler (4,5 ve 3) ortak bir sabit dosyasından içe alınır. Mutasyon denemesi kolay: bir rengi bilerek bozup testin kırmızıya döndüğü görülür. Telefon ve panel ekranları piksel olarak birbirine karşılaştırılamaz (yazı çizimi farklı); görsel eşliği bu değer eşlik testi garanti eder.",
+   "compat": "Motor gereksinimi Node ^22.12, ^24 ya da 26 ve üstü; Vite 8 ile aynı yapılandırma. Testten önce tz build koşar (pretest).",
+   "modern": "5.0.0 3 Eylül 2026, 5.0.3 30 Eylül 2026.",
+   "risks": "Üretilen dosyalar depoya girerse fark gürültüsü; ya yalnız derlemede üretilir ya da fark denetimi CI'da koşar.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/vitest",
+     "title": "vitest npm kaydı",
+     "publisher": "npm",
+     "date": "2026-09-30"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/vitest-dev%2Fvitest",
+     "title": "vitest-dev/vitest depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C22",
+   "category": "Arayüz erişilebilirlik taraması",
+   "package": "axe-core",
+   "repo": "dequelabs/axe-core",
+   "verdict": "seçildi",
+   "version": "4.14.0",
+   "released": "2026-10-05",
+   "stars": "7587",
+   "role": "Panel katalog sayfası Vitest tarayıcı kipinde açıldığında gerçek DOM üzerinde kontrast, etiket ve ARIA hatalarını tarar.",
+   "why": "Sektörün ortak motoru (haftalık yaklaşık 92 milyon indirme); Storybook a11y eklentisi ve @axe-core/playwright da bunu sarar. Vitest tarayıcı kipinde doğrudan içe alınıp axe.run(öğe) ile çalışır, ek sarmalayıcı gerekmez. Token testi renk çiftini, axe çiftin doğru yerde kullanıldığını denetler (ör. ikincil metin rengi yanlış zeminde).",
+   "compat": "Tarayıcıda çalışır; React Native DOM üretmediği için telefonda karşılığı yok, telefonda renk güvencesi token testinden gelir.",
+   "modern": "4.14.0, 5 Ekim 2026.",
+   "risks": "Otomatik tarama WCAG sorunlarının bir kısmını yakalar; klavye ve ekran okuyucu denetimi yine elle yapılır. Lisans MPL-2.0, yalnız test bağımlılığı olduğu için dağıtılmaz.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/axe-core",
+     "title": "axe-core npm kaydı",
+     "publisher": "npm",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/dequelabs%2Faxe-core",
+     "title": "dequelabs/axe-core depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C23",
+   "category": "Arayüz erişilebilirlik taraması",
+   "package": "@axe-core/playwright",
+   "repo": "dequelabs/axe-core-npm",
+   "verdict": "ikinci",
+   "version": "4.13.0",
+   "released": "2026-08-11",
+   "stars": "726",
+   "role": "Playwright Test seçilirse aynı axe motorunu o çalıştırıcıda kullanır.",
+   "why": "Panel için uçtan uca Playwright testleri eklenirse en doğrudan yol; şimdilik Vitest içinde axe-core yeter.",
+   "compat": "Eş bağımlılık playwright-core 1 ve üstü.",
+   "modern": "4.13.0, 11 Ağustos 2026.",
+   "risks": "İkinci çalıştırıcı gerektirir.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@axe-core%2Fplaywright",
+     "title": "@axe-core/playwright npm kaydı",
+     "publisher": "npm",
+     "date": "2026-08-11"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/dequelabs%2Faxe-core-npm",
+     "title": "dequelabs/axe-core-npm depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C24",
+   "category": "Arayüz erişilebilirlik taraması",
+   "package": "pa11y-ci",
+   "repo": "pa11y/pa11y-ci",
+   "verdict": "reddedildi",
+   "version": "5.0.0",
+   "released": "2026-10-05",
+   "stars": "637",
+   "role": "URL listesiyle çalışan ayrı erişilebilirlik tarayıcısı.",
+   "why": "Çalışan bir sunucu ve ayrı bir CI adımı ister; aynı işi Vitest içindeki axe-core ek araçsız görüyor. Lisans LGPL-3.0-only.",
+   "compat": "Ayrı tarayıcı süreciyle çalışır.",
+   "modern": "5.0.0, 5 Ekim 2026; bakımı sürüyor.",
+   "risks": "Fazladan araç ve yapılandırma.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/pa11y-ci",
+     "title": "pa11y-ci npm kaydı",
+     "publisher": "npm",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/pa11y%2Fpa11y-ci",
+     "title": "pa11y/pa11y-ci depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C25",
+   "category": "Bileşen kataloğu",
+   "package": "yok: /katalog geliştirme ekranı (panel ve telefon)",
+   "repo": "",
+   "verdict": "gerekmez",
+   "version": "-",
+   "released": "-",
+   "stars": "-",
+   "role": "Panelde yalnız geliştirme derlemesinde bulunan /katalog sayfası, telefonda __DEV__ ile korunan /katalog ekranı. İkisi aynı bileşen ve durum listesini (normal, üzerine gelme, basılı, odak, devre dışı, hata, yükleniyor) gösterir; panel ve telefon yan yana konup karşılaştırılır; görsel ve erişilebilirlik testleri de bu ekranları çeker.",
+   "why": "İki kişilik ekip ve sınırlı bileşen sayısı için Storybook'un yükü getirisinden büyük: her yıl büyük sürüm (9.0.0 28 Mayıs 2025, 10.0.0 28 Ekim 2025, 11.0.0-alpha.2 5 Ekim 2026), ayrı yapılandırma ve derleme, telefonda Metro sarmalayıcısı ve sabit eş bağımlılıklar. Katalog düz bir sayfa olduğu için kütüphane gerekmez; yaşayan katalogun asıl faydası (her durumu tek yerde görmek ve ekran görüntüsüyle korumak) bu sayfayla elde edilir.",
+   "compat": "Panelde TanStack Router 1 rotası, telefonda kullanılacak yönlendirici (Expo SDK 57 ile gelen expo-router ~57.0.24) üzerinde bir ekran. Üretim paketine girmemesi bir derleme testiyle denetlenir.",
+   "modern": "Vitest 4 ile gelen tarayıcı içi ekran görüntüsü karşılaştırması ve Maestro assertScreenshot, katalog aracı olmadan aynı denetimi yapıyor.",
+   "risks": "Bileşen sayısı 40'ı geçerse ya da ekibe tasarımcı katılırsa Storybook yeniden değerlendirilmeli. Katalog ekranı gerçek veri değil sabit örnek veri kullanmalı.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/storybook",
+     "title": "storybook npm kaydı",
+     "publisher": "npm",
+     "date": "2026-09-29"
+    },
+    {
+     "url": "https://registry.npmjs.org/@storybook%2Freact-native",
+     "title": "@storybook/react-native npm kaydı",
+     "publisher": "npm",
+     "date": "2026-09-06"
+    },
+    {
+     "url": "https://unpkg.com/expo@57.0.26/bundledNativeModules.json",
+     "title": "Expo SDK 57 paketli modül sürümleri",
+     "publisher": "Expo (unpkg)",
+     "date": "2026-09-29"
+    }
+   ]
+  },
+  {
+   "id": "L5-C26",
+   "category": "Bileşen kataloğu",
+   "package": "storybook",
+   "repo": "storybookjs/storybook",
+   "verdict": "ikinci",
+   "version": "10.6.1",
+   "released": "2026-09-29",
+   "stars": "91201",
+   "role": "Panel bileşenleri için ayrı katalog uygulaması; @storybook/addon-vitest hikayeleri Vitest testine çevirir, @storybook/addon-a11y axe taraması yapar.",
+   "why": "En olgun katalog aracı ve Vitest 5 ile resmen uyumlu (@storybook/addon-vitest eş bağımlılığı vitest ^3, ^4 ya da ^5). Ama ikinci bir yapılandırma, ayrı derleme ve yıllık büyük sürüm geçişi getirir; iki kişilik ekipte /katalog sayfası aynı faydayı verir. Bileşen sayısı büyürse ya da tasarımcı katılırsa ilk tercih.",
+   "compat": "@storybook/react-vite 10.6.1 eş bağımlılıklarında vite ^8 ve react ^19 var.",
+   "modern": "10.0.0 28 Ekim 2025; 11 sürümü alfa aşamasında (11.0.0-alpha.2, 5 Ekim 2026).",
+   "risks": "Yıllık geçiş işi; 11 alfa.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/storybook",
+     "title": "storybook npm kaydı",
+     "publisher": "npm",
+     "date": "2026-09-29"
+    },
+    {
+     "url": "https://registry.npmjs.org/@storybook%2Freact-vite",
+     "title": "@storybook/react-vite npm kaydı",
+     "publisher": "npm",
+     "date": "2026-09-29"
+    },
+    {
+     "url": "https://registry.npmjs.org/@storybook%2Faddon-vitest",
+     "title": "@storybook/addon-vitest npm kaydı",
+     "publisher": "npm",
+     "date": "2026-09-29"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/storybookjs%2Fstorybook",
+     "title": "storybookjs/storybook depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C27",
+   "category": "Bileşen kataloğu",
+   "package": "@storybook/react-native",
+   "repo": "storybookjs/react-native",
+   "verdict": "reddedildi",
+   "version": "10.6.0",
+   "released": "2026-09-06",
+   "stars": "1322",
+   "role": "Bileşenleri telefonun içinde katalog olarak gösterir.",
+   "why": "10.6.0'ın eş bağımlılıkları react-native-safe-area-context'i tam 5.8.0'a sabitliyor, Expo SDK 57 ise ~5.7.0 paketliyor; react-native-reanimated tam 4.5.1 (SDK 57 ile aynı, ama her SDK güncellemesinde yeniden çakışır), ayrıca @gorhom/bottom-sheet ve gesture-handler isteniyor. Metro yapılandırmasına sarmalayıcı ve uygulama girişine geçiş gerekir. İki kişi için /katalog ekranı daha az iş.",
+   "compat": "Expo ve Expo Router desteği var; sabit eş sürümler SDK güncellemelerinde çakışma çıkarır.",
+   "modern": "Etkin: 10.6.0 6 Eylül 2026, bakımcı dannyhw, geçen yıl issue kapanma ortalaması 16 gün.",
+   "risks": "Eş bağımlılık çakışması; katalog kodunun uygulama paketine sızması.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@storybook%2Freact-native",
+     "title": "@storybook/react-native npm kaydı",
+     "publisher": "npm",
+     "date": "2026-09-06"
+    },
+    {
+     "url": "https://unpkg.com/expo@57.0.26/bundledNativeModules.json",
+     "title": "Expo SDK 57 paketli modül sürümleri",
+     "publisher": "Expo (unpkg)",
+     "date": "2026-09-29"
+    },
+    {
+     "url": "https://expo.dev/blog/storybook-and-expo",
+     "title": "Storybook and Expo",
+     "publisher": "Expo",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://issues.ecosyste.ms/api/v1/hosts/GitHub/repositories/storybookjs%2Freact-native",
+     "title": "storybookjs/react-native issue istatistiği",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C28",
+   "category": "Bileşen kataloğu",
+   "package": "@ladle/react",
+   "repo": "tajo/ladle",
+   "verdict": "reddedildi",
+   "version": "5.1.1",
+   "released": "2025-11-04",
+   "stars": "2990",
+   "role": "Vite tabanlı hafif Storybook benzeri.",
+   "why": "Son sürüm 4 Kasım 2025 (11 ay önce), geçen yıl yalnız 1 issue açılmış; proje sessiz. Katalog sayfası aynı işi görüyor ve telefonu kapsamıyor.",
+   "compat": "React 18 ve üstü; yalnız web.",
+   "modern": "Sürüm temposu durmuş görünüyor.",
+   "risks": "Bakım belirsiz.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@ladle%2Freact",
+     "title": "@ladle/react npm kaydı",
+     "publisher": "npm",
+     "date": "2025-11-04"
+    },
+    {
+     "url": "https://issues.ecosyste.ms/api/v1/hosts/GitHub/repositories/tajo%2Fladle",
+     "title": "tajo/ladle issue istatistiği",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C29",
+   "category": "Bileşen kataloğu",
+   "package": "react-cosmos",
+   "repo": "react-cosmos/react-cosmos",
+   "verdict": "reddedildi",
+   "version": "7.4.1",
+   "released": "2026-08-31",
+   "stars": "8685",
+   "role": "Fixture tabanlı bileşen kataloğu.",
+   "why": "Bakımı iyi (7.4.1, 31 Ağustos 2026; 5 açık issue), ama yine ayrı bir araç ve fixture düzeni getirir; iki kişilik ekipte katalog sayfası yeter.",
+   "compat": "React 18 ve üstü.",
+   "modern": "7.0.0 9 Haziran 2025.",
+   "risks": "Ek yapılandırma.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/react-cosmos",
+     "title": "react-cosmos npm kaydı",
+     "publisher": "npm",
+     "date": "2026-08-31"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/react-cosmos%2Freact-cosmos",
+     "title": "react-cosmos/react-cosmos depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C30",
+   "category": "Bileşen kataloğu",
+   "package": "@unpunnyfuns/swatchbook-addon",
+   "repo": "",
+   "verdict": "reddedildi",
+   "version": "2.2.0",
+   "released": "2026-09-22",
+   "stars": "ölçülmedi",
+   "role": "Storybook içinde DTCG değişkenlerini tablo ve palet olarak gösterir.",
+   "why": "Storybook 10 ve @storybook/react-vite ister; Storybook seçilmediği için gereksiz. Değişken tablosu /katalog sayfasında tokens.native.ts'den üretilen bir listeyle gösterilir.",
+   "compat": "Eş bağımlılık storybook ^10.1.0.",
+   "modern": "Yeni (2.2.0, 22 Eylül 2026).",
+   "risks": "Küçük topluluk.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@unpunnyfuns%2Fswatchbook-addon",
+     "title": "@unpunnyfuns/swatchbook-addon npm kaydı",
+     "publisher": "npm",
+     "date": "2026-09-22"
+    }
+   ]
+  },
+  {
+   "id": "L5-C31",
+   "category": "Panel görsel regresyon",
+   "package": "@vitest/browser-playwright",
+   "repo": "vitest-dev/vitest",
+   "verdict": "seçildi",
+   "version": "5.0.3",
+   "released": "2026-09-30",
+   "stars": "17177",
+   "role": "Vitest 5 tarayıcı kipinde katalog bölümlerini gerçek Chromium'da açar, toMatchScreenshot ile referans görüntülerle karşılaştırır; üzerine gelme ve odak durumlarını gerçek olaylarla oluşturur.",
+   "why": "Vitest zaten seçili; görsel regresyon Vitest 4.0 ile (22 Ekim 2025) geldi ve tarayıcı kipi o sürümde \"experimental\" etiketinden çıktı. Ayrı bir test çalıştırıcı ve rapor eklenmez. Karşılaştırma eşiği ayarlanabilir, referans görüntü adları platformu içerir.",
+   "compat": "Eş bağımlılık vitest 5.0.3 (aynı sürüm) ve playwright. Vitest belgesi ortam farkları yüzünden Docker ya da yalnız CI'da koşmayı öneriyor: referans görüntüler tek bir Linux CI imajında üretilir ve güncellenir.",
+   "modern": "Vitest 4 ile gelen en yeni yol, Vitest 5 ile sürüyor (haftalık yaklaşık 10 milyon indirme).",
+   "risks": "Playwright'ın toHaveScreenshot'ına göre genç (Ekim 2025). Windows'ta alınan görüntü Linux CI ile tutmaz. Hareket ekran görüntüsünden önce durdurulmalı: testler azaltılmış hareket tercihiyle koşar.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@vitest%2Fbrowser-playwright",
+     "title": "@vitest/browser-playwright npm kaydı",
+     "publisher": "npm",
+     "date": "2026-09-30"
+    },
+    {
+     "url": "https://vitest.dev/blog/vitest-4",
+     "title": "Vitest 4.0 is out",
+     "publisher": "Vitest",
+     "date": "2025-10-22"
+    },
+    {
+     "url": "https://vitest.dev/guide/browser/visual-regression-testing",
+     "title": "Visual Regression Testing",
+     "publisher": "Vitest",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C32",
+   "category": "Panel görsel regresyon",
+   "package": "@playwright/test",
+   "repo": "microsoft/playwright",
+   "verdict": "ikinci",
+   "version": "1.63.0",
+   "released": "2026-09-04",
+   "stars": "97092",
+   "role": "Panelin tam sayfalarını (yazdırma görünümü, projeksiyon sayfası) ve katalog sayfasını toHaveScreenshot ile karşılaştırır.",
+   "why": "Ekran görüntüsü karşılaştırmasının en olgun yolu; Docker imajları ve iz görüntüleyici hazır, animations: \"disabled\", maxDiffPixels, stylePath seçenekleri var. Ama Vitest'in yanında ikinci bir çalıştırıcı ve çalışan bir geliştirme sunucusu ister. Panel için uçtan uca tarayıcı testi gerekirse buna geçilir, görsel testler de buraya taşınır.",
+   "compat": "Node 20 ve üstü; Vite 8 sunucusunu webServer ayarıyla açar.",
+   "modern": "Aylık sürüm (1.63.0, 4 Eylül 2026).",
+   "risks": "Belge çizimin işletim sistemine, donanıma ve başsız kipe göre değiştiğini söylüyor; referanslar tek ortamda üretilmeli.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@playwright%2Ftest",
+     "title": "@playwright/test npm kaydı",
+     "publisher": "npm",
+     "date": "2026-09-04"
+    },
+    {
+     "url": "https://playwright.dev/docs/test-snapshots",
+     "title": "Visual comparisons",
+     "publisher": "Playwright",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C33",
+   "category": "Panel görsel regresyon",
+   "package": "chromatic",
+   "repo": "chromaui/chromatic-cli",
+   "verdict": "reddedildi",
+   "version": "18.11.0",
+   "released": "2026-10-05",
+   "stars": "337",
+   "role": "Bulutta görsel karşılaştırma ve inceleme hizmeti.",
+   "why": "Ücretli hizmet: ücretsiz plan ayda 5.000 görüntü ve yalnız Chrome, sonraki plan aylık 179 dolar (35.000 görüntü). Storybook, Playwright ya da Vitest eklentisiyle çalışır. Yerel ve ücretsiz Vitest karşılaştırması aynı işi görüyor; ücretli bir hizmet kurmak sahibin onayını ister.",
+   "compat": "Fiyat sayfasında React Native desteği geçmiyor.",
+   "modern": "Etkin (18.11.0, 5 Ekim 2026).",
+   "risks": "Görüntüler üçüncü tarafa yüklenir; kota aşımı.",
+   "sources": [
+    {
+     "url": "https://www.chromatic.com/pricing",
+     "title": "Chromatic pricing",
+     "publisher": "Chromatic",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://registry.npmjs.org/chromatic",
+     "title": "chromatic npm kaydı",
+     "publisher": "npm",
+     "date": "2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "L5-C34",
+   "category": "Panel görsel regresyon",
+   "package": "@argos-ci/playwright",
+   "repo": "argos-ci/argos-javascript",
+   "verdict": "reddedildi",
+   "version": "7.7.1",
+   "released": "2026-10-04",
+   "stars": "19 (paket deposu; ana depo argos-ci/argos 636)",
+   "role": "Playwright görüntülerini Argos bulut hizmetinde karşılaştırır ve inceletir.",
+   "why": "İnceleme arayüzü bulut hizmetinde; iki kişi farkları PR'daki görüntü farkıyla zaten inceleyebilir. Node 22 ister ve Playwright Test'e bağlı.",
+   "compat": "Playwright Test ile çalışır, Vitest ile değil.",
+   "modern": "Etkin (7.7.1, 4 Ekim 2026).",
+   "risks": "Üçüncü taraf hizmet ve hesap.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@argos-ci%2Fplaywright",
+     "title": "@argos-ci/playwright npm kaydı",
+     "publisher": "npm",
+     "date": "2026-10-04"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/argos-ci%2Fargos",
+     "title": "argos-ci/argos depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C35",
+   "category": "Panel görsel regresyon",
+   "package": "@percy/cli",
+   "repo": "",
+   "verdict": "reddedildi",
+   "version": "1.32.11",
+   "released": "2026-09-24",
+   "stars": "ölçülmedi",
+   "role": "BrowserStack'in bulut görsel test hizmeti.",
+   "why": "Ücretli bulut hizmeti; yerel karşılaştırma yetiyor, görüntüler dışarı çıkmaz.",
+   "compat": "Ayrı hesap ve anahtar ister.",
+   "modern": "Etkin (1.32.11, 24 Eylül 2026).",
+   "risks": "Maliyet ve dış bağımlılık.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/@percy%2Fcli",
+     "title": "@percy/cli npm kaydı",
+     "publisher": "npm",
+     "date": "2026-09-24"
+    }
+   ]
+  },
+  {
+   "id": "L5-C36",
+   "category": "Panel görsel regresyon",
+   "package": "lost-pixel",
+   "repo": "lost-pixel/lost-pixel",
+   "verdict": "reddedildi",
+   "version": "3.22.0",
+   "released": "2024-11-14",
+   "stars": "1682",
+   "role": "Açık kaynak görsel regresyon aracı.",
+   "why": "Depo arşivlenmiş, son sürüm 14 Kasım 2024 (22 ay önce).",
+   "compat": "Bakım yok.",
+   "modern": "Bakımı bitmiş.",
+   "risks": "Düzeltme gelmez.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/lost-pixel",
+     "title": "lost-pixel npm kaydı",
+     "publisher": "npm",
+     "date": "2024-11-14"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/lost-pixel%2Flost-pixel",
+     "title": "lost-pixel/lost-pixel depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C37",
+   "category": "Panel görsel regresyon",
+   "package": "backstopjs",
+   "repo": "",
+   "verdict": "reddedildi",
+   "version": "6.3.25",
+   "released": "2024-09-07",
+   "stars": "ölçülmedi",
+   "role": "Eski görsel regresyon aracı.",
+   "why": "Son sürüm 7 Eylül 2024 (24 ay önce).",
+   "compat": "Kendi tarayıcı yönetimiyle çalışır.",
+   "modern": "Sürüm temposu durmuş.",
+   "risks": "Bakım belirsiz.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/backstopjs",
+     "title": "backstopjs npm kaydı",
+     "publisher": "npm",
+     "date": "2024-09-07"
+    }
+   ]
+  },
+  {
+   "id": "L5-C38",
+   "category": "Telefon görsel regresyon",
+   "package": "maestro (CLI, npm paketi değil)",
+   "repo": "mobile-dev-inc/maestro",
+   "verdict": "seçildi",
+   "version": "2.11.0",
+   "released": "2026-09-29",
+   "stars": "15849",
+   "role": "Geliştirme derlemesinde /katalog ekranını açan YAML akışları; assertScreenshot ile her bölümü referans görüntüyle karşılaştırır (cropOn ile tek bileşene daraltılır, thresholdPercentage varsayılan 95).",
+   "why": "Görsel karşılaştırma komutu yerleşik: 2.6.0'da eşleşme yüzdesi eşikle hizalandı, 2.8.0'da eşik için değişken desteği geldi. Maestro belgesi Expo Go, geliştirme derlemeleri ve EAS Workflows ile tam uyum yazıyor. Jest istemez, akışlar YAML. Geçen yıl 230 issue açılmış, ortalama 22 günde kapanmış; sürümler aylık (2.9.0 26 Ağustos, 2.10.0 31 Ağustos, 2.11.0 29 Eylül 2026).",
+   "compat": "Uygulamaya kütüphane eklenmez; CLI emülatörü dışarıdan sürer. Android emülatörü GitHub Actions'ta, iOS simülatörü macOS makinesinde koşar.",
+   "modern": "2.x serisi 2026'da aylık sürümle ilerliyor.",
+   "risks": "Emülatör çizimi gerçek telefondan farklı: referanslar tek emülatör görüntüsünde (sabit cihaz, yazı ölçeği 1, açık tema) üretilmeli. %95 varsayılan eşik ince renk kaymalarını kaçırır; renk doğruluğu zaten token testinde ölçülür, Maestro düzen ve durum kırılmalarını yakalar.",
+   "sources": [
+    {
+     "url": "https://docs.maestro.dev/reference/commands-available/assertscreenshot",
+     "title": "assertScreenshot",
+     "publisher": "Maestro",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://github.com/mobile-dev-inc/maestro/blob/main/CHANGELOG.md",
+     "title": "Maestro CHANGELOG",
+     "publisher": "mobile.dev",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://github.com/mobile-dev-inc/maestro/releases",
+     "title": "Maestro sürümleri (v2.11.0)",
+     "publisher": "GitHub",
+     "date": "2026-09-29"
+    },
+    {
+     "url": "https://issues.ecosyste.ms/api/v1/hosts/GitHub/repositories/mobile-dev-inc%2Fmaestro",
+     "title": "mobile-dev-inc/maestro issue istatistiği",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/mobile-dev-inc%2Fmaestro",
+     "title": "mobile-dev-inc/maestro depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C39",
+   "category": "Telefon görsel regresyon",
+   "package": "detox",
+   "repo": "wix/Detox",
+   "verdict": "reddedildi",
+   "version": "20.51.4",
+   "released": "2026-06-16",
+   "stars": "12031",
+   "role": "Gri kutu React Native uçtan uca test aracı.",
+   "why": "Eş bağımlılık olarak Jest (27 ile 30) istiyor; teknik.html \"Jest eklenmez\" diyor. Yerel derleme yapılandırması ağır; Maestro aynı işi YAML ile görüyor.",
+   "compat": "Jest zorunlu, plandaki Vitest düzeniyle çelişir.",
+   "modern": "Etkin (20.51.4, 16 Haziran 2026).",
+   "risks": "Plan kararıyla çelişki.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/detox",
+     "title": "detox npm kaydı",
+     "publisher": "npm",
+     "date": "2026-06-16"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/wix%2FDetox",
+     "title": "wix/Detox depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C40",
+   "category": "Telefon görsel regresyon",
+   "package": "react-native-owl",
+   "repo": "FormidableLabs/react-native-owl",
+   "verdict": "reddedildi",
+   "version": "1.5.0",
+   "released": "2025-01-14",
+   "stars": "695",
+   "role": "React Native ekran görüntüsü karşılaştırma aracı.",
+   "why": "Eş bağımlılık react ^17 ya da ^18; React 19.2 ile resmen uyumsuz. Son sürüm 14 Ocak 2025 (20 ay önce), haftalık 151 indirme.",
+   "compat": "React 19 desteği yok.",
+   "modern": "Bakım durmuş görünüyor.",
+   "risks": "Kurulum çakışması.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/react-native-owl",
+     "title": "react-native-owl npm kaydı",
+     "publisher": "npm",
+     "date": "2025-01-14"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/FormidableLabs%2Freact-native-owl",
+     "title": "FormidableLabs/react-native-owl depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  },
+  {
+   "id": "L5-C41",
+   "category": "Telefon görsel regresyon",
+   "package": "sherlo",
+   "repo": "sherlo-io/sherlo",
+   "verdict": "reddedildi",
+   "version": "2.0.2",
+   "released": "2026-08-05",
+   "stars": "83",
+   "role": "React Native Storybook hikayeleri üzerinde bulutta görsel test hizmeti.",
+   "why": "Storybook React Native ister (o da reddedildi) ve bulut hizmeti; topluluk küçük (83 yıldız).",
+   "compat": "Storybook RN kurulumuna bağlı.",
+   "modern": "Yeni ve etkin (2.0.2, 5 Ağustos 2026).",
+   "risks": "Dış hizmet ve hesap.",
+   "sources": [
+    {
+     "url": "https://registry.npmjs.org/sherlo",
+     "title": "sherlo npm kaydı",
+     "publisher": "npm",
+     "date": "2026-08-05"
+    },
+    {
+     "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/sherlo-io%2Fsherlo",
+     "title": "sherlo-io/sherlo depo bilgisi",
+     "publisher": "ecosyste.ms",
+     "date": "erişim 2026-10-06"
+    }
+   ]
+  }
+ ],
+ "stack": [
+  {
+   "category": "Token biçimi",
+   "pick": "DTCG 2025.10 (.tokens.json)",
+   "second": "",
+   "note": "Renk OKLCH nesnesi, süre {value, unit}, eğri cubicBezier, transition bileşiği. Yaylar üç number değişkeni (stiffness, damping, mass). Kaynak dosya önerisi: packages/tasarim/tokens/."
+  },
+  {
+   "category": "Token derleme aracı",
+   "pick": "@terrazzo/cli",
+   "second": "style-dictionary",
+   "note": "Komut: tz build. Error düzeyinde kurallar: a11y/min-contrast (AA, çift listesi), core/max-gamut (srgb), core/colorspace (oklch), core/required-modes (hareket için azaltılmış mod), core/required-children (yay grupları), core/valid-*."
+  },
+  {
+   "category": "Panel çıktısı (CSS değişkenleri)",
+   "pick": "@terrazzo/plugin-css",
+   "second": "@terrazzo/plugin-tailwind",
+   "note": "legacyHex: true ile hex; azaltılmış hareket modu prefers-reduced-motion seçicisiyle. Tailwind 4 seçilirse ikinci eklenti eklenir."
+  },
+  {
+   "category": "Telefon çıktısı (TypeScript sabitleri)",
+   "pick": "yerel Terrazzo eklentisi (tokens.native.ts)",
+   "second": "",
+   "note": "Renkler colorjs.io ile sRGB hex; sayılar, eğriler ve yaylar düz sabit; azaltılmış hareket ayrı nesne. Uygulamaya renk kütüphanesi girmez."
+  },
+  {
+   "category": "Telefonda renk biçimi",
+   "pick": "react-native (yerleşik ayrıştırıcı, hex)",
+   "second": "",
+   "note": "React Native 0.86 ve 0.87 oklch(), lab(), lch(), color() kabul etmiyor; hex yeterli çünkü palet sRGB içinde."
+  },
+  {
+   "category": "Renk hesabı (derleme ve test)",
+   "pick": "colorjs.io",
+   "second": "culori",
+   "note": "Terrazzo ve Style Dictionary ile aynı motor; sürüm sabit ve tek kopya."
+  },
+  {
+   "category": "Token ve kontrast testleri",
+   "pick": "vitest",
+   "second": "",
+   "note": "Zaten seçili Vitest 5. Testler: iki platform hex eşliği, kontrast çiftleri, kırık beyaz kuralı, azaltılmış hareket karşılıkları; eşikler ortak sabit dosyasından içe alınır."
+  },
+  {
+   "category": "Arayüz erişilebilirlik taraması",
+   "pick": "axe-core",
+   "second": "@axe-core/playwright",
+   "note": "Panel katalog sayfasında Vitest tarayıcı kipinde axe.run. Telefonda karşılığı yok; telefon renk güvencesi token testinden gelir."
+  },
+  {
+   "category": "Bileşen kataloğu",
+   "pick": "yok: /katalog geliştirme ekranı (panel ve telefon)",
+   "second": "storybook",
+   "note": "Aynı bileşen ve durum listesi iki platformda; üretim paketine girmediği derleme testinde denetlenir. Bileşen sayısı 40'ı geçerse ya da tasarımcı katılırsa Storybook 10."
+  },
+  {
+   "category": "Panel görsel regresyon",
+   "pick": "@vitest/browser-playwright",
+   "second": "@playwright/test",
+   "note": "toMatchScreenshot; referans görüntüler yalnız Linux CI imajında üretilir; testler azaltılmış hareket tercihiyle koşar."
+  },
+  {
+   "category": "Telefon görsel regresyon",
+   "pick": "maestro (CLI)",
+   "second": "",
+   "note": "assertScreenshot ve cropOn; tek emülatör görüntüsü, eşik ilk turda ölçülerek 95'ten yukarı çekilir."
+  }
+ ],
+ "open_questions": [
+  "Koyu tema istenecek mi? İstenirse Terrazzo modları ve kontrast çiftleri iki tema için ayrı denetlenir; bu çalışma yalnız açık temayı varsaydı.",
+  "Tema ve azaltılmış hareket modları DTCG 2025.10 resolver modülüyle mi, Terrazzo'nun mod sözdizimiyle mi yazılacak? İlk kurulumda Terrazzo 2.7 belgesine göre seçilmeli.",
+  "Paneldeki hareket kütüphanesi yay değerlerini sayı olarak mı alacak, yoksa derlemede CSS linear() eğrisine mi çevrilecek? Bu, animasyon motoru alanının kararına bağlı.",
+  "Telefon referans görüntüleri yalnız Android emülatöründe mi tutulacak, yoksa iOS simülatörü için macOS CI makinesi de açılacak mı?",
+  "Telefon görsel testleri GitHub Actions'taki Android emülatöründe mi, EAS Workflows'ta mı koşacak? EAS ücretli dakika harcayabilir, sahibin onayı gerekir.",
+  "Maestro assertScreenshot eşiği: varsayılan %95 gevşek; ilk referans turunda gürültü ölçülüp daha sıkı bir değer seçilmeli.",
+  "Panelin stil yöntemi (düz CSS ve CSS Modules ya da Tailwind 4) başka alanda seçilecek; Tailwind seçilirse @terrazzo/plugin-tailwind eklenir, hat değişmez."
+ ]
+}

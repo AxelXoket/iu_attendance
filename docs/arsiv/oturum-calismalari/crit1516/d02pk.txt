@@ -1,0 +1,162 @@
+D02-P01 [a2] Dersler sözleşmesi
+ deps=[]
+ bekler=['D13-P01']
+ jobs=[] exports=['OturumUretimOlayi', 'OTURUM_TURLERI', 'OTURUM_DURUMLARI', 'IPTAL_NEDENLERI', 'YAPILDI_DURUMLARI', 'DERSLER_DENETIM_OLAYLARI']
+ notes=31 rota tanımı, istek ve cevap şemaları, DERSLER_ hata kataloğu, dört sabit değer listesi, OturumUretimOlayi tipi ve denetim olay şemaları packages/contracts/src/dersler.ts dosyasına yazılır. Öbür modüllerin beklediği sabitler ve tipler burada çıkar; dosya yalnız D13'ün sözleşme parçalarını içe aktarır. tsc ve D13'ün Vitest sözleşme denetimiyle sınanır.
+
+D02-P02 [a1] Takvim, çakışma ve ders kodu kuralları
+ deps=[]
+ bekler=[]
+ jobs=[] exports=[]
+ notes=Son hafta, kilit günü, dönem arası, tatil ve sınav haftası kuralları, yarı açık aralık, program saati örtüşmesi ve Türkçe büyüten ders kodu normalleştirmesi hiçbir dosya içe aktarmayan saf işlevler olarak yazılır; Vitest ve fast-check özellikleri TZ=UTC ve TZ=Europe/Istanbul ile iki kez koşar.
+
+D02-P03 [a7] Oturum üretim planı
+ deps=['D02-P01', 'D02-P02']
+ bekler=['D02-P01', 'D02-P02']
+ jobs=[] exports=[]
+ notes=Programdan dönemin bütün oluşumlarını çıkaran ve yalnız başlamamış oturumların farkını (eklenecek, güncellenecek, iptal, geri alınacak) veren deterministik plan işlevi takvim kurallarının üstüne yazılır, iptal nedeni ve oturum türü tipleri sözleşmeden gelir; numRuns 1000 özellikleri, satır ve dal kapsamı yüzde 90 ve packages/core/src/dersler üzerinde Stryker kırma eşiğiyle denetlenir.
+
+D02-P04 [a3] Şema, göç ve saat çevirisi
+ deps=['D02-P01']
+ bekler=['D02-P01', 'D12-P01']
+ jobs=[] exports=[]
+ notes=On dört tablo kisitAdi adlarıyla Drizzle şemasına, CHECK listeleri durumKisiti ile sözleşme sabitlerinden yazılır; tetikleyiciler, CHECK kısıtları ve modül içi yabancı anahtarlar tek başlangıç göçündedir. kisiler tablosuna giden üç yabancı anahtar D01'in göçünü (20261020090000) beklemesin diye ders paketindeki ayrı ileri göçe bırakılır; başlangıç göçü yalnız D12'nin işlevleriyle kurulur. saat.ts AT TIME ZONE çevirisini verir; saat.test.ts geçici test veritabanında koşar, göç D12 şema denetiminden geçer.
+
+D02-P05 [a4] Okuma yaprağı ve kayıt defterleri
+ deps=['D02-P01', 'D02-P02', 'D02-P04']
+ bekler=['D02-P01', 'D02-P02', 'D02-P04', 'D12-P01', 'D13-P01']
+ jobs=[] exports=['dersGetir', 'dersYetkisi', 'subeGetir', 'dersSubeleri', 'birimGetir', 'kilitliBirimDonemleri', 'hocaninDersleri', 'oturumGetir', 'oturumlariGetir', 'oturumSayfasi', 'oturumSubeleri', 'birimDonemiGetir', 'kilitDurumu', 'takvimGetir', 'donemArasiMi', 'denetlenecekDersler', 'oturumUretimDinleyicisiKaydet', 'kilitAdimiKaydet', 'listeKaynagiKaydet']
+ notes=Öbür modüllerin beklediği on altı okuma işlevi yaprak kuralıyla yalnız tablolar.ts, sözleşme, core takvim kuralları ve D12 işlem tipi kullanılarak yaprak.ts içine, üç kayıt defteri (üretim dinleyicisi, kilit adımı, liste kaynağı) kayitlar.ts içine yazılır; başka alan modülüne bağlanmadığı için şemadan hemen sonra çıkar. yaprak.test.ts satırları tablolar.ts ile atıp işlevleri geçici test veritabanında doğrudan çağırır.
+
+D02-P06 [a7] Yetki, liste sorguları ve çakışma ucu
+ deps=['D02-P02', 'D02-P04', 'D02-P05']
+ bekler=['D02-P02', 'D02-P04', 'D02-P05', 'D01-P04', 'D13-P03', 'D13-P01', 'D12-P01']
+ jobs=[] exports=[]
+ notes=Kaynak ve inceleme hesabı yetki yardımcısı (dersYetkisi ve D01.yetkiDenetle), başka modüle bağlanmayan liste sorguları (hoca adı D01.kisiGetir'den) ve kayıtlı liste kaynağının etkin satırlarıyla numara ve isim döndürmeyen çakışma ucu işleyicisi yazılır; test dosyası işleyicileri geçici test veritabanında doğrudan çağırır, uygulama kurulmaz.
+
+D02-P07 [a6] Oran yazıcısı
+ deps=['D02-P04', 'D02-P05']
+ bekler=['D02-P04', 'D02-P05', 'D06-P05', 'D12-P01']
+ jobs=[] exports=['oranlariYaz']
+ notes=D08'in oran ucunun kendi işleminde çağırdığı oranlariYaz (ders satırı FOR UPDATE, kilitDurumu ile aynı an, sonuç kodu, damga) yazım hattını ve D08'in iş kuyruğunu beklemesin diye ayrı dosyada yazılır; test dosyası sayaç casusuyla geçici test veritabanında koşar.
+
+D02-P08 [a8] Kafa sayısı yazıcısı
+ deps=['D02-P04', 'D02-P05']
+ bekler=['D02-P04', 'D02-P05', 'D08-P07', 'D08-P06', 'D12-P01']
+ jobs=[] exports=['kafaSayisiniYaz']
+ notes=D07'nin kafa sayısı öğesinin son adımı olan kafaSayisiniYaz ve yapıldı cevabının da kullandığı çelişki kuralı oturum yazım hattını beklemesin diye ayrı dosyada yazılır (oturum satırı FOR NO KEY UPDATE, an saat arayüzünden, D08.devamHesaplaIsiKoy YAPILDI); test dosyası sahte D08 kaydıyla geçici test veritabanında koşar.
+
+D02-P09 [a8] Oturum yazım hattı ve denetim yazıcısı
+ deps=['D02-P03', 'D02-P04', 'D02-P05']
+ bekler=['D02-P03', 'D02-P04', 'D02-P05', 'D06-P05', 'D08-P07', 'D08-P06', 'D09-P03', 'D12-P01']
+ jobs=[] exports=[]
+ notes=Planı yazan hat (satırlar ve değişiklik geçmişi, üretim dinleyicileri, denetim, D08 işi, en son tek surumAl), program, ders, deneme ve hesap olayının paylaştığı arşiv kuralı (hocasizDersKurali dahil) ile devir kuralı ve DERSLER_DENETIM_OLAYLARI ile D09.denetimeYaz'a yazan denetim yazıcısı yazılır; servisler birbirine değil bu dosyaya dayanır. uretim.test.ts sahte dinleyici ve sayaç casusuyla geçici test veritabanında koşar.
+
+D02-P10 [a10] Program kaydı
+ deps=['D02-P03', 'D02-P05', 'D02-P06', 'D02-P09']
+ bekler=['D02-P03', 'D02-P05', 'D02-P06', 'D02-P09', 'D13-P03']
+ jobs=[] exports=[]
+ notes=Program görme, önizleme ve kaydetme işleyicileri yazım hattının üstüne yazılır (bugünkü oturum korunur, düzenleme numarası denetlenir); test dosyası işleyicileri geçici test veritabanında doğrudan çağırır, oturum üretimi senaryoları uçtan uca pakette koşar.
+
+D02-P11 [a9] Oturum işlemleri ve Ders yapıldı mı
+ deps=['D02-P05', 'D02-P06', 'D02-P08', 'D02-P09']
+ bekler=['D02-P05', 'D02-P06', 'D02-P08', 'D02-P09', 'D06-P05', 'D08-P07', 'D08-P06', 'D13-P03']
+ jobs=[] exports=[]
+ notes=Oturum listesi, telafi (taşıma ve sınır), tek oturum düzenleme, iptal ve geri alma, onaysız liste, tek ve toplu yapıldı cevabı (ders satırları dersId sırasıyla kilitlenir, çelişki kuralı kafa-sayisi.ts'ten) yazılır; test dosyası geçici test veritabanında koşar, telafi, iptal ve yapıldı senaryoları uçtan uca pakette koşar.
+
+D02-P12 [a9] Ders, şube ve devir
+ deps=['D02-P02', 'D02-P05', 'D02-P06', 'D02-P09']
+ bekler=['D02-P02', 'D02-P05', 'D02-P06', 'D02-P09', 'D01-P04', 'D06-P05', 'D08-P07', 'D08-P06', 'D13-P03']
+ jobs=[] exports=[]
+ notes=Ders açma, düzenleme (birim, süre ve QR değişince aynı işlemde yeniden üretim), arşiv, şube ekleme (programaKat) ve pasifleştirme, yönetici listesi ve devir işleyicileri yazılır; dersler.hoca_kisi_id, oturumlar.iptal_eden_kisi_id ve oturum_degisiklikleri.degistiren_kisi_id yabancı anahtarları D01 göçünden (20261020090000) sonra gelen ayrı ileri göçle eklenir. Test dosyası sahte liste kaynağı ve sahte D04 dinleyicisiyle geçici test veritabanında koşar.
+
+D02-P13 [a9] Birim, dönem ve takvim yönetimi
+ deps=['D02-P04', 'D02-P05', 'D02-P06', 'D02-P09']
+ bekler=['D02-P04', 'D02-P05', 'D02-P06', 'D02-P09', 'D12-P06', 'D14-P07', 'D14-P01', 'D06-P05', 'D13-P03']
+ jobs=[] exports=[]
+ notes=Birim, bölüm, dönem, takvim ve birim dönemi bağı işleyicileri (FOR SHARE ile kilit anı türetme, son günü gerekçeyle ileri alma ve yeniden açma, aynı işlemde kuyruğa koyma) ile üç kuyruk tanımı yazılır; yeniden üretim işinin kendisi iş tanımları paketindedir. Test dosyası D12 bölüm casusu ve D14 test kuyruğuyla geçici test veritabanında koşar.
+
+D02-P14 [a10] Dönem kilidi
+ deps=['D02-P05', 'D02-P06', 'D02-P09']
+ bekler=['D02-P05', 'D02-P06', 'D02-P09', 'D06-P05', 'D08-P07', 'D08-P06', 'D13-P03']
+ jobs=['donem_kilidi'] exports=[]
+ notes=Kilit anının uygulanması (kayıtlı adımlar sira ile, sonra arşiv, ders başına KILIT işi, denetim ve sürüm), kilitler listesi ve donem_kilidi işleyicisi yazılır; test dosyası sahte kilit adımlarıyla geçici test veritabanında koşar, takvim ve kilit senaryoları uçtan uca pakette koşar.
+
+D02-P15 [a10] Deneme dersi ve hesap olayları
+ deps=['D02-P05', 'D02-P09']
+ bekler=['D02-P05', 'D02-P09', 'D01-P04', 'D01-P01', 'D12-P06', 'D06-P05', 'D15-P02']
+ jobs=['deneme_dersi_oturumlari'] exports=['denemeDersiniKur', 'derslerKimlikDinleyicisi']
+ notes=Eş güçlü denemeDersiniKur (inceleme dönemi, birimsiz deneme dersi, şube 1, 14 günlük oturum, yazım hattındaki devir kuralı), deneme_dersi_oturumlari işleyicisi ve yazım hattındaki hocasizDersKurali'ni çağıran derslerKimlikDinleyicisi yazılır; ders servisini beklemez. Test dosyası sayaç casusu ve D12 bölüm casusuyla geçici test veritabanında koşar.
+
+D02-P16 [a11] İndirme kaynakları ve personel kapsamı
+ deps=['D02-P04', 'D02-P05']
+ bekler=['D02-P04', 'D02-P05', 'D01-P04', 'D12-P01']
+ jobs=[] exports=[]
+ notes=Beş genel kaynak (dersler, program saatleri, oturumlar, tatiller, kilit) ve personel kapsam kaynağı kendi tipleriyle yazılır, D06 kaydını eklenti yapar; test dosyası kaynak işlevlerini geçici test veritabanında doğrudan çağırır, indirme senaryoları uçtan uca pakette koşar.
+
+D02-P17 [a12] Rotalar, eklenti ve modül girişi
+ deps=['D02-P01', 'D02-P05', 'D02-P06', 'D02-P07', 'D02-P08', 'D02-P10', 'D02-P11', 'D02-P12', 'D02-P13', 'D02-P14', 'D02-P15', 'D02-P16']
+ bekler=['D02-P01', 'D02-P05', 'D02-P06', 'D02-P07', 'D02-P08', 'D02-P10', 'D02-P11', 'D02-P12', 'D02-P13', 'D02-P14', 'D02-P15', 'D02-P16', 'D13-P08', 'D13-P03', 'D06-P05']
+ jobs=[] exports=['derslerEklentisi', 'DerslerEklentisiSecenekleri']
+ notes=Üç rota dosyası 31 işleyiciyi D13.rotalariKaydet ile bağlar, eklenti beş indirme kaynağını ve personel kapsamını kaydedip liste kaynağını açılışta denetler, index.ts dışa açılanları verir; iş tanımlarını içe aktarmaz. eklenti.test.ts sahte bağımlılıklarla çıplak Fastify örneğinde koşar, bileşim kökü kurulmaz.
+
+D02-P18 [a16] Takvim yenileme işi ve iş tanımları
+ deps=['D02-P05', 'D02-P09', 'D02-P13', 'D02-P14', 'D02-P15']
+ bekler=['D02-P05', 'D02-P09', 'D02-P13', 'D02-P14', 'D02-P15', 'D14-P07', 'D15-P02']
+ jobs=['takvim_oturumlarini_yenile'] exports=['isler']
+ notes=takvim_oturumlarini_yenile işinin olay ve gece onarımı çalışması yazım hattıyla yazılır, üç iş isTanimla ile isler dizisinde tanımlanır; isler.test.ts diziyi D14'ün çizelge doğrulayıcısından geçirir ve işi geçici test veritabanında iki kez çalıştırır.
+
+D02-P19 [a12] Veri kurucusu ve ortak adımlar
+ deps=['D02-P01', 'D02-P04']
+ bekler=['D02-P01', 'D02-P04', 'D15-P09']
+ jobs=[] exports=[]
+ notes=Öbür modüllerin senaryolarının da kurucu('dersler') ile kullandığı veri kurucusu (birim, dönem, takvim, ders, şube, program saati ve oturum satırları) ve birim, dönem, takvim, tatil, sınav haftası, sahte saat ve TZ ortak adımları yalnız tablolar, saat.ts ve sözleşmeyle yazılır; servisleri ve bileşim kökünü beklemez.
+
+D02-P20 [a13] Senaryo adımları
+ deps=['D02-P01', 'D02-P19', 'D02-P05', 'D02-P08', 'D02-P15']
+ bekler=['D02-P01', 'D02-P19', 'D02-P05', 'D02-P08', 'D02-P15', 'D15-P09', 'D13-P04', 'D09-P03', 'D14-P07']
+ jobs=[] exports=[]
+ notes=Ders, şube, program, önizleme, telafi, iptal, yapıldı ve kafa sayısı adımları; birim, dönem, takvim, bağ, sahte üretim dinleyicisi ve sahte kilit adımı kaydı, denemeDersiniKur çağrısı, hesap silme ve iş çalıştırma adımları; rota tablosu, hata kataloğu ve denetim olayı örneklerini D13.TUM_ROTALAR ve D09.denetimeYaz doğrulayıcısıyla karşılaştıran sözleşme adımları yazılır. Uçları test dünyasının istekGonder'i ile sözleşmedeki rota tanımlarından çağırır; bütün senaryo paketleri bu adımları paylaştığı için bileşim kökünden önce tek yerde durur ve senaryo paketleri birbirini beklemez.
+
+D02-P21 [a15] Program ve saat dilimi senaryoları
+ deps=['D02-P19', 'D02-P20']
+ bekler=['D02-P19', 'D02-P20', 'D13-P13', 'D15-P09']
+ jobs=[] exports=[]
+ notes=Oturum üretimi ve saat dilimi senaryoları sahte dinleyici, sayaç casusu ve kurucunun takviminden hesaplanan kaba gün sayımıyla yazılır ve bileşik uygulamada HTTP üzerinden yeşil olur.
+
+D02-P22 [a15] Ders ve şube senaryoları
+ deps=['D02-P19', 'D02-P20']
+ bekler=['D02-P19', 'D02-P20', 'D13-P13', 'D15-P09']
+ jobs=[] exports=[]
+ notes=Ders, şube, arşiv ve devir senaryoları gerçek liste kaynağı ve D04 dinleyicisi kurulu bileşik uygulamada yazılır ve yeşil olur.
+
+D02-P23 [a15] Oturum senaryoları
+ deps=['D02-P19', 'D02-P20']
+ bekler=['D02-P19', 'D02-P20', 'D13-P13', 'D15-P09']
+ jobs=[] exports=[]
+ notes=Telafi, iptal, düzenleme ve "Ders yapıldı mı?" senaryoları bileşik uygulamada yazılır ve yeşil olur.
+
+D02-P24 [a15] Birim, dönem, takvim ve kilit senaryoları
+ deps=['D02-P19', 'D02-P20']
+ bekler=['D02-P19', 'D02-P20', 'D13-P13', 'D15-P09']
+ jobs=[] exports=[]
+ notes=Birim, dönem, takvim, yeniden üretim işi, gece onarımı, kilit anı, kilit adımları, son günü ileri alma ve ortak takvim senaryoları sahte saat ve D14 iki kez çalıştırma adımıyla bileşik uygulamada yazılır ve yeşil olur; 500 derslik yük ölçümü geliştirme makinesinde koşar.
+
+D02-P25 [a15] Çakışma, deneme, hesap silme, yetki ve indirme senaryoları
+ deps=['D02-P19', 'D02-P20']
+ bekler=['D02-P19', 'D02-P20', 'D13-P13', 'D15-P09']
+ jobs=[] exports=[]
+ notes=Çakışma, deneme dersi, hesap silme, başka hocanın dersi (önce kırmızı yazılır) ve inceleme hesabı senaryoları ile D06'nın artımlı ve tam indirme adımlarını kullanan indirme senaryoları bileşik uygulamada yazılır ve yeşil olur.
+
+D02-P26 [a15] Sözleşme senaryoları
+ deps=['D02-P19', 'D02-P20']
+ bekler=['D02-P19', 'D02-P20', 'D13-P13', 'D15-P09']
+ jobs=[] exports=[]
+ notes=Rota listesi, hata kataloğu, yönetici uçları, denetim olayları, iki süreçte eklenti kayıtları, şema adları ve içe aktarma kuralları (kisiler yabancı anahtarları dahil), üretim olayı tipi, D08 nedenleri ve tek sürüm damgası bileşik uygulamada denetlenir.
+
+D02-P27 [a18] Eşzamanlılık, yük ve bilinçli hatalar
+ deps=['D02-P19', 'D02-P20', 'D02-P21', 'D02-P22', 'D02-P23', 'D02-P24', 'D02-P25', 'D02-P26']
+ bekler=['D02-P19', 'D02-P20', 'D02-P21', 'D02-P22', 'D02-P23', 'D02-P24', 'D02-P25', 'D02-P26', 'D13-P13', 'D15-P09']
+ jobs=[] exports=[]
+ notes=Üç eşzamanlılık senaryosu çok bağlantılı adımlarla, iki ders çıkışı ölçümü D15'in k6 koşusuyla yazılır; bütün D02 senaryoları cevap şemasıyla bir kez daha koşar ve bilinçli hata listesinin her maddesi kendi senaryosunu kırmızıya çevirir, özgün baytlar md5 denetimiyle geri yazılır.
+

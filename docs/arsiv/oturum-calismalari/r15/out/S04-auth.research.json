@@ -1,0 +1,701 @@
+{
+ "checked_ok": [
+  {
+   "plan_line": 586,
+   "claim": "Better Auth 1.7.7 is the current latest release (GitHub release 2026-09-30T21:29Z, npm dist-tag latest = 1.7.7). 1.7.0 shipped 2026-08-18, so there were 8 releases in 6 weeks, with 1.6.x backports running in parallel (1.6.33 on 2026-09-14).",
+   "source_url": "https://github.com/better-auth/better-auth/releases/tag/v1.7.7"
+  },
+  {
+   "plan_line": 586,
+   "claim": "1.7.7 fixes GHSA-44jh-23m7-hpcf (Low). That advisory covers exactly the plan's setup: database-backed rate limits on PostgreSQL through the Drizzle adapter could be exceeded by concurrent requests in versions 1.6.17 to 1.7.6. 1.7.7 also fixes the critical GHSA-965c-763c-88jm, which needs magic link plus OAuth, neither of which the plan uses.",
+   "source_url": "https://github.com/better-auth/better-auth/security/advisories/GHSA-44jh-23m7-hpcf"
+  },
+  {
+   "plan_line": 586,
+   "claim": "'Proje 2026'da çok sayıda güvenlik duyurusu yayımladı' is correct. The advisory list shows 27 advisories published in 2026 (3 critical, 17 high, 5 moderate, 2 low), most of them in SSO, SCIM, OAuth provider, OIDC, Stripe and organization plugins. The only email-OTP-related one (GHSA-qq9h-g4jm-xgf3) requires open email+password sign-up, which the plan does not enable.",
+   "source_url": "https://github.com/better-auth/better-auth/security/advisories"
+  },
+  {
+   "plan_line": 69,
+   "claim": "6 digits, 5 minutes and 3 tries are exactly the email OTP plugin defaults (otpLength 6, expiresIn 300 s, allowedAttempts 3). Once the limit is hit the code is consumed (TOO_MANY_ATTEMPTS), so a new code is needed. The default resendStrategy 'rotate' invalidates the previous code.",
+   "source_url": "https://www.better-auth.com/docs/plugins/email-otp"
+  },
+  {
+   "plan_line": 586,
+   "claim": "disableSignUp exists. For an unknown address, send-verification-otp returns {success:true} without sending any mail, so the response body does not reveal whether the account exists.",
+   "source_url": "https://raw.githubusercontent.com/better-auth/better-auth/main/packages/better-auth/src/plugins/email-otp/routes.ts"
+  },
+  {
+   "plan_line": 69,
+   "claim": "OTP verification uses constant-time comparison (constantTimeEqual) in all storage modes.",
+   "source_url": "https://raw.githubusercontent.com/better-auth/better-auth/main/packages/better-auth/src/plugins/email-otp/otp-token.ts"
+  },
+  {
+   "plan_line": 586,
+   "claim": "Sessions are stored in the database by default. The cookie cache is off by default, and sessions move elsewhere only if a secondary storage is configured. So 'oturumlar yalnız veritabanında' is the default and keeps the API stateless for horizontal scaling.",
+   "source_url": "https://www.better-auth.com/docs/concepts/session-management"
+  },
+  {
+   "plan_line": 66,
+   "claim": "'Onaydan önce giriş yapılamaz' can be enforced in Better Auth with a session-create before hook, which can abort by returning false or throwing APIError.",
+   "source_url": "https://www.better-auth.com/docs/concepts/database"
+  },
+  {
+   "plan_line": 586,
+   "claim": "A documented Fastify integration path exists: a catch-all route, fromNodeHeaders and auth.handler(Request).",
+   "source_url": "https://www.better-auth.com/docs/integrations/fastify"
+  },
+  {
+   "plan_line": 586,
+   "claim": "better-auth 1.7.7 declares the peer dependency drizzle-orm '^0.45.2 || >=1.0.0-rc.1 <2.0.0', so it is compatible with the plan's Drizzle 1.0 RC.",
+   "source_url": "https://www.npmjs.com/package/better-auth"
+  },
+  {
+   "plan_line": 586,
+   "claim": "@better-auth/expo 1.7.7 shipped the same day as better-auth 1.7.7. Its Expo peer dependencies are marked optional, so the server package no longer drags Expo packages into the backend (issue #7603 is closed).",
+   "source_url": "https://www.npmjs.com/package/@better-auth/expo"
+  },
+  {
+   "plan_line": 586,
+   "claim": "Better Auth telemetry is disabled by default ('optional, transparent, and disabled by default'), so it does not conflict with the plan's 'üçüncü taraf analitik yok'.",
+   "source_url": "https://www.better-auth.com/docs/reference/telemetry"
+  },
+  {
+   "plan_line": 586,
+   "claim": "Better Auth has a backing organization: a USD 5M seed round on 2025-06-24 (Peak XV, Y Combinator), and it has maintained Auth.js since 2025-09-22.",
+   "source_url": "https://better-auth.com/blog/seed-round"
+  },
+  {
+   "plan_line": 69,
+   "claim": "6 digits, a lifetime well under 10 minutes and single use all satisfy NIST SP 800-63B-4 (final, 26 Aug 2025) out-of-band secret rules: at least six decimal digits, invalid unless completed within 10 minutes, accepted only once.",
+   "source_url": "https://pages.nist.gov/800-63-4/sp800-63b.html"
+  },
+  {
+   "plan_line": 69,
+   "claim": "Re-login every 30 days matches NIST 800-63B-4 sec. 2.1.3: 'A definite reauthentication overall timeout SHALL be established, which SHOULD be no more than 30 days at AAL1.'",
+   "source_url": "https://pages.nist.gov/800-63-4/sp800-63b.html"
+  },
+  {
+   "plan_line": 69,
+   "claim": "The code rules meet ASVS 5.0.0 6.5.1 (single use), 6.5.4 (at least 20 bits, 6 random digits is enough) and 6.5.5 (out-of-band requests last at most 10 minutes).",
+   "source_url": "https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/en/0x15-V6-Authentication.md"
+  },
+  {
+   "plan_line": 317,
+   "claim": "Counting and limiting wrong code attempts on the server matches ASVS 5.0 6.6.3 (L2), which requires code-based out-of-band authentication to be protected against brute force by rate limiting.",
+   "source_url": "https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/en/0x15-V6-Authentication.md"
+  },
+  {
+   "plan_line": 595,
+   "claim": "Nodemailer is current and maintained: 10.0.14 released 2026-10-03, no runtime dependencies, engines node >=20, licence MIT-0.",
+   "source_url": "https://github.com/nodemailer/nodemailer/releases"
+  },
+  {
+   "plan_line": 595,
+   "claim": "The in-memory test mailbox needs no extra library, because Nodemailer's stream/JSON transports build the message without delivering it and are documented as suited to testing.",
+   "source_url": "https://nodemailer.com/transports/stream"
+  },
+  {
+   "plan_line": 87,
+   "claim": "Mailpit is actively maintained: v1.31.4 published 2026-10-03.",
+   "source_url": "https://github.com/axllent/mailpit/releases"
+  },
+  {
+   "plan_line": 877,
+   "claim": "Students' addresses are on a different domain, @ogr.iu.edu.tr, according to the university's EBS page.",
+   "source_url": "https://ebs.istanbul.edu.tr/home/universite?id=ogrenim"
+  },
+  {
+   "plan_line": 877,
+   "claim": "Under İÜ/BİDB/TL-008, istanbul.edu.tr belongs to employees and retired staff, and only non-retirees who leave have their mail deleted. So a domain rule indeed does not exclude retirees.",
+   "source_url": "https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=iu-bidb-tl-008-e-posta-kullanim-talimati.pdf"
+  },
+  {
+   "plan_line": 595,
+   "claim": "Premise confirmed: istanbul.edu.tr mail is hosted on Google Workspace (MX aspmx.l.google.com), and TL-008 states both @istanbul.edu.tr and @ogr.iu.edu.tr run on Gmail.",
+   "source_url": "https://dns.adguard-dns.com/resolve?name=istanbul.edu.tr&type=MX"
+  },
+  {
+   "plan_line": 72,
+   "claim": "I/ı and İ/i are the correct Turkish case pairs. CLDR's Turkish collation treats I as the capital of ı and İ as the capital of i, and treats ç ğ ı ö ş ü as separate letters.",
+   "source_url": "https://raw.githubusercontent.com/unicode-org/cldr/main/common/collation/tr.xml"
+  }
+ ],
+ "findings": [
+  {
+   "id": "S04-01",
+   "plan_line": 69,
+   "plan_quote": "Kod veritabanında açık değil özet olarak tutulur",
+   "kind": "RISK",
+   "lenses": [
+    "correct",
+    "useful"
+   ],
+   "severity": "medium",
+   "finding": "Better Auth's storeOTP 'hashed' mode (which line 586 relies on: 'kod özet olarak saklanır') stores an unsalted, unkeyed SHA-256 of the code. A 6-digit code has only 10^6 values, so anyone who can read the verification table (leaked backup, read-replica credentials, SQL injection elsewhere) can recover a live code instantly, request a code for an instructor and log in within the 5 minutes. The claimed protection is illusory. Both NIST and ASVS say a plain hash is not offline-attack resistant for secrets under 112 bits; they say this for look-up secrets, and the same arithmetic applies here. Better Auth's 'encrypted' mode (key from the server secret) or a custom keyed hash does protect, because the key is not in the database.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/better-auth/better-auth/main/packages/better-auth/src/plugins/email-otp/utils.ts",
+     "quote": "const hash = await createHash(\"SHA-256\").digest(new TextEncoder().encode(otp))",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/better-auth/better-auth/main/packages/better-auth/src/plugins/email-otp/otp-token.ts",
+     "quote": "return await symmetricEncrypt({ key: ctx.context.secretConfig, data: otp, });",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "quote": "Look-up secrets that are shorter than the minimum security strength specified in the latest revision of [SP800-131A] (i.e., 112 bits as of the date of this publication) SHALL be stored in a salted and hashed form using a suitable password hashing scheme",
+     "date": "2025-08-26"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/en/0x15-V6-Authentication.md",
+     "quote": "A standard hash function can be used if the secret has 112 bits of entropy or more.",
+     "date": "2025-05-30"
+    }
+   ],
+   "recommendation_tr": "Kodu düz özetle değil, sunucudaki gizli anahtarla saklarım: anahtarlı özet (HMAC) ya da Better Auth'ta 'encrypted' seçeneği. 6 haneli kodun yalnız 1 milyon olasılığı var; düz SHA-256 özeti, veritabanını okuyan birine geçerli kodu anında verir.",
+   "confidence": "high"
+  },
+  {
+   "id": "S04-02",
+   "plan_line": 69,
+   "plan_quote": "bir adrese gönderilebilecek kod sayısı sınırlıdır",
+   "kind": "MISSING",
+   "lenses": [
+    "correct",
+    "useful",
+    "scalable"
+   ],
+   "severity": "medium",
+   "finding": "The plan gives no numbers, and Better Auth cannot enforce its rules out of the box. Its limiter is keyed only by client IP (x-forwarded-for, IPv6 grouped per /64). Its email-OTP paths default to 3 requests per 60 s per IP. Storage is in-memory by default, so limits are not shared across the plan's multiple server copies, and limiting is off in development. Server-side auth.api calls (which the plan's own registration endpoint would use) are not limited at all. There is no per-address send counter and no per-account failure counter across codes, so the 'adres başına' limit and line 317's 'yanlış denemeler sayılır ve sınırlanır' must be custom code. NIST caps consecutive failures per account at 100. A tight per-IP limit also hurts: behind campus NAT or a shared IPv6 /64, the 4th instructor logging in within a minute gets refused.",
+   "evidence": [
+    {
+     "url": "https://www.better-auth.com/docs/concepts/rate-limit",
+     "quote": "Rate limiting uses the connecting IP address to track the number of requests made by a user. The default header checked is `x-forwarded-for`",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/concepts/rate-limit",
+     "quote": "By default, IPv6 addresses are rate limited per `/64` subnet, not per individual address.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/concepts/rate-limit",
+     "quote": "Server-side requests made using `auth.api` aren't affected by rate limiting.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/concepts/rate-limit",
+     "quote": "By default, rate limit data is stored in memory",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/better-auth/better-auth/main/packages/better-auth/src/plugins/email-otp/index.ts",
+     "quote": "window: opts.rateLimit?.window || 60, max: opts.rateLimit?.max || 3",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "quote": "the verifier SHALL limit consecutive failed authentication attempts using a specific authenticator on a single subscriber account to no more than 100 by disabling that authenticator.",
+     "date": "2025-08-26"
+    }
+   ],
+   "recommendation_tr": "Sınırları adrese ve hesaba bağlar, sayıyla yazarım: aynı adrese en sık dakikada 1, saatte en çok 5, günde en çok 10 kod; kod başına 3 deneme; bir hesapta kodlar arası art arda 50 yanlış denemede giriş kilitlenir, yönetici açar (NIST sınırı 100). Sayaçlar veritabanında durur, birden çok sunucu kopyasında da geçerli olur. IP sınırı gevşek kalır, çünkü kampüste birçok hoca aynı IP'den ya da aynı IPv6 ağından çıkar. Sınırlar testlerde de açık çalışır.",
+   "confidence": "high"
+  },
+  {
+   "id": "S04-03",
+   "plan_line": 69,
+   "plan_quote": "E-postaya 6 haneli kod gelir",
+   "kind": "RISK",
+   "lenses": [
+    "correct",
+    "useful",
+    "sustainable"
+   ],
+   "severity": "medium",
+   "finding": "The plan targets OWASP ASVS 5.0 Level 2 (line 598), but instructors and admins log in with an emailed code alone. ASVS 6.3.3 is an L2 requirement: it asks for MFA or a combination of single-factor mechanisms, and allows relaxing it only with a documented rationale and mitigations. ASVS V6.6 calls email an unsafe out-of-band mechanism, 6.3.6 (L3) bans email as a factor, and NIST SP 800-63B-4 sec. 3.1.3.1 says email SHALL NOT be used for out-of-band authentication. Admins approve instructors and lock the term, and instructors edit attendance that decides exam eligibility. So the L2 claim is currently not met and the deviation is not written down. The plan already builds hardware-backed device keys on phones, which could serve as the second factor without new packages.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/en/0x15-V6-Authentication.md",
+     "quote": "Verify that either a multi-factor authentication mechanism or a combination of single-factor authentication mechanisms, must be used in order to access the application. ... Relaxing any of the considerations in this requirement requires a fully documented rationale and a comprehensive set of mitigating controls.",
+     "date": "2025-05-30"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/en/0x15-V6-Authentication.md",
+     "quote": "Unsafe out-of-band authentication mechanisms such as e-mail and VOIP are not permitted.",
+     "date": "2025-05-30"
+    },
+    {
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "quote": "Email SHALL NOT be used for out-of-band authentication because it may be vulnerable to:",
+     "date": "2025-08-26"
+    },
+    {
+     "url": "C:\\Users\\USER\\AppData\\Local\\Temp\\claude\\C--Users-USER-Desktop-iu-attendance\\7abdd45e-faba-44fe-954e-90155d6bca30\\scratchpad\\r15\\plan-text.md",
+     "quote": "Hedef OWASP ASVS 5.0 seviye 2; telefon için OWASP MASVS.",
+     "date": "2026-10-04"
+    }
+   ],
+   "recommendation_tr": "Hedefim ASVS 5.0 seviye 2 ve bu seviye iki etkenli giriş istiyor (6.3.3); e-posta kodu tek başına yetmiyor. Hoca ve yöneticinin telefonu ilk kodlu girişte donanım anahtarıyla kaydedilir; panele girişte e-posta kodundan sonra ekranda kısa bir onay kodu çıkar, hoca bunu telefonundaki uygulamada onaylar. Ek paket gerekmez. Bunu yapmazsam plana açıkça yazarım: 'giriş e-posta koduyla tek etkenli, 6.3.3'ten bilerek sapıyorum', gerekçesi ve önlemleriyle (3 cihaz, 30 gün, oturum kapatma, denetim kaydı).",
+   "confidence": "high"
+  },
+  {
+   "id": "S04-04",
+   "plan_line": 586,
+   "plan_quote": "Better Auth 1.7.7, sürüm tam sabit ve sıkı ayarla: yalnız e-posta kodu eklentisi",
+   "kind": "SIMPLIFY",
+   "lenses": [
+    "compact",
+    "sustainable",
+    "useful"
+   ],
+   "severity": "medium",
+   "finding": "For exactly this scope, Better Auth is not the most compact sustainable choice. The scope is an email code for a few thousand staff, DB sessions, a 30-day cap and 3 devices; students never log in and use custom device keys anyway. What Better Auth costs: better-auth 1.7.7 has 17 direct dependencies (Mongo, Prisma, Kysely, memory and Drizzle adapters, telemetry, kysely, jose, nanostores and more). It requires its 4 core tables (user, session, account, verification). Its routes sit outside the plan's Zod/OpenAPI contract, and it needs client packages on the phone and panel. The plan's own rules still need custom code: per-address limits (it is IP-only), the 3-device cap (no per-user session limit; the multi-session plugin is for several accounts in one browser), the absolute 30-day cap (the default is 7-day sliding), keyed code storage (its 'hashed' is plain SHA-256) and the pending-approval check. Its security policy supports only the latest version, and minors carry breaking schema changes (1.7.0 re-keyed accounts on issuer and accountId). It had 27 advisories in 2026, and each one means triage and often a minor upgrade. A small own module needs roughly 2 tables and 5 endpoints using Node's built-in crypto and the official @fastify/cookie. That is the path Lucia's author took when deprecating Lucia (a single-file session replacement of about 270 lines). Trade-off: I own the security bugs, which is mitigated by the tiny scope and the plan's behaviour tests.",
+   "evidence": [
+    {
+     "url": "https://www.npmjs.com/package/better-auth",
+     "quote": "\"@better-auth/mongo-adapter\": \"1.7.7\", \"@better-auth/prisma-adapter\": \"1.7.7\", \"@better-auth/telemetry\": \"1.7.7\", \"kysely\": \"^0.28.17 || ^0.29.0\"",
+     "date": "2026-09-30"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/concepts/database",
+     "quote": "user, session, account, verification",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://github.com/better-auth/better-auth/blob/main/SECURITY.md",
+     "quote": "We only support the latest version of Better Auth. Older versions are not supported.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://github.com/better-auth/better-auth/releases/tag/v1.7.0",
+     "quote": "Scoped account identity by trusted issuer, keying accounts on `(issuer, accountId)`",
+     "date": "2026-08-18"
+    },
+    {
+     "url": "https://lucia-auth.com/",
+     "quote": "Lucia was deprecated in March 2025.",
+     "date": "2025-03"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/lucia-auth/lucia/refs/heads/main/code/auth_session.ts",
+     "quote": "For an explanation on sessions: https://auth.pilcrowonpaper.com/sessions",
+     "date": "2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Better Auth yerine baştan küçük kendi modülümü yazarım: 2 tablo (giriş kodları, oturumlar), 5 uç (kod iste, kodla gir, çık, oturumlarım, oturumu kapat), Node'un yerleşik kripto modülü ve resmi @fastify/cookie. Uçlar Zod sözleşmesine ve OpenAPI'ye girer, telefon ve panel aynı istemciyi kullanır. Better Auth yedek olarak not edilir. Better Auth'u tutarsam her 1.x ara sürümünü büyük sürüm gibi elle ve testler yeşilken alırım, çünkü yalnız son sürüm destekleniyor ve ara sürümlerde şema değişebiliyor.",
+   "confidence": "medium"
+  },
+  {
+   "id": "S04-05",
+   "plan_line": 586,
+   "plan_quote": "telefonda @better-auth/expo",
+   "kind": "SIMPLIFY",
+   "lenses": [
+    "compact",
+    "current"
+   ],
+   "severity": "low",
+   "finding": "Only relevant if Better Auth stays (see S04-04). @better-auth/expo brings the better-auth client into the app, needs its own server plugin (so 'yalnız e-posta kodu eklentisi' is not accurate) and needs expo-network on the client. expo-linking, expo-web-browser and expo-constants serve social sign-in only. To call our own API, the app must read the cookie through authClient.getCookie() and attach it by hand. The guide is written for Expo SDK 55, while the plan is on SDK 57. Better Auth's bearer plugin lets the phone keep one token in expo-secure-store (already in the plan) and send it through the same openapi-fetch client.",
+   "evidence": [
+    {
+     "url": "https://www.better-auth.com/docs/integrations/expo",
+     "quote": "This guide is written for Expo SDK 55 (React Native 0.83, React 19.2).",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/integrations/expo",
+     "quote": "Add the Expo plugin to your Better Auth server.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://www.npmjs.com/package/@better-auth/expo",
+     "quote": "\"expo-network\": \">=8.0.7\", \"expo-web-browser\": \">=14.0.0\", \"@better-auth/core\": \"^1.7.7\"",
+     "date": "2026-09-30"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/plugins/bearer",
+     "quote": "The Bearer plugin enables authentication using Bearer tokens as an alternative to browser cookies.",
+     "date": "2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Telefonda Better Auth paketi kullanmam: girişten sonra oturum anahtarı expo-secure-store'da durur ve aynı OpenAPI istemcisiyle 'Authorization: Bearer' başlığında gider. Better Auth kalırsa sunucuya bearer eklentisi eklenir; @better-auth/expo, istemci kütüphanesi ve expo-network uygulamaya girmez.",
+   "confidence": "medium"
+  },
+  {
+   "id": "S04-06",
+   "plan_line": 595,
+   "plan_quote": "Nodemailer ile SMTP.",
+   "kind": "MISSING",
+   "lenses": [
+    "correct",
+    "useful",
+    "sustainable"
+   ],
+   "severity": "high",
+   "finding": "The plan does not say which SMTP server or sender domain sends the login codes, and a code that lands in spam blocks instructor login entirely. istanbul.edu.tr mail is on Google Workspace. Its SPF authorizes only Mailjet, 194.27.128.0/24 and Google (~all), and its DMARC is p=none. Mail from our own server claiming @istanbul.edu.tr would fail SPF and DKIM. Workspace's 'inbound emails spoofing your domain' protection then shows a warning, moves the mail to spam or quarantines it, depending on İÜ's admin settings. Gmail's bulk-sender rules formally do not apply to Workspace recipients, so delivery depends on İÜ's own filters. Two routes work through Google: an admin-configured SMTP relay (smtp-relay.gmail.com with IP allowlist or SMTP AUTH, 10,000 messages per user per day), or a university account over OAuth2 or an app password, since basic-auth SMTP has been off since 14 March 2025. İÜ rules say a unit or service mailbox is requested with form FR-005 and an official letter.",
+   "evidence": [
+    {
+     "url": "https://dns.adguard-dns.com/resolve?name=istanbul.edu.tr&type=TXT",
+     "quote": "v=spf1 include:spf.mailjet.com  ip4:194.27.128.0/24 include:_spf.google.com ~all",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://dns.adguard-dns.com/resolve?name=_dmarc.istanbul.edu.tr&type=TXT",
+     "quote": "v=DMARC1; p=none; sp=none; ... pct=100; ri=86400",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://dns.adguard-dns.com/resolve?name=istanbul.edu.tr&type=MX",
+     "quote": "1 aspmx.l.google.com.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://support.google.com/a/answer/14229414",
+     "quote": "The Email sender guidelines don't apply to messages sent to Google Workspace accounts.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://knowledge.workspace.google.com/admin/gmail/advanced/advanced-phishing-and-malware-protection",
+     "quote": "potential Business Email Compromise (BEC) messages not authenticated with either SPF or DKIM, pretending to be from your domain",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://knowledge.workspace.google.com/admin/sync/transition-from-less-secure-apps-to-oauth",
+     "quote": "CalDAV, CardDAV, IMAP, SMTP, and POP will no longer work with legacy passwords (basic authentication).",
+     "date": "2025-03-14"
+    },
+    {
+     "url": "https://knowledge.workspace.google.com/admin/gmail/advanced/route-outgoing-smtp-relay-messages-through-google",
+     "quote": "up to 10,000 messages in a 24-hour period",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=iu-bidb-tl-008-e-posta-kullanim-talimati.pdf",
+     "quote": "Birimler veya etkinlikler için kurumsal e-posta hesabı istekleri “Kurumsal e-Posta Talep Formu (İÜ/BİDB/FR-005)” doldurularak resmi yazı ile BİDB’na iletmesi gerekmektedir.",
+     "date": "2016-11-30"
+    }
+   ],
+   "recommendation_tr": "Kod e-postaları kendi sunucumdan istanbul.edu.tr adına doğrudan gitmez. BİDB'den FR-005 formuyla bir gönderici hesap (ör. yoklama@istanbul.edu.tr) ve sunucu IP'me Google Workspace SMTP rölesi izni isterim; röle olmazsa aynı hesapla OAuth2 ile gönderirim (düz şifreyle SMTP Mart 2025'ten beri kapalı). Bu, açık noktalara 'BİDB'den gönderici hesap ve röle izni' diye eklenir. Kendi alan adımdan göndermem gerekirse SPF, DKIM ve DMARC hizalı kurarım ve önce birkaç hoca adresinde kodun gelen kutusuna düştüğünü denerim.",
+   "confidence": "high"
+  },
+  {
+   "id": "S04-07",
+   "plan_line": 595,
+   "plan_quote": "Nodemailer ile SMTP.",
+   "kind": "BETTER",
+   "lenses": [
+    "useful",
+    "scalable",
+    "compact"
+   ],
+   "severity": "low",
+   "finding": "If the code mail is sent inside the HTTP request, response time reveals whether an address exists or is pending, and a short SMTP outage fails the login request. Better Auth's own docs say not to await email sending. ASVS 6.3.8 (L3) names response time as an enumeration channel. The plan already runs pg-boss, so queueing the mail adds no part. Pending instructors also need a clear outcome instead of a code that never arrives.",
+   "evidence": [
+    {
+     "url": "https://www.better-auth.com/docs/concepts/email",
+     "quote": "Avoid awaiting the email sending to prevent timing attacks.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/en/0x15-V6-Authentication.md",
+     "quote": "Verify that valid users cannot be deduced from failed authentication challenges, such as by basing on error messages, HTTP response codes, or different response times. Registration and forgot password functionality must also have this protection.",
+     "date": "2025-05-30"
+    }
+   ],
+   "recommendation_tr": "Kod e-postası istek içinde değil, iş kuyruğundan (pg-boss) gider. Kod isteği her durumda aynı cevabı aynı hızda döner: adres kayıtlı değilse e-posta gitmez, onay bekliyorsa kod yerine 'hesabınız onay bekliyor' e-postası gider. SMTP kesilirse iş birkaç kez yeniden denenir.",
+   "confidence": "medium"
+  },
+  {
+   "id": "S04-08",
+   "plan_line": 69,
+   "plan_quote": "En fazla 3 cihaz.",
+   "kind": "MISSING",
+   "lenses": [
+    "useful",
+    "correct"
+   ],
+   "severity": "medium",
+   "finding": "The plan does not say what happens at the 4th device, whether panel browsers count as devices, or how sessions are seen and closed. ASVS 5.0 sets these requirements: users can view and terminate their active sessions (7.5.2, L2); admins can terminate a user's sessions (7.4.5, L2); disabling an account ends all its sessions (7.4.2, L1); and an inactivity timeout is decided and documented (7.3.1, L2). Better Auth has list and revoke APIs but no per-user cap, so the cap needs a hook either way.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/en/0x16-V7-Session-Management.md",
+     "quote": "Verify that users are able to view and (having authenticated again with at least one factor) terminate any or all currently active sessions.",
+     "date": "2025-05-30"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/en/0x16-V7-Session-Management.md",
+     "quote": "Verify that the application terminates all active sessions when a user account is disabled or deleted (such as an employee leaving the company).",
+     "date": "2025-05-30"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/en/0x16-V7-Session-Management.md",
+     "quote": "Verify that application administrators are able to terminate active sessions for an individual user or for all users.",
+     "date": "2025-05-30"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0/5.0/en/0x16-V7-Session-Management.md",
+     "quote": "Verify that there is an inactivity timeout such that re-authentication is enforced according to risk analysis and documented security decisions.",
+     "date": "2025-05-30"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/plugins/multi-session",
+     "quote": "The multi-session plugin allows users to maintain multiple active sessions across different accounts in the same browser.",
+     "date": "2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Cihaz ve oturum kuralını yazarım: panel tarayıcıları da cihaz sayılır; 4. girişte en eski oturum kapanır ve hocaya bildirilir. Hoca uygulamada ve panelde cihazlarını görür, istediğini kapatır. Yönetici bir hesabın bütün oturumlarını kapatabilir; hesap pasifleşince bütün oturumları biter. Hareketsizlik sınırı da yazılır (ör. 14 gün kullanılmayan oturum biter).",
+   "confidence": "high"
+  },
+  {
+   "id": "S04-09",
+   "plan_line": 69,
+   "plan_quote": "Oturum açık kalır ama en geç 30 günde bir yeniden kodla girilir.",
+   "kind": "RISK",
+   "lenses": [
+    "correct",
+    "useful"
+   ],
+   "severity": "low",
+   "finding": "Three gaps. (a) Better Auth's default is a 7-day session that is extended on use (updateAge 1 day), which never forces the 30-day re-login; a hard cap needs expiresIn of 30 days plus disableSessionRefresh. (b) Lines 369 and 513 say there is no forced re-login mid-semester, without saying that this applies to students only, so it reads as a contradiction with this line. (c) An instructor session can expire while the phone is offline in class; queued instructor actions such as the head count must survive, and renewal should be offered before expiry while online. 30 days itself is within NIST AAL1 guidance.",
+   "evidence": [
+    {
+     "url": "https://www.better-auth.com/docs/concepts/session-management",
+     "quote": "The session expires after 7 days by default",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/concepts/session-management",
+     "quote": "whenever the session is used and the `updateAge` is reached, the session expiration is updated",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "C:\\Users\\USER\\AppData\\Local\\Temp\\claude\\C--Users-USER-Desktop-iu-attendance\\7abdd45e-faba-44fe-954e-90155d6bca30\\scratchpad\\r15\\plan-text.md",
+     "quote": "Dönem ortasında zorunlu güncelleme ve zorunlu yeniden giriş yok",
+     "date": "2026-10-04"
+    },
+    {
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "quote": "A definite reauthentication overall timeout SHALL be established, which SHOULD be no more than 30 days at AAL1.",
+     "date": "2025-08-26"
+    }
+   ],
+   "recommendation_tr": "30 gün kesin sınırdır, kullanım süreyi uzatmaz (Better Auth'ta expiresIn 30 gün ve disableSessionRefresh). Bitmesine 3 gün kala uygulama, internet varken yeni kod ister. Süre derste internetsizken dolarsa telefondaki hoca işlemleri (kafa sayısı vb.) silinmez, girişten sonra gönderilir. 'Dönem ortasında zorunlu yeniden giriş yok' kuralının öğrenci için olduğunu, hocanın 30 günde bir kodla girdiğini açıkça yazarım.",
+   "confidence": "high"
+  },
+  {
+   "id": "S04-10",
+   "plan_line": 87,
+   "plan_quote": "Böylece yayın sürümüne özel bir \"kodu göster\" ayarı gerekmez.",
+   "kind": "MISSING",
+   "lenses": [
+    "correct",
+    "useful"
+   ],
+   "severity": "medium",
+   "finding": "Store review needs a working instructor-mode login against the release server, and the reviewer cannot read an emailed code. Apple 2.1(a) requires demo account info when the app has a login, and the App Review demo account must not expire. Google Play explicitly asks for reusable credentials that bypass OTP. An OTP-only app was rejected because the Apple tester needed the emailed code. So the release server does need one narrowly scoped special path, which contradicts line 87's conclusion. Line 493's 'deneme hesabı' does not say how it logs in.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/app-store/review/guidelines/",
+     "quote": "include demo account info (and turn on your back-end service!) if your app includes a login.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/help/app-store-connect/reference/app-review-information",
+     "quote": "The demo account is used during the App Review process and must not expire.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://support.google.com/googleplay/android-developer/answer/15748846",
+     "quote": "if your app typically requires a 2-Step verification code or One-time password, make sure to provide reusable login credentials that can bypass these requirements.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/forums/thread/750326",
+     "quote": "it was rejected as the Apple tester required the email access code that was sent when they entered the tester email address we have in the app description.",
+     "date": "2024-04"
+    }
+   ],
+   "recommendation_tr": "Mağaza incelemesi için yayın sunucusunda tek bir inceleme hesabı olur: yalnız bu adres için sabit ve tekrar kullanılabilir bir kod kabul edilir; ayar ortam değişkeniyle açılıp kapanır, hesap yalnız deneme dersini görür, her girişi loglanır. 'Kodu göster ayarı gerekmez' cümlesi buna göre düzeltilir.",
+   "confidence": "high"
+  },
+  {
+   "id": "S04-11",
+   "plan_line": 72,
+   "plan_quote": "(Türkçe harf duyarlı: I/ı, İ/i)",
+   "kind": "BETTER",
+   "lenses": [
+    "correct",
+    "useful",
+    "compact"
+   ],
+   "severity": "low",
+   "finding": "The intent is right but the exact comparison is not stated, and the default JS and Unicode case mappings are wrong for Turkish ('istanbul' becomes 'ISTANBUL', not 'İSTANBUL'). CLDR's Turkish collation makes I the capital of ı and İ the capital of i at tertiary level, and ç ğ ı ö ş ü separate primary letters. A tr-locale collator at sensitivity 'base' therefore ignores case the Turkish way, keeps Turkish letters distinct and ignores accents such as the circumflex in 'â'. Node's official builds ship full ICU, so this needs no dependency. The rule belongs in packages/core next to the other shared rules.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/unicode-org/cldr/main/common/collation/tr.xml",
+     "quote": "&[before 1]i<ı<<<I &i<<<İ ... &S<ş<<<Ş",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Collator/Collator",
+     "quote": "Only strings that differ in base letters compare as unequal. Examples: a ≠ b, a = á, a = A.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleUpperCase",
+     "quote": "console.log(city.toLocaleUpperCase(\"TR\")); // Expected output: \"İSTANBUL\"",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://nodejs.org/api/intl.html",
+     "quote": "The official binaries are also built in this mode.",
+     "date": "2026-10-05"
+    }
+   ],
+   "recommendation_tr": "İsim eşleştirmesi ortak kod paketinde tek fonksiyondur: önce Unicode NFC, baştaki ve sondaki boşluk silinir, çoklu boşluk teke iner; sonra Türkçe kuralla büyük küçük harf farkı yok sayılarak karşılaştırılır (Intl.Collator 'tr', duyarlılık 'base'). Böylece IŞIK ile ışık, İLKER ile ilker eşleşir; Sahin ile Şahin, Ilker ile İlker eşleşmez ve hoca onayına düşer; â ile a farkı sayılmaz. Dil belirtmeyen toLowerCase ve toUpperCase kullanılmaz; fonksiyon bir örnek tablosuyla test edilir.",
+   "confidence": "medium"
+  },
+  {
+   "id": "S04-12",
+   "plan_line": 877,
+   "plan_quote": "Alan adı sınırı öğrenciyi eler (öğrencilerin adresi başka alan adında) ama emekli personeli elemez.",
+   "kind": "BETTER",
+   "lenses": [
+    "useful",
+    "compact"
+   ],
+   "severity": "low",
+   "finding": "The university's email rules confirm the reasoning, and the domain also admits administrative staff, so manual approval stays necessary. Under TL-008, istanbul.edu.tr belongs to all employees and retirees, only non-retirees who leave lose their mail, and students are on ogr.iu.edu.tr. Two cheap gains are still available: a domain pre-filter on the registration form, and verifying the address with a code at registration. With both, fake or squatted requests (someone registering a real instructor's address with a wrong name or department) never reach the admin queue, and the same code mechanism is reused.",
+   "evidence": [
+    {
+     "url": "https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=iu-bidb-tl-008-e-posta-kullanim-talimati.pdf",
+     "quote": "“istanbul.edu.tr” alan adıyla e-posta alma ve gönderme hakkı sadece İstanbul Üniversitesi çalışanları ve emekli personeline aittir.",
+     "date": "2016-11-30"
+    },
+    {
+     "url": "https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=iu-bidb-tl-008-e-posta-kullanim-talimati.pdf",
+     "quote": "emeklilik haricinde İÜ ile ilişiği kesilmiş (istifa, nakil tayin, görev süresi sona erme vb.) kullanıcıların e-posta adresleri sistemden silinmektedir.",
+     "date": "2016-11-30"
+    },
+    {
+     "url": "https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=iu-bidb-tl-008-e-posta-kullanim-talimati.pdf",
+     "quote": "“ogr.iu.edu.tr” alan adıyla sadece İstanbul Üniversitesi öğrencileri alabilir.",
+     "date": "2016-11-30"
+    }
+   ],
+   "recommendation_tr": "Kayıt formu yalnız @istanbul.edu.tr adreslerini kabul eder; başvuru, adrese giden kod girilince yöneticinin listesine düşer. Elle onay sürer, çünkü bu alan adı idari personelde ve emeklilerde de var.",
+   "confidence": "medium"
+  },
+  {
+   "id": "S04-13",
+   "plan_line": 66,
+   "plan_quote": "Hoca uygulamadan ya da panelden ad-soyad, bölüm ve kurumsal e-postasıyla kayıt formunu doldurur",
+   "kind": "MISSING",
+   "lenses": [
+    "useful",
+    "correct"
+   ],
+   "severity": "low",
+   "finding": "Instructors create accounts inside the app, but the plan mentions account deletion only for students (line 84). Apple requires that any app supporting account creation lets users start deleting their account inside the app, and deactivation alone is not enough. Without it, iPhone review of the instructor mode can be rejected.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/support/offering-account-deletion-in-your-app/",
+     "quote": "apps submitted to the App Store that support account creation must also let users initiate deletion of their account within the app.",
+     "date": "2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/support/offering-account-deletion-in-your-app/",
+     "quote": "only offering to temporarily deactivate or disable an account is insufficient.",
+     "date": "2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Hoca da uygulamadan hesabını silme isteği başlatabilir (Apple şartı, yalnız pasifleştirmek yetmiyor). Öğrencideki 'gönderilmemiş iş varken silinmez' kuralı hocanın bekleyen işleri için de geçerli olur.",
+   "confidence": "medium"
+  },
+  {
+   "id": "S04-14",
+   "plan_line": 315,
+   "plan_quote": "Saati doğrulanamayan ve yedek kodla alınan kayıtlardan her öğrenci için her derste dönem başına en çok 2 tanesi otomatik kabul edilir.",
+   "kind": "RISK",
+   "lenses": [
+    "correct"
+   ],
+   "severity": "low",
+   "finding": "Line 315 reads as one shared allowance of 2 for both kinds of record. Lines 194 and 211 give 2 for clock-unverified records, and line 293 gives 2 for backup codes, separately. This rule lives in packages/core with tests shared by phone, server and panel, so it needs exactly one meaning.",
+   "evidence": [
+    {
+     "url": "C:\\Users\\USER\\AppData\\Local\\Temp\\claude\\C--Users-USER-Desktop-iu-attendance\\7abdd45e-faba-44fe-954e-90155d6bca30\\scratchpad\\r15\\plan-text.md",
+     "quote": "bunlardan her öğrenci için her derste dönem başına en çok 2 tanesi otomatik kabul edilir (line 194); Yedek kodu iletmek: her derste dönem başına en çok 2 (line 293)",
+     "date": "2026-10-04"
+    }
+   ],
+   "recommendation_tr": "Tek anlam yazarım: saati doğrulanamayan ve yedek kodlu kayıtlar tek sayaçta toplam 2 (daha basit ve sıkı) ya da her biri ayrı 2. Satır 194, 293 ve 315 aynı cümleyle düzeltilir ve ortak kurallar testine girer.",
+   "confidence": "high"
+  },
+  {
+   "id": "S04-15",
+   "plan_line": 595,
+   "plan_quote": "Nodemailer ile SMTP.",
+   "kind": "RISK",
+   "lenses": [
+    "sustainable"
+   ],
+   "severity": "low",
+   "finding": "Nodemailer is current, dependency-free and MIT-0, but npm lists a single maintainer. In September 2026 it published a run of advisories (DoS in address parsing and the SMTP client, envelope parsing bugs), all fixed quickly in 10.0.x. The plan's own rule (line 741) names a fallback for every single-maintainer package, but Nodemailer is not on that list.",
+   "evidence": [
+    {
+     "url": "https://www.npmjs.com/package/nodemailer",
+     "quote": "\"license\": \"MIT-0\", \"maintainers\": [ \"andris\" ]",
+     "date": "2026-10-03"
+    },
+    {
+     "url": "https://github.com/nodemailer/nodemailer/security/advisories",
+     "quote": "Quadratic backtracking in the addressparser free-text fallback allows remote denial of service",
+     "date": "2026-09-11"
+    },
+    {
+     "url": "C:\\Users\\USER\\AppData\\Local\\Temp\\claude\\C--Users-USER-Desktop-iu-attendance\\7abdd45e-faba-44fe-954e-90155d6bca30\\scratchpad\\r15\\plan-text.md",
+     "quote": "Tek kişinin bakımındaki paketlerin yedeği belli (fastify-zod-openapi, Orval, graphile-worker).",
+     "date": "2026-10-04"
+    }
+   ],
+   "recommendation_tr": "Nodemailer'ı tek kişinin bakımındaki paketler listesine eklerim; e-posta tek arayüzün arkasında olduğu için yedeği başka bir SMTP istemcisidir (ör. emailjs). Dependabot ile güncel tutulur; Eylül 2026'da birçok güvenlik düzeltmesi çıktı.",
+   "confidence": "medium"
+  },
+  {
+   "id": "S04-16",
+   "plan_line": 586,
+   "plan_quote": "Panelde güvenli çerez",
+   "kind": "MISSING",
+   "lenses": [
+    "useful",
+    "compact"
+   ],
+   "severity": "low",
+   "finding": "Cookie login is only reliable when the panel and the API share a site. Safari's ITP blocks the API's cookie as third-party when frontend and API are on different domains. The plan does not say where the panel is served. Serving it from the same origin as the API makes the cookie first-party, needs no cross-subdomain cookie setup, and needs no CORS for the panel. The phone is native and never needs CORS.",
+   "evidence": [
+    {
+     "url": "https://www.better-auth.com/docs/concepts/cookies",
+     "quote": "Safari treats `domainA.com` as a third-party and blocks its cookies.",
+     "date": "2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Paneli API ile aynı adresten sunarım (panel kökte, API /v1 altında). Çerez birinci taraf olur (httpOnly, Secure, SameSite=Lax), Safari engellemez, panel için CORS ayarına gerek kalmaz.",
+   "confidence": "medium"
+  }
+ ],
+ "compactness_notes": "Net effect on moving parts if the slice's recommendations are accepted. S04-04 removes better-auth on the server, which brings 17 direct dependencies including Mongo, Prisma, Kysely, memory and Drizzle adapters and telemetry. It also removes the better-auth client from the panel and phone, and @better-auth/expo plus expo-network from the phone. It adds only the official @fastify/cookie (2 dependencies); rate limiting reuses @fastify/rate-limit, which is already in the plan, and per-address and per-account counters are columns or rows in the same DB. If Better Auth is kept, S04-05 alone still removes @better-auth/expo and the client library from the phone. S04-16 can make @fastify/cors unnecessary for the panel. S04-01, 02, 07, 08, 09, 11, 12, 13 and 14 add no packages, because they reuse Node crypto, Intl, pg-boss and Nodemailer. S04-10 adds one environment flag and one review account. S04-06 adds no code, only an external dependency on BİDB for a sender account and relay permission. S04-15 only names a fallback. Net change in tools and dependencies: negative.",
+ "open_questions": [
+  "Does İÜ enforce Google 2-Step Verification on staff Workspace accounts? If it does, an email-code login inherits a second factor on the mailbox side, and the documented-deviation option in S04-03 becomes easier to justify.",
+  "Will the server run inside İÜ's network (194.27.128.0/24, already in the istanbul.edu.tr SPF record) or outside it? Will BİDB grant an FR-005 sender account and Workspace SMTP relay for the server IP?",
+  "Which actions has İÜ set for the Workspace settings 'inbound emails spoofing your domain' and 'unauthenticated emails'? The Google default is inbox with a warning; spam or quarantine would make unauthenticated code mails fail outright.",
+  "Is 'Dönem ortasında zorunlu yeniden giriş yok' (lines 369 and 513) meant for students only? Instructors re-login every 30 days under line 69.",
+  "İÜ/BİDB/TL-008 shows only a first publication date (30.11.2016) and no revision. Whether retirees still keep istanbul.edu.tr accounts today could not be confirmed from a newer page, because the bilgiislem.istanbul.edu.tr staff email page returns no readable body to fetchers.",
+  "ASVS 5.0 6.3.3 (L2) also bears on students' device-key-only access. The device slice should state whether the L2 target covers students.",
+  "Better Auth's Expo guide is written for Expo SDK 55. No SDK 57-specific breakage of @better-auth/expo 1.7.7 was confirmed either way."
+ ]
+}

@@ -1,0 +1,91 @@
+.summary :: esitleme modülü telefonun ortak kuyruğunu tek uçtan (POST /v1/esitleme/gonderim) alır, her öğeyi türünün sahibine aynı veritabanı işleminde dağıtır ve her (kurulum, sıra) için tek defter satırı tutar; bozuk öğe paketi düşürmez, her öğeye KABUL, ZATEN_VAR, RET ya da TEKRAR_DENE döner. Kurulum, bir uygulama kopyasında bir hesabın kuyruğudur; kesintisiz son sıra her eşitlemede telefona bildirilir, yedekten dönüşte telefon sonrakileri yeniden gönderir ve imzalı ulaşma makbuzu ilk ulaşma anını korur. İndirme (GET /v1/esitleme/degisiklikler) tek sayaç satırından alınan sürümle artımlıdır; imleç nesli, genel ve kapsam sürümünü, öğrencinin durum sürümünü, yerel yapı sürümünü ve hesap özetini taşır, nesil, kapsam ya da yapı değişince baştan indir der ve gönderme kuyruğuna dokunmaz. Öğrencinin kendi kayıtları, kararları, düzeltmeleri ve devam durumu öğrenci başına sürümle iner; telefonun imleçle sakladığını bildirdiği sürüm, kararın telefona ulaştığı anı (sorun bildirme süresinin başı) yazar. Modül iş kuralı tutmaz: öğe işleyicileri ve indirme kaynakları sahip modüllerin eklentisinde ogeTuruKaydet ve indirmeKaynagiKaydet ile kaydolur.
+
+.tables[0].columns[8].note :: Öğenin sunucuya ulaşma anı: ilk KABUL ya da ZATEN_VAR anı; geçerli ulaşma makbuzuyla yeniden gelen öğede makbuzdaki an. Ulaşma makbuzu bu anı imzalar.
+
+.tables[4].columns[2].name :: karar_surumu
+
+.tables[4].indexes[0] :: karar_teslimleri_donem_id_kayit_id_karar_surumu_pk: PRIMARY KEY (donem_id, kayit_id, karar_surumu)
+
+.tables[4].constraints[2] :: karar_teslimleri_surum_ck: CHECK (karar_surumu >= 1 AND sunulan_durum_surumu >= 1)
+
+.endpoints[0].request.ogeler :: dizi, en çok 200: { tur: metin (en çok 64), sira: tam sayı 1 ile 9007199254740991, ogeKimligi: metin (en çok 64), govde: metin (en çok 65536), ilkCapa: nesne ya da null (IlkCapaAlanlari, şeması packages/contracts/src/saat.ts; yalnız işlem anı taşıyan personel işlerinde), ulasmaMakbuzu: metin (en çok 128) ya da null }. Öğe içi biçim öğe başına denetlenir, paketi düşürmez.
+
+.endpoints[0].response.sonuclar :: dizi, istekteki ogeler sırasıyla birebir: { sira, ogeKimligi, tur, sonuc: 'KABUL' | 'ZATEN_VAR' | 'RET' | 'TEKRAR_DENE', gerekce: metin ya da null, ulasmaAni: ISO 8601 UTC milisaniyeli ya da null, ulasmaMakbuzu: metin ya da null, beklemeSaniye: tam sayı ya da null, ayrinti: nesne ya da null (şeması öğe türünün sahibinin sözleşmesinde) }; sonuc ve gerekce x-extensible-enum.
+
+.state_machines[0].transitions[1].when :: Öğe başka yoldan zaten ulaşmıştı (ör. aynı kayıt önce makbuz okutmasıyla geldi).
+
+.state_machines[1].transitions[1].when :: Sonuç KABUL ya da ZATEN_VAR; ulaşma anı ve ulaşma makbuzu saklanır, makbuz 'Sunucuya ulaştı' olur.
+
+.state_machines[1].transitions[2].when :: Sonuç RET; makbuz 'Telefonda kayıtlı, gönderilmedi' kalır, günlük sayaçlara yazılır.
+
+.state_machines[1].transitions[5].when :: Cevaptaki sonSira öğenin sırasından küçük (sunucu yedekten döndü); bir kez, ulaşma makbuzuyla yeniden gönderilir.
+
+.invariants[6] :: Hızlı yolda işlem başına geri dönüş noktası sayısı paketteki ardışık öğe türü grubu sayısını aşmaz; öğe başına geri dönüş noktası yalnız bir grup hata verince açılır.
+
+.invariants[14] :: Ulaşma makbuzu yalnız aynı kurulum, sıra, öğe kimliği ve gövde baytları için geçer; geçerli makbuz ulaşma anını ileri almaz, ilk anı geri getirir.
+
+.invariants[16] :: Numara, isim, gövde metni, imleç, oturum anahtarı ve ulaşma makbuzu loga ve iş verisine girmez; loglarda kurulum ve kişi iç kimliği, rota kalıbı, sonuç ve gerekçe kodu bulunur.
+
+.exports[1].purpose :: Öğe türünün sahibi eklentisi yüklenirken bir kez kaydolur; aynı tür ikinci kez kaydolursa açılış durur. Sahipler: yoklama_kaydi, makbuz_okutmasi (D05); pencere_suresi, erken_kapatma (D04); kafa_sayisi (D07); elle_ekleme, sorun_bildirimi (D09); gosterim_kaydi (D11); telefon_sayaci (D15). İşleyici ardışık aynı tür öğeleri sıra düzeninde alır (isleToplu bir çağrıda, isle tek tek), aynı uzunlukta ve sırada sonuç döner, beklenen hiçbir durumda fırlatmaz, hızlı yolda öğe başına SAVEPOINT açmaz.
+
+.exports[6].signature :: kararTeslimAni(tx: Islem, kayitAnahtari: { donemId: DonemId; kayitId: KayitId }, kararSurumu: number): Promise<Date | null>
+
+.files[11] :: apps/server/src/modules/esitleme/ulasma-makbuzu.ts
+
+.tests[18].asserts :: Grupta bir öğe kısıt ihlali: o RET ESITLEME_KISIT_IHLALI, gruptaki öbürleri KABUL; hızlı yolda tek SAVEPOINT, yedek yolda öğe başına SAVEPOINT (sorgu günlüğünden sayılır).
+
+.tests[21].name :: Ulaşma makbuzu başka öğeye geçmez
+
+.tests[21].asserts :: Gövdesi bir bayt değişmiş, başka sıradaki ya da başka kurulumdaki öğeye takılan makbuz yok sayılır, ulaşma anı paketin anı olur; değişmemiş öğede makbuzdaki an kullanılır.
+
+.tests[35].name :: Yedekten dönüşte makbuzlu kayıt kaybolmaz
+
+.tests[35].asserts :: Defter, kurulum su seviyesi ve kayıtlar son dakikaların öncesine geri sarılınca sonraki cevapta sonSira düşer; telefon kuralı (packages/core) üstteki ULASTI öğeleri bir kez yeniden gönderir; her makbuzlu kayıt sahibinin tablosunda tam bir kez ve ulaşma anı makbuzdaki ilk an.
+
+.tests[45].name :: Ulaşma makbuzu
+
+.tests[45].asserts :: Kurulum, sıra, öğe kimliği, gövde özeti, an ya da kid'den biri değişince doğrulama başarısız; listede duran eski kid ile üretilen makbuz geçer, listeden çıkan geçmez.
+
+.tests[52].asserts :: k6 sabit geliş hızıyla 20.000 telefon 1 dakikada; telefon başına belge, gönderim ve gerekirse indirme; gönderim p95 1 saniye ve p99 3 saniye altında, 503 oranı yüzde 2 altında ve hepsi Retry-After'lı, 503 dışı 5xx sıfır, her makbuzlu kayıt tam bir kez (D15-B15 profili); sayaç kilidi bekleme süresi ölçülür.
+
+.resolved_gaps[2].decision :: Rota şeması yalnız zarfı denetler: ogeler en çok 200; her öğede tur (64), sira (1 ile 2^53-1), ogeKimligi (64), govde (65536), ilkCapa (nesne ya da null), ulasmaMakbuzu (128). Tür deseni, UUIDv7, ilkCapa şeması ve türün govdeEnBuyukBayt sınırı D06'da öğe başına denetlenir; uymayan öğe RET ESITLEME_OGE_GECERSIZ alır ve deftere yazılır. Gövde sınırı 1 MiB (D13-B11); telefon paketi 200 öğe ve 768 KiB ile sınırlar. 200'ü aşan öğe sayısı şema hatasıdır (400); telefonun tepkisi 413 ile aynıdır (ikiye böler).
+
+.resolved_gaps[3].decision :: Öğe sonucu { sira, ogeKimligi, tur, sonuc, gerekce, ulasmaAni, ulasmaMakbuzu, beklemeSaniye, ayrinti }; sonuc KABUL, ZATEN_VAR, RET, TEKRAR_DENE ve gerekce x-extensible-enum. ZATEN_VAR da saklanan ulaşma anını ve sahibin güncel ayrıntısını (yoklamada karar) döner. ayrinti şeması öğe türünün sahibinin sözleşmesindedir. Telefon bilinmeyen sonucu TEKRAR_DENE gibi, en uzun aralıkla işler ve günlük sayaçlara yazar.
+
+.resolved_gaps[3].why :: Makbuz ulaşmayı ve kararı ayrı adımlar olarak gösterir (tasarim.html#ph-success); hoca okutmasıyla ulaşmış kaydı yeniden yollayan telefon ZATEN_VAR ile 'Sunucuya ulaştı' olur (plan.html#kararlar-kayit-ve-makbuz). Bilinmeyeni TEKRAR_DENE saymak 'makbuzu olan kayıt kaybolmaz' kuralını (teknik.html#testler-birim) bozmayan tek seçenektir.
+
+.resolved_gaps[4].why :: Plan 'ret' sözcüğünü iki anlamda kullanıyor; sözlük ayrımı D06'da kesin olmalı ki telefon makbuzu doğru göstersin. Hangi gerekçenin hangi sınıfta olduğu D05 ve D07'nin işleyici kuralıdır (D05-B05, D07-B03 aynı soruyu taşıyor).
+
+.resolved_gaps[6].decision :: Kesintisiz son sıra kurulum başınadır: en büyük n ki 1..n her sıranın defterde (sonucu ne olursa olsun) satırı var. Her öğe türü sıra tüketir; sıra kurulumda 1'den başlar, boşluksuz artar, dönemle sıfırlanmaz. Gönderim ve indirme cevaplarının ikisi de sonSira döner. Telefon sonSira'dan büyük sıradaki ULASTI ve RET öğelerini bir kez, ulaşma makbuzlarıyla yeniden gönderir. Tek öğe yine 400 ya da 413 alırsa (yalnız telefon hatasında olur) telefon sonraki pakette yerelRetler ile bildirir, D06 RET ESITLEME_YEREL_RET yazar; böyle öğe yeniden gönderilmez, gerekirse yeniden bildirilir. Bölünen paketin yarıları önce sol yarı sonuçlanarak gider, böylece olağan akışta sonSira'nın üstünde ULASTI öğe kalmaz. teknik.html#kod-veri-modeli'nin Cihazlar maddesindeki 'cihazdan alınan son sıra numarası' cihaz satırında değil kurulumlar tablosunda tutulur; plan.html#hedefler'deki (cihaz, sıra numarası) boşluğu burada (kurulum, sıra) boşluğudur.
+
+.resolved_gaps[6].why :: En büyük sıra, sırasız varışta (bölünen paket, öğe düzeyinde TEKRAR_DENE) küçük sıralı öğe ulaşmadan ilerler; WAL'ın en çok 5 dakikalık kaybı (teknik.html#veritabani-yedek) onu silerse telefon yeniden yollamaz ve 'makbuzlu kayıtta kayıp 0' bozulur. TEKRAR_DENE ve yerel retler de deftere yazıldığından su seviyesi olağan akışta takılmaz. Son sıra tek yazar kuralıyla D06'dadır (contracts: kurulumlar).
+
+.open_points[0].question :: İmzası doğrulanan ama geçersiz bir kayıt (listede olmadığı ders, pencere dışı, ulaşma anını aşan saat) gönderimde RET mi almalı, yoksa KABUL alıp 'Ret' kararıyla mı saklanmalı? Birincisinde makbuz 'Telefonda kayıtlı, gönderilmedi' kalır ve her gün hatırlatılır; ikincisinde 'Sunucuya ulaştı' ve 'Sunucu kararı: Ret' görünür, öğrenci 3 gün içinde sorun bildirebilir.
+
+.olcum[0] :: Makbuzlu kayıtta kayıp 0: gönderim durum makinesi testi ve yedekten dönüş senaryosu her değişiklikte; geri yükleme denemesinde sonSira ve baştan indirme (plan.html#hedefler).
+
+.kayitlar[0] :: app.ts: esitlemeEklentisi(app, { saat, log, ulasmaMakbuzu: { etkinKid, anahtarlar } }); anahtarlar D15.gizliAnahtar('ulasma_makbuzu', kid) ile bileşim kökünde okunur
+
+.beklenenler[5] :: D15: 'ulasma_makbuzu' amaçlı gizli anahtar (kid'li; eski anahtar en az dönem kilidine kadar saklanır, teknik.html#sunucu-ayarlar listesine eklenir); ders çıkışı yük testinde gönderim ve indirme profili; olcum_ görünümleri kurulumlar ve gonderim_defteri'ni okur.
+
+.beklenenler[6] :: Öğe sahipleri (D04, D05, D07, D09, D11, D15): ogeTuruKaydet ile kaydolur; işleyici beklenen her sonucu döner, fırlatmaz, hızlı yolda öğe başına SAVEPOINT açmaz; ayrıntı şemasını kendi sözleşmesinde yazar; öğe kimliğini kendi tablosunda hedefli ON CONFLICT ile tekil tutar; GelenOge.ulasmaAni'yi (paket anı ya da makbuz anı) ulaşma anı olarak yazar.
+
+.akislar.gonderim[8] :: Paketin sıraları için defter tek sorguyla okunur; öğeler artan sırayla ön denetimden geçer: zarf, sıra çakışması, tür kaydı, rol, oturum. Ulaşma makbuzu geçerliyse öğenin ulaşma anı makbuzdaki andır.
+
+.akislar.gonderim[9] :: Ardışık aynı tür öğe grupları en çok 50 öğelik parçalarla: SAVEPOINT, işleyici (isleToplu bir kez ya da isle tek tek), sonuç sözleşmesi denetimi, RELEASE. Hata: geri dön; geçici kod (40001, 40P01, 55P03, 57014) ise parça TEKRAR_DENE ESITLEME_GECICI_CAKISMA, değilse öğe başına SAVEPOINT ile yeniden (23 sınıfı RET ESITLEME_KISIT_IHLALI, öbürü TEKRAR_DENE ESITLEME_ISLEYICI_HATASI). Her parçadan sonra 8 saniyelik bütçe denetlenir; dolduysa kalan öğeler TEKRAR_DENE ESITLEME_ZAMAN_BUTCESI alır.
+
+.akislar.gonderim[11] :: COMMIT. Cevap: istek sırasıyla sonuçlar ve ulaşma makbuzları, sonSira, degisiklikVar. Tek log satırı.
+
+.kurallar[4].ad :: Ulaşma makbuzu
+
+.kurallar[4].metin :: base64url(biçim 1 bayt (1) | kid 1 bayt | kabulAniMs 8 bayt büyük uçlu | HMAC-SHA256(anahtar[kid], 'esitleme.ulasma.1' | kurulum 16 bayt | sira 8 bayt | ogeKimligi 16 bayt | SHA-256(govde) 32 bayt | kabulAniMs 8 bayt)), 42 bayt, 56 karakter. Doğrulama timingSafeEqual ile; geçerli makbuz öğenin ulaşma anını makbuzdaki an yapar. Anahtar listesinde olmayan kid yok sayılır (ulaşma anı paketin anı olur).
+
+.telefon_sozlesmesi[3] :: Sonuç: KABUL ve ZATEN_VAR öğeyi ULASTI yapar (ulaşma anı ve makbuzu saklanır); RET makbuzu 'gönderilmedi' bırakır; TEKRAR_DENE ve bilinmeyen sonuç öğeyi beklemeye alır.
+
+.telefon_sozlesmesi[4] :: sonSira kuralı: sonSira'dan büyük sıradaki ULASTI ve RET öğeleri bir kez, makbuzlarıyla yeniden gönderilir (plan.html#gun-kenar-durumlar); YEREL_RET öğesi gönderilmez, yerelRetler ile yeniden bildirilir.
+
+.tipler[1] :: export const OGE_TURLERI = { yoklama_kaydi: 'D05', makbuz_okutmasi: 'D05', pencere_suresi: 'D04', erken_kapatma: 'D04',
+
+.tipler[10] ::   onceki: { sonuc: OgeSonucuKodu; gerekce: string | null; kabulAni: Date | null } | null }
+
+.tipler[28] ::     satirlar: readonly Omit<IndirilenSatir, 'surum'>[]; kararlar: readonly { donemId: DonemId; kayitId: KayitId; kararSurumu: number }[] }> }

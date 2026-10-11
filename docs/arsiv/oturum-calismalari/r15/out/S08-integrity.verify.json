@@ -1,0 +1,324 @@
+{
+ "verdicts": [
+  {
+   "id": "S08-01",
+   "verdict": "CONFIRMED",
+   "note": "All cited facts verified on primary pages: UNRECOGNIZED_VERSION and UNLICENSED for non-Play installs, certificateSha256Digest filled unless UNEVALUATED, optional signals need a Play install on Android 13+, unlinked projects get no optional configuration. Framing gap: line 36 makes GitHub the Android channel, but lines 485 and 857 recommend adding a Play closed test track; if adopted, Play-installed copies come through Play and the Cloud project can be linked, so the server rule must accept both PLAY_RECOGNIZED and UNRECOGNIZED_VERSION with our certificate digest. The verdicts page also requires checking requestPackageName, requestHash and the timestampMillis window.",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/google/play/integrity/verdicts",
+     "quote": "The certificate or package name does not match Google Play records.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/verdicts",
+     "quote": "This field is populated iff appRecognitionVerdict != UNEVALUATED.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/improvements",
+     "quote": "All optional signals available to developers using Google Play Console or the Play SDK Console (except device attributes) now require the requesting app to be installed, or updated, by Google Play on Android 13 or later.",
+     "date": "2026-02-26"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/setup",
+     "quote": "Projects that are enabled in the Google Cloud Console but not linked in the Play Console or Play SDK Console are not eligible for additional configuration options or quota increases.",
+     "date": "2026-10-01"
+    }
+   ]
+  },
+  {
+   "id": "S08-02",
+   "verdict": "CONFIRMED",
+   "note": "Setup page confirms the 10,000/day token-request limit shared between classic requests and standard token preparations, a separate 10,000/day limit on decryptions on Google's servers, and that an increase needs the app on Google Play plus a linked project. Error page confirms TOO_MANY_REQUESTS covers the daily quota. Recommendation holds; see recommendation_issues for a retry cap.",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/google/play/integrity/setup",
+     "quote": "Your app or SDK has a default daily limit of 10,000 total requests, tied to the associated Cloud Project Number.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/setup",
+     "quote": "To be eligible for a quota increase, your app must be available on Google Play in addition to any other distribution channels.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/error-codes",
+     "quote": "The calling app is making too many requests to the API and has been throttled, or your app has exceeded its daily request quota.",
+     "date": "2026-02-26"
+    }
+   ]
+  },
+  {
+   "id": "S08-03",
+   "verdict": "CONFIRMED",
+   "note": "Facts verified: blog quote (19 Nov 2025), improvements-page quote, Kotlin-library advice and the 1 Feb 2026 P-384 root note (page updated 2026-07-09); android.googleapis.com/attestation/root currently returns 2 certificates (one RSA, one EC). @peculiar/asn1-android only parses. The fork is real, but the stated trade-off misses two costs of the Play Integrity-only pick (see recommendation_issues).",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/blog/posts/stronger-threat-detection-simpler-integration-protect-your-growth-with-the-play-integrity-api",
+     "quote": "Play Integrity API is the recommended way to benefit from hardware-backed Android platform key attestation.",
+     "date": "2025-11-19"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/improvements",
+     "quote": "Play Integrity API already uses key attestation to obtain hardware-backed security signals on some devices and will now integrate them more deeply on all devices running Android 13 or later.",
+     "date": "2026-02-26"
+    },
+    {
+     "url": "https://developer.android.com/privacy-and-security/security-key-attestation",
+     "quote": "It's well-tested, and covers edge cases that are often missed by custom verifiers.",
+     "date": "2026-07-09"
+    }
+   ]
+  },
+  {
+   "id": "S08-04",
+   "verdict": "CONFIRMED",
+   "note": "Apple's assertion step 5 (counter greater than previous) and step 6 (embedded challenge), the WWDC21 replay-protection sentence, the WWDC26 'strictly increasing' sentence and node-app-attest's check all verified. Scenario (b) follows from the plan's own per-record results (line 127); scenario (a) applies when online requests are signed with the same App Attest key, which line 81 implies. Given the 'Kayit kaybi 0' and 'Haksiz devamsiz 0' targets the severity is arguably high. node-app-attest takes the stored signCount as an input, so the server can set its own rule. The proposed fix is heavier than needed (see recommendation_issues).",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server",
+     "quote": "Verify that the authenticator data's counter value is greater than the value from the previous assertion, or greater than 0 on the first assertion.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/videos/play/wwdc2021/10244/",
+     "quote": "To help protect against replay attacks, store the counter value on your server, and expect it to increase with each subsequent request.",
+     "date": "2021-06"
+    },
+    {
+     "url": "https://github.com/uebelack/node-app-attest/blob/main/src/verifyAssertion.js",
+     "quote": "if (nextSignCount <= signCount) { throw new Error(\"invalid signCount\"); }",
+     "date": "1.0.1, 2026-02-20"
+    }
+   ]
+  },
+  {
+   "id": "S08-05",
+   "verdict": "CONFIRMED",
+   "note": "Apple quotes on storing (key, receipt) pairs, keeping development and production apart, storing the receipt immediately, and production use after TestFlight or App Store all verified. The device row also needs a status (active or replaced) and the replacement time, which the rule at line 233 depends on. Parts of the recommendation are redundant (see recommendation_issues).",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server",
+     "quote": "When attestation succeeds, independently verify and store the receipt immediately.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.devicecheck.appattest-environment",
+     "quote": "After distributing your app through TestFlight, the App Store, or the Apple Developer Enterprise Program, your app ignores the entitlement you set and uses the production environment.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S08-06",
+   "verdict": "CONFIRMED",
+   "note": "Expo SDK 57 docs confirm persistence across uninstall on iOS, keychainAccessible being iOS-only and the THIS_DEVICE_ONLY descriptions; the same page says Android Keystore entries are deleted on uninstall. Auto Backup restores databases on install, Expo's android.allowBackup defaults to true, and allowBackup=false does not stop device-to-device transfer on some devices for apps targeting Android 12+, so the first-launch detection rule is the reliable fix.",
+   "evidence": [
+    {
+     "url": "https://docs.expo.dev/versions/latest/sdk/securestore/",
+     "quote": "Data saved using expo-secure-store will persist across app uninstallations if the app is reinstalled with the same bundle ID.",
+     "date": "SDK 57, accessed 2026-10-05"
+    },
+    {
+     "url": "https://docs.expo.dev/versions/latest/sdk/securestore/",
+     "quote": "app's entries are deleted from the Android Key Store when the app is uninstalled.",
+     "date": "SDK 57, accessed 2026-10-05"
+    },
+    {
+     "url": "https://docs.expo.dev/versions/latest/config/app/",
+     "quote": "Defaults to the Android default, which is true.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.android.com/identity/data/autobackup",
+     "quote": "specifying android:allowBackup=\"false\" disables cloud-based backup and restore (such as Google Drive backups) but doesn't disable device-to-device transfers for the app.",
+     "date": "2026-02-26"
+    }
+   ]
+  },
+  {
+   "id": "S08-07",
+   "verdict": "CONFIRMED",
+   "note": "RFC 7518 3.4 requires a 64-octet R||S value; Apple's assertion signature covers SHA256(authenticatorData || clientDataHash). The label contradiction is real. Addition: @expo/app-integrity's iOS generateAssertionAsync takes a string and hashes its UTF-8 bytes, so the envelope must keep the exact signed text (see misses).",
+   "evidence": [
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc7518#section-3.4",
+     "quote": "The JWS Signature value MUST be a 64-octet sequence. If it is not a 64-octet sequence, the validation has failed.",
+     "date": "2015-05"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server",
+     "quote": "Concatenate authenticatorData and clientDataHash, and apply a SHA256 hash over the result to form nonce.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S08-08",
+   "verdict": "CONFIRMED",
+   "note": "WWDC21 session 10244 and the WWDC26 session 'Secure your apps with App Attest' both state assertions are produced on the device without Apple servers; the DeviceCheck article confirms only attestKey reaches Apple's server and serverUnavailable is retried with the same key. The main article does not itself state the offline case, but WWDC transcripts are Apple primary sources, so 'belgelenmemis' is wrong.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/videos/play/wwdc2021/10244/",
+     "quote": "The assertion flow is simpler than attestation, as the Apple servers are no longer involved. All assertions using the key are generated on-device and validated on your server.",
+     "date": "2021-06"
+    },
+    {
+     "url": "https://developer.apple.com/videos/play/wwdc2026/201/",
+     "quote": "Assertions are generated locally on the device and do not round-trip Apple servers.",
+     "date": "2026-06"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity",
+     "quote": "If the method, which accesses a remote Apple server, returns the serverUnavailable error, try attestation again later with the same key.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S08-09",
+   "verdict": "CONFIRMED",
+   "note": "npm registry: node-app-attest 1.0.1 on 2026-02-20 with one maintainer; appattest-checker-node last modified 2024-10-13 with one maintainer. Source reads authData at fixed offsets and checks none of the new extension fields; Apple's table confirms 2 = TestFlight and 4 = App Store. Small correction to the in-house remark: the library uses Node's X509Certificate only for the chain checks and depends on cbor, asn1js and pkijs, so taking it in-house keeps a CBOR and an ASN.1 parser. The plan's line 741 rule (single-maintainer packages name a backup) should list node-app-attest with 'kendi kodum' as its backup.",
+   "evidence": [
+    {
+     "url": "https://registry.npmjs.org/node-app-attest",
+     "quote": "\"1.0.1\": \"2026-02-20T12:55:36.843Z\"",
+     "date": "2026-02-20"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server",
+     "quote": "Verify the apple_validation_category_01 value within the extensions CBOR dictionary in the authenticator data.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://registry.npmjs.org/node-app-attest",
+     "quote": "\"asn1js\": \"^3.0.7\", \"cbor\": \"^10.0.11\", \"pkijs\": \"^3.3.3\"",
+     "date": "1.0.1, 2026-02-20"
+    }
+   ]
+  },
+  {
+   "id": "S08-10",
+   "verdict": "CONFIRMED",
+   "note": "Quotes verified. @expo/app-integrity's Android source generates an EC key with PURPOSE_SIGN and DIGEST_SHA256 plus an attestation challenge and has no signing function, so the own module can sign with it by alias. Better Auth's Expo guide requires expo-secure-store, so it stays. A fallback gap remains for iPhones whose attestation fails (see recommendation_issues).",
+   "evidence": [
+    {
+     "url": "https://github.com/paulmillr/noble-curves",
+     "quote": "For React Native, you may need a polyfill for getRandomValues.",
+     "date": "2.4.0, 2026-08-27"
+    },
+    {
+     "url": "https://docs.expo.dev/versions/v57.0.0/sdk/app-integrity/",
+     "quote": "Generates a hardware-attested key pair in the Android Keystore. This key can be used for attestation on GrapheneOS and other secure Android distributions.",
+     "date": "SDK 57, accessed 2026-10-05"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/integrations/expo",
+     "quote": "Make sure you install the expo-secure-store package into your Expo app. This is used to store the session data and cookies securely.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  }
+ ],
+ "recommendation_issues": [
+  {
+   "id": "S08-04",
+   "problem": "Two server-side counters per key, strict per-device ordering and cascading 'tekrar dene' add state and a head-of-line stall: one record stuck on 'tekrar dene' holds back every later record of that phone, against the 95%-in-24h target. Smaller fix: do not sign online requests (downloads, time-certificate refresh) with the App Attest key; authenticate them with a device token issued at registration, so only records consume the counter. For records, require the counter to be unused for that key (unique (device, counter) on the record row) instead of greater than the last; replay is already blocked by the unique record id, the unique (device, sequence) and the signature over the exact bytes, and node-app-attest accepts the reference signCount as an input. The reason for departing from Apple's step 5 is written into the plan. The open question's Secure Enclave key, bound once with App Attest, removes the counter entirely and is the cleaner long-term option."
+  },
+  {
+   "id": "S08-03",
+   "problem": "The trade-off omits two costs of the Play Integrity-only pick. Standard-request tokens can only be decrypted on Google's servers (local decryption needs the app on Google Play), so every Android registration makes a server-to-Google call with a service-account token and spends one of 10,000 daily decryptions. The server also loses its only direct proof that the Android key is hardware-backed, so the 'anahtar turu' field at line 786 becomes app-reported. The default should follow line 857: Play track adopted, Play Integrity only; GitHub only, key attestation only (checked on the server without Google calls or quota), accepting the custom verifier and root upkeep."
+  },
+  {
+   "id": "S08-10",
+   "problem": "Removing the software key leaves no signing key for an iPhone whose App Attest attestation fails with a non-retryable error (Apple: discard the key and create a new one), and the reactive 'add a software key when seen' would bring back @noble/curves and the r||s branch. Smaller fallback with no new package: the own native module creates a Secure Enclave P-256 key with CryptoKit (iOS 13+), signs records in DER, and the device carries the 'Cihaz dogrulanmadi' label; the server already verifies DER. Optionally the Android Keystore key is generated in the same own module that signs, rather than relying on the key parameters of an alpha package."
+  },
+  {
+   "id": "S08-05",
+   "problem": "The per-device 'ortam' column is redundant: node-app-attest refuses development-environment keys unless allowDevelopmentEnvironment is set and returns the environment, so one production server setting covers it. The receipt only feeds Apple's fraud metric, which the same research advises against adding, so storing it is optional. The counter columns depend on the S08-04 choice: with the uniqueness rule the counter sits on the record row, not the device row."
+  },
+  {
+   "id": "S08-02",
+   "problem": "'Dogrulama sonraki acilista kendiliginden yeniden denenir' spends a token preparation on every app open while the day's quota is exhausted, eating into the next day as well. Cap it at one retry per device per day with exponential backoff, which Google's error page advises."
+  }
+ ],
+ "checked_ok_disputes": [
+  {
+   "plan_line": 683,
+   "claim": "Keystore P-256 anahtarı ve Google köklü donanım anahtar kanıtı Android 7.0 (API 24) ve üstünde var; Play Integrity standart istek API 23 ister. Planın Android 7 alt sınırı uygun.",
+   "problem": "Overstated. Google-rooted hardware attestation became mandatory only with Android 8.0; Android 7.x phones may produce no Google-rooted hardware chain, so on them the key-attestation path ends in 'Cihaz dogrulanmadi'. The Android 7 floor still works because unverified phones are only labeled, but the claim as written is wrong for part of the 7.x population.",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/privacy-and-security/security-key-attestation",
+     "quote": "Note that attestation was not required until Android 8.0 (API level 26).",
+     "date": "2026-07-09"
+    },
+    {
+     "url": "https://developer.android.com/privacy-and-security/security-key-attestation",
+     "quote": "Android devices that have passed the testing required to have the Google suite of apps, including Google Play, and which launched with Android 7.0 (API level 24) or higher should use attestation keys signed by the Google Hardware Attestation Root certificate.",
+     "date": "2026-07-09"
+    }
+   ]
+  }
+ ],
+ "misses": [
+  {
+   "plan_line": 589,
+   "plan_quote": "Android anahtar kanıtı @peculiar/asn1-android, iPhone App Attest node-app-attest ile doğrulanır.",
+   "kind": "MISSING",
+   "severity": "low",
+   "finding": "The verification list names server tools for key attestation and App Attest but nothing for Play Integrity, which line 78 relies on. @expo/app-integrity uses standard requests, whose tokens can only be decrypted on Google's servers: the server needs a service account in the Cloud project, an OAuth access token with the playintegrity scope and a decodeIntegrityToken call per registration, each counted against the 10,000/day decryption limit. Local decryption is offered only to apps on Google Play. If the Cloud project sits under an organization created on or after 3 May 2024, the baseline policy blocks creating service-account keys, the simple way for a self-hosted server to authenticate.",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/google/play/integrity/standard",
+     "quote": "To obtain the device integrity verdicts, you must decrypt the integrity token on Google's servers.",
+     "date": "2026-06-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/setup",
+     "quote": "To decrypt locally within your own secure server environment, you can download encryption keys from the Play Console or the Play SDK Console. Your app must be available on Google Play to use this feature.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://docs.cloud.google.com/resource-manager/docs/secure-by-default-organizations",
+     "quote": "Google Cloud security baseline constraints are enforced for all organizations created on or after May 3, 2024.",
+     "date": "2026-09-30"
+    },
+    {
+     "url": "https://registry.npmjs.org/google-auth-library",
+     "quote": "\"repository.url\": \"git+https://github.com/googleapis/google-cloud-node.git\"",
+     "date": "2026-09-16"
+    }
+   ],
+   "recommendation_tr": "İmza doğrulama satırına Play Integrity'nin sunucu adımı eklenir. Telefonun gönderdiği jeton sunucuda Google'ın decodeIntegrityToken ucuna gönderilip çözülür; standart istek jetonu yalnız Google'ın sunucusunda çözülebiliyor. Bunun için Google bulut projesinde bir hizmet hesabı açılır, anahtarı sunucuda gizli ayar olarak durur ve loglara yazılmaz; erişim jetonu Google'ın bakımındaki google-auth-library ile alınır, istek düz fetch ile atılır. Her çözme günlük 10.000 sınırına sayılır. Google'a ulaşılamazsa kayıt durmaz: telefon 'Cihaz doğrulanmadı' etiketiyle bağlanır, doğrulama ertesi gün yeniden denenir. Bulut projesi bir kuruluşa bağlı olmadan, kişisel hesapta açılır; 3 Mayıs 2024'ten sonra kurulan kuruluşlarda hizmet hesabı anahtarı üretimi varsayılan olarak kapalıdır. Android'de yalnız anahtar kanıtı seçilirse bu adım ve hizmet hesabı hiç gerekmez."
+  },
+  {
+   "plan_line": 589,
+   "plan_quote": "Kayıt tam baytlarıyla imzalanır (JWS ES256 biçimi), yeniden biçimlendirme hatası olmaz.",
+   "kind": "RISK",
+   "severity": "low",
+   "finding": "On iPhone the signing goes through @expo/app-integrity's generateAssertionAsync(keyId, challenge), which takes a string and signs over SHA256 of its UTF-8 bytes, not over arbitrary bytes. If the record is binary and passed as base64, the server must hash the base64 text exactly as sent; hashing the decoded bytes makes every iPhone record fail verification and end as 'ret'.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/expo/expo/main/packages/expo-app-integrity/ios/IntegrityModule.swift",
+     "quote": "let data = Data(challenge.utf8)",
+     "date": "main branch, accessed 2026-10-05 (57.0.2 published 2026-09-11)"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/expo/expo/main/packages/expo-app-integrity/ios/IntegrityModule.swift",
+     "quote": "let clientDataHash = Data(SHA256.hash(data: data))",
+     "date": "main branch, accessed 2026-10-05"
+    },
+    {
+     "url": "https://docs.expo.dev/versions/latest/sdk/app-integrity/",
+     "quote": "generateAssertionAsync(keyId, challenge)",
+     "date": "SDK 57, accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Kayıt bir kez tek bir metne çevrilir (ör. kayıt baytlarının base64 hali) ve telefonda, kuyrukta ve sunucuda hep bu metin olduğu gibi saklanır. iPhone onayı bu metnin UTF-8 baytları üzerinden alınır, Android imzası da aynı baytlara atılır. Sunucu metni yeniden üretmez, gelen metni özetleyip doğrular. Bunu iPhone ve Android için birer uçtan uca davranış senaryosu korur."
+  }
+ ],
+ "slice_verdict": "PASS",
+ "verdict_reason": "All 10 findings re-checked against primary sources (Play Integrity verdicts/setup pages updated 2026-10-01, improvements and error pages 2026-02-26, key attestation page 2026-07-09 and the live root JSON, Apple DeviceCheck docs plus WWDC21 and WWDC26 transcripts, Expo SDK 57 docs and package source, npm registry, RFC 7518): 10 confirmed, 0 corrected, 0 refuted, 0 unverifiable. Of 12 checked_ok items, the versioned and dated ones were spot-checked; 1 is overstated (Android 7 hardware attestation, low impact). Five recommendation issues, none high: the S08-04 two-counter plus cascade-retry fix is heavier than a uniqueness rule with token-authenticated online requests; S08-03's Play Integrity-only default misses the Google-side decryption dependency and the loss of hardware-key proof; S08-10 lacks an iPhone fallback key; S08-05 adds a redundant environment column; S08-02 needs a retry cap. Two low-severity misses: the Play Integrity server decode step is absent from line 589, and the iOS module signs a UTF-8 string, not raw bytes. S08-04 is arguably high given the zero-loss target, but it is confirmed. No high-severity item is unverified and no high-severity miss remains, so the slice passes."
+}

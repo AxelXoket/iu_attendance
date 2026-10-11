@@ -1,0 +1,289 @@
+[
+ {
+  "severity": "HIGH",
+  "where": "#erisilebilirlik Odak halkası: \"outlineWidth: 2, outlineOffset: 2, outlineColor focus.ring (Yeni Mimari stilleri)\"; #etkilesim focus, Telefon: \"halka bir View çerçevesidir; opaklığı CSS geçişiyle\"",
+  "problem": "The phone focus ring for hardware keyboards is described with two incompatible implementations. Outline props have no opacity to fade. A separate View frame needs geometry (offset, and an inset variant for edge-touching rows and tabs) that the document never gives.",
+  "fix": "Use outline props: a Reanimated CSS transition of outlineColor from transparent, dur.mikro with ease.mikro, and outlineOffset -2 for edge-touching items. Write it once in the #etkilesim focus row and link to it from #erisilebilirlik.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "HIGH",
+  "where": "#kutuphaneler Yoklama başarı animasyonu: \"Köşeli onay işareti düz View çubuklarıyla çizilir, yalnız transform ve opaklık canlanır\"; #etkilesim success, Telefon: \"Çizim react-native-svg Path'in strokeDashoffset değeri\"",
+  "problem": "The app's only signature moment has two build recipes. View bars cannot draw a stroke, and #hareket Kurallar names stroke-dashoffset as the one allowed exception to transform and opacity.",
+  "fix": "Keep react-native-svg Path with strokeDashoffset (react-native-svg is already a dependency for the icons). Rewrite the #kutuphaneler row as \"react-native-svg Path ve Reanimated: çizim strokeDashoffset, ölçek withSpring(spring.imza)\".",
+  "angle": "The developer "
+ },
+ {
+  "severity": "HIGH",
+  "where": "#erisilebilirlik Artırılmış kontrast: \"eşleme @media (prefers-contrast: more) içinde tek bloktur, token dosyasından üretilir\"; #tokenlar lead: \"tamamı aşağıda\"",
+  "problem": "The printed token file (248 tokens) has no increased-contrast values, and the page CSS has no prefers-contrast block. Neither the panel block nor the phone's \"tokens.ts içinde ikinci nesne\" can be generated as described. The 76 measured pairs leave out accent.10 on bg.selected (7,28:1), so \"artırılmış olanlar da tcheck.js'ten geçer\" is unproven. In this mode danger.fillHover becomes #861116, the same value danger.fillPressed already has, so hover and pressed look the same, and danger.fillPressed gets no increased value of its own.",
+  "fix": "Add the mapping to the token file as an $extensions contrastMore value on text.secondary, text.link, text.linkHover, border.strong, border.strongOnTint, border.subtle, danger.fill, danger.fillHover, danger.fillPressed, status.danger.solid and text.disabled. Emit the @media block into tokens.css, add the new pairs to #kontrast, and give danger.fillPressed its own darker value.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#platform web paneli, linear() row: \"Aynı süreyle cubic-bezier giriş eğrisi oynar\"; #hareket Yaylar: \"kalıbın kendi süre ve eğri tokenı kullanılır\"; #tokenlar: \"Panel ve bu sayfa yayı bu iki değerle çizer.\"",
+  "problem": "The document gives two different fallback rules for browsers without linear(), and the page does a third thing: the success mark falls back to dur.imza 400 ms with ease.imza and switches to --spring-imza-dur 350 ms under @supports. No panel pattern in #etkilesim uses a spring, and --spring-hizli and --spring-orta are never used, so a panel developer will look for elements that should use them.",
+  "fix": "State: \"Yaylar yalnız telefonda; panelde her kalıp süre ve eğri tokenıyla oynar; bu sayfa yalnız başarı işaretini linear() ile gösterir, desteklenmezse dur.imza ve ease.imza\". Delete the Platform row's \"aynı süreyle\" sentence and the two unused spring variables.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#kutuphaneler Liste: \"sabit satır yüksekliği ve getItemLayout verilir\"; #erisilebilirlik Telefon: \"satır yüksekliği yazıyla büyür\"",
+  "problem": "Fixed row heights contradict rows that grow with font scale (200 percent, AX5). A wrong getItemLayout causes scroll jumps and blank gaps.",
+  "fix": "Remove \"sabit satır yüksekliği ve getItemLayout\" and let rows be measured. The existing fallback, @legendapp/list, handles variable heights if the 500-row low-end test fails.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#erisilebilirlik Panel: \"Yazı boyları rem ile yazılır (px bölü 16; 14 px 0.875rem)\" and \"düğme, alan ve satır min-height ile çizilir\"",
+  "problem": "The token file stores type sizes in px and never names a px-to-rem step. Every live panel component uses px fonts and fixed heights: .btn has height: var(--h) with white-space: nowrap, .input has height 40px, and tabs and menu items have height 40px. The 200 percent table also says \"Düğme yükselir, etiket ikinci satıra iner\", which nowrap prevents.",
+  "fix": "Name the Style Dictionary transforms (size/pxToRem for fontSize, unitless lineHeight). Move the demos to min-height and allow wrapping, or label the demos as px-only drawings.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#erisilebilirlik Dokunma: \"araç çubuğundaki 40 px sekme ve alanlarla hizalanır\"; Anatomi Metin alanı: \"Panel 40\"",
+  "problem": "The panel demo toolbar uses a 32 px search field (.search .input height 32, icon at left 10 and top 8) and a 32 px Süz button (btn-sm).",
+  "fix": "Make the search field 40 px with the 16 px icon inset 12, and make Süz a 40 px secondary button, or document a 32 px compact field in the anatomy.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#platform web paneli: \":root { accent-color: var(--accent-fill); } taşır: işaret kutusu ve <progress>\"",
+  "problem": "The specified checkbox (0 radius, border.strong, strongOnTint on tinted rows, hover border.hover) needs appearance: none. The demo uses appearance: none, which ignores accent-color. The progress bar in #erisilebilirlik is a role=\"progressbar\" div, not <progress>. The developer cannot tell whether to use native or custom controls.",
+  "fix": "Replace the sentence with \"Onay kutusu input type=checkbox üstünde appearance: none ile çizilir (Bileşenler)\", or remove it.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#kutuphaneler panel Uzun liste: \"content-visibility: auto\" with \"ekran okuyucunun tablo gezintisi\"",
+  "problem": "content-visibility has no effect on table, tbody or tr: size containment does not apply to internal table boxes or to display: table. It therefore does nothing for the attendance table this row is about.",
+  "fix": "Say that tables render all their rows (a few hundred is fine). Keep content-visibility for non-table lists only, with @tanstack/react-virtual as the fallback.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#erisilebilirlik: \"Renklerin anlamı sabittir.\"; #gece-mavisi: \"Uyarı ve hata: mor ve kırmızı mürekkep.\"",
+  "problem": "Violet carries two meanings: a warning (İncelemede and Seviye 2, status.warning #7839A5) and a neutral presence status (Görevli, #652F94). In the panel table the two sit in neighbouring columns.",
+  "fix": "Either state violet's two meanings next to the rule, or move one of them (for example show the warning as neutral.12 ink with the warning icon) so that each hue has one meaning.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "Anatomi Diyalog: \"düğmeler arası 8\"; #erisilebilirlik: \"Çerçeveli kontroller arasında en az 12 dp kalır\"",
+  "problem": "On the phone, the dialog's two 48 dp buttons (one framed, one filled) are 8 apart (.dlg-f gap 8), which breaks the 12 dp rule.",
+  "fix": "Use a 12 gap on the phone, keep 8 on the panel, and write both values in the row.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ozet Alt sayfa row, #katmanlar, #etkilesim sheet, #platform, #kutuphaneler, #acik 01: \"Açılış ve kapanış hareketi sistemindir\"",
+  "problem": "Facts repeated where a link would do: (a) the TrueSheet system-motion sentence appears 6 times; (b) the selection-mark place list appears word for word in #gece-mavisi role 4 and in #bicim Çizgiler under işaret; (c) the panel toast rule (role=status or role=alert, no library) appears in #ozet, #katmanlar, #platform, #kutuphaneler and #acik 04; (d) the date box rule (Intl tr-TR, Europe/Istanbul, \"6 Ekim 2026 Salı\") appears in #ozet, #platform, #kutuphaneler and #acik 05; (e) \"color, opacity and press by CSS transition, position by withSpring\" appears in #ozet, #hareket Kurallar and #kutuphaneler; (f) the haptics details appear in #ekranlar, #etkilesim, #platform, #kutuphaneler and #acik 16; (g) the #ozet Token adları row repeats the #tokenlar reading key.",
+  "fix": "Keep one copy of each: (a) #etkilesim sheet, (b) #gece-mavisi, (c) #katmanlar, (d) #acik 05, (e) #hareket, (f) #platform, (g) #tokenlar. Replace every other occurrence with a link.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "HIGH",
+  "where": "tasarim.html as a whole: 85,187 px tall at 1440 and 145,636 px at 390, 26,087 words (dgate). Tallest sections at 1440: #erisilebilirlik 11,632 px, #platform 6,286, #acik 6,220, #bilesenler 6,036. Evidence: review2/c/er1440-00.png, review2/c/bl1440-01.png",
+  "problem": "Fails rubric D14. Next to Carbon, Geist and M3 the page cannot be scanned. Numbered rule lists sit in a text column of about 420 px under 1,112 px separator rules, so the right 55% of every row is empty. Component specs are 14 x 8 prose matrices. The same facts come back in 3 to 5 sections (MEDIUM items below). Each piece is well made; together they read as a spec dump, not a design system the owner can approve in one sitting.",
+  "fix": "Apply the cuts listed below. Lay out every numbered rule list like Hareket > Kurallar (two columns) or İlkeler (title left, text right). Targets: at most 20,000 words, at most 55,000 px at 1440, and no section taller than 4,000 px.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#erisilebilirlik > Hareket azaltma item 03: 'içinde --mv: 0 yer ve ölçeği kaldırır'. Artırılmış kontrast paragraph: 'blok --status-word değişkenine'. At 390: #hareket 'time.baslikGecikme' and the curve card '--ease-standart'. Evidence: review2/c/er1440r-01.png, review2/c/er1440r-00.png, review2/c/m-ha.png",
+  "problem": "Inline code breaks in the middle of identifiers: '-' / '-mv: 0', '--' / 'status-word', 'time.baslikGecik' / 'me', '--ease-' / 'standart'. A developer can read '-mv' as a different property.",
+  "fix": "Set white-space: nowrap on inline code shorter than 40 characters and allow breaks only at spaces. In narrow cards, put the CSS variable on its own line.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ozet 'Alt sayfa' row, #katmanlar item 01, #platform 'Alt sayfa', #etkilesim 'sheet' row. Repeated text: 'Açılış ve kapanış hareketi sistemindir'",
+  "problem": "The same TrueSheet sentence appears word for word in three sections, plus a paraphrase in the interaction table.",
+  "fix": "Keep it only in #platform. Özet row: 'Telefonda TrueSheet, köşe 0 (Platformlar)'. In Katmanlar 01 and the Etkileşim sheet row, replace the sentence with a link to Platformlar.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ozet 'Panelde bildirim ve tarih', #platform web item 02, #kutuphaneler, #acik item 05. Repeated text: 'seçilen tarih hemen altında Türkçe yazılır'",
+  "problem": "The date-box rule and its example '6 Ekim 2026 Salı' appear three times word for word and a fourth time as a paraphrase.",
+  "fix": "Keep it in #platform only. Elsewhere, link to it.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ozet 'Token adları' row and #tokenlar Okuma anahtarı 01 ('nokta tire olur, harf büyüklüğü korunur'). #tokenlar 04 and #hareket ('Animasyonları kaldır açıkken bütün süreler 0 olur')",
+  "problem": "Two rules each appear twice, word for word.",
+  "fix": "Delete the Özet 'Token adları' row. Delete the second sentence of Okuma anahtarı 04 and link to Hareket.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#erisilebilirlik subsections Kontrast eşikleri, Hareket azaltma (6 rules), Renk tek başına anlam taşımaz, Ekran başına tek birincil eylem",
+  "problem": "These repeat #kontrast; #hareket (Kurallar 10, the Süreler note and the Etkileşim column); #ilkeler 02 together with #durumlar; and #gece-mavisi 01 'Tek dolgu' together with #dogru. They are the main reason the section is 11,632 px tall.",
+  "fix": "Keep only what is new here (platform APIs, font scaling, QR invert, live regions). Replace each of the four subsections with one line and a link.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ozet lead says 'bütün değerleri bağlantı verilen bölümde durur', yet the rows print '#143065 (accent.11), hover #1F4184', '120 ms'de', '0,97', '48x48 dp'. The hero key-figure strip repeats #F2F4F8 and #143065 a third time.",
+  "problem": "The summary contradicts its own lead by restating exact values that live in the sections (four copies of the palette within the first 3,400 px).",
+  "fix": "Keep the decision words in each Özet row and drop the hex, ms and scale values. This removes about 40% of its 841 words.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#acik, 2,408 words, 19 items. Measured: 27 paragraphs of 75 to 94 characters per line at 1440. Evidence: review2/c/ak1440-00.png",
+  "problem": "'Neden önemli' restates section text, and the lines break the design's own 'Paragraf satırı en çok 70 karakter'.",
+  "fix": "Each item gets question, öneri and karar in at most 3 lines, with max-width 70ch.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "LOW",
+  "where": "#ilkeler right column (shots/1440-ilkeler.png)",
+  "problem": "Three text widths in one column: Uygulamada runs to about x 1350, Dayanak to about 1215, the Kaynak line to about 1165.",
+  "fix": "Use one max-width for all three blocks.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "LOW",
+  "where": "#kaynaklar (review2/c/ac1440r.png)",
+  "problem": "A numbered section holding one paragraph, followed by a 130 px empty band and a second rule above the footer.",
+  "fix": "Move the sentence into the footer and drop section 22.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "LOW",
+  "where": "#erisilebilirlik 'Tab ile dene' row (review2/c/er1440-01.png)",
+  "problem": "The link and checkbox labels sit about 10 px below the button labels because the row aligns to the input's bottom edge.",
+  "fix": "Set align-items: center and put the input label inline, or move the input to its own row.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "LOW",
+  "where": "#platform browser table header (review2/c/pf1440-03.png)",
+  "problem": "The second header row's grey band covers only x 250 to 818; the 'Özellik' and 'Yoksa ne olur' cells are not banded.",
+  "fix": "Band the full header height across all columns.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "HIGH",
+  "where": "18 places, e.g. #acik h3 \"Sahibin kararı\"; #gece-mavisi role 2 \"Sahibin kilidi.\"; role 7 \"Sahibin kuralı\"; #renk lead \"sahibin kilidiyle sabittir\"; #hareket lead \"sahiple ayrıca konuşulacak\"; #platform \"kararı sahibin\"; #kutuphaneler \"sahip onayıyla\"; #acik 01, 03, 04, 13 \"olumsuz çıkarsa ek iş için sahip.\", 14 \"krem görünürse sahip.\"",
+  "problem": "Breaks D12 (the plan's voice). plan.html never names a \"sahip\": it speaks impersonally and in the first person (\"ben ekipte yönetici rolüyle çalışırım\"). In a repository document read by department faculty, \"sahip\" is review-pipeline jargon that no reader can resolve, and it sits next to a third voice, \"biz\" (\"çizdiğimiz\", \"kendi bileşenimiz\", \"tokenlarımız\"). Two Karar cells (#acik 13, 14) end in a bare noun and are not sentences.",
+  "fix": "Heading \"Sahibin kararı\" -> \"Karar bekleyenler\". \"Sahibin kilidi\" and \"Sahibin kuralı\" -> \"Kilit, 6 Ekim 2026\". \"sahibin izin verdiği ton aralığı\" -> \"kilidin izin verdiği ton aralığı\". \"sahiple ayrıca konuşulacak\" -> \"ayrıca konuşulacak\". \"Sahip bunu kendi sözüyle sonraya bıraktı:\" -> \"Tasarım isteği bunu sonraya bıraktı:\". \"sahip onayıyla\" -> \"onayla\". #acik 13 and 14 Karar -> \"Olumsuz çıkarsa karar yeniden açılır.\" and \"Krem görünürse karar yeniden açılır.\" Replace the \"biz\" forms with \"uygulamanın çizdiği\". Apply the same sweep to the research file, which has 103 uses.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "HIGH",
+  "where": "#kutuphaneler > Telefon uygulaması, row \"Yoklama başarı animasyonu\": \"Köşeli onay işareti düz View çubuklarıyla çizilir, yalnız transform ve opaklık canlanır\"",
+  "problem": "This contradicts #etkilesim row \"success\" (\"Çizim react-native-svg Path'in strokeDashoffset değeri\") and #hareket > Kurallar (\"İki istisna: ... başarı anındaki çizimin stroke-dashoffset değeri\"). A developer gets two incompatible build instructions for the one moment the design treats as its signature, so D13 fails here.",
+  "fix": "Make the library row match the motion spec: \"react-native-svg Path; çizim strokeDashoffset (Hareket, Kurallar istisnası), ölçek withSpring(spring.imza)\". If View bars are what is actually wanted, delete the stroke-dashoffset exception from Kurallar and rewrite the success row instead. One of the two has to go.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#erisilebilirlik > Kontrast eşikleri: \"Hiçbir anlam alt tona yüklenmez.\"",
+  "problem": "This contradicts the document's own definition (#ozet: \"Gece mavisi | Alt ton\") and its central rule that Var, success and Sunucuya ulaştı are midnight blue. A reader cannot tell whether midnight blue may carry meaning or not.",
+  "fix": "\"Nötrlerdeki mavi ton hiçbir anlam taşımaz; anlamı ikon ve sözcük taşır.\"",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#acik 01: \"Telefondaki alt sayfa bu konuşmanın dışında, hareketini sistem yapar\"; same item \"panel React'in 19.3.0 ile kararlı olan ViewTransition bileşeni için React 19.3'e geçsin mi\"",
+  "problem": "The owner deferred the open and close animation of \"paneller\" without excluding the phone bottom sheet; the document removes it from that conversation on its own (O6). The same item also folds two library questions (Motion 14, React 19.3) into the owner's animation question, inside a garden-path sentence (\"panel React'in ...\").",
+  "fix": "Keep the bottom sheet in scope and state the constraint: TrueSheet uses the system's motion; the alternative is our own sheet driven by the tokens, at a stated cost. Move the Motion 14 and React 19.3 questions to open point 03 or to Kütüphaneler, written as two plain questions.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#platform > Web paneli: \"Tek istisna işletim sisteminin çizdiği açılır parçalar (select listesi, tarih seçici): köşesi, animasyonu ve rengi sistemin.\"",
+  "problem": "The same paragraph admits that the macOS system accent can be yellow or green. Native select and date-picker popups will then show yellow or green inside the panel, and accent-color does not reach them. The owner's lock is absolute (\"kesinlikle olmayacak\", \"not in the panel\"), yet the document accepts this silently.",
+  "fix": "Add an owner open point: either OS-drawn popups count as outside the lock, or the panel replaces native select popups with a listbox built from buttons, which needs an exception to teknik.html's native-element rule.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#erisilebilirlik > Kontrast eşikleri \"tokens.json'a eklenen her çift ... tcheck.js'ten geçer\"; Renk tek başına \"tcheck.js benzetimi yapar\"; Denetim \"tcheck.js ve Vitest token testinden\"; token JSON $description \"tokens.json'dan üretildi\"",
+  "problem": "This repository document cites a script and a file that are not in the repository. tcheck.js and tokens.json are scratchpad tools; the published file is called tasarim.tokens.json. A developer reading cold cannot find either.",
+  "fix": "Replace with \"packages/tasarim kontrast testi (Açık noktalar, Token dosyası)\" and use one file name, tasarim.tokens.json, everywhere.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#kutuphaneler > Liste: \"sabit satır yüksekliği ve getItemLayout verilir\"",
+  "problem": "This contradicts #erisilebilirlik (\"Yükseklik içerikten gelir: düğme, satır, kart ve damga minHeight ile çizilir\") and the 200 % text table, where names wrap onto two lines. A fixed row height cannot coexist with font scaling.",
+  "fix": "Delete \"sabit satır yüksekliği ve getItemLayout verilir\". Write \"satır yüksekliği ölçülür\".",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "Hero (four stat tiles plus the 100-square chart), #ozet (19 rows), #ilkeler (\"Uygulamada\" paragraphs)",
+  "problem": "There are three summary layers before the first real section. Hero tiles repeat Özet, and one of them is wrong (see the accent.11 finding). The chart repeats Ölçülen pay row 1 (%5,3 appears three times). Özet rows carry build detail that sits verbatim elsewhere: \"Token adları\" is word for word Tokenlar > Okuma anahtarı item 1 and the JSON $description; \"Telefonda hareket\", \"Alt sayfa\" and \"Panelde bildirim ve tarih\" restate whole paragraphs. İlkeler \"Uygulamada\" paragraphs restate their sections; 05 even quotes the offline banner text a third time.",
+  "fix": "Delete the four hero tiles and move the chart into Ölçülen pay. Delete the Özet rows \"Token adları\" and \"Telefonda hareket\". Trim \"Alt sayfa\" to \"Sistem sayfası, köşe 0; hareketi sistemin\" and \"Panelde bildirim ve tarih\" to one clause with a link. Reduce each \"Uygulamada\" paragraph to a single \"Ayrıntı\" link.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "Bottom sheet stated 5 times: #ozet \"Alt sayfa\", #katmanlar \"Alt sayfa.\" paragraph, #platform > Alt sayfa, #kutuphaneler \"Alt sayfa\" Neden cell, #etkilesim \"sheet\" Telefon cell: \"süre, eğri ve yay tokenları onu sürmez\"",
+  "problem": "The same rule (TrueSheet, UISheetPresentationController or Material sheet, corner 0, system motion that follows the system reduce-motion setting, tokens do not drive it) appears five times, often word for word.",
+  "fix": "Keep it once in #platform > Alt sayfa. Elsewhere write \"Alt sayfa: Platformlar\". In the sheet table row leave only \"Sistemin\".",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "Panel toast via live region stated 6 times: #ozet, #katmanlar > Panel bildirimi, #platform \"Kısa bildirim.\", #kutuphaneler \"Bildirim\" row, #acik 04, #erisilebilirlik live-region table. Turkish date under the date box stated 4 times: #ozet, #platform \"Tarih kutusu.\", #kutuphaneler \"Tarih seçici\", #acik 05",
+  "problem": "Each rule is repeated where a link would do. \"Sonner ancak sahip ... teknik.html'e yazarsa gelir\" appears twice almost verbatim.",
+  "fix": "Toast: keep #katmanlar > Panel bildirimi and the live-region table, delete the #platform paragraph and the restating text in the Kütüphaneler cell, keep one Sonner sentence in #acik 04. Date: keep #acik 05; elsewhere write \"Tarih kutusu: Açık noktalar 05\".",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#erisilebilirlik > Ekran başına tek birincil eylem (first paragraph) and Renk tek başına (\"Gece mavisi hiçbir zaman uyarı anlamı taşımaz.\")",
+  "problem": "Both restate #gece-mavisi: rule 01, the never-list item on secondary and disabled buttons, the Doğru ve yanlış \"Birincil eylem\" pair, and the never-list sentence copied word for word.",
+  "fix": "Replace that first paragraph with \"Tek dolu düğme kuralı: Gece mavisi nerede, 01\" and keep only the two new rules (the button names the action; the app asks nothing it already knows). Delete the copied sentence.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "HIGH",
+  "where": "#erisilebilirlik-hedef: 'Panelde 24 px'in altındaki tek hedef satır içi bağlantıdır (2.5.8'in satır içi istisnası)'",
+  "problem": "plan.html#hoca, Erişilebilirlik: 'tıklanan öğeler en az 24 piksel', with no exception. Panel body text is govde-01 at 14/20 px, so every inline link is a clickable target under 24 px. That directly contradicts a plan decision. The document applies WCAG's inline exception without asking, yet for the same kind of gap (disabled text against the plan's 4,5:1 rule) it opened #acik-devre-disi.",
+  "fix": "Option 1: give panel inline links a 24 px hit area (a { padding-block: 2px } on 14/20 text keeps the layout) and delete the exception sentence. Option 2: add an open point next to #acik-devre-disi, 'Satır içi bağlantı 24 px kuralına girer mi?', with the recommendation and the plan line it would change.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#erisilebilirlik-artirilmis 'React Native vermez, küçük bir yerel modül ister'; #erisilebilirlik-denetim 'bileşen kataloğunda axe-core ile 0 ihlal verir'",
+  "problem": "Two changes to teknik.html with no open point. (1) A new Android contrast reader (UiModeManager.getContrast, ContrastChangeListener) added to 'kendi küçük yerel modülüm' (teknik.html#telefon). (2) New quality gates: a component catalog that teknik never names, axe-core, a Vitest token test, tcheck.js, and a manual matrix (AX5, Windows karşıtlık teması, Akıllı Ters Çevirme, Android 17 zorla koyu mod). This matrix is cited as 'teknik.html, Kalite kapıları' but differs from that list, which has Lighthouse and lacks the rest. A developer reads two different release gates.",
+  "fix": "Add one open point, 'teknik.html'e eklenecek erişilebilirlik işleri', giving the exact lines to add to teknik.html#telefon and #testler-kalite. In #erisilebilirlik-denetim link teknik.html for the gate list instead of restating it. Name the catalog tool or drop 'bileşen kataloğu'.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#acik-kursu (item 12): 'Kürsü bilgisayarlarında Chrome 109 var mı?' ... 'Tasarım için ek iş çıkmaz.'",
+  "problem": "This item restates the open point 'Derslik koşulları' in plan.html#acik plus the teknik.html#panel-cati rule. By its own words it creates no design work, so it pads the 'Gerçek cihazda denenecek' list and gives the same question a second place to be answered.",
+  "fix": "Delete item 12 (about 70 words) and renumber. The Chrome 109 column in #platform-web already links teknik.html#panel-cati.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#kutuphaneler-telefon 'Yoklama başarı animasyonu: Düz View ve Reanimated' vs #k-success 'react-native-svg Path'in strokeDashoffset değeri'",
+  "problem": "The library row says the check mark is drawn with plain View bars and only transform and opacity animate. #k-success and Hareket rule 01 say it is an SVG path animated by stroke-dashoffset. A developer cannot build both, and the choice decides whether react-native-svg sits on the success path.",
+  "fix": "Choose the SVG path, since react-native-svg is already chosen for icons. Change the row to 'react-native-svg Path ve Reanimated: çizim strokeDashoffset, ölçek withSpring'. Otherwise remove stroke-dashoffset from #k-success and from the rule-01 exception.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#erisilebilirlik-kontrast 'tokens.json'a eklenen her çift ... tcheck.js'ten geçer'; #tokenlar JSON $description 'tokens.json'dan üretildi'",
+  "problem": "tcheck.js (3 mentions) and tokens.json live in the design scratchpad, not in the repository, and teknik.html lists neither. #tokenlar calls the DTCG file the single source, yet its own $description says it was generated from a different file. The file is also named three ways: tokens.json, .tokens.json and tasarim.tokens.json. A developer new to the code cannot find either tool.",
+  "fix": "Replace the tcheck.js mentions with 'packages/tasarim içindeki kontrast testi (Açık noktalar 07)'. Delete 'tokens.json'dan üretildi' from $description. Use one file name, tasarim.tokens.json, everywhere.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ozet, #katmanlar, #hareket Kurallar, #k-sheet, #platform-alt-sayfa, #kutuphaneler-telefon, #acik-panel-hareket: 'Açılış ve kapanış hareketi sistemindir'",
+  "problem": "Facts repeated inside tasarim.html: the TrueSheet system-motion sentence 7 times; the Turkish date echo under the date box ('6 Ekim 2026 Salı') 4 times (#ozet, #platform-web, #kutuphaneler-panel, #acik-yerel-oge); the panel live-region toast rule 5 times; the three linear() strings twice (#hareket Yaylar and the JSON); hex plus OKLCH printed again on all 37 'Anlam rolleri' cards and 13 times as '#FEFEFF oklch(...)' in the two 'Durum renkleri' tables, though the scale tables and the JSON already hold them.",
+  "fix": "State each fact once and link to it elsewhere: TrueSheet in #platform-alt-sayfa, the date echo in #acik-yerel-oge, the toast in #katmanlar 'Panel bildirimi', linear() only in the JSON. Role cards show 'bg.page: neutral.2' with no hex or OKLCH, and status tables write 'neutral.1'. Roughly 700 words go.",
+  "angle": "Consistency wi"
+ }
+]

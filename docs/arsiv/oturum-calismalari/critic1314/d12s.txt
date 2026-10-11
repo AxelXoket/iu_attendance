@@ -1,0 +1,48 @@
+.summary: D12 veritabanının kendisini ve verinin ömrünü yönetir: PostgreSQL 18 kümesi ve kendi imajı, ayar dosyaları, roller ve şemalar, tek göç klasörünün kuralı ve CI denetimi, bağlantı havuzu ve işlem yardımcısı, nesil okuma, yedek, geri yükleme, saklama süresi işi ve test veritabanı. Alan tablosu tutmaz; yalnız göç defterinden (__drizzle_migrations), geri yükleme kayıtlarından ve saklama kanıtından sorumludur, tek ucu yöneticiye geri yüklemeleri listeler. Altyapı kodu başka modül içe aktarmaz: modüller dış yüzünü çağırır ve saklama işleyicilerini ona kaydeder, bağlantı ayarlarını ve saati bileşim kökleri verir; yalnız bileşim kökü cli/geri-yukleme D01'in dış yüzünü kullanır ve kimlik dinleyicilerini dört aboneyle kurar. Yedek ve geri yükleme işleri ana makinedeki zamanlayıcıyla pg-boss dışında çalışır, sonucunu D15'in okuduğu durum dosyasına yazar. Saklama süresi İÜ'den gelene kadar hiçbir kayıt silinmez: mekanizma baştan kurulur, süre ayarı boş kalır.
+
+.tables[1].purpose: Her gerçek geri yüklemenin ve nesli değiştiren büyük sürüm geçişinin kaydı: yöntem, gerekçe kodu, dönülen an, kayıp pencerenin sonu, önceki ve yeni nesil, süre. Satırı geri yükleme komutu (cli/geri-yukleme kaydet, yoklama_goc) dönüş doğrulandıktan sonra yazar; aynı dönüşün ikinci yazımı ON CONFLICT (yeni_nesil) DO NOTHING ile yok sayılır. Yönetici ucu listeler. Geri yükleme denemeleri buraya yazılmaz.
+
+.state_machines[2].name: geri_yukleme (gerçek dönüş: docker/postgres/yedek/geri-yukle.sh ve cli/geri-yukleme)
+
+.state_machines[2].states[8]: iptaller_uygulandi
+
+.state_machines[2].transitions[5].by: cli/geri-yukleme dogrula
+
+.state_machines[2].transitions[6].by: cli/geri-yukleme dogrula
+
+.state_machines[2].transitions[8].by: cli/geri-yukleme kaydet
+
+.state_machines[2].transitions[9].to: iptaller_uygulandi
+
+.state_machines[2].transitions[9].by: cli/geri-yukleme iptaller
+
+.state_machines[2].transitions[10].by: cli/geri-yukleme iptaller
+
+.state_machines[2].transitions[11].from: iptaller_uygulandi
+
+.invariants[13]: Geri yükleme ancak yeni nesil öncekinden farklıysa kaydedilir; trafik ancak kayıttan ve iptallerin yeniden uygulanmasından sonra açılır; pg_dump'tan dönüş yalnız boş yeni birimde, yeni initdb kümesine yapılır; dönüş boyunca makine işleri çalışmaz.
+
+.files[44]: apps/server/src/cli/geri-yukleme.ts
+
+.files[45]: apps/server/src/cli/geri-yukleme-iptaller.ts
+
+.files[59]: apps/server/test/features/veritabani/geri-yukleme-iptalleri.feature
+
+.tests[58].asserts: onceki_nesil ile yeni_nesil aynı satır CHECK ihlaliyle reddedilir; cli/geri-yukleme kaydet bu durumda VERITABANI_NESIL_DEGISMEDI ile çıkar. Aynı dönüş için kaydet iki kez çalışınca tek satır kalır ve ikinci çalışma 0 ile biter.
+
+.tests[59].name: Geri yükleme iptalleri
+
+.tests[59].asserts: Bir hoca oturumu kapatılır ve bir hesap silinir (kimlik olayları loga düşer); veritabanı bu olaylardan önceki âna döndürülür; iptaller komutu sonrası, trafik açılınca kapatılan oturumla gelen istek 401, silinen hesabın oturumu 401, bütün panel oturumları kapalı. Komut dört kimlik abonesini kimlikDinleyicileriniKur ile kurar: kapatılan öğrenci oturumunun D11 QR yuvası aynı işlemde iptal. Komut ikinci kez çalışınca değişiklik yok; abonelerden biri eksik kurulursa kimlikDinleyicileriHazir fırlatır ve komut hiçbir iptali uygulamadan durur. Yer kontrolü: komut atlanınca aynı oturum dönüşten sonra geçerli.
+
+.resolved_gaps[29].decision: geri-yukle.sh API'yi, işçiyi ve xprem'i durdurur ve dönüş boyunca makine işlerinin kilidini tutar; nesil doğrulanıp göç uygulanmadan, kayıt yazılmadan ve iptaller yeniden uygulanmadan trafik açılmaz. cli/geri-yukleme worker.ts gibi bir bileşim köküdür (contracts.json reads_from'daki tek modül D01, I058; A2): komut önce D01.kimlikDinleyicileriniKur'u dört aboneyle (dersler D02 derslerKimlikDinleyicisi, esitleme D06 esitlemeKimlikDinleyicisi, projeksiyon D11 projeksiyonKimlikDinleyicisi, isletim D15 kimlikOlayiDinleyicisi) kurar ve kimlikDinleyicileriHazir'ı çağırır, sonra hesabiSil ve oturumlariKapat; böylece yeniden uygulanan iptallerin olayları da bütün abonelere aynı işlemde gider (I050). infra/veritabani hiçbir modülü içe aktarmaz. Alt komut iptaller: her dönüşte bütün panel oturumlarını D01.oturumlariKapat(tx, { istemci: 'panel' }, 'geri_yukleme') ile kapatır; hedef_ani'den sonraki kimlik olaylarını D15'in log arşivinden (/var/log/iu-yoklama/<servis>/<gün>.log.gz) ve trafik kapanırken alınan loglardan okur; hesap silmeyi D01.hesabiSil(tx, { kisiId, kaynak: 'geri_yukleme_yeniden' }) ile, oturum kapatma, cihaz kapanması ve hesap durumu değişikliğini o kişinin bütün oturumlarını oturumlariKapat(tx, { kisiId }, 'geri_yukleme') ile kapatarak yeniden uygular. geri-yukle.sh trafiği yalnız komut 0 ile bitince açar. Hocalara gösterim ve cihaz değişiminin kendisinin yeniden yapılması ürün kararıdır: açık nokta D12-A05.
+
+.open_points[4].recommendation: Panel oturumları her dönüşte kapatılır ve kayıp penceredeki iptaller yeniden uygulanır (karar verildi, D12-B30). Kalan: D01 her kimlik olayını yalnız iç kimlik, olay türü ve anla yapısal log satırı olarak bırakır (iptaller komutunun kaynağı; D01'e istek). Telefon oturumları toptan kapatılmaz, hoca derste girişsiz kalmasın; yalnız logda iptali olan kişininkiler kapanır. Kayıp pencerede onaylanmış cihaz değişimi yeniden yapılmaz, öğrenci değişim akışını yeniden başlatır. Hocalar için bütün personele açık bir uç (GET /v1/veritabani/geri-yuklemeler/son) eklenir ve panel üst bilgide son dönüşün kayıp penceresini gösterir; bugün yalnız yönetici ucu var. Mimar kararı: onay bekleyen açık nokta olarak kalır (I121).
+
+.requests[0].istek: D12 exports'ta 'veritabani: Drizzle bağlantısı ve havuz' girişi 'veritabani: Veritabani { islem, semaDurumu, kapat, db, havuz } ve Islem tipi' olur; reads_from'a yalnız giriş noktası cli/geri-yukleme için D01 notu. file_ownership'e her modül için apps/server/migrations/??????????????_<belirteç>_* globu (14 haneli UTC önekle sabitlenir; ör. _api_ > D13, _is_kuyrugu_ > D14), klasör kuralı D12'de kalır.
+
+.requests[0].sonuc: contracts.json'a işlendi: veritabaniKur ve Islem dış yüzde, reads_from'da bileşim kökü cli/geri-yukleme için D01, modül başına göç globu (A1, I017).
+
+.requests[4].istek: Her kimlik olayı (hesap_silindi, giris_oturumu_kapandi, cihaz_kapandi, hesap_durumu_degisti) yalnız iç kimlik, olay türü ve anla yapısal log satırı olarak da yazılsın; cli/geri-yukleme iptaller bunu okur. kimlik.kisi_bagi sınıfının işleyicisi (ogrenci_hesaplari'nda numara ve isim) yoklama_saklama ile yazılsın.
+
+.alignment[5].outcome: Dış yüz contracts.json ile aynı 19 düz adla, açıklamalar not alanında; sözleşme dosyası dış yüzden ayrıldı (spec.contracts_file); cli/geri-yukleme bileşim kökü olarak dört kimlik abonesini kurar.
+

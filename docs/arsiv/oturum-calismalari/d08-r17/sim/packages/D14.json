@@ -1,0 +1,381 @@
+{
+ "id": "D14",
+ "packages": [
+  {
+   "id": "D14-P01",
+   "title": "Sözleşme tipleri, hata kataloğu ve iş tanımı doğrulaması",
+   "files": [
+    "packages/contracts/src/is-kuyrugu.ts",
+    "apps/server/src/infra/is-kuyrugu/tanim.ts",
+    "apps/server/src/infra/is-kuyrugu/veri-semasi.ts",
+    "apps/server/src/infra/is-kuyrugu/zamanlama.ts",
+    "apps/server/src/infra/is-kuyrugu/tanim.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "KuyrukTanimi",
+    "IsBaglami",
+    "PartiIsi",
+    "PartiBaglami",
+    "IsSagligi",
+    "IsKuyrugu",
+    "Eposta",
+    "IS_KUYRUGU_HATA_KODLARI",
+    "isTanimla"
+   ],
+   "needs": [
+    "D13.hataKodlariTanimla"
+   ],
+   "tests": [
+    "Kayıtlı iş tanımları ad ve veri kurallarına uyar",
+    "Tekillik anahtarı sayısal parça kabul etmez"
+   ],
+   "depends_on": [],
+   "size": "L",
+   "notes": "Sözleşme dosyasındaki tipler ve 20 kodluk IS_KUYRUGU_HATA_KODLARI ile saf isTanimla, veri şeması yaprak ve en kötü boyut denetimi, tekillik anahtarı parçaları ve tanım başına zamanlama kuralları yazılır; tanim.test.ts örnek şemalarla ve jobs/*/index.ts'teki isler dizileriyle ad ve veri kurallarını, fast-check ile 2.000 tekillik anahtarını denetler."
+  },
+  {
+   "id": "D14-P02",
+   "title": "E-posta türleri, sabit metinler, Türkçe saat biçimi ve bağlantı denetimi",
+   "files": [
+    "apps/server/src/infra/eposta/turler.ts",
+    "apps/server/src/infra/eposta/sabit-metinler.ts",
+    "apps/server/src/infra/eposta/bicim.ts",
+    "apps/server/src/infra/eposta/baglanti-denetimi.ts",
+    "apps/server/src/infra/eposta/bicim.test.ts",
+    "apps/server/src/infra/eposta/baglanti-denetimi.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "EPOSTA_TURLERI",
+    "EpostaVerisi",
+    "EpostaHataTuru",
+    "baglantiDenetle"
+   ],
+   "needs": [],
+   "tests": [
+    "Saat eki bütün dakikalarda doğru",
+    "Bağlantı denetimi örnek tablosunda doğru karar verir"
+   ],
+   "depends_on": [],
+   "size": "M",
+   "notes": "Türler, şablon verisi şemaları ve hata türleri tek sabitten, sabit cümleler, İstanbul saatini Türkçe yazan biçim ve baglantiDenetle yazılır; bicim.test.ts 1.440 dakikanın saat ekini bağımsız türetimle, baglanti-denetimi.test.ts örnek tablosunu içe alarak denetler."
+  },
+  {
+   "id": "D14-P03",
+   "title": "E-posta şablonları",
+   "files": [
+    "apps/server/src/infra/eposta/sablonlar/giris-kodu.ts",
+    "apps/server/src/infra/eposta/sablonlar/basvuru-kodu.ts",
+    "apps/server/src/infra/eposta/sablonlar/basvuru-silme-kodu.ts",
+    "apps/server/src/infra/eposta/sablonlar/onay-bekliyor.ts",
+    "apps/server/src/infra/eposta/sablonlar/giris-bildirimi.ts",
+    "apps/server/src/infra/eposta/sablonlar/isletim-uyarisi.ts",
+    "apps/server/src/infra/eposta/sablonlar/isletim-ozeti.ts",
+    "apps/server/src/infra/eposta/sablonlar.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [],
+   "tests": [
+    "Şablonlarda bağlantı olmaz, son paragraf sabit cümledir"
+   ],
+   "depends_on": [
+    "D14-P02"
+   ],
+   "size": "M",
+   "notes": "Yedi türün düz metin şablonları sabit son paragraf, bağlantı denetimi ve cihaz etiketi kuralıyla yazılır; sablonlar.test.ts fast-check ile 2.000 geçerli veride ürün metninde bağlantı olmadığını, son paragrafın SABIT_UYARI_CUMLESI olduğunu ve işletim metinlerinde belirtecin [adres] olduğunu denetler."
+  },
+  {
+   "id": "D14-P04",
+   "title": "Gönderim tablosu, adres özeti, kayan pencere sınırı ve temizlik işi",
+   "files": [
+    "apps/server/src/infra/eposta/tablolar.ts",
+    "apps/server/src/infra/eposta/ozet.ts",
+    "apps/server/src/infra/eposta/sinir.ts",
+    "apps/server/src/infra/eposta/saglik.ts",
+    "apps/server/src/infra/eposta/temizlik.ts",
+    "apps/server/src/infra/eposta/sinir.test.ts",
+    "apps/server/src/jobs/is-kuyrugu/index.ts",
+    "apps/server/src/jobs/is-kuyrugu/eposta-gonderim-temizligi.ts",
+    "apps/server/migrations/20261010140000_is_kuyrugu_eposta_gonderimleri/migration.sql",
+    "apps/server/migrations/20261010140000_is_kuyrugu_eposta_gonderimleri/snapshot.json"
+   ],
+   "tables": [
+    "eposta_gonderimleri"
+   ],
+   "endpoints": [],
+   "jobs": [
+    "eposta_gonderim_temizligi"
+   ],
+   "exports": [
+    "epostaSagligi",
+    "epostaGonderimleriniTemizle"
+   ],
+   "needs": [
+    "D12.tabloYardimcilari",
+    "D12.kisitAdi",
+    "D12.danismaKilidi",
+    "D12.islem"
+   ],
+   "tests": [
+    "Kayan pencere sınırı hiçbir aralıkta aşılmaz ve gereksiz reddetmez"
+   ],
+   "depends_on": [
+    "D14-P01",
+    "D14-P02"
+   ],
+   "size": "L",
+   "notes": "eposta_gonderimleri tablosu tabloYardimcilari ve is_kuyrugu göçüyle, HMAC adres özeti ve kilit anahtarı, READ COMMITTED denetimli sınır mantığı, epostaSagligi, 1.000'lik partili temizlik ve eposta_gonderim_temizligi tanımı yazılır; sinir.test.ts 5.000 rastgele istek dizisinde EPOSTA_SINIRLARI'nın hiçbir pencerede aşılmadığını ve gereksiz ret olmadığını denetler."
+  },
+  {
+   "id": "D14-P05",
+   "title": "SMTP taşıyıcısı, süreç içi gönderici, sahte posta kutusu ve epostaKur",
+   "files": [
+    "apps/server/src/infra/eposta/tasiyici.ts",
+    "apps/server/src/infra/eposta/gonderici.ts",
+    "apps/server/src/infra/eposta/index.ts",
+    "apps/server/test/support/sahte-posta.ts",
+    "apps/server/src/infra/eposta/tasiyici.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "epostaKur",
+    "epostaGonder",
+    "epostaSiniriDenetle",
+    "smtpTasiyicisi",
+    "sahtePostaKutusu"
+   ],
+   "needs": [
+    "D12.islem"
+   ],
+   "tests": [
+    "STARTTLS ilan etmeyen sunucuya ileti gitmez"
+   ],
+   "depends_on": [
+    "D14-P01",
+    "D14-P02",
+    "D14-P03",
+    "D14-P04"
+   ],
+   "size": "L",
+   "notes": "Nodemailer havuzlu smtpTasiyicisi, deneme beklemeli ve kapanışlı süreç içi gönderici, epostaGonder ile epostaSiniriDenetle'yi bağlayan epostaKur ve testler için sahtePostaKutusu yazılır; tasiyici.test.ts STARTTLS ilan etmeyen sahte sunucuya AUTH ve DATA gitmediğini, ilan edende iletinin gittiğini ve TLS ayarlarını denetler."
+  },
+  {
+   "id": "D14-P06",
+   "title": "pg-boss örneği, iş gönderme, tek iş sarmalayıcısı ve test yardımcıları",
+   "files": [
+    "apps/server/src/infra/is-kuyrugu/pgboss.ts",
+    "apps/server/src/infra/is-kuyrugu/gonder.ts",
+    "apps/server/src/infra/is-kuyrugu/hata-suzgeci.ts",
+    "apps/server/src/infra/is-kuyrugu/sarmalayici.ts",
+    "apps/server/test/support/is-kuyrugu.ts",
+    "apps/server/src/infra/is-kuyrugu/hata-suzgeci.test.ts"
+   ],
+   "tables": [
+    "pgboss_semasi"
+   ],
+   "endpoints": [],
+   "jobs": [
+    "pgboss_bakimi"
+   ],
+   "exports": [
+    "isKuyrugunuBosalt",
+    "isiCalistirVeBekle",
+    "kuyruktakiIsler",
+    "zamanlamaliOrnekAc"
+   ],
+   "needs": [],
+   "tests": [
+    "İş hatası çıktıya ve loga değer sızdırmaz"
+   ],
+   "depends_on": [
+    "D14-P01"
+   ],
+   "size": "L",
+   "notes": "pg-boss 12 örneği (API'de fromDrizzle, işçide havuz 2, açık bakım değerleri, şema sürümü denetimi), işlem içi isGonder, tek iş sarmalayıcısı, hata süzgeci ve test kuyruğu yardımcıları yazılır; hata-suzgeci.test.ts gerçek pg-boss ile değer taşıyan hatanın iş çıktısına ve yakalanan loga sızmadığını artı denetimle sınar."
+  },
+  {
+   "id": "D14-P07",
+   "title": "Parti işleyicisi, iş sağlığı, kuyruk politikası ve isKuyruguKur dış yüzü",
+   "files": [
+    "apps/server/src/infra/is-kuyrugu/parti.ts",
+    "apps/server/src/infra/is-kuyrugu/saglik.ts",
+    "apps/server/src/infra/is-kuyrugu/politika.ts",
+    "apps/server/src/infra/is-kuyrugu/index.ts",
+    "apps/server/test/steps/is-kuyrugu/test-kuyruklari.ts",
+    "apps/server/src/infra/is-kuyrugu/parti.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "isGonder",
+    "isSagligi",
+    "isKuyruguKur"
+   ],
+   "needs": [],
+   "tests": [
+    "Parti işleyicisinde bir işin hatası yalnız o işi başarısız sayar",
+    "Parti kuyruğu ders çıkışı yükünü taşır"
+   ],
+   "depends_on": [
+    "D14-P01",
+    "D14-P05",
+    "D14-P06"
+   ],
+   "size": "L",
+   "notes": "Parti sarmalayıcısı, isSagligi sorguları, tanımdan kuyruk ayarı üreten politika, test kuyruğu tanımları ve dış yüzü örneğe bağlayan isKuyruguKur yazılır; parti.test.ts 50'lik partide yalnız başarısız sayılan işlerin retry olduğunu ve 20.000 işlik yükün tek işli ayardan en az 10 kat hızlı bittiğini ölçer."
+  },
+  {
+   "id": "D14-P08",
+   "title": "Altyapı iş uyarlayıcısı, kur adımı ve worker.ts bileşim kökü",
+   "files": [
+    "apps/server/src/infra/is-kuyrugu/altyapi-uyarlayici.ts",
+    "apps/server/src/infra/is-kuyrugu/kur.ts",
+    "apps/server/src/worker.ts",
+    "apps/server/src/infra/is-kuyrugu/altyapi-uyarlayici.test.ts",
+    "apps/server/src/infra/is-kuyrugu/zamanlama.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "altyapiIsleriniUyarla",
+    "kuyruklariKur"
+   ],
+   "needs": [
+    "D15.ayarlariYukle",
+    "D15.logOlustur",
+    "D15.gizliAnahtar",
+    "D15.isletimIsleri",
+    "D12.veritabaniKur",
+    "D12.veritabaniIsleri",
+    "D13.uygulamaKur"
+   ],
+   "tests": [
+    "Zamanlama kuralları bütün kayıtta tutar",
+    "Altyapı iş fabrikaları isTanimla'ya uyarlanır"
+   ],
+   "depends_on": [
+    "D14-P01",
+    "D14-P04",
+    "D14-P05",
+    "D14-P07"
+   ],
+   "size": "L",
+   "notes": "D15 tanımlarını isTanimla biçimine çeviren uyarlayıcı, yetki, kuyruk ve zamanlamayı eşitleyen kuyruklariKur ve 11 adımlı açılışla kur alt komutunu taşıyan worker.ts yazılır; altyapi-uyarlayici.test.ts ve zamanlama.test.ts worker.ts'in topladığı gerçek kayıtta uyarlanan işleri ve 14 günlük İstanbul zamanlama kurallarını denetler."
+  },
+  {
+   "id": "D14-P09",
+   "title": "İş kuyruğu senaryoları, iş adımları ve kancalar",
+   "files": [
+    "apps/server/test/steps/is-kuyrugu/is-adimlari.ts",
+    "apps/server/test/steps/is-kuyrugu/kancalar.ts",
+    "apps/server/test/features/is-kuyrugu/is-gonderme.feature",
+    "apps/server/test/features/is-kuyrugu/is-calistirma.feature",
+    "apps/server/test/features/is-kuyrugu/zamanlama.feature",
+    "apps/server/test/features/is-kuyrugu/kurulum.feature",
+    "apps/server/test/features/is-kuyrugu/saglik.feature",
+    "apps/server/test/features/is-kuyrugu/isci-sureci.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D15.TestDunyasi",
+    "D13.TUM_HATALAR",
+    "D12.veritabaniKur",
+    "D12.islem"
+   ],
+   "tests": [
+    "İşlem geri alınınca kuyrukta iş kalmaz",
+    "Tekillik anahtarı ikinci işi açmaz",
+    "İş verisi kuyruk şemasıyla doğrulanır",
+    "Gönderilen işin oluşturma anı TestClock saatidir",
+    "Hata kataloğu D13 biçimine uyar",
+    "Hata veren iş yeniden denenir, denemeler bitince ölü kuyruğa düşer",
+    "Süresi aşan iş bakımda yeniden denemeye geçer",
+    "Tamamlanan işin çıktısı isSagligi'nda görünür",
+    "Test kuyruğu yardımcıları ortak işçiyi bozmaz",
+    "Günlük iş işçi kapalıyken kaçarsa açılınca bir kez çalışır",
+    "Zamanlama İstanbul saatiyle tetiklenir",
+    "Kuyruk kurulumu ayarları aynen yazar ve tekrar çalışınca değişmez",
+    "API rolü pgboss şemasında yalnız iş ekler",
+    "Şema sürümü uyuşmazsa süreç açılmaz",
+    "Açılışta bir kez çalışacak iş kur iki kez çalışınca tek açılır",
+    "Sağlık özeti kuyruk ve e-posta durumunu verir",
+    "En eski bekleyen iş ileri tarihli işi saymaz",
+    "İşçi açılış sırası ve çıkış kodları",
+    "İşçi kapanışında e-posta önce kapanır, uyarı iki kez gitmez"
+   ],
+   "depends_on": [
+    "D14-P05",
+    "D14-P06",
+    "D14-P07",
+    "D14-P08"
+   ],
+   "size": "L",
+   "notes": "is-adimlari.ts ortak iş adımlarını ('aynı veriyle iki kez çalışırsa' dahil) ve kancalar.ts senaryo öncesi temizliği taşır; gönderme, çalıştırma, zamanlama, kurulum, sağlık ve işçi süreci senaryoları D15 test dünyasında TestClock ile her biri zemin denetimiyle koşar."
+  },
+  {
+   "id": "D14-P10",
+   "title": "E-posta senaryoları ve e-posta adımları",
+   "files": [
+    "apps/server/test/steps/is-kuyrugu/eposta-adimlari.ts",
+    "apps/server/test/features/is-kuyrugu/eposta-sinir.feature",
+    "apps/server/test/features/is-kuyrugu/eposta-gonderim.feature",
+    "apps/server/test/features/is-kuyrugu/eposta-sablon.feature",
+    "apps/server/test/features/is-kuyrugu/eposta-temizlik.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D15.TestDunyasi",
+    "D12.islem",
+    "D12.danismaKilidi",
+    "D12.danismaKilidiDene"
+   ],
+   "tests": [
+    "Aynı adrese dakikada ikinci kod e-postası gitmez",
+    "Saatte 5 ve günde 10 sınırı kayan penceredir",
+    "Yarışan istekler sınırı aşamaz",
+    "Başvuru silme kodu giriş koduyla aynı sayaca girer",
+    "Reddedilen istekler tabloyu şişirmez",
+    "Kapanış ve kapasite sonucu sınıra sayılmaz",
+    "Sınır denetimi READ COMMITTED dışında reddedilir",
+    "Adres kilidi danışma kilidi kuralıyla alınır",
+    "Kod e-postası cevaptan sonra gider, konuda kod yoktur",
+    "Sınıra giren tür izinsiz ve iki kez gönderilemez",
+    "Geçici SMTP hatası yeniden denenir, kalıcı hata denenmez",
+    "Kapanışta yoldaki gönderim beklenir, bekleyen deneme kapanışla biter",
+    "Gönderim tablosunda ve loglarda adres ve kod bulunmaz",
+    "Satır yazımında veritabanı hatası BASARISIZ döner",
+    "Ders başı giriş yığılması (D15 yük testine eklenecek senaryo)",
+    "Giriş bildirimi İstanbul saatini Türkçe yazar",
+    "Cihaz etiketindeki bağlantı e-postaya girmez",
+    "E-posta gönderim temizliği 7 günden eskiyi siler",
+    "D14 işi aynı veriyle iki kez çalışınca aynı sonucu verir",
+    "Koruyucu testler kasıtlı bozmada kırmızıya döner"
+   ],
+   "depends_on": [
+    "D14-P04",
+    "D14-P05",
+    "D14-P09"
+   ],
+   "size": "L",
+   "notes": "eposta-adimlari.ts ile sınır, gönderim, şablon ve temizlik senaryoları sahte posta kutusu ve TestClock üzerinde koşar, ardından koruyucu testler md5 denetimli kasıtlı bozmayla tek tek kırmızıya döndürülüp geri yüklenir."
+  }
+ ]
+}

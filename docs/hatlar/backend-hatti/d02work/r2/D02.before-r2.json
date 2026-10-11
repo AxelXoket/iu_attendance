@@ -1,0 +1,2951 @@
+{
+ "id": "D02",
+ "module": "dersler",
+ "summary": "D02 (dersler) birimi, bölümü, genel dönemi, birim takvimini, birim ve dönem kilidini, dersi, şubeyi ve haftalık programı tutar; oturumları programdan dönemin tamamı için önceden üretir ve her değişiklikte yalnız başlamamış oturumları saf bir plan fonksiyonuyla yeniden hesaplayıp farkı yazar. Oturum bir program saatinin tek buluşmasıdır ve hiç silinmez: iptal, taşıma, telafi, tek oturum düzenlemesi ve \"Ders yapıldı mı?\" cevabı oturum satırında ve değişiklik geçmişinde iz bırakır, sayımı D08 ve D10 oturum durumundan okur. Yerel program saati UTC ana PostgreSQL'in saat dilimi verisiyle (AT TIME ZONE 'Europe/Istanbul') çevrilir; kilit dahil kural taşıyan her an bileşim kökünün verdiği saat arayüzünden gelir, kilit anı son günün ertesi 00:00 İstanbul'dur. Pencere hesabı (D04) üretim dinleyicisi, kilit kapanışı (D07) kilit adımı olarak D02'ye kaydolur; telefona inen beş tablo D06'nın tek sürümüyle damgalanır ve D02'nin indirme kaynağıyla kullanıcının kapsamına göre iner. Ürün kararı isteyen 11 soru önerilen varsayılanla açık noktada bekliyor; 3 sözleşme eki (liste kaynağı, deneme dersi kurulumu, dönem arası) contracts.json'a işlenmeli.",
+ "tables": [
+  {
+   "name": "birimler",
+   "purpose": "Takvimin ve kilidin bağlandığı akademik birim (fakülte, enstitü, yüksekokul, meslek yüksekokulu, konservatuvar). Listeyi yönetici tutar; hoca başvurusu ve ders buradan seçer.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar. Oluşturan uçta istemcinin ürettiği UUIDv7 gelebilir (tekrar anahtarı, D13-B12 deseni); gelmezse veritabanı üretir."
+    },
+    {
+     "name": "ad",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "NFC, baş ve son boşluk silinir, çoklu boşluk teke iner; 1 ile 120 karakter."
+    },
+    {
+     "name": "tur",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "fakulte, enstitu, yuksekokul, meslek_yuksekokulu, konservatuvar (metin ve CHECK; cevapta x-extensible-enum)."
+    },
+    {
+     "name": "etkin",
+     "type": "boolean",
+     "null": false,
+     "default": "true",
+     "note": "Pasif birim girişsiz listede ve yeni ders açmada görünmez; var olan dersler etkilenmez."
+    },
+    {
+     "name": "olusturma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    },
+    {
+     "name": "guncelleme_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    }
+   ],
+   "indexes": [
+    "birimler_id_pk (id)",
+    "birimler_ad_uq UNIQUE (ad)"
+   ],
+   "constraints": [
+    "birimler_ad_ck: char_length(ad) BETWEEN 1 AND 120",
+    "birimler_tur_ck: tur IN ('fakulte','enstitu','yuksekokul','meslek_yuksekokulu','konservatuvar')",
+    "Göç uygulama rollerinden DELETE yetkisini geri alır (birim silinmez, pasif olur)."
+   ]
+  },
+  {
+   "name": "bolumler",
+   "purpose": "Birime bağlı bölüm; kendi takvimi yoktur. Hoca başvurusunda seçilir (D01), derste isteğe bağlı alandır.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar. Oluşturan uçta istemcinin ürettiği UUIDv7 gelebilir (tekrar anahtarı, D13-B12 deseni); gelmezse veritabanı üretir."
+    },
+    {
+     "name": "birim_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Bağlı olduğu birim."
+    },
+    {
+     "name": "ad",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "Birimdekiyle aynı normalleştirme; 1 ile 120 karakter."
+    },
+    {
+     "name": "etkin",
+     "type": "boolean",
+     "null": false,
+     "default": "true",
+     "note": "Pasif bölüm girişsiz listede görünmez."
+    },
+    {
+     "name": "olusturma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    },
+    {
+     "name": "guncelleme_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    }
+   ],
+   "indexes": [
+    "bolumler_id_pk (id)",
+    "bolumler_birim_id_ad_uq UNIQUE (birim_id, ad)",
+    "bolumler_id_birim_id_uq UNIQUE (id, birim_id) (derslerin bileşik yabancı anahtarı için)"
+   ],
+   "constraints": [
+    "bolumler_birim_id_fk: birim_id REFERENCES birimler (id)",
+    "bolumler_ad_ck: char_length(ad) BETWEEN 1 AND 120",
+    "Göç DELETE yetkisini geri alır."
+   ]
+  },
+  {
+   "name": "donemler",
+   "purpose": "Genel akademik dönem (ör. 2026-2027 güz); yoklama kaydının tekil anahtarındaki ve bölme anahtarındaki dönem kimliği budur (teknik.html#veritabani-donem-alani). Tarihler ve kilit birim_donemleri satırındadır.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar. Oluşturan uçta istemcinin ürettiği UUIDv7 gelebilir (tekrar anahtarı, D13-B12 deseni); gelmezse veritabanı üretir."
+    },
+    {
+     "name": "akademik_yil",
+     "type": "text",
+     "null": true,
+     "default": "",
+     "note": "YYYY-YYYY, ikinci yıl birincinin bir fazlası. Yalnız inceleme döneminde boş."
+    },
+    {
+     "name": "yariyil",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "guz, bahar, yaz; inceleme yalnız denemeDersiniKur'un açtığı süresiz ve kilitsiz dönem için (metin ve CHECK)."
+    },
+    {
+     "name": "olusturma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    }
+   ],
+   "indexes": [
+    "donemler_id_pk (id)",
+    "donemler_akademik_yil_yariyil_uq UNIQUE (akademik_yil, yariyil)",
+    "donemler_inceleme_uq UNIQUE (yariyil) WHERE yariyil = 'inceleme' (tek inceleme dönemi)"
+   ],
+   "constraints": [
+    "donemler_yariyil_ck: yariyil IN ('guz','bahar','yaz','inceleme')",
+    "donemler_akademik_yil_ck: (yariyil = 'inceleme' AND akademik_yil IS NULL) OR (yariyil <> 'inceleme' AND akademik_yil ~ '^[0-9]{4}-[0-9]{4}$' AND substr(akademik_yil,6,4)::int = substr(akademik_yil,1,4)::int + 1)",
+    "Göç DELETE yetkisini geri alır."
+   ]
+  },
+  {
+   "name": "takvimler",
+   "purpose": "Bir dönemin tarih takımı. Birden çok birim aynı takvime bağlanabilir (İÜ genel takvimi bir kez girilir, ayrı takvimli birim kendi takvimine bağlanır; plan.html#hoca).",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar. Oluşturan uçta istemcinin ürettiği UUIDv7 gelebilir (tekrar anahtarı, D13-B12 deseni); gelmezse veritabanı üretir."
+    },
+    {
+     "name": "donem_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Takvimin dönemi; inceleme dönemine takvim açılmaz (uygulama kuralı)."
+    },
+    {
+     "name": "ad",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "Ör. İÜ genel ön lisans ve lisans, Eczacılık; 1 ile 120 karakter."
+    },
+    {
+     "name": "ders_baslangic",
+     "type": "date",
+     "null": false,
+     "default": "",
+     "note": "Derslerin başladığı gün (İstanbul)."
+    },
+    {
+     "name": "ders_bitis",
+     "type": "date",
+     "null": false,
+     "default": "",
+     "note": "Derslerin bittiği gün."
+    },
+    {
+     "name": "ekle_birak_bitis",
+     "type": "date",
+     "null": false,
+     "default": "",
+     "note": "Bilgi alanı: D03 geç ekleme ekranında ipucu olarak gösterir; sunucu kuralı yoktur (D02-B31)."
+    },
+    {
+     "name": "devamsizlik_son_gun",
+     "type": "date",
+     "null": false,
+     "default": "",
+     "note": "Devamsızlıkların otomasyona işlenmesi için son gün; kilit anı bundan türer (plan.html#devam-donem-sonu)."
+    },
+    {
+     "name": "surum_no",
+     "type": "integer",
+     "null": false,
+     "default": "1",
+     "note": "İyimser eşzamanlılık numarası; her PUT bir artırır, istek beklenen numarayı taşır (D02-B48). Takvim telefona inmediği için D06 sürümü almaz."
+    },
+    {
+     "name": "olusturma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    },
+    {
+     "name": "guncelleme_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    }
+   ],
+   "indexes": [
+    "takvimler_id_pk (id)",
+    "takvimler_donem_id_ad_uq UNIQUE (donem_id, ad)",
+    "takvimler_id_donem_id_uq UNIQUE (id, donem_id) (birim_donemleri bileşik yabancı anahtarı için)"
+   ],
+   "constraints": [
+    "takvimler_donem_id_fk: donem_id REFERENCES donemler (id)",
+    "takvimler_tarihler_ck: ders_baslangic < ders_bitis AND ders_bitis <= devamsizlik_son_gun AND ekle_birak_bitis <= ders_bitis (son gün ders bitişine eşit olabilir: Eczacılık örneği)",
+    "takvimler_ad_ck: char_length(ad) BETWEEN 1 AND 120",
+    "Göç DELETE yetkisini geri alır."
+   ]
+  },
+  {
+   "name": "takvim_tatilleri",
+   "purpose": "Takvimdeki tatil: tam gün ya da yarım gün (arife öğleden sonra). Telefona tatil satırı olarak iner; oturum üretiminde tatil günündeki oluşum üretilmez, sonradan girilen tatil gelecekteki oturumu iptal (tatil) yapar.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar. Oluşturan uçta istemcinin ürettiği UUIDv7 gelebilir (tekrar anahtarı, D13-B12 deseni); gelmezse veritabanı üretir."
+    },
+    {
+     "name": "takvim_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Bağlı takvim."
+    },
+    {
+     "name": "ad",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "Ör. Cumhuriyet Bayramı; 1 ile 120 karakter."
+    },
+    {
+     "name": "baslangic_tarihi",
+     "type": "date",
+     "null": false,
+     "default": "",
+     "note": "İlk tatil günü."
+    },
+    {
+     "name": "bitis_tarihi",
+     "type": "date",
+     "null": false,
+     "default": "",
+     "note": "Son tatil günü (dahil)."
+    },
+    {
+     "name": "yarim_gun_baslangic",
+     "type": "time",
+     "null": true,
+     "default": "",
+     "note": "Doluysa tatil baslangic_tarihi günü bu yerel saatte başlar; o gün bu saatten önce başlayan oturum kalır (D02-B07). Boş: tam gün."
+    },
+    {
+     "name": "surum",
+     "type": "bigint",
+     "null": false,
+     "default": "",
+     "note": "Telefona inen satırın değişiklik sürümü. Yazan işlem sonunda bir kez D06.surumAl(tx) ile alınır ve işlemin değiştirdiği bütün inen satırlara yazılır."
+    },
+    {
+     "name": "silindi",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "Kaldırılan tatil silinmez, true olur ve telefona silindi işaretiyle iner."
+    },
+    {
+     "name": "olusturma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    },
+    {
+     "name": "guncelleme_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    }
+   ],
+   "indexes": [
+    "takvim_tatilleri_id_pk (id)",
+    "takvim_tatilleri_takvim_id_surum_idx (takvim_id, surum)"
+   ],
+   "constraints": [
+    "takvim_tatilleri_takvim_id_fk: takvim_id REFERENCES takvimler (id)",
+    "takvim_tatilleri_tarihler_ck: baslangic_tarihi <= bitis_tarihi",
+    "takvim_tatilleri_yarim_gun_ck: yarim_gun_baslangic IS NULL OR yarim_gun_baslangic > time '00:00'",
+    "Göç DELETE yetkisini geri alır (inen tablo)."
+   ]
+  },
+  {
+   "name": "takvim_sinav_haftalari",
+   "purpose": "Takvimdeki ara sınav, final ve bütünleme haftaları; oturum üretiminde ders yapılıp yapılmayacağını belirler. Telefona inmez.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar. Oluşturan uçta istemcinin ürettiği UUIDv7 gelebilir (tekrar anahtarı, D13-B12 deseni); gelmezse veritabanı üretir."
+    },
+    {
+     "name": "takvim_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Bağlı takvim."
+    },
+    {
+     "name": "tur",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "ara, final, butunleme (metin ve CHECK)."
+    },
+    {
+     "name": "baslangic_tarihi",
+     "type": "date",
+     "null": false,
+     "default": "",
+     "note": "İlk gün."
+    },
+    {
+     "name": "bitis_tarihi",
+     "type": "date",
+     "null": false,
+     "default": "",
+     "note": "Son gün (dahil)."
+    },
+    {
+     "name": "ders_yapilir",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "false iken bu aralıkta programdan oturum üretilmez; varsayılan sahibin onayını bekliyor (D02-A01)."
+    },
+    {
+     "name": "olusturma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    }
+   ],
+   "indexes": [
+    "takvim_sinav_haftalari_id_pk (id)",
+    "takvim_sinav_haftalari_takvim_id_idx (takvim_id)"
+   ],
+   "constraints": [
+    "takvim_sinav_haftalari_takvim_id_fk: takvim_id REFERENCES takvimler (id)",
+    "takvim_sinav_haftalari_tur_ck: tur IN ('ara','final','butunleme')",
+    "takvim_sinav_haftalari_tarihler_ck: baslangic_tarihi <= bitis_tarihi",
+    "Satırlar takvim PUT ile değiştirilir; telefona inmediği için fiziksel silme serbesttir, önceki hali denetim kaydında."
+   ]
+  },
+  {
+   "name": "birim_donemleri",
+   "purpose": "Birim ve dönem çifti: hangi takvim kullanılıyor, kilit anı ve kilit yan etkilerinin uygulandığı an. Telefona kilit satırı olarak iner (son gün, kilit anı).",
+   "columns": [
+    {
+     "name": "birim_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Birim."
+    },
+    {
+     "name": "donem_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Genel dönem."
+    },
+    {
+     "name": "takvim_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Aynı dönemin takvimi (bileşik yabancı anahtarla denetlenir)."
+    },
+    {
+     "name": "kilit_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Türetilmiş: ((devamsizlik_son_gun + 1)::timestamp AT TIME ZONE 'Europe/Istanbul'), yani son günün ertesi 00:00 İstanbul. Takvim ya da bağ yazımıyla aynı işlemde güncellenir (D02-B19)."
+    },
+    {
+     "name": "kilit_uygulandi_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "donem_kilidi işinin yan etkileri uyguladığı an; boşsa henüz uygulanmadı. Son gün kilitten sonra ileri alınırsa boşa döner, iş yeni anda yeniden uygular (D02-A05)."
+    },
+    {
+     "name": "surum",
+     "type": "bigint",
+     "null": false,
+     "default": "",
+     "note": "Telefona inen satırın değişiklik sürümü. Yazan işlem sonunda bir kez D06.surumAl(tx) ile alınır ve işlemin değiştirdiği bütün inen satırlara yazılır."
+    },
+    {
+     "name": "silindi",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "Bu tabloda satır silinmez; sütun inen tablolar için ortak biçim gereği vardır (teknik.html#kod-veri-modeli) ve hep false kalır (CHECK). Kapsamdan çıkan ders indirmede sanal silindi satırıyla bildirilir."
+    },
+    {
+     "name": "olusturma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    },
+    {
+     "name": "guncelleme_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    }
+   ],
+   "indexes": [
+    "birim_donemleri_birim_id_donem_id_pk (birim_id, donem_id)",
+    "birim_donemleri_takvim_id_idx (takvim_id)",
+    "birim_donemleri_kilit_ani_idx (kilit_ani) WHERE kilit_uygulandi_ani IS NULL (kilit işinin taraması)"
+   ],
+   "constraints": [
+    "birim_donemleri_birim_id_fk: birim_id REFERENCES birimler (id)",
+    "birim_donemleri_donem_id_fk: donem_id REFERENCES donemler (id)",
+    "birim_donemleri_takvim_id_donem_id_fk: (takvim_id, donem_id) REFERENCES takvimler (id, donem_id)",
+    "birim_donemleri_silindi_ck: silindi = false",
+    "Göç DELETE yetkisini geri alır."
+   ]
+  },
+  {
+   "name": "dersler",
+   "purpose": "Bir hocanın bir dönemdeki ders açılışı (D02-B01): tek sahip, birim, ders ayarları (varsayılan yoklama süresi, teori ve uygulama p, QR ayarı). p alanlarının anlamı ve değiştiren uç D08'in, yazımı D02.oranlariYaz ile. Ders silinmez, arşivlenir (plan.html#devam-donem-sonu).",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar. Oluşturan uçta istemcinin ürettiği UUIDv7 gelebilir (tekrar anahtarı, D13-B12 deseni); gelmezse veritabanı üretir."
+    },
+    {
+     "name": "donem_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Genel dönem; sonradan değişmez (tetikleyici)."
+    },
+    {
+     "name": "birim_id",
+     "type": "uuid",
+     "null": true,
+     "default": "",
+     "note": "Takvimi ve kilidi veren birim; yalnız deneme dersinde boş (CHECK)."
+    },
+    {
+     "name": "bolum_id",
+     "type": "uuid",
+     "null": true,
+     "default": "",
+     "note": "İsteğe bağlı bölüm; birimin bölümü olmalı (bileşik yabancı anahtar)."
+    },
+    {
+     "name": "hoca_kisi_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Dersin tek hocası (kisiler, D01 tablosu; yabancı anahtar için tablo tanımı alınır)."
+    },
+    {
+     "name": "onceki_hoca_kisi_idleri",
+     "type": "uuid[]",
+     "null": false,
+     "default": "'{}'",
+     "note": "Devirle dersi bırakan hocalar; eski hocanın telefonuna ders kapsamdan çıktı diye iner (indirme kuralı)."
+    },
+    {
+     "name": "sahip_atama_surumu",
+     "type": "bigint",
+     "null": false,
+     "default": "",
+     "note": "Şimdiki sahibin dersi aldığı sürüm (açılış ya da devir). Sahibin indirmesinde bu sürüm imleçten büyükse dersin bütün satırları sürüme bakılmadan gider; D03 da liste satırları için aynı alanı dersGetir ile okur."
+    },
+    {
+     "name": "kod",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "NFC, boşluk sadeleşir, Türkçe kuralla büyük harfe çevrilir (BİL 301); 1 ile 20 karakter."
+    },
+    {
+     "name": "ad",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "NFC, boşluk sadeleşir; 1 ile 120 karakter."
+    },
+    {
+     "name": "teori_p",
+     "type": "smallint",
+     "null": false,
+     "default": "70",
+     "note": "Teori devam oranı, tam yüzde 0 ile 100 (formül tam sayı p ister: plan.html#devam-uyari-seviyeleri). Yalnız oranlariYaz değiştirir."
+    },
+    {
+     "name": "uygulama_p",
+     "type": "smallint",
+     "null": false,
+     "default": "80",
+     "note": "Uygulama devam oranı, tam yüzde 0 ile 100."
+    },
+    {
+     "name": "yoklama_suresi_dk",
+     "type": "smallint",
+     "null": true,
+     "default": "",
+     "note": "Hocanın ders ayarı (D02-B26): 1 ile 240 dakika; boş: süre seçilmedi, pencere ders boyunca açık ve kayıtlar Kendi beyanı (plan.html#kararlar-inceleme-hesaplari, Süre seçilmediyse)."
+    },
+    {
+     "name": "qr_ile_yoklama",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "QR'lı ders ayarı (D11 ister, D02 yazar). Yeni oturumlara kopyalanır; true yapan istek bileşim kökünden gelen QR ayarı bayrağı kapalıyken reddedilir (D02-A10)."
+    },
+    {
+     "name": "deneme_dersi",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "İnceleme hesaplarının her an açık deneme dersi (D02-B30). Kilit, onaysız liste, çakışma, dönem arası ve raporlar bu dersi dışlar."
+    },
+    {
+     "name": "takip_baslangici",
+     "type": "date",
+     "null": true,
+     "default": "",
+     "note": "İlk program kaydında, o gün dönemin ders başlangıcından sonraysa o gün yazılır; daha önceki oturum üretilmez, raporlar bu tarihi gösterir (D02-A11). Boş: dönemin başından beri."
+    },
+    {
+     "name": "durum",
+     "type": "text",
+     "null": false,
+     "default": "'etkin'",
+     "note": "etkin, arsiv (metin ve CHECK). Arşiv salt okunurdur; yalnız cevapsız ya da çelişkili oturuma \"Ders yapıldı mı?\" cevabı yazılır."
+    },
+    {
+     "name": "arsiv_nedeni",
+     "type": "text",
+     "null": true,
+     "default": "",
+     "note": "hoca (başlamış oturumu yokken hoca arşivledi) ya da kilit (donem_kilidi işi)."
+    },
+    {
+     "name": "arsiv_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "Arşivlendiği an."
+    },
+    {
+     "name": "duzenleme_no",
+     "type": "integer",
+     "null": false,
+     "default": "1",
+     "note": "Ders ayarı, program ve şube için iyimser eşzamanlılık numarası; PATCH ve program PUT beklenen numarayı taşır; ders ayarı, program ve şube yazımı (şube program kümelerini değiştirdiği için) bir artırır."
+    },
+    {
+     "name": "surum",
+     "type": "bigint",
+     "null": false,
+     "default": "",
+     "note": "Telefona inen satırın değişiklik sürümü. Yazan işlem sonunda bir kez D06.surumAl(tx) ile alınır ve işlemin değiştirdiği bütün inen satırlara yazılır."
+    },
+    {
+     "name": "silindi",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "Bu tabloda satır silinmez; sütun inen tablolar için ortak biçim gereği vardır (teknik.html#kod-veri-modeli) ve hep false kalır (CHECK). Kapsamdan çıkan ders indirmede sanal silindi satırıyla bildirilir."
+    },
+    {
+     "name": "olusturma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    },
+    {
+     "name": "guncelleme_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    }
+   ],
+   "indexes": [
+    "dersler_id_pk (id)",
+    "dersler_id_donem_id_uq UNIQUE (id, donem_id) (oturumların bileşik yabancı anahtarı için)",
+    "dersler_donem_id_hoca_kisi_id_kod_uq UNIQUE (donem_id, hoca_kisi_id, kod) WHERE durum = 'etkin'",
+    "dersler_deneme_uq UNIQUE (deneme_dersi) WHERE deneme_dersi AND durum = 'etkin' (tek etkin deneme dersi)",
+    "dersler_hoca_kisi_id_donem_id_idx (hoca_kisi_id, donem_id)",
+    "dersler_birim_id_donem_id_idx (birim_id, donem_id)",
+    "dersler_onceki_hoca_kisi_idleri_idx USING gin (onceki_hoca_kisi_idleri)"
+   ],
+   "constraints": [
+    "dersler_donem_id_fk: donem_id REFERENCES donemler (id)",
+    "dersler_birim_id_fk: birim_id REFERENCES birimler (id)",
+    "dersler_bolum_id_birim_id_fk: (bolum_id, birim_id) REFERENCES bolumler (id, birim_id)",
+    "dersler_hoca_kisi_id_fk: hoca_kisi_id REFERENCES kisiler (id)",
+    "dersler_deneme_birim_ck: (deneme_dersi AND birim_id IS NULL) OR (NOT deneme_dersi AND birim_id IS NOT NULL)",
+    "dersler_kod_ck: char_length(kod) BETWEEN 1 AND 20; dersler_ad_ck: char_length(ad) BETWEEN 1 AND 120",
+    "dersler_p_ck: teori_p BETWEEN 0 AND 100 AND uygulama_p BETWEEN 0 AND 100",
+    "dersler_yoklama_suresi_dk_ck: yoklama_suresi_dk IS NULL OR yoklama_suresi_dk BETWEEN 1 AND 240",
+    "dersler_durum_ck: (durum = 'etkin' AND arsiv_ani IS NULL AND arsiv_nedeni IS NULL) OR (durum = 'arsiv' AND arsiv_ani IS NOT NULL AND arsiv_nedeni IN ('hoca','kilit'))",
+    "dersler_silindi_ck: silindi = false",
+    "dersler_donem_degismez_tg: BEFORE UPDATE tetikleyicisi donem_id değişince hata verir (D12-B13 koruma deseni)",
+    "Göç DELETE yetkisini geri alır."
+   ]
+  },
+  {
+   "name": "subeler",
+   "purpose": "Dersin şubesi; öğrenci listesi satırları şubeye bağlanır (D03). Silinmez, pasif olur. Telefona dersin satırı içinde (şube dizisi) iner, ayrı sürümü yoktur.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar. Oluşturan uçta istemcinin ürettiği UUIDv7 gelebilir (tekrar anahtarı, D13-B12 deseni); gelmezse veritabanı üretir."
+    },
+    {
+     "name": "ders_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Bağlı ders."
+    },
+    {
+     "name": "etiket",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "Ör. 1, A; NFC ve boşluk sadeleşir; 1 ile 20 karakter."
+    },
+    {
+     "name": "durum",
+     "type": "text",
+     "null": false,
+     "default": "'etkin'",
+     "note": "etkin, pasif (metin ve CHECK). Etkin liste satırı olan şube pasif yapılamaz."
+    },
+    {
+     "name": "pasif_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "Pasif olduğu an."
+    },
+    {
+     "name": "olusturma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    }
+   ],
+   "indexes": [
+    "subeler_id_pk (id)",
+    "subeler_ders_id_etiket_uq UNIQUE (ders_id, etiket)",
+    "subeler_id_ders_id_uq UNIQUE (id, ders_id) (program ve oturum şube tablolarının bileşik yabancı anahtarı için)"
+   ],
+   "constraints": [
+    "subeler_ders_id_fk: ders_id REFERENCES dersler (id)",
+    "subeler_etiket_ck: char_length(etiket) BETWEEN 1 AND 20",
+    "subeler_durum_ck: (durum = 'etkin' AND pasif_ani IS NULL) OR (durum = 'pasif' AND pasif_ani IS NOT NULL)",
+    "Göç DELETE yetkisini geri alır."
+   ]
+  },
+  {
+   "name": "program_saatleri",
+   "purpose": "Haftalık program saati: gün, yerel saat aralığı, türe göre açık ders saati sayısı, derslik ve isteğe bağlı geçerlilik aralığı (D02-B04, D02-B14). Kaldırılan saat silinmez, silindi işareti alır; oturumlar kimliğiyle ona bağlı kalır.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar. Oluşturan uçta istemcinin ürettiği UUIDv7 gelebilir (tekrar anahtarı, D13-B12 deseni); gelmezse veritabanı üretir."
+    },
+    {
+     "name": "ders_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Bağlı ders."
+    },
+    {
+     "name": "gun",
+     "type": "smallint",
+     "null": false,
+     "default": "",
+     "note": "ISO hafta günü: 1 pazartesi, 7 pazar."
+    },
+    {
+     "name": "baslangic_saati",
+     "type": "time",
+     "null": false,
+     "default": "",
+     "note": "Europe/Istanbul yerel saat (teknik.html#veritabani-donem-alani)."
+    },
+    {
+     "name": "bitis_saati",
+     "type": "time",
+     "null": false,
+     "default": "",
+     "note": "Aynı gün içinde, başlangıçtan büyük; gece yarısını geçmez."
+    },
+    {
+     "name": "teori_saat",
+     "type": "smallint",
+     "null": false,
+     "default": "",
+     "note": "Bu buluşmadaki teori ders saati sayısı (50 dakikalık ders saati süreden türetilmez)."
+    },
+    {
+     "name": "uygulama_saat",
+     "type": "smallint",
+     "null": false,
+     "default": "",
+     "note": "Uygulama ders saati sayısı; toplam 1 ile 12."
+    },
+    {
+     "name": "derslik",
+     "type": "text",
+     "null": true,
+     "default": "",
+     "note": "Serbest metin, 1 ile 40 karakter (D02-B12); telefonda gösterilir."
+    },
+    {
+     "name": "gecerlilik_baslangic",
+     "type": "date",
+     "null": true,
+     "default": "",
+     "note": "Boşsa dönemin ders başlangıcı."
+    },
+    {
+     "name": "gecerlilik_bitis",
+     "type": "date",
+     "null": true,
+     "default": "",
+     "note": "Boşsa dönemin ders bitişi."
+    },
+    {
+     "name": "surum",
+     "type": "bigint",
+     "null": false,
+     "default": "",
+     "note": "Telefona inen satırın değişiklik sürümü. Yazan işlem sonunda bir kez D06.surumAl(tx) ile alınır ve işlemin değiştirdiği bütün inen satırlara yazılır."
+    },
+    {
+     "name": "silindi",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "Programdan çıkarılan saat true olur ve telefona silindi işaretiyle iner."
+    },
+    {
+     "name": "olusturma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    },
+    {
+     "name": "guncelleme_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    }
+   ],
+   "indexes": [
+    "program_saatleri_id_pk (id)",
+    "program_saatleri_id_ders_id_uq UNIQUE (id, ders_id)",
+    "program_saatleri_ders_id_surum_idx (ders_id, surum)"
+   ],
+   "constraints": [
+    "program_saatleri_ders_id_fk: ders_id REFERENCES dersler (id)",
+    "program_saatleri_gun_ck: gun BETWEEN 1 AND 7",
+    "program_saatleri_saat_ck: baslangic_saati < bitis_saati AND bitis_saati <= time '23:59'",
+    "program_saatleri_ders_saati_ck: teori_saat >= 0 AND uygulama_saat >= 0 AND teori_saat + uygulama_saat BETWEEN 1 AND 12",
+    "program_saatleri_derslik_ck: derslik IS NULL OR char_length(derslik) BETWEEN 1 AND 40",
+    "program_saatleri_gecerlilik_ck: gecerlilik_baslangic IS NULL OR gecerlilik_bitis IS NULL OR gecerlilik_baslangic <= gecerlilik_bitis",
+    "Göç DELETE yetkisini geri alır (inen tablo)."
+   ]
+  },
+  {
+   "name": "program_saati_subeleri",
+   "purpose": "Program saatinin kapsadığı şubeler; birlikte işlenen şubeler dahil (D02-B02). Oturum üretilirken oturum_subeleri bu kümeden kopyalanır.",
+   "columns": [
+    {
+     "name": "program_saati_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Program saati."
+    },
+    {
+     "name": "sube_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Aynı dersin şubesi."
+    },
+    {
+     "name": "ders_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Bileşik yabancı anahtarlar için kopya; iki tarafın aynı derse ait olduğunu veritabanı denetler."
+    }
+   ],
+   "indexes": [
+    "program_saati_subeleri_program_saati_id_sube_id_pk (program_saati_id, sube_id)",
+    "program_saati_subeleri_sube_id_idx (sube_id)"
+   ],
+   "constraints": [
+    "program_saati_subeleri_program_saati_id_ders_id_fk: (program_saati_id, ders_id) REFERENCES program_saatleri (id, ders_id)",
+    "program_saati_subeleri_sube_id_ders_id_fk: (sube_id, ders_id) REFERENCES subeler (id, ders_id)",
+    "Telefona doğrudan inmez (şube dizisi program saati satırında iner); küme değişince satırlar silinip yeniden yazılır."
+   ]
+  },
+  {
+   "name": "oturumlar",
+   "purpose": "Dersin tek buluşması (ders oturumu; plan.html#sozluk): programdan (normal), telafiden ya da deneme dersi işinden üretilir, hiç silinmez. Açılış ve kapanış anı UTC, telefona iner (teknik.html#kod-veri-modeli). Pencere ve kapanma D04'ün kendi tablosundadır; kafa sayısı, yapıldı onayı, kısa kod ve QR ayarı kopyası bu satırdadır ve yalnız D02 yazar.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar. Oluşturan uçta istemcinin ürettiği UUIDv7 gelebilir (tekrar anahtarı, D13-B12 deseni); gelmezse veritabanı üretir."
+    },
+    {
+     "name": "ders_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Bağlı ders; değişmez."
+    },
+    {
+     "name": "donem_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Dersin dönemi; kaydın dönemi buradan türer (D05), değişmez (tetikleyici)."
+    },
+    {
+     "name": "program_saati_id",
+     "type": "uuid",
+     "null": true,
+     "default": "",
+     "note": "Normal oturumda kaynağı olan program saati; telafi ve deneme oturumunda boş."
+    },
+    {
+     "name": "tur",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "normal, telafi, deneme (metin ve CHECK; cevapta x-extensible-enum)."
+    },
+    {
+     "name": "tarih",
+     "type": "date",
+     "null": false,
+     "default": "",
+     "note": "Ders günü (İstanbul); değişmez. Kimlik (program_saati_id, tarih) normal oturumda tekildir."
+    },
+    {
+     "name": "baslangic_saati",
+     "type": "time",
+     "null": false,
+     "default": "",
+     "note": "Yerel başlangıç."
+    },
+    {
+     "name": "bitis_saati",
+     "type": "time",
+     "null": false,
+     "default": "",
+     "note": "Yerel bitiş; 24:00 yalnız deneme oturumunda."
+    },
+    {
+     "name": "baslangic_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Türetilmiş: (tarih + baslangic_saati) AT TIME ZONE 'Europe/Istanbul', yazımla aynı SQL deyiminde. Gece işi gelecekteki planlı oturumlarda bu eşitliği yeniden denetler (saat dilimi verisi değişirse)."
+    },
+    {
+     "name": "bitis_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Aynı kuralla bitiş."
+    },
+    {
+     "name": "teori_saat",
+     "type": "smallint",
+     "null": false,
+     "default": "",
+     "note": "Programdan ya da telafiden kopya; hak hesabının T'si türe göre buradan toplanır (D08)."
+    },
+    {
+     "name": "uygulama_saat",
+     "type": "smallint",
+     "null": false,
+     "default": "",
+     "note": "Aynı; toplam 1 ile 12."
+    },
+    {
+     "name": "derslik",
+     "type": "text",
+     "null": true,
+     "default": "",
+     "note": "Kopya; tek oturumda değiştirilebilir."
+    },
+    {
+     "name": "yoklama_suresi_dk",
+     "type": "smallint",
+     "null": true,
+     "default": "",
+     "note": "Üretimde dersten kopyalanır; ders ayarı değişince başlamamış oturumlarda güncellenir. Ders içi değişiklik D04'ün pencere tablosundadır."
+    },
+    {
+     "name": "qr_ile_yoklama",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "Üretimde dersten kopya (D11 okur)."
+    },
+    {
+     "name": "durum",
+     "type": "text",
+     "null": false,
+     "default": "'planlandi'",
+     "note": "planlandi, iptal (metin ve CHECK)."
+    },
+    {
+     "name": "iptal_nedeni",
+     "type": "text",
+     "null": true,
+     "default": "",
+     "note": "hoca, tasindi, tatil, sinav_haftasi, takvim, program, arsiv. Yalnız hoca ve tasindi hocanın kararıdır; ötekileri yeniden üretim geri alabilir."
+    },
+    {
+     "name": "iptal_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "İptal anı."
+    },
+    {
+     "name": "iptal_eden_kisi_id",
+     "type": "uuid",
+     "null": true,
+     "default": "",
+     "note": "Hoca iptalinde hoca; sistem iptalinde boş."
+    },
+    {
+     "name": "elle_duzenlendi",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "Hoca tek oturumun saatini, dersliğini ya da saat sayılarını değiştirdiyse true; yeniden üretim bu alanlara dokunmaz, yalnız iptal edebilir."
+    },
+    {
+     "name": "telafi_edilen_oturum_id",
+     "type": "uuid",
+     "null": true,
+     "default": "",
+     "note": "Telafinin yerine geçtiği aynı dersin oturumu (isteğe bağlı bağ; telafi borcu hesabı için, D02-A02)."
+    },
+    {
+     "name": "kisa_kod",
+     "type": "bigint",
+     "null": false,
+     "default": "nextval('oturumlar_kisa_kod_seq')",
+     "note": "Aşama 2 QR'ının 10 rakamlık oturum kısa kodu; tekil, sırayla verilir, değişmez; JSON'da soldan sıfırla 10 rakamlık metin (teknik.html#telefon-kamera-qr)."
+    },
+    {
+     "name": "kafa_sayisi",
+     "type": "integer",
+     "null": true,
+     "default": "",
+     "note": "Hocanın kafa sayısı (0 ile 5000); yalnız kafaSayisiniYaz (D07 çağırır) yazar. Telefona inmez."
+    },
+    {
+     "name": "kafa_sayisi_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "Kafa sayısının sunucuya yazıldığı an (saat arayüzü); D07 işaret anı için okur."
+    },
+    {
+     "name": "yapildi",
+     "type": "boolean",
+     "null": true,
+     "default": "",
+     "note": "Boş: cevap yok. true: kafa sayısı ya da hoca cevabı. false: hoca \"yapılmadı\" dedi; bu oturumun kayıtları ve saatleri sayılmaz (plan.html#kararlar-kafa-sayisi). Telefona inmez."
+    },
+    {
+     "name": "yapildi_kaynagi",
+     "type": "text",
+     "null": true,
+     "default": "",
+     "note": "kafa_sayisi, hoca_cevabi."
+    },
+    {
+     "name": "yapildi_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "Son yapıldı bilgisinin yazıldığı an."
+    },
+    {
+     "name": "yapildi_celiskili",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "\"Yapılmadı\" cevabından sonra (ya da iptal oturuma) kafa sayısı geldiyse true; yapildi boşalır ve soru yeniden çıkar (D02-B18)."
+    },
+    {
+     "name": "surum",
+     "type": "bigint",
+     "null": false,
+     "default": "",
+     "note": "Telefona inen satırın değişiklik sürümü. Yazan işlem sonunda bir kez D06.surumAl(tx) ile alınır ve işlemin değiştirdiği bütün inen satırlara yazılır."
+    },
+    {
+     "name": "silindi",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "Bu tabloda satır silinmez; sütun inen tablolar için ortak biçim gereği vardır (teknik.html#kod-veri-modeli) ve hep false kalır (CHECK). Kapsamdan çıkan ders indirmede sanal silindi satırıyla bildirilir."
+    },
+    {
+     "name": "olusturma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    },
+    {
+     "name": "guncelleme_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden yazılır; SQL now() kullanılmaz."
+    }
+   ],
+   "indexes": [
+    "oturumlar_id_pk (id)",
+    "oturumlar_id_ders_id_uq UNIQUE (id, ders_id)",
+    "oturumlar_id_donem_id_uq UNIQUE (id, donem_id) (D04 pencere ve D05 kayıt tablolarının bileşik yabancı anahtarı için)",
+    "oturumlar_kisa_kod_uq UNIQUE (kisa_kod)",
+    "oturumlar_program_saati_id_tarih_uq UNIQUE (program_saati_id, tarih) WHERE program_saati_id IS NOT NULL (yeniden üretimin kimliği)",
+    "oturumlar_deneme_ders_id_tarih_uq UNIQUE (ders_id, tarih) WHERE tur = 'deneme'",
+    "oturumlar_ders_id_baslangic_ani_idx (ders_id, baslangic_ani)",
+    "oturumlar_ders_id_surum_idx (ders_id, surum) (indirme)",
+    "oturumlar_onaysiz_idx (ders_id, bitis_ani) WHERE durum = 'planlandi' AND yapildi IS NULL",
+    "oturumlar_celiski_idx (ders_id) WHERE yapildi_celiskili",
+    "oturumlar_donem_id_tarih_idx (donem_id, tarih)",
+    "oturumlar_telafi_edilen_oturum_id_idx (telafi_edilen_oturum_id) WHERE telafi_edilen_oturum_id IS NOT NULL",
+    "BRIN dizini baştan yok (teknik.html#veritabani-donem-alani)."
+   ],
+   "constraints": [
+    "oturumlar_ders_id_donem_id_fk: (ders_id, donem_id) REFERENCES dersler (id, donem_id)",
+    "oturumlar_program_saati_id_ders_id_fk: (program_saati_id, ders_id) REFERENCES program_saatleri (id, ders_id)",
+    "oturumlar_telafi_edilen_oturum_id_ders_id_fk: (telafi_edilen_oturum_id, ders_id) REFERENCES oturumlar (id, ders_id)",
+    "oturumlar_iptal_eden_kisi_id_fk: iptal_eden_kisi_id REFERENCES kisiler (id)",
+    "oturumlar_tur_ck: tur IN ('normal','telafi','deneme') AND ((tur = 'normal') = (program_saati_id IS NOT NULL))",
+    "oturumlar_telafi_ck: telafi_edilen_oturum_id IS NULL OR (tur = 'telafi' AND telafi_edilen_oturum_id <> id)",
+    "oturumlar_saat_ck: baslangic_saati < bitis_saati AND (bitis_saati <= time '23:59' OR tur = 'deneme') AND baslangic_ani < bitis_ani",
+    "oturumlar_ders_saati_ck: teori_saat >= 0 AND uygulama_saat >= 0 AND teori_saat + uygulama_saat BETWEEN 1 AND 12",
+    "oturumlar_yoklama_suresi_dk_ck: yoklama_suresi_dk IS NULL OR yoklama_suresi_dk BETWEEN 1 AND 240",
+    "oturumlar_iptal_ck: (durum = 'planlandi' AND iptal_nedeni IS NULL AND iptal_ani IS NULL AND iptal_eden_kisi_id IS NULL) OR (durum = 'iptal' AND iptal_nedeni IN ('hoca','tasindi','tatil','sinav_haftasi','takvim','program','arsiv') AND iptal_ani IS NOT NULL)",
+    "oturumlar_kisa_kod_ck: kisa_kod BETWEEN 1 AND 9999999999",
+    "oturumlar_kafa_sayisi_ck: (kafa_sayisi IS NULL) = (kafa_sayisi_ani IS NULL) AND (kafa_sayisi IS NULL OR kafa_sayisi BETWEEN 0 AND 5000)",
+    "oturumlar_yapildi_ck: (yapildi IS NULL) = (yapildi_kaynagi IS NULL) AND (yapildi IS NULL) = (yapildi_ani IS NULL) AND (yapildi_kaynagi IS NULL OR yapildi_kaynagi IN ('kafa_sayisi','hoca_cevabi')) AND NOT (yapildi_celiskili AND yapildi IS NOT NULL)",
+    "oturumlar_iptal_yapildi_ck: durum = 'planlandi' OR yapildi IS NULL",
+    "oturumlar_silindi_ck: silindi = false",
+    "oturumlar_degismez_tg: BEFORE UPDATE tetikleyicisi ders_id, donem_id, program_saati_id, tur, tarih ve kisa_kod değişince hata verir",
+    "Dizi: oturumlar_kisa_kod_seq MINVALUE 1 MAXVALUE 9999999999 NO CYCLE (ilk göçte; D02-B38)",
+    "Göç DELETE yetkisini geri alır: oturum hiç silinmez."
+   ]
+  },
+  {
+   "name": "oturum_subeleri",
+   "purpose": "Oturumun kapsadığı şubeler (birlikte işlenen şubeler dahil): öğrenciye hangi oturumun ineceğini ve kaydın hangi oturuma sayılacağını belirler (D05 ve D07 oturumSubeleri ile okur).",
+   "columns": [
+    {
+     "name": "oturum_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Oturum."
+    },
+    {
+     "name": "sube_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Aynı dersin şubesi."
+    },
+    {
+     "name": "ders_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Bileşik yabancı anahtarlar için kopya."
+    }
+   ],
+   "indexes": [
+    "oturum_subeleri_oturum_id_sube_id_pk (oturum_id, sube_id)",
+    "oturum_subeleri_sube_id_oturum_id_idx (sube_id, oturum_id) (öğrenci kapsamı ve çakışma sorgusu)"
+   ],
+   "constraints": [
+    "oturum_subeleri_oturum_id_ders_id_fk: (oturum_id, ders_id) REFERENCES oturumlar (id, ders_id)",
+    "oturum_subeleri_sube_id_ders_id_fk: (sube_id, ders_id) REFERENCES subeler (id, ders_id)",
+    "Bir oturumun en az bir şubesi olur (uygulama kuralı, davranış testiyle). Küme değişirse eski küme oturum_degisiklikleri satırına yazılır; şube dizisi oturum satırıyla iner."
+   ]
+  },
+  {
+   "name": "oturum_degisiklikleri",
+   "purpose": "Oturumun program tarafındaki değişiklik geçmişi (saat, derslik, saat sayıları, süre, şube kümesi, iptal ve geri alma): eski programla internetsiz telefondan gelen kaydın kararında D07'nin kanıtı (D02-B13). Ders içi ayar değişiklikleri D04'ün pencere_degisiklikleri tablosundadır.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar. Oluşturan uçta istemcinin ürettiği UUIDv7 gelebilir (tekrar anahtarı, D13-B12 deseni); gelmezse veritabanı üretir."
+    },
+    {
+     "name": "oturum_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Değişen oturum."
+    },
+    {
+     "name": "neden",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "hoca, program, takvim, tatil, sinav_haftasi, tasindi, arsiv, sure, saat_dilimi, yapildi_cevabi (metin ve CHECK)."
+    },
+    {
+     "name": "onceki_durum",
+     "type": "text",
+     "null": true,
+     "default": "",
+     "note": "planlandi ya da iptal."
+    },
+    {
+     "name": "yeni_durum",
+     "type": "text",
+     "null": true,
+     "default": "",
+     "note": "planlandi ya da iptal."
+    },
+    {
+     "name": "onceki_baslangic_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "Değişiklikten önceki açılış anı."
+    },
+    {
+     "name": "onceki_bitis_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "Önceki kapanış anı."
+    },
+    {
+     "name": "yeni_baslangic_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "Yeni açılış anı."
+    },
+    {
+     "name": "yeni_bitis_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "Yeni kapanış anı."
+    },
+    {
+     "name": "diger_alanlar",
+     "type": "jsonb",
+     "null": false,
+     "default": "'{}'",
+     "note": "Önceki ve yeni derslik, saat sayıları, süre, iptal nedeni ve şube kümesi; şeması packages/contracts/src/dersler.ts içinde Zod ile (numara ve isim yok)."
+    },
+    {
+     "name": "degistiren_kisi_id",
+     "type": "uuid",
+     "null": true,
+     "default": "",
+     "note": "Hoca ya da yönetici; boşsa sistem işi."
+    },
+    {
+     "name": "degisiklik_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Saat arayüzünden."
+    }
+   ],
+   "indexes": [
+    "oturum_degisiklikleri_id_pk (id)",
+    "oturum_degisiklikleri_oturum_id_degisiklik_ani_idx (oturum_id, degisiklik_ani)"
+   ],
+   "constraints": [
+    "oturum_degisiklikleri_oturum_id_fk: oturum_id REFERENCES oturumlar (id)",
+    "oturum_degisiklikleri_degistiren_kisi_id_fk: degistiren_kisi_id REFERENCES kisiler (id)",
+    "oturum_degisiklikleri_neden_ck: neden IN ('hoca','program','takvim','tatil','sinav_haftasi','tasindi','arsiv','sure','saat_dilimi','yapildi_cevabi')",
+    "oturum_degisiklikleri_durum_ck: (onceki_durum IS NULL OR onceki_durum IN ('planlandi','iptal')) AND (yeni_durum IS NULL OR yeni_durum IN ('planlandi','iptal'))",
+    "Göç UPDATE ve DELETE yetkisini geri alır: satır yalnız eklenir."
+   ]
+  }
+ ],
+ "endpoints": [
+  {
+   "method": "GET",
+   "path": "/v1/dersler",
+   "client": "panel",
+   "auth": "Oturum, rol hoca; yalnız sahibi olduğu dersler döner (deneme hocası yalnız deneme dersini görür).",
+   "request": {
+    "donemId": "uuidv7, sorgu, isteğe bağlı",
+    "durum": "etkin|arsiv, sorgu, isteğe bağlı"
+   },
+   "response": {
+    "dersler": "DersOzeti { id, donemId, birimId: uuid|null, bolumId: uuid|null, kod, ad, teoriP: int, uygulamaP: int, yoklamaSuresiDk: int|null, qrIleYoklama: bool, denemeDersi: bool, takipBaslangici: tarih|null, durum: etkin|arsiv (x-extensible-enum), arsivNedeni: hoca|kilit|null, duzenlemeNo: int, subeler: [{ id, etiket, durum: etkin|pasif }], kilit: { sonGun: tarih|null, kilitAni: an|null, kilitli: bool } }[]; kod sırasıyla, en çok 500"
+   },
+   "errors": [],
+   "idempotency": "Yan etkisiz okuma; aynı an ve aynı veriyle aynı cevap.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler",
+   "client": "panel",
+   "auth": "Oturum, rol hoca; sahip isteği yapan hocadır.",
+   "request": {
+    "id": "uuidv7, istemci üretir (tekrar anahtarı)",
+    "donemId": "uuidv7; inceleme dönemi olamaz",
+    "birimId": "uuidv7; etkin birim; bu birim ve dönemin takvimi bağlı olmalı (D02-B25)",
+    "bolumId": "uuidv7|null; birimin bölümü",
+    "kod": "metin 1-20; NFC, boşluk sadeleşir, Türkçe büyük harfe çevrilir; hocanın bu dönemdeki etkin dersleri arasında tekil",
+    "ad": "metin 1-120; NFC, boşluk sadeleşir",
+    "yoklamaSuresiDk": "tam sayı 1-240 ya da null (süre seçilmedi: Kendi beyanı)",
+    "subeler": "dizi 1-20: { id: uuidv7, etiket: metin 1-20 }, etiketler tekil"
+   },
+   "response": {
+    "ders": "DersOzeti { id, donemId, birimId: uuid|null, bolumId: uuid|null, kod, ad, teoriP: int, uygulamaP: int, yoklamaSuresiDk: int|null, qrIleYoklama: bool, denemeDersi: bool, takipBaslangici: tarih|null, durum: etkin|arsiv (x-extensible-enum), arsivNedeni: hoca|kilit|null, duzenlemeNo: int, subeler: [{ id, etiket, durum: etkin|pasif }], kilit: { sonGun: tarih|null, kilitAni: an|null, kilitli: bool } }; yeni derste 201, aynı id ve içerikte 200"
+   },
+   "errors": [
+    "DERSLER_DONEM_BULUNAMADI",
+    "DERSLER_BIRIM_BULUNAMADI",
+    "DERSLER_BOLUM_BULUNAMADI",
+    "DERSLER_BIRIM_PASIF",
+    "DERSLER_TAKVIM_YOK",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_KOD_KULLANIMDA",
+    "DERSLER_KIMLIK_CAKISMASI"
+   ],
+   "idempotency": "Gövdedeki id (istemcinin ürettiği UUIDv7) tekrar anahtarıdır: aynı id ve aynı içerik 200 ile var olan ders döner, aynı id farklı içerik 409 DERSLER_KIMLIK_CAKISMASI (D13-B12 deseni). Hedefli ON CONFLICT (id) DO NOTHING.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "GET",
+   "path": "/v1/dersler/{dersId}",
+   "client": "panel",
+   "auth": "Oturum (panel çerezi ya da Bearer), rol hoca; ders sahibi olmalı (dersYetkisi = sahip). Sahip değilse 404 DERSLER_DERS_BULUNAMADI: başka hocanın dersinin varlığı sızmaz (D13-B02, plan.html#baslangic yetki senaryosu).",
+   "request": {
+    "dersId": "uuidv7, yol"
+   },
+   "response": {
+    "ders": "DersOzeti { id, donemId, birimId: uuid|null, bolumId: uuid|null, kod, ad, teoriP: int, uygulamaP: int, yoklamaSuresiDk: int|null, qrIleYoklama: bool, denemeDersi: bool, takipBaslangici: tarih|null, durum: etkin|arsiv (x-extensible-enum), arsivNedeni: hoca|kilit|null, duzenlemeNo: int, subeler: [{ id, etiket, durum: etkin|pasif }], kilit: { sonGun: tarih|null, kilitAni: an|null, kilitli: bool } }",
+    "programSaatleri": "ProgramSaati { id, gun: 1-7, baslangicSaati: HH:MM, bitisSaati: HH:MM, teoriSaat: int, uygulamaSaat: int, derslik: metin|null, gecerlilikBaslangic: tarih|null, gecerlilikBitis: tarih|null, subeIdleri: uuid[] }[] (silinmemiş)",
+    "takvim": "{ takvimId, ad, dersBaslangic, dersBitis, ekleBirakBitis, sonGun, sonHaftaBaslangici: tarih } | null (deneme dersinde null)",
+    "sayilar": "{ planlanan: int, yapilan: int, yapilmayan: int, cevapsiz: int, iptal: int } (deneme dersi hariç dönem toplamı)"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI"
+   ],
+   "idempotency": "Yan etkisiz okuma; aynı an ve aynı veriyle aynı cevap.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/dersler/{dersId}",
+   "client": "panel",
+   "auth": "Oturum (panel çerezi ya da Bearer), rol hoca; ders sahibi olmalı (dersYetkisi = sahip). Sahip değilse 404 DERSLER_DERS_BULUNAMADI: başka hocanın dersinin varlığı sızmaz (D13-B02, plan.html#baslangic yetki senaryosu).",
+   "request": {
+    "beklenenDuzenlemeNo": "tam sayı; ders.duzenlemeNo ile aynı olmalı (gövde istenen değerlerle zaten aynıysa bakılmaz)",
+    "kod": "metin 1-20, isteğe bağlı",
+    "ad": "metin 1-120, isteğe bağlı",
+    "birimId": "uuidv7, isteğe bağlı; yeni birim ve dönemin takvimi bağlı olmalı; başlamamış oturumlar yeni takvimle yeniden üretilir",
+    "bolumId": "uuidv7|null, isteğe bağlı",
+    "yoklamaSuresiDk": "tam sayı 1-240 ya da null, isteğe bağlı; başlamamış oturumlara kopyalanır, pencereleri D04 dinleyicisi yeniden hesaplar",
+    "qrIleYoklama": "bool, isteğe bağlı; true yalnız QR ayarı bayrağı açıkken (D02-A10)"
+   },
+   "response": {
+    "ders": "DersOzeti { id, donemId, birimId: uuid|null, bolumId: uuid|null, kod, ad, teoriP: int, uygulamaP: int, yoklamaSuresiDk: int|null, qrIleYoklama: bool, denemeDersi: bool, takipBaslangici: tarih|null, durum: etkin|arsiv (x-extensible-enum), arsivNedeni: hoca|kilit|null, duzenlemeNo: int, subeler: [{ id, etiket, durum: etkin|pasif }], kilit: { sonGun: tarih|null, kilitAni: an|null, kilitli: bool } }",
+    "oturumEtkisi": "OturumEtkisi { eklenen: int, guncellenen: int, iptal: int, geriAlinan: int }"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI",
+    "DERSLER_SURUM_UYUSMUYOR",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_DERS_ARSIVDE",
+    "DERSLER_KOD_KULLANIMDA",
+    "DERSLER_BIRIM_BULUNAMADI",
+    "DERSLER_BIRIM_PASIF",
+    "DERSLER_BOLUM_BULUNAMADI",
+    "DERSLER_TAKVIM_YOK",
+    "DERSLER_DENEME_DERSI_DEGISTIRILEMEZ",
+    "DERSLER_QR_AYARI_KAPALI"
+   ],
+   "idempotency": "İstenen değerler zaten kayıtlıysa 200 ve değişiklik yok (numaraya bakılmaz, denetim kaydı ve sürüm yazılmaz); farklıysa beklenen numara tutmalı, tutmazsa 409 ve cevapta güncel ders.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/{dersId}/arsivle",
+   "client": "panel",
+   "auth": "Oturum (panel çerezi ya da Bearer), rol hoca; ders sahibi olmalı (dersYetkisi = sahip). Sahip değilse 404 DERSLER_DERS_BULUNAMADI: başka hocanın dersinin varlığı sızmaz (D13-B02, plan.html#baslangic yetki senaryosu).",
+   "request": {
+    "dersId": "uuidv7, yol; gövde boş"
+   },
+   "response": {
+    "ders": "DersOzeti { id, donemId, birimId: uuid|null, bolumId: uuid|null, kod, ad, teoriP: int, uygulamaP: int, yoklamaSuresiDk: int|null, qrIleYoklama: bool, denemeDersi: bool, takipBaslangici: tarih|null, durum: etkin|arsiv (x-extensible-enum), arsivNedeni: hoca|kilit|null, duzenlemeNo: int, subeler: [{ id, etiket, durum: etkin|pasif }], kilit: { sonGun: tarih|null, kilitAni: an|null, kilitli: bool } }",
+    "iptalEdilenOturum": "int (gelecekteki planlı oturumlar iptal, neden arsiv)"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI",
+    "DERSLER_DERS_BASLAMIS",
+    "DERSLER_DENEME_DERSI_DEGISTIRILEMEZ"
+   ],
+   "idempotency": "Arşivdeki derse 200 ve değişiklik yok.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/{dersId}/subeler",
+   "client": "panel",
+   "auth": "Oturum (panel çerezi ya da Bearer), rol hoca; ders sahibi olmalı (dersYetkisi = sahip). Sahip değilse 404 DERSLER_DERS_BULUNAMADI: başka hocanın dersinin varlığı sızmaz (D13-B02, plan.html#baslangic yetki senaryosu).",
+   "request": {
+    "id": "uuidv7, tekrar anahtarı",
+    "etiket": "metin 1-20, derste tekil",
+    "programaKat": "bool, varsayılan true: şube bütün program saatlerine ve başlamamış normal oturumlarına eklenir"
+   },
+   "response": {
+    "sube": "{ id, etiket, durum }",
+    "oturumEtkisi": "OturumEtkisi { eklenen: int, guncellenen: int, iptal: int, geriAlinan: int }"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI",
+    "DERSLER_SUBE_ETIKETI_KULLANIMDA",
+    "DERSLER_SUBE_SINIRI",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_DERS_ARSIVDE",
+    "DERSLER_DENEME_DERSI_DEGISTIRILEMEZ",
+    "DERSLER_KIMLIK_CAKISMASI"
+   ],
+   "idempotency": "Gövdedeki id (istemcinin ürettiği UUIDv7) tekrar anahtarıdır: aynı id ve aynı içerik 200 ile var olan şube döner, aynı id farklı içerik 409 DERSLER_KIMLIK_CAKISMASI (D13-B12 deseni). Hedefli ON CONFLICT (id) DO NOTHING.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/dersler/{dersId}/subeler/{subeId}",
+   "client": "panel",
+   "auth": "Oturum (panel çerezi ya da Bearer), rol hoca; ders sahibi olmalı (dersYetkisi = sahip). Sahip değilse 404 DERSLER_DERS_BULUNAMADI: başka hocanın dersinin varlığı sızmaz (D13-B02, plan.html#baslangic yetki senaryosu).",
+   "request": {
+    "etiket": "metin 1-20, isteğe bağlı",
+    "durum": "etkin|pasif, isteğe bağlı; pasif yalnız şubede etkin liste satırı yokken (liste kaynağı sorulur) ve dersin başka etkin şubesi varken; pasif şube başlamamış oturumlardan ve program saatlerinden çıkar, şubesiz kalan oturum iptal (program)"
+   },
+   "response": {
+    "sube": "{ id, etiket, durum }",
+    "oturumEtkisi": "OturumEtkisi { eklenen: int, guncellenen: int, iptal: int, geriAlinan: int }"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI",
+    "DERSLER_SUBE_BULUNAMADI",
+    "DERSLER_SUBE_ETIKETI_KULLANIMDA",
+    "DERSLER_SUBEDE_OGRENCI_VAR",
+    "DERSLER_SON_ETKIN_SUBE",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_DERS_ARSIVDE",
+    "DERSLER_DENEME_DERSI_DEGISTIRILEMEZ"
+   ],
+   "idempotency": "Aynı değerler 200 ve değişiklik yok.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "GET",
+   "path": "/v1/dersler/{dersId}/program",
+   "client": "panel",
+   "auth": "Oturum (panel çerezi ya da Bearer), rol hoca; ders sahibi olmalı (dersYetkisi = sahip). Sahip değilse 404 DERSLER_DERS_BULUNAMADI: başka hocanın dersinin varlığı sızmaz (D13-B02, plan.html#baslangic yetki senaryosu).",
+   "request": {
+    "dersId": "uuidv7, yol"
+   },
+   "response": {
+    "duzenlemeNo": "int",
+    "programSaatleri": "ProgramSaati { id, gun: 1-7, baslangicSaati: HH:MM, bitisSaati: HH:MM, teoriSaat: int, uygulamaSaat: int, derslik: metin|null, gecerlilikBaslangic: tarih|null, gecerlilikBitis: tarih|null, subeIdleri: uuid[] }[] (silinmemiş, gün ve saat sırasıyla)"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI"
+   ],
+   "idempotency": "Yan etkisiz okuma; aynı an ve aynı veriyle aynı cevap.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/{dersId}/program/onizleme",
+   "client": "panel",
+   "auth": "Oturum (panel çerezi ya da Bearer), rol hoca; ders sahibi olmalı (dersYetkisi = sahip). Sahip değilse 404 DERSLER_DERS_BULUNAMADI: başka hocanın dersinin varlığı sızmaz (D13-B02, plan.html#baslangic yetki senaryosu).",
+   "request": {
+    "programSaatleri": "ProgramSaati girdisi dizisi, 0 ile 20 öğe: { id: uuidv7 (var olan saat kendi kimliğiyle, yeni saat için istemci üretir: tekrarlanan istek aynı gövde olur), gun: 1-7, baslangicSaati: HH:MM, bitisSaati: HH:MM (başlangıçtan büyük, en geç 23:59), teoriSaat: 0-12, uygulamaSaat: 0-12 (toplam 1-12), derslik: metin 1-40 ya da null, gecerlilikBaslangic?: tarih, gecerlilikBitis?: tarih (dönem içinde, başlangıç <= bitiş), subeIdleri: uuidv7[] 1-20, dersin etkin şubeleri }. Aynı gün kesişen iki saatin şube kümeleri ayrık olmalı."
+   },
+   "response": {
+    "eklenecek": "int",
+    "guncellenecek": "[{ oturumId, tarih, alanlar: metin[] }]",
+    "iptalEdilecek": "[{ oturumId, tarih, baslangicSaati, neden }]",
+    "geriAlinacak": "[{ oturumId, tarih }]",
+    "donemToplami": "{ planlanan: int, teoriSaat: int, uygulamaSaat: int } (yazılırsa oluşacak planlı oturumlar)",
+    "uyarilar": "metin[] (x-extensible-enum): BASLAMIS_OTURUMLAR_DEGISMEZ, TATIL_GUNLERI_ATLANDI, SINAV_HAFTASI_ATLANDI"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI",
+    "DERSLER_TAKVIM_YOK",
+    "DERSLER_PROGRAM_GECERSIZ",
+    "DERSLER_PROGRAM_CAKISIYOR",
+    "DERSLER_PROGRAM_COK_BUYUK",
+    "DERSLER_SUBE_BULUNAMADI",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_DERS_ARSIVDE",
+    "DERSLER_DENEME_DERSI_DEGISTIRILEMEZ"
+   ],
+   "idempotency": "Hiçbir şey yazmaz; PUT ile aynı saf plan fonksiyonunu aynı anla çalıştırır, aynı girdi aynı önizleme.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/dersler/{dersId}/program",
+   "client": "panel",
+   "auth": "Oturum (panel çerezi ya da Bearer), rol hoca; ders sahibi olmalı (dersYetkisi = sahip). Sahip değilse 404 DERSLER_DERS_BULUNAMADI: başka hocanın dersinin varlığı sızmaz (D13-B02, plan.html#baslangic yetki senaryosu).",
+   "request": {
+    "beklenenDuzenlemeNo": "tam sayı; dersin duzenlemeNo değeri",
+    "programSaatleri": "ProgramSaati girdisi dizisi, 0 ile 20 öğe: { id: uuidv7 (var olan saat kendi kimliğiyle, yeni saat için istemci üretir: tekrarlanan istek aynı gövde olur), gun: 1-7, baslangicSaati: HH:MM, bitisSaati: HH:MM (başlangıçtan büyük, en geç 23:59), teoriSaat: 0-12, uygulamaSaat: 0-12 (toplam 1-12), derslik: metin 1-40 ya da null, gecerlilikBaslangic?: tarih, gecerlilikBitis?: tarih (dönem içinde, başlangıç <= bitiş), subeIdleri: uuidv7[] 1-20, dersin etkin şubeleri }. Aynı gün kesişen iki saatin şube kümeleri ayrık olmalı."
+   },
+   "response": {
+    "duzenlemeNo": "int",
+    "programSaatleri": "ProgramSaati { id, gun: 1-7, baslangicSaati: HH:MM, bitisSaati: HH:MM, teoriSaat: int, uygulamaSaat: int, derslik: metin|null, gecerlilikBaslangic: tarih|null, gecerlilikBitis: tarih|null, subeIdleri: uuid[] }[]",
+    "oturumEtkisi": "OturumEtkisi { eklenen: int, guncellenen: int, iptal: int, geriAlinan: int }"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI",
+    "DERSLER_SURUM_UYUSMUYOR",
+    "DERSLER_TAKVIM_YOK",
+    "DERSLER_PROGRAM_GECERSIZ",
+    "DERSLER_PROGRAM_CAKISIYOR",
+    "DERSLER_PROGRAM_COK_BUYUK",
+    "DERSLER_SUBE_BULUNAMADI",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_DERS_ARSIVDE",
+    "DERSLER_DENEME_DERSI_DEGISTIRILEMEZ"
+   ],
+   "idempotency": "Gövde kayıtlı programla aynıysa (id ve alanlar) 200, numara artmaz, oturum ve sürüm değişmez. Farklıysa beklenen numara tutmalı, tutmazsa 409 ve cevapta güncel program. Yazım tek işlemde: program saatleri, oturum üretimi, dinleyiciler (D04), denetim, D08 işi, sürüm.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "GET",
+   "path": "/v1/dersler/{dersId}/oturumlar",
+   "client": "panel",
+   "auth": "Oturum (panel çerezi ya da Bearer), rol hoca; ders sahibi olmalı (dersYetkisi = sahip). Sahip değilse 404 DERSLER_DERS_BULUNAMADI: başka hocanın dersinin varlığı sızmaz (D13-B02, plan.html#baslangic yetki senaryosu).",
+   "request": {
+    "baslangic": "tarih, sorgu, isteğe bağlı (varsayılan dönemin ders başlangıcı)",
+    "bitis": "tarih, sorgu, isteğe bağlı (varsayılan son gün); aralık en çok 200 gün",
+    "durum": "planlandi|iptal, isteğe bağlı",
+    "subeId": "uuidv7, isteğe bağlı"
+   },
+   "response": {
+    "oturumlar": "OturumPanel { id, dersId, tur: normal|telafi|deneme, tarih, baslangicSaati, bitisSaati, baslangicAni: an, bitisAni: an, teoriSaat, uygulamaSaat, derslik: metin|null, yoklamaSuresiDk: int|null, qrIleYoklama: bool, durum: planlandi|iptal, iptalNedeni: metin|null, kisaKod: 10 rakamlık metin, subeIdleri: uuid[], elleDuzenlendi: bool, telafiEdilenOturumId: uuid|null, yapildi: { durum: cevapsiz|yapildi|yapilmadi|celiskili, kaynak: kafa_sayisi|hoca_cevabi|null, kafaSayisi: int|null } } (durum alanları x-extensible-enum)[]; başlangıç anı sırasıyla, en çok 1000"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI",
+    "DERSLER_ARALIK_COK_GENIS"
+   ],
+   "idempotency": "Yan etkisiz okuma; aynı an ve aynı veriyle aynı cevap.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/{dersId}/telafi",
+   "client": "panel",
+   "auth": "Oturum (panel çerezi ya da Bearer), rol hoca; ders sahibi olmalı (dersYetkisi = sahip). Sahip değilse 404 DERSLER_DERS_BULUNAMADI: başka hocanın dersinin varlığı sızmaz (D13-B02, plan.html#baslangic yetki senaryosu).",
+   "request": {
+    "id": "uuidv7, tekrar anahtarı (oturum kimliği olur)",
+    "tarih": "tarih; dönemin ders başlangıcı ile birimin son günü arasında",
+    "baslangicSaati": "HH:MM",
+    "bitisSaati": "HH:MM (başlangıçtan büyük, en geç 23:59)",
+    "teoriSaat": "0-12",
+    "uygulamaSaat": "0-12 (toplam 1-12)",
+    "derslik": "metin 1-40 ya da null",
+    "subeIdleri": "uuidv7[] 1-20, isteğe bağlı; varsayılan dersin bütün etkin şubeleri",
+    "yoklamaSuresiDk": "tam sayı 1-240 ya da null, isteğe bağlı; verilmezse ders ayarı",
+    "telafiEdilenOturumId": "uuidv7, isteğe bağlı; aynı dersin oturumu (telafi borcu bağı)",
+    "eskisiniIptalEt": "bool, varsayılan false; true ise telafiEdilenOturumId zorunlu ve o oturum başlamamış olmalı: aynı işlemde iptal (tasindi) olur (taşıma); çakışma denetiminde iptal edilecek eski oturum sayılmaz"
+   },
+   "response": {
+    "oturum": "OturumPanel { id, dersId, tur: normal|telafi|deneme, tarih, baslangicSaati, bitisSaati, baslangicAni: an, bitisAni: an, teoriSaat, uygulamaSaat, derslik: metin|null, yoklamaSuresiDk: int|null, qrIleYoklama: bool, durum: planlandi|iptal, iptalNedeni: metin|null, kisaKod: 10 rakamlık metin, subeIdleri: uuid[], elleDuzenlendi: bool, telafiEdilenOturumId: uuid|null, yapildi: { durum: cevapsiz|yapildi|yapilmadi|celiskili, kaynak: kafa_sayisi|hoca_cevabi|null, kafaSayisi: int|null } } (durum alanları x-extensible-enum)",
+    "iptalEdilen": "OturumPanel|null (taşımada eski oturum)",
+    "uyarilar": "metin[] (x-extensible-enum): AYNI_GUN (yalnız programı internetteyken indiren telefonlarda açılır), GECMIS (hiçbir telefon bilemez, kaydı olmayanları listeden işaretleyin), TATIL_GUNU, SINAV_HAFTASI"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_DERS_ARSIVDE",
+    "DERSLER_TARIH_DONEM_DISI",
+    "DERSLER_TELAFI_SINIRI",
+    "DERSLER_OTURUM_BULUNAMADI",
+    "DERSLER_OTURUM_BASLAMIS",
+    "DERSLER_OTURUM_CAKISIYOR",
+    "DERSLER_SUBE_BULUNAMADI",
+    "DERSLER_DENEME_DERSI_DEGISTIRILEMEZ",
+    "DERSLER_KIMLIK_CAKISMASI"
+   ],
+   "idempotency": "Gövdedeki id (istemcinin ürettiği UUIDv7) tekrar anahtarıdır: aynı id ve aynı içerik 200 ile var olan telafi oturumu döner, aynı id farklı içerik 409 DERSLER_KIMLIK_CAKISMASI (D13-B12 deseni). Hedefli ON CONFLICT (id) DO NOTHING. eskisiniIptalEt true iken telafiEdilenOturumId yoksa istek şema düzeyinde 400 alır (Zod refine).",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "GET",
+   "path": "/v1/dersler/{dersId}/cakismalar",
+   "client": "panel",
+   "auth": "Oturum (panel çerezi ya da Bearer), rol hoca; ders sahibi olmalı (dersYetkisi = sahip). Sahip değilse 404 DERSLER_DERS_BULUNAMADI: başka hocanın dersinin varlığı sızmaz (D13-B02, plan.html#baslangic yetki senaryosu).",
+   "request": {
+    "baslangic": "tarih, sorgu, isteğe bağlı (varsayılan bugün, İstanbul)",
+    "bitis": "tarih, sorgu, isteğe bağlı (varsayılan dönemin ders bitişi); aralık en çok 200 gün"
+   },
+   "response": {
+    "cakismalar": "[{ satirId: uuid (bu dersin liste satırı; numara ve isim dönmez, panel D03 listesinden eşler), subeId, oturumId, tarih, baslangicSaati, bitisSaati, digerDers: { kod, ad }, digerOturum: { tarih, baslangicSaati, bitisSaati } }]; en çok 2000 öğe",
+    "ogrenciSayisi": "int (çakışması olan farklı öğrenci)"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI",
+    "DERSLER_ARALIK_COK_GENIS",
+    "DERSLER_SONUC_COK_BUYUK"
+   ],
+   "idempotency": "Yan etkisiz okuma; aynı an ve aynı veriyle aynı cevap.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/dersler/oturumlar/{oturumId}",
+   "client": "panel",
+   "auth": "Oturum, rol hoca; oturumun dersinin sahibi olmalı. Değilse 404 DERSLER_OTURUM_BULUNAMADI.",
+   "request": {
+    "baslangicSaati": "HH:MM, isteğe bağlı (aynı gün)",
+    "bitisSaati": "HH:MM, isteğe bağlı",
+    "derslik": "metin 1-40 ya da null, isteğe bağlı",
+    "teoriSaat": "0-12, isteğe bağlı",
+    "uygulamaSaat": "0-12, isteğe bağlı (toplam 1-12)",
+    "iptaliGeriAl": "true, isteğe bağlı; yalnız hoca nedeniyle iptal edilmiş, başlamamış oturumda; öteki alanlarla birlikte gelemez"
+   },
+   "response": {
+    "oturum": "OturumPanel { id, dersId, tur: normal|telafi|deneme, tarih, baslangicSaati, bitisSaati, baslangicAni: an, bitisAni: an, teoriSaat, uygulamaSaat, derslik: metin|null, yoklamaSuresiDk: int|null, qrIleYoklama: bool, durum: planlandi|iptal, iptalNedeni: metin|null, kisaKod: 10 rakamlık metin, subeIdleri: uuid[], elleDuzenlendi: bool, telafiEdilenOturumId: uuid|null, yapildi: { durum: cevapsiz|yapildi|yapilmadi|celiskili, kaynak: kafa_sayisi|hoca_cevabi|null, kafaSayisi: int|null } } (durum alanları x-extensible-enum)"
+   },
+   "errors": [
+    "DERSLER_OTURUM_BULUNAMADI",
+    "DERSLER_OTURUM_BASLAMIS",
+    "DERSLER_OTURUM_IPTAL",
+    "DERSLER_IPTAL_GERI_ALINAMAZ",
+    "DERSLER_OTURUM_CAKISIYOR",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_DERS_ARSIVDE",
+    "DERSLER_DENEME_DERSI_DEGISTIRILEMEZ"
+   ],
+   "idempotency": "İstenen değerler zaten kayıtlıysa 200 ve değişiklik yok. Değişiklik: önceki değerler oturum_degisiklikleri satırına, oturum elle_duzenlendi olur, D04 dinleyicisi pencereyi yeniden hesaplar.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/oturumlar/{oturumId}/iptal",
+   "client": "panel",
+   "auth": "Oturum, rol hoca; oturumun dersinin sahibi olmalı. Değilse 404 DERSLER_OTURUM_BULUNAMADI.",
+   "request": {
+    "oturumId": "uuidv7, yol; gövde boş (neden her zaman hoca)"
+   },
+   "response": {
+    "oturum": "OturumPanel { id, dersId, tur: normal|telafi|deneme, tarih, baslangicSaati, bitisSaati, baslangicAni: an, bitisAni: an, teoriSaat, uygulamaSaat, derslik: metin|null, yoklamaSuresiDk: int|null, qrIleYoklama: bool, durum: planlandi|iptal, iptalNedeni: metin|null, kisaKod: 10 rakamlık metin, subeIdleri: uuid[], elleDuzenlendi: bool, telafiEdilenOturumId: uuid|null, yapildi: { durum: cevapsiz|yapildi|yapilmadi|celiskili, kaynak: kafa_sayisi|hoca_cevabi|null, kafaSayisi: int|null } } (durum alanları x-extensible-enum)"
+   },
+   "errors": [
+    "DERSLER_OTURUM_BULUNAMADI",
+    "DERSLER_OTURUM_BASLAMIS",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_DERS_ARSIVDE",
+    "DERSLER_DENEME_DERSI_DEGISTIRILEMEZ"
+   ],
+   "idempotency": "Zaten iptal oturuma 200 ve değişiklik yok. Oturum silinmez; kimliği geçerli kalır, eski programla gelen kaydın kararı D07'nindir.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "GET",
+   "path": "/v1/dersler/oturumlar/onaysiz",
+   "client": "panel",
+   "auth": "Oturum, rol hoca; yalnız sahibi olduğu derslerin oturumları. Hoca telefonu da internetliyken aynı ucu çağırır.",
+   "request": {
+    "dersId": "uuidv7, sorgu, isteğe bağlı"
+   },
+   "response": {
+    "oturumlar": "[{ oturumId, dersId, dersKodu, dersAdi, tarih, baslangicSaati, bitisSaati, teoriSaat, uygulamaSaat, durum: planlandi|iptal, celiskili: bool, kafaSayisi: int|null }]; tarih sırasıyla. Kapsam: bitmiş (bitis_ani <= şimdi), planlı ve cevapsız oturumlar ile kafa sayısı çelişkisi olan (iptal dahil) oturumlar; deneme dersi hariç",
+    "toplam": "int"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI"
+   ],
+   "idempotency": "Yan etkisiz okuma; aynı an ve aynı veriyle aynı cevap.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/oturumlar/{oturumId}/yapildi-mi",
+   "client": "panel",
+   "auth": "Oturum, rol hoca; oturumun dersinin sahibi olmalı. Değilse 404 DERSLER_OTURUM_BULUNAMADI. Hoca telefonu da internetliyken çağırır.",
+   "request": {
+    "yapildi": "bool"
+   },
+   "response": {
+    "oturum": "{ oturumId, durum: planlandi|iptal, yapildi: { durum, kaynak, kafaSayisi } }"
+   },
+   "errors": [
+    "DERSLER_OTURUM_BULUNAMADI",
+    "DERSLER_OTURUM_BASLAMADI",
+    "DERSLER_OTURUM_IPTAL",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_DENEME_DERSI_DEGISTIRILEMEZ"
+   ],
+   "idempotency": "Aynı cevap zaten kayıtlıysa ve çelişki yoksa 200, denetim kaydı ikinci kez yazılmaz. Kilitli dönemde yalnız cevapsız ya da çelişkili oturuma yazılır. Değişen cevap aynı işlemde D08.devamHesaplaIsiKoy(tx, dersId, null, program) koyar.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/oturumlar/yapildi-mi",
+   "client": "panel",
+   "auth": "Oturum, rol hoca; her öğe ayrı denetlenir (sahip olmadığı oturum bulunamadi sonucu alır).",
+   "request": {
+    "oturumIdleri": "uuidv7[] 1-200, tekil",
+    "yapildi": "bool (hepsine tek cevap)"
+   },
+   "response": {
+    "sonuclar": "[{ oturumId, sonuc: yazildi|degismedi|bulunamadi|baslamadi|iptal|kilitli (x-extensible-enum) }]; istekteki sırayla"
+   },
+   "errors": [],
+   "idempotency": "Öğe düzeyinde: aynı cevap degismedi döner, ikinci denetim kaydı yazılmaz. Bütün öğeler tek işlemde; gövde bozuksa yalnız genel 400. Ders başına tek D08 işi konur.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "GET",
+   "path": "/v1/dersler/birimler",
+   "client": "telefon",
+   "auth": "Girişsiz (hoca başvuru formu, uygulamada ve panelde; D01-B50).",
+   "request": {},
+   "response": {
+    "birimler": "[{ id, ad, tur (x-extensible-enum), bolumler: [{ id, ad }] }]; yalnız etkin birim ve bölümler, ad sırasıyla (COLLATE tr-TR-x-icu)"
+   },
+   "errors": [],
+   "idempotency": "Yan etkisiz okuma; aynı an ve aynı veriyle aynı cevap.",
+   "rate_limit": "Girişsiz sınıf (D13 hizSinifi): IP başına dakikada 3000 istek; cevap Cache-Control: public, max-age=300."
+  },
+  {
+   "method": "GET",
+   "path": "/v1/dersler/yonetim/birimler",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu).",
+   "request": {},
+   "response": {
+    "birimler": "[{ id, ad, tur, etkin, bolumler: [{ id, ad, etkin }] }]; pasifler dahil"
+   },
+   "errors": [],
+   "idempotency": "Yan etkisiz okuma; aynı an ve aynı veriyle aynı cevap.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/yonetim/birimler",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu).",
+   "request": {
+    "id": "uuidv7, tekrar anahtarı",
+    "ad": "metin 1-120, tekil",
+    "tur": "fakulte|enstitu|yuksekokul|meslek_yuksekokulu|konservatuvar"
+   },
+   "response": {
+    "birim": "{ id, ad, tur, etkin, bolumler: [] }"
+   },
+   "errors": [
+    "DERSLER_BIRIM_ADI_KULLANIMDA",
+    "DERSLER_KIMLIK_CAKISMASI"
+   ],
+   "idempotency": "Gövdedeki id (istemcinin ürettiği UUIDv7) tekrar anahtarıdır: aynı id ve aynı içerik 200 ile var olan birim döner, aynı id farklı içerik 409 DERSLER_KIMLIK_CAKISMASI (D13-B12 deseni). Hedefli ON CONFLICT (id) DO NOTHING.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/dersler/yonetim/birimler/{birimId}",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu).",
+   "request": {
+    "ad": "metin 1-120, isteğe bağlı",
+    "tur": "isteğe bağlı",
+    "etkin": "bool, isteğe bağlı (pasif birim yeni ders ve başvuruda görünmez, var olan dersler sürer)",
+    "bolumler": "isteğe bağlı dizi 1-200: { id: uuidv7 (birimin bölümü), ad?: metin 1-120, etkin?: bool } (bölüm adı ve etkinliği)"
+   },
+   "response": {
+    "birim": "{ id, ad, tur, etkin, bolumler: [{ id, ad, etkin }] }"
+   },
+   "errors": [
+    "DERSLER_BIRIM_BULUNAMADI",
+    "DERSLER_BIRIM_ADI_KULLANIMDA",
+    "DERSLER_BOLUM_BULUNAMADI",
+    "DERSLER_BOLUM_ADI_KULLANIMDA"
+   ],
+   "idempotency": "Aynı değerler 200 ve değişiklik yok.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/yonetim/birimler/{birimId}/bolumler",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu).",
+   "request": {
+    "id": "uuidv7, tekrar anahtarı",
+    "ad": "metin 1-120, birimde tekil"
+   },
+   "response": {
+    "bolum": "{ id, birimId, ad, etkin }"
+   },
+   "errors": [
+    "DERSLER_BIRIM_BULUNAMADI",
+    "DERSLER_BOLUM_ADI_KULLANIMDA",
+    "DERSLER_KIMLIK_CAKISMASI"
+   ],
+   "idempotency": "Gövdedeki id (istemcinin ürettiği UUIDv7) tekrar anahtarıdır: aynı id ve aynı içerik 200 ile var olan bölüm döner, aynı id farklı içerik 409 DERSLER_KIMLIK_CAKISMASI (D13-B12 deseni). Hedefli ON CONFLICT (id) DO NOTHING.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "GET",
+   "path": "/v1/dersler/yonetim/donemler",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu).",
+   "request": {},
+   "response": {
+    "donemler": "[{ id, akademikYil, yariyil (x-extensible-enum), takvimler: [{ id, ad, dersBaslangic, dersBitis, ekleBirakBitis, devamsizlikSonGun, surumNo, tatiller: [{ id, ad, baslangicTarihi, bitisTarihi, yarimGunBaslangic }], sinavHaftalari: [{ id, tur, baslangicTarihi, bitisTarihi, dersYapilir }] }], birimler: [{ birimId, takvimId, kilitAni, kilitli }] }]; yeniden eskiye, inceleme dönemi hariç"
+   },
+   "errors": [],
+   "idempotency": "Yan etkisiz okuma; aynı an ve aynı veriyle aynı cevap.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/yonetim/donemler",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu).",
+   "request": {
+    "id": "uuidv7, tekrar anahtarı",
+    "akademikYil": "YYYY-YYYY, ikinci yıl birincinin bir fazlası",
+    "yariyil": "guz|bahar|yaz"
+   },
+   "response": {
+    "donem": "{ id, akademikYil, yariyil }"
+   },
+   "errors": [
+    "DERSLER_DONEM_VAR",
+    "DERSLER_KIMLIK_CAKISMASI"
+   ],
+   "idempotency": "Gövdedeki id (istemcinin ürettiği UUIDv7) tekrar anahtarıdır: aynı id ve aynı içerik 200 ile var olan dönem döner, aynı id farklı içerik 409 DERSLER_KIMLIK_CAKISMASI (D13-B12 deseni). Hedefli ON CONFLICT (id) DO NOTHING.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/yonetim/takvimler",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu).",
+   "request": {
+    "id": "uuidv7, tekrar anahtarı",
+    "donemId": "uuidv7; inceleme dönemi olamaz",
+    "ad": "metin 1-120, dönemde tekil",
+    "dersBaslangic": "tarih",
+    "dersBitis": "tarih (> dersBaslangic)",
+    "ekleBirakBitis": "tarih (<= dersBitis)",
+    "devamsizlikSonGun": "tarih (>= dersBitis)",
+    "tatiller": "dizi 0-60: { id: uuidv7, ad: metin 1-120, baslangicTarihi, bitisTarihi (>= başlangıç), yarimGunBaslangic: HH:MM|null }",
+    "sinavHaftalari": "dizi 0-10: { id: uuidv7, tur: ara|final|butunleme, baslangicTarihi, bitisTarihi, dersYapilir: bool (varsayılan false, D02-A01) }"
+   },
+   "response": {
+    "takvim": "{ id, donemId, ad, dersBaslangic, dersBitis, ekleBirakBitis, devamsizlikSonGun, surumNo, tatiller, sinavHaftalari }"
+   },
+   "errors": [
+    "DERSLER_DONEM_BULUNAMADI",
+    "DERSLER_TAKVIM_ADI_KULLANIMDA",
+    "DERSLER_TAKVIM_TARIHLERI_GECERSIZ",
+    "DERSLER_KIMLIK_CAKISMASI"
+   ],
+   "idempotency": "Gövdedeki id (istemcinin ürettiği UUIDv7) tekrar anahtarıdır: aynı id ve aynı içerik 200 ile var olan takvim döner, aynı id farklı içerik 409 DERSLER_KIMLIK_CAKISMASI (D13-B12 deseni). Hedefli ON CONFLICT (id) DO NOTHING. Takvim birime bağlanana kadar hiçbir oturumu etkilemez.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/dersler/yonetim/takvimler/{takvimId}",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu).",
+   "request": {
+    "beklenenSurumNo": "tam sayı; takvimin surumNo değeri",
+    "ad": "metin 1-120",
+    "dersBaslangic": "tarih",
+    "dersBitis": "tarih",
+    "ekleBirakBitis": "tarih",
+    "devamsizlikSonGun": "tarih",
+    "tatiller": "dizi 0-60: { id: uuidv7 (var olan kendi kimliğiyle, yeni tatil için istemci üretir), ad, baslangicTarihi, bitisTarihi, yarimGunBaslangic: HH:MM|null }; listede olmayan var olan tatil silindi olur",
+    "sinavHaftalari": "dizi 0-10: { id: uuidv7 (yeni için istemci üretir), tur, baslangicTarihi, bitisTarihi, dersYapilir: bool }",
+    "hemenKilitle": "bool, varsayılan false; yeni son gün bağlı bir birimi şimdi kilitleyecekse true olmalı",
+    "sonGunGerekcesi": "birim_karari|yanlis_giris, isteğe bağlı; kilit anı geçmiş bir birimin son günü ileri alınırken zorunlu (D02-A05)"
+   },
+   "response": {
+    "takvim": "POST cevabıyla aynı",
+    "etkilenenBirimDonemi": "int",
+    "yenidenUretim": "bool (takvim_oturumlarini_yenile işi aynı işlemde kuyruğa kondu mu)"
+   },
+   "errors": [
+    "DERSLER_TAKVIM_BULUNAMADI",
+    "DERSLER_SURUM_UYUSMUYOR",
+    "DERSLER_TAKVIM_TARIHLERI_GECERSIZ",
+    "DERSLER_KILIT_HEMEN_OLUR",
+    "DERSLER_SON_GUN_GERI_ALINAMAZ",
+    "DERSLER_GEREKCE_GEREKLI",
+    "DERSLER_TAKVIM_ADI_KULLANIMDA"
+   ],
+   "idempotency": "Gövde kayıtlı takvimle aynıysa 200, numara artmaz, iş konmaz. Değişiklikte aynı işlemde: takvim satırları, bağlı birim_donemleri.kilit_ani ve sürümü, denetim kaydı, D14.isGonder(tx, takvim_oturumlarini_yenile, { takvimId }).",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/dersler/yonetim/birimler/{birimId}/donemler/{donemId}",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu).",
+   "request": {
+    "takvimId": "uuidv7; aynı dönemin takvimi",
+    "hemenKilitle": "bool, varsayılan false; bağlanan takvimin son günü geçmişse true olmalı"
+   },
+   "response": {
+    "birimDonemi": "{ birimId, donemId, takvimId, sonGun, kilitAni, kilitli }",
+    "yenidenUretim": "bool"
+   },
+   "errors": [
+    "DERSLER_BIRIM_BULUNAMADI",
+    "DERSLER_DONEM_BULUNAMADI",
+    "DERSLER_TAKVIM_BULUNAMADI",
+    "DERSLER_TAKVIM_DONEMI_UYUSMUYOR",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_KILIT_HEMEN_OLUR"
+   ],
+   "idempotency": "Aynı takvime bağlıysa 200 ve değişiklik yok. Bağ değişince aynı işlemde kilit anı yeniden hesaplanır ve takvim_oturumlarini_yenile işi ({ birimId, donemId }) konur. Kilitli birim ve dönemin bağı değişmez.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "GET",
+   "path": "/v1/dersler/yonetim/kilitler",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu).",
+   "request": {
+    "donemId": "uuidv7, sorgu, isteğe bağlı"
+   },
+   "response": {
+    "donemArasi": "bool (donemArasiMi ile aynı hesap)",
+    "birimDonemleri": "[{ birimId, birimAdi, donemId, akademikYil, yariyil, takvimId, sonGun, kilitAni, kilitli, kilitUygulandiAni: an|null, cevapsizOturum: int }]"
+   },
+   "errors": [],
+   "idempotency": "Yan etkisiz okuma; aynı an ve aynı veriyle aynı cevap.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "GET",
+   "path": "/v1/dersler/yonetim/dersler",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu). Öğrenci listesi, yoklama ve kafa sayısı dönmez (D02-A08).",
+   "request": {
+    "donemId": "uuidv7, sorgu, isteğe bağlı",
+    "birimId": "uuidv7, sorgu, isteğe bağlı",
+    "imlec": "opak metin, isteğe bağlı (keyset: kod ve id)",
+    "adet": "1-500, varsayılan 100"
+   },
+   "response": {
+    "ogeler": "[{ id, kod, ad, donemId, birimId, birimAdi, sahip: { kisiId, adSoyad, hesapDurumu } (D01.kisiGetir), teoriP, uygulamaP, yoklamaSuresiDk, durum, arsivNedeni }]; deneme dersi hariç",
+    "sonrakiImlec": "metin|null"
+   },
+   "errors": [],
+   "idempotency": "Yan etkisiz okuma; aynı an ve aynı veriyle aynı cevap.",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/dersler/yonetim/dersler/{dersId}/devir",
+   "client": "panel",
+   "auth": "Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu).",
+   "request": {
+    "hedefKisiId": "uuidv7; D01.kisiGetir ile etkin personel ve D01.personelRolleri ile hoca rolü taşımalı",
+    "gerekce": "hoca_ayrildi|hesap_silindi|gorev_degisikligi"
+   },
+   "response": {
+    "ders": "DersOzeti { id, donemId, birimId: uuid|null, bolumId: uuid|null, kod, ad, teoriP: int, uygulamaP: int, yoklamaSuresiDk: int|null, qrIleYoklama: bool, denemeDersi: bool, takipBaslangici: tarih|null, durum: etkin|arsiv (x-extensible-enum), arsivNedeni: hoca|kilit|null, duzenlemeNo: int, subeler: [{ id, etiket, durum: etkin|pasif }], kilit: { sonGun: tarih|null, kilitAni: an|null, kilitli: bool } }"
+   },
+   "errors": [
+    "DERSLER_DERS_BULUNAMADI",
+    "DERSLER_DEVIR_HEDEFI_GECERSIZ",
+    "DERSLER_KOD_KULLANIMDA",
+    "DERSLER_DONEM_KILITLI",
+    "DERSLER_DERS_ARSIVDE",
+    "DERSLER_DENEME_DERSI_DEGISTIRILEMEZ"
+   ],
+   "idempotency": "Sahip zaten hedefse 200 ve değişiklik yok. Devirde aynı işlemde: sahip değişir, eski sahip onceki_hoca_kisi_idleri dizisine eklenir, sahip_atama_surumu ve ders sürümü yeni sürüm olur, denetim kaydı yazılır. Kilitli ya da arşivdeki ders yalnız sahibi silinmiş ya da pasif ve cevapsız oturumu kalmışsa devredilir; yeni hoca orada yalnız cevapsız oturumları cevaplar. Kural sahibin onayını bekliyor (D02-A07).",
+   "rate_limit": "Girişli sınıf (D13 hizSinifi): oturum başına dakikada 120 istek."
+  }
+ ],
+ "jobs": [
+  {
+   "name": "takvim_oturumlarini_yenile",
+   "schedule": "Olay tetiklemeli: takvim PUT'u { takvimId } ve birim ve dönem bağı PUT'u { birimId, donemId } verisiyle aynı veritabanı işleminde D14.isGonder ile kuyruğa koyar. Ayrıca her gece 04:50 Europe/Istanbul { gece: true } verisiyle (missed: once). Politika stately (bir bekleyen, bir çalışan), tekillik anahtarı takvim ya da birim ve dönem kimliği.",
+   "idempotency": "Fark temelli: her ders için istenen oturum kümesi takvimden ve programdan yeniden hesaplanır, yalnız fark yazılır; ikinci çalışma boş fark bulur, sürüm, denetim ve D08 işi yazmaz. Her ders kendi işleminde ve ders satırı FOR UPDATE ile kilitli işlenir; iş yarıda kalırsa yeniden denemede kalan dersler aynı sonucu alır.",
+   "does": "Takvime (ya da birim ve döneme) bağlı birimlerin etkin ve deneme olmayan derslerini kod sırasıyla gezer; her derste başlamamış normal oturumları saf üretim planıyla yeniden hesaplar (yeni oluşum, tatil, sınav haftası ve takvim iptali, geri alma), üretim dinleyicilerini (D04) çağırır, D08.devamHesaplaIsiKoy(tx, dersId, null, 'takvim') koyar, ders başına tek denetim olayı (dersler.oturumlar_yenilendi, sayılarla) yazar ve sürüm alır. Gece çalışmasında ayrıca başlamamış planlı oturumlarda baslangic_ani ve bitis_ani değerini (tarih + yerel saat) AT TIME ZONE 'Europe/Istanbul' ile yeniden türetip farklı olanları düzeltir (neden saat_dilimi, dinleyiciler çağrılır) ve kilit anı geçmemiş birim_donemleri.kilit_ani değerini yeniden türetir; düzeltilen satır sayısını dersler.yenileme.fark log satırına yazar. İş verisi yalnız iç kimlik taşır."
+  },
+  {
+   "name": "donem_kilidi",
+   "schedule": "Her gün 00:20 Europe/Istanbul (kilit anı 00:00, 03:00 ile 04:00 arası boş bırakılır: D14-B05), missed: once; politika stately.",
+   "idempotency": "Yalnız kilit_ani <= şimdi ve kilit_uygulandi_ani boş satırları işler; her birim ve dönem kendi işleminde, birim_donemleri satırı FOR UPDATE ile kilitlenip koşul yeniden okunarak işlenir. Bir adım hata verirse işlem geri alınır, kilit_uygulandi_ani boş kalır ve iş yeniden dener; uygulanmış satıra ikinci çalışma dokunmaz. Kilit durumu bu işten değil saatten türediği için iş gecikse de kilit doğru görünür.",
+   "does": "Kilit anı geçmiş her birim ve dönem için tek işlemde: kilitAdimiKaydet ile kayıtlı adımları sıra numarasıyla çağırır (D07 donemKilidiKararKapanisi: onaysız Kendi beyanı sayılmış haliyle, kararsız kayıtlar, denetim kaydıyla); birimin o dönemdeki etkin derslerini arşivler (arsiv_nedeni kilit); her ders için D08.devamHesaplaIsiKoy(tx, dersId, null, 'takvim') koyar (D10'un gün sonu anlığı bu işleri bekler); birim_donemleri ve ders satırlarını yeni sürümle damgalar (telefon kilidi öğrenir); kilit_uygulandi_ani yazar; dersler.donem_kilitlendi denetim olayını yazar."
+  },
+  {
+   "name": "deneme_dersi_oturumlari",
+   "schedule": "Her gün 04:40 Europe/Istanbul, missed: once; ayrıca denemeDersiniKur aynı işlemde kuyruğa koyar.",
+   "idempotency": "Kısmi tekil dizin (ders_id, tarih) WHERE tur = 'deneme' ve hedefli ON CONFLICT DO NOTHING: iki kez çalışmak oturum sayısını değiştirmez; yeni satır yoksa sürüm, dinleyici ve denetim çağrılmaz.",
+   "does": "Etkin deneme dersi için bugünden (İstanbul) 14 gün ileriye kadar her gün 00:00 ile 24:00 deneme oturumunu üretir (teori 1 saat, süre seçilmemiş, dersin bütün etkin şubeleri, kısa kodlu); yeni oturumlar için üretim dinleyicilerini (D04) çağırır ve sürüm alır. Deneme dersi yoksa bir şey yazmaz, dersler.deneme.yok uyarısını loglar (dersi D01'in inceleme_hesaplari_kurulumu işi denemeDersiniKur ile kurar). Geçmiş deneme oturumları kalır; onaysız liste, çakışma, kilit ve raporlar deneme dersini dışlar."
+  }
+ ],
+ "state_machines": [
+  {
+   "name": "Oturum durumu",
+   "states": [
+    "planlandi",
+    "iptal"
+   ],
+   "transitions": [
+    {
+     "from": "planlandi",
+     "to": "iptal",
+     "by": "hoca: POST /v1/dersler/oturumlar/{oturumId}/iptal",
+     "when": "Oturum başlamamış, dönem kilitli değil, ders etkin; neden hoca."
+    },
+    {
+     "from": "planlandi",
+     "to": "iptal",
+     "by": "hoca: POST /v1/dersler/{dersId}/telafi (eskisiniIptalEt)",
+     "when": "Taşıma: yeni telafi oturumuyla aynı işlemde; neden tasindi."
+    },
+    {
+     "from": "planlandi",
+     "to": "iptal",
+     "by": "sistem: program PUT, takvim işi, şube pasifleştirme",
+     "when": "Başlamamış oluşum artık istenen kümede değil; neden program, takvim, tatil ya da sinav_haftasi."
+    },
+    {
+     "from": "planlandi",
+     "to": "iptal",
+     "by": "hoca: POST /v1/dersler/{dersId}/arsivle",
+     "when": "Arşivlenen dersin başlamamış oturumları; neden arsiv."
+    },
+    {
+     "from": "iptal",
+     "to": "planlandi",
+     "by": "hoca: PATCH /v1/dersler/oturumlar/{oturumId} (iptaliGeriAl)",
+     "when": "Neden hoca ve oturum başlamamış."
+    },
+    {
+     "from": "iptal",
+     "to": "planlandi",
+     "by": "sistem: yeniden üretim",
+     "when": "Neden program, takvim, tatil ya da sinav_haftasi, oluşum yeniden isteniyor ve oturum başlamamış. Hoca, tasindi ve arsiv iptali hiç kendiliğinden geri gelmez."
+    },
+    {
+     "from": "iptal",
+     "to": "planlandi",
+     "by": "hoca: \"Ders yapıldı mı?\" cevabı yapıldı",
+     "when": "İptal oturuma kafa sayısı gelmiş (çelişkili) ve hoca dersin yapıldığını söylüyor; değişiklik geçmişine yapildi_cevabi nedeniyle yazılır."
+    }
+   ]
+  },
+  {
+   "name": "Yapıldı onayı",
+   "states": [
+    "cevapsiz",
+    "yapildi",
+    "yapilmadi",
+    "celiskili"
+   ],
+   "transitions": [
+    {
+     "from": "cevapsiz",
+     "to": "yapildi",
+     "by": "D07: kafaSayisiniYaz",
+     "when": "Kafa sayısı geldi (ders yapıldı onayı da budur)."
+    },
+    {
+     "from": "cevapsiz",
+     "to": "yapildi",
+     "by": "hoca cevabı",
+     "when": "Oturum başlamış; yapildi true."
+    },
+    {
+     "from": "cevapsiz",
+     "to": "yapilmadi",
+     "by": "hoca cevabı",
+     "when": "Oturum başlamış; kayıtları ve saatleri sayılmaz."
+    },
+    {
+     "from": "yapilmadi",
+     "to": "celiskili",
+     "by": "D07: kafaSayisiniYaz",
+     "when": "\"Yapılmadı\" cevabından sonra kafa sayısı geldi; yapildi boşalır, soru yeniden çıkar."
+    },
+    {
+     "from": "cevapsiz",
+     "to": "celiskili",
+     "by": "D07: kafaSayisiniYaz",
+     "when": "İptal oturuma kafa sayısı geldi."
+    },
+    {
+     "from": "celiskili",
+     "to": "yapildi",
+     "by": "hoca cevabı",
+     "when": "Çelişki kapanır (kilitten sonra da); iptal oturum planlı olur."
+    },
+    {
+     "from": "celiskili",
+     "to": "yapilmadi",
+     "by": "hoca cevabı",
+     "when": "Çelişki kapanır; kafa sayısı kanıt olarak kalır."
+    },
+    {
+     "from": "yapildi",
+     "to": "yapilmadi",
+     "by": "hoca cevabı",
+     "when": "Kilitten önce; denetim kaydı ve D08 işi."
+    },
+    {
+     "from": "yapilmadi",
+     "to": "yapildi",
+     "by": "hoca cevabı",
+     "when": "Kilitten önce; denetim kaydı ve D08 işi."
+    },
+    {
+     "from": "yapildi",
+     "to": "yapildi",
+     "by": "D07: kafaSayisiniYaz",
+     "when": "Hoca cevabıyla yapıldı olan oturuma kafa sayısı gelir: kaynak kafa_sayisi olur."
+    }
+   ]
+  },
+  {
+   "name": "Ders",
+   "states": [
+    "etkin",
+    "arsiv"
+   ],
+   "transitions": [
+    {
+     "from": "etkin",
+     "to": "arsiv",
+     "by": "hoca: POST /v1/dersler/{dersId}/arsivle",
+     "when": "Başlamış ve iptal edilmemiş oturumu yok; arsiv_nedeni hoca; ders telefonlardan kalkar."
+    },
+    {
+     "from": "etkin",
+     "to": "arsiv",
+     "by": "sistem: donem_kilidi",
+     "when": "Birim ve dönemin kilidi uygulanıyor; arsiv_nedeni kilit; telefonda Dönem kapandı olarak kalır."
+    }
+   ]
+  },
+  {
+   "name": "Birim ve dönem kilidi",
+   "states": [
+    "acik",
+    "kilitli_bekliyor",
+    "uygulandi"
+   ],
+   "transitions": [
+    {
+     "from": "acik",
+     "to": "kilitli_bekliyor",
+     "by": "saat",
+     "when": "Saat arayüzünün anı kilit_ani değerine ulaştı (son günün ertesi 00:00 İstanbul); yazım yok, durum türetilir."
+    },
+    {
+     "from": "kilitli_bekliyor",
+     "to": "uygulandi",
+     "by": "sistem: donem_kilidi",
+     "when": "Kayıtlı adımlar, arşiv, D08 işleri ve sürüm tek işlemde başarılı."
+    },
+    {
+     "from": "acik",
+     "to": "acik",
+     "by": "yönetici: takvim PUT",
+     "when": "Son gün kilit anından önce değişir; kilit_ani yeniden türer."
+    },
+    {
+     "from": "kilitli_bekliyor",
+     "to": "acik",
+     "by": "yönetici: takvim PUT (sonGunGerekcesi)",
+     "when": "Son gün ileri alınır (D02-A05)."
+    },
+    {
+     "from": "uygulandi",
+     "to": "acik",
+     "by": "yönetici: takvim PUT (sonGunGerekcesi)",
+     "when": "Son gün ileri alınır; kilit_uygulandi_ani boşalır, uygulanmış etkiler geri alınmaz, iş yeni anda yeniden uygular (D02-A05)."
+    }
+   ]
+  },
+  {
+   "name": "Şube",
+   "states": [
+    "etkin",
+    "pasif"
+   ],
+   "transitions": [
+    {
+     "from": "etkin",
+     "to": "pasif",
+     "by": "hoca: PATCH şube",
+     "when": "Şubede etkin liste satırı yok ve dersin başka etkin şubesi var; şube başlamamış oturumlardan ve program saatlerinden çıkar."
+    },
+    {
+     "from": "pasif",
+     "to": "etkin",
+     "by": "hoca: PATCH şube",
+     "when": "Dönem kilitli değil; programa yeniden katmak program PUT ile."
+    }
+   ]
+  }
+ ],
+ "invariants": [
+  "Tek yazar: bu 14 tabloya yalnız D02 kodu yazar; oturumlar.kafa_sayisi yalnız kafaSayisiniYaz ile, oturumlar.yapildi yalnız kafaSayisiniYaz ve \"Ders yapıldı mı?\" uçlarıyla, dersler.teori_p ve uygulama_p yalnız oranlariYaz ile değişir.",
+  "Ders, şube, program saati, oturum, tatil, birim, bölüm, dönem, takvim ve birim dönemi satırı hiç silinmez (göç uygulama rollerinden DELETE yetkisini alır); kaldırma silindi, pasif, iptal ya da arşiv işaretidir. oturum_degisiklikleri yalnız eklenir.",
+  "Bir oturumun ders_id, donem_id, program_saati_id, tur, tarih ve kisa_kod değerleri oluştuktan sonra değişmez; dersin donem_id değeri değişmez (BEFORE UPDATE tetikleyicileri).",
+  "Başlamış ya da geçmiş oturumun saati, dersliği, saat sayıları, şube kümesi ve durumu program, takvim, telafi, arşiv ya da düzenleme yoluyla değişmez; geçmişe dokunan yollar yalnız \"Ders yapıldı mı?\" cevabı, kafa sayısı ve D09 düzeltmesidir.",
+  "Normal oturumda (program_saati_id, tarih) tekildir; yeniden üretim oturumu bu çiftle bulur, bu yüzden aynı girdiyle ikinci çalışma hiçbir satır, sürüm ya da denetim kaydı yazmaz.",
+  "Gelecekteki her planlı normal oturumun tarihi dersin takvim aralığında ve program saatinin geçerlilik aralığında, hafta günü program saatinin günüdür; tam gün tatilde ve ders yapılmayan sınav haftasında değildir; yarım gün tatil günündeyse başlangıcı tatil saatinden öncedir.",
+  "Hoca, tasindi ve arsiv nedeniyle iptal edilen oturum yeniden üretimle geri gelmez; hoca iptali yalnız hocanın açık isteğiyle (iptaliGeriAl) döner.",
+  "baslangic_ani = (tarih + baslangic_saati) AT TIME ZONE 'Europe/Istanbul' ve bitiş için aynısı: yazımla aynı SQL deyiminde kurulur, gece işi başlamamış oturumlarda korur; telefonun saat dilimi hiçbir hesaba girmez.",
+  "Kilit türetilmiş bir durumdur: kilitli, saat arayüzünün anı birim_donemleri.kilit_ani değerine ulaşınca doğrudur; kilit_ani son günün ertesi 00:00 Europe/Istanbul. Kural kodunda SQL now() ve Date.now() yoktur.",
+  "Kilitli birim ve dönemin derslerinde program, telafi, iptal, düzenleme, şube ve ders ayarı reddedilir; \"Ders yapıldı mı?\" cevabı yalnız cevapsız ya da çelişkili oturuma yazılır; kafa sayısı kilitten sonra da aynı kurallarla yazılır (yapılmadı oturumda çelişki açar); devir yalnız sahibi silinmiş ya da pasif dersin cevapsız oturumları için (D02-A07).",
+  "Telefona inen bir sütunu değiştiren her işlemin sonunda D06.surumAl(tx) bir kez alınır ve işlemin değiştirdiği bütün inen satırlara yazılır; inen sütun sürüm almadan değişmez, inmeyen sütun (kafa sayısı, yapıldı) sürüm almaz.",
+  "Program, takvim, telafi, iptal, düzenleme, yapıldı ve kilit yazımı tek işlemdir: oturumlar, şube kümeleri, değişiklik geçmişi, üretim dinleyicileri (D04), denetim kaydı (D09), devam işi (D08), yeniden üretim işi (D14) ve sürüm birlikte yazılır ya da hiçbiri yazılmaz.",
+  "Bir oturumun ve bir program saatinin şubeleri aynı dersin şubeleridir (bileşik yabancı anahtar); planlı oturumun en az bir şubesi vardır.",
+  "yapildi_celiskili doğruyken yapildi boştur; iptal oturumda yapildi hep boştur; kafa sayısı varken kafa_sayisi_ani doludur.",
+  "Dersin tek sahibi vardır; başka hocanın dersi, şubesi ve oturumu hocaya 404 döner; yönetici ucu öğrenci listesi, yoklama ve kafa sayısı döndürmez.",
+  "Öğrencinin indirmesine yalnız etkin liste satırının şubesini kapsayan program saatleri ve oturumlar ile bu derslerin ders, tatil ve kilit satırları girer; kafa sayısı ve yapıldı bilgisi hiçbir telefona inmez.",
+  "Kısa kod 1 ile 9.999.999.999 arasında, tekil, oturum oluşurken diziden verilir ve değişmez; JSON'da 10 rakamlık metindir.",
+  "İş verisinde, logda ve denetim ayrıntısında numara ve isim yoktur; D02 tablolarında öğrenci kişisel verisi tutulmaz (çakışma cevabı liste satırı kimliği döner).",
+  "Deneme dersi tektir, birimsizdir, inceleme dönemindedir; onaysız liste, çakışma, kilit, dönem arası ve rapor sorguları onu dışlar (D10 tabloları dersler.deneme_dersi = false süzgeciyle okur)."
+ ],
+ "exports": [
+  {
+   "name": "dersGetir",
+   "signature": "dersGetir(tx: VeritabaniIslemi, dersId: string): Promise<DersBilgisi | null>",
+   "purpose": "Dersin ayarları ve sahipliği: DersBilgisi { id, donemId, birimId: string | null, bolumId: string | null, hocaKisiId, oncekiHocaKisiIdleri: string[], hocaAtamaSurumu: bigint, kod, ad, teoriP, uygulamaP, yoklamaSuresiDk: number | null, qrIleYoklama, denemeDersi, takipBaslangici: string | null, durum, arsivNedeni, arsivAni: Date | null, surum: bigint }. D03, D04, D05, D07, D08, D09, D11 okur; D03 devirde liste satırlarını yeni hocaya göndermek için hocaAtamaSurumu ve oncekiHocaKisiIdleri kullanır. yaprak.ts içinde."
+  },
+  {
+   "name": "dersYetkisi",
+   "signature": "dersYetkisi(tx: VeritabaniIslemi, kisi: OturumKisisi, dersId: string): Promise<'sahip' | 'yonetici' | null>",
+   "purpose": "Kaynak yetkisinin tek yeri: kişi dersin sahibiyse sahip; sahibi değil ama yönetici rolü ve kapsamı dersin birimini içeriyorsa yonetici; değilse null. D01'i çağırmaz, rol ve kapsam kökteki kancanın kişi nesnesinden okunur. Liste, yoklama, onay ve düzeltme işlemleri yalnız sahip sonucunu kabul eder; yonetici sonucu yalnız yönetici işleri (oran, devir) içindir. Asistan rolü gelirse yalnız burada genişler (D02-A09). yaprak.ts içinde."
+  },
+  {
+   "name": "subeGetir",
+   "signature": "subeGetir(tx: VeritabaniIslemi, subeId: string): Promise<SubeBilgisi | null>",
+   "purpose": "SubeBilgisi { id, dersId, etiket, durum: etkin | pasif, pasifAni: Date | null }; liste yükleme ve satır işlemleri (D03), teyit yetkisi (D01). yaprak.ts içinde."
+  },
+  {
+   "name": "dersSubeleri",
+   "signature": "dersSubeleri(tx: VeritabaniIslemi, dersId: string): Promise<SubeBilgisi[]>",
+   "purpose": "Dersin bütün şubeleri etiket sırasıyla (D03, D08, D10). yaprak.ts içinde."
+  },
+  {
+   "name": "oturumGetir",
+   "signature": "oturumGetir(tx: VeritabaniIslemi, oturumId: string): Promise<OturumBilgisi | null>",
+   "purpose": "OturumBilgisi { id, dersId, donemId, birimId: string | null, tur, tarih, baslangicSaati, bitisSaati, baslangicAni: Date, bitisAni: Date, teoriSaat, uygulamaSaat, derslik, yoklamaSuresiDk, qrIleYoklama, durum, iptalNedeni, kisaKod: string, kafaSayisi, kafaSayisiAni, yapildi: boolean | null, yapildiKaynagi, yapildiCeliskili, telafiEdilenOturumId, subeIdleri: string[], degisiklikler: { an: Date, neden, oncekiBaslangicAni, oncekiBitisAni, oncekiDurum }[] }. Eski programla gelen kaydın kararı için değişiklik geçmişiyle (D04, D05, D07, D09, D11). yaprak.ts içinde."
+  },
+  {
+   "name": "oturumlariGetir",
+   "signature": "oturumlariGetir(tx: VeritabaniIslemi, suzgec: OturumSuzgeci): Promise<OturumBilgisi[]>",
+   "purpose": "OturumSuzgeci { dersId?, subeId?, donemId?, birimId?, oturumIdleri?, kisaKod?, durum?: 'planlandi' | 'iptal', yapildi?: boolean | 'cevapsiz', bitmis?: boolean, baslangicAniEnAz?: Date, baslangicAniEnCok?: Date, tarihten?: string, tarihe?: string, tur?: ('normal' | 'telafi' | 'deneme')[], denemeDahil?: boolean (varsayılan false), sira?: 'artan' | 'azalan', adet?: number (en çok 5000) }; değişiklik geçmişi dönmez. T, kalan planlı saat ve sonraki oturum (D08), onaysız oturum engeli (D10), kısa kodla oturum (D11). yaprak.ts içinde."
+  },
+  {
+   "name": "oturumSubeleri",
+   "signature": "oturumSubeleri(tx: VeritabaniIslemi, oturumId: string): Promise<string[]>",
+   "purpose": "Kaydın öğrencisinin şubesi oturumun kümesinde mi sorusu (D05, D07). yaprak.ts içinde."
+  },
+  {
+   "name": "birimGetir",
+   "signature": "birimGetir(tx: VeritabaniIslemi, birimId: string): Promise<BirimBilgisi | null>",
+   "purpose": "BirimBilgisi { id, ad, tur, etkin, bolumler: { id, ad, etkin }[] }; hoca başvurusunda birim ve bölüm denetimi (D01). yaprak.ts içinde."
+  },
+  {
+   "name": "birimDonemiGetir",
+   "signature": "birimDonemiGetir(tx: VeritabaniIslemi, birimId: string, donemId: string): Promise<BirimDonemiBilgisi | null>",
+   "purpose": "BirimDonemiBilgisi { birimId, donemId, takvimId, dersBaslangic, dersBitis, ekleBirakBitis, sonGun, sonHaftaBaslangici, kilitAni: Date, kilitUygulandiAni: Date | null }; çağıran gönderme süresi sonu için D06.gondermeSuresiSonu saf işlevine verir (D07, D09, D10); kilit anı (D08, D09), son hafta. yaprak.ts içinde."
+  },
+  {
+   "name": "kilitDurumu",
+   "signature": "kilitDurumu(tx: VeritabaniIslemi, birimId: string | null, donemId: string, an?: Date): Promise<KilitDurumu>",
+   "purpose": "KilitDurumu { kilitli: boolean, kilitAni: Date | null, sonGun: string | null, uygulandi: boolean, kaynak: 'takvim' | 'inceleme' | 'takvim_yok' }. an verilmezse bileşim kökünün verdiği saat; kayıt kararında kaydın ulaşma anı verilir (D05, D07). Deneme dersi (birimsiz) hiç kilitlenmez. yaprak.ts içinde."
+  },
+  {
+   "name": "kilitliBirimDonemleri",
+   "signature": "kilitliBirimDonemleri(tx: VeritabaniIslemi, an?: Date): Promise<Array<{ birimId: string; donemId: string; kilitAni: Date; kilitUygulandiAni: Date | null }>>",
+   "purpose": "Kilit anı geçmiş bütün birim ve dönemler; eski saat belgesi ve QR anahtarı saklama süresi (D04, D11) ve dönemsel temizlik için. yaprak.ts içinde."
+  },
+  {
+   "name": "takvimGetir",
+   "signature": "takvimGetir(tx: VeritabaniIslemi, birimId: string, donemId: string): Promise<TakvimBilgisi | null>",
+   "purpose": "TakvimBilgisi { takvimId, donemId, ad, dersBaslangic, dersBitis, ekleBirakBitis, sonGun, tatiller: { ad, baslangicTarihi, bitisTarihi, yarimGunBaslangic }[], sinavHaftalari: { tur, baslangicTarihi, bitisTarihi, dersYapilir }[] }; ekle-bırak ipucu (D03), takvim gösterimi (D08, D10). yaprak.ts içinde."
+  },
+  {
+   "name": "kafaSayisiniYaz",
+   "signature": "kafaSayisiniYaz(tx: VeritabaniIslemi, oturumId: string, kafaSayisi: number, yapildi: true): Promise<{ sonuc: 'yazildi' | 'degismedi' | 'celiski' | 'oturum_yok'; yapildi: boolean | null; celiskili: boolean }>",
+   "purpose": "Yalnız D07'nin kafa_sayisi öğesi çağırır. 0 ile 5000 tam sayı; oturum satırı FOR UPDATE ile kilitlenir; 'yapılmadı' ya da iptal oturumda çelişki açar, kafa_sayisi_ani saat arayüzünden yazılır; yapıldı bilgisi değişirse aynı işlemde D08.devamHesaplaIsiKoy(tx, dersId, null, 'program') koyar. Denetim olayını çağıran (D07) yazar; inen sütun olmadığından sürüm almaz."
+  },
+  {
+   "name": "oranlariYaz",
+   "signature": "oranlariYaz(tx: VeritabaniIslemi, dersId: string, oranlar: { teoriP: number; uygulamaP: number }): Promise<{ onceki: { teoriP: number; uygulamaP: number }; degisti: boolean }>",
+   "purpose": "Yalnız D08'in PUT /v1/devam/dersler/{dersId}/oranlar ucu çağırır. 0 ile 100 tam sayı; arşivdeki ya da kilitli derste uygulamaHatasi(DERSLER_DERS_ARSIVDE | DERSLER_DONEM_KILITLI) fırlatır; değişince ders sürümünü alır (telefon yerel hak hesabı için p'yi indirir). Denetim ve devam işi D08'in."
+  },
+  {
+   "name": "oturumUretimDinleyicisiKaydet",
+   "signature": "oturumUretimDinleyicisiKaydet(dinleyici: (tx: VeritabaniIslemi, olay: OturumUretimOlayi) => Promise<void>): void",
+   "purpose": "OturumUretimOlayi { neden: 'uretim' | 'program' | 'telafi' | 'oturum' | 'iptal' | 'iptal_geri' | 'takvim' | 'sure' | 'arsiv' | 'deneme' | 'saat_dilimi', dersId, oturumlar: { oturumId, donemId, baslangicAni, bitisAni, yoklamaSuresiDk, durum, yeni: boolean, onceki: { baslangicAni, bitisAni } | null }[] }. D04 pencereleriHesapla bu yolla kaydolur. Her üretim ve oturum değişikliğinde sürüm alınmadan önce aynı işlemde kayıt sırasıyla çağrılır; hata işlemi geri alır. Eklentiler yüklenirken bir kez çağrılır."
+  },
+  {
+   "name": "kilitAdimiKaydet",
+   "signature": "kilitAdimiKaydet(adim: { ad: string; sira: number; calistir: (tx: VeritabaniIslemi, birimDonemi: { birimId: string; donemId: string; kilitAni: Date }) => Promise<void> }): void",
+   "purpose": "D07 donemKilidiKararKapanisi bu yolla kaydolur; donem_kilidi işi adımları sıra numarasıyla aynı işlemde çağırır; aynı ad iki kez kaydolursa hata."
+  },
+  {
+   "name": "listeKaynagiKaydet",
+   "signature": "listeKaynagiKaydet(kaynak: { etkinSatirlar(tx: VeritabaniIslemi, suzgec: { subeIdleri?: readonly string[]; ogrenciNolari?: readonly string[] }): Promise<ReadonlyArray<{ satirId: string; subeId: string; ogrenciNo: string; surum: bigint }>>; pasiflesenSatirlar(tx: VeritabaniIslemi, ogrenciNo: string, surumden: bigint): Promise<ReadonlyArray<{ subeId: string; surum: bigint }>> }): void",
+   "purpose": "Sözleşme eki (D02-A12): D03 kendi eklentisinde kaydolur, D02 D03'ü içe aktarmaz. Öğrenci indirme kapsamı, kapsam olayları, çakışma ucu ve şube pasifleştirme denetimi bunu kullanır; uygulama hazır olurken kayıt yoksa eklenti açılmaz."
+  },
+  {
+   "name": "denemeDersiniKur",
+   "signature": "denemeDersiniKur(tx: VeritabaniIslemi, hocaKisiId: string): Promise<{ dersId: string; subeId: string }>",
+   "purpose": "Sözleşme eki (D02-A13): D01'in inceleme_hesaplari_kurulumu işi çağırır. İnceleme dönemini ve deneme dersini (tek şube 1, süre seçilmemiş) idempotent kurar; sahibi farklıysa yeni deneme hocasına devreder; deneme_dersi_oturumlari işini aynı işlemde kuyruğa koyar."
+  },
+  {
+   "name": "donemArasiMi",
+   "signature": "donemArasiMi(tx: VeritabaniIslemi, an?: Date): Promise<boolean>",
+   "purpose": "Sözleşme eki (D02-A14): hiçbir etkin birimde dersleri başlamış ve kilitlenmemiş birim dönemi yoksa true (inceleme dönemi hariç). D13'ün en düşük sürüm koruması (D13-B17) ve yayın penceresi kullanır; app.ts bağlar. yaprak.ts içinde."
+  },
+  {
+   "name": "derslerEklentisi",
+   "signature": "derslerEklentisi: FastifyPluginAsync<{ saat: Saat; qrDersAyariAcik: boolean }>",
+   "purpose": "app.ts (D13) bir kez kaydeder: rotaları D13.rotalariKaydet ile ekler, indirme kaynağını D06.indirmeKaynagiKaydet ile kaydeder, saati ve QR ayarı bayrağını modüle verir; hazır olurken liste kaynağının kayıtlı olduğunu denetler."
+  },
+  {
+   "name": "derslerIsTanimlari",
+   "signature": "derslerIsTanimlari(altyapi: { saat: Saat }): IsTanimi[]",
+   "purpose": "jobs/dersler/index.ts: üç işin tanımı (ad, cron, tz Europe/Istanbul, missed, politika, işleyici); worker.ts (D14) toplar ve D14.isTanimla ile kaydeder."
+  }
+ ],
+ "files": [
+  "apps/server/src/modules/dersler/index.ts",
+  "apps/server/src/modules/dersler/yaprak.ts",
+  "apps/server/src/modules/dersler/tablolar.ts",
+  "apps/server/src/modules/dersler/eklenti.ts",
+  "apps/server/src/modules/dersler/rotalar-dersler.ts",
+  "apps/server/src/modules/dersler/rotalar-oturumlar.ts",
+  "apps/server/src/modules/dersler/rotalar-yonetim.ts",
+  "apps/server/src/modules/dersler/servis-ders.ts",
+  "apps/server/src/modules/dersler/servis-program.ts",
+  "apps/server/src/modules/dersler/servis-oturum.ts",
+  "apps/server/src/modules/dersler/servis-takvim.ts",
+  "apps/server/src/modules/dersler/servis-kilit.ts",
+  "apps/server/src/modules/dersler/servis-cakisma.ts",
+  "apps/server/src/modules/dersler/servis-deneme.ts",
+  "apps/server/src/modules/dersler/uretim.ts",
+  "apps/server/src/modules/dersler/indirme.ts",
+  "apps/server/src/modules/dersler/kayitlar.ts",
+  "apps/server/src/modules/dersler/sorgular.ts",
+  "apps/server/src/modules/dersler/denetim.ts",
+  "apps/server/src/modules/dersler/saat.ts",
+  "apps/server/src/jobs/dersler/index.ts",
+  "apps/server/src/jobs/dersler/takvim-oturumlarini-yenile.ts",
+  "apps/server/src/jobs/dersler/donem-kilidi.ts",
+  "apps/server/src/jobs/dersler/deneme-dersi-oturumlari.ts",
+  "packages/contracts/src/dersler.ts",
+  "packages/core/src/dersler/index.ts",
+  "packages/core/src/dersler/uretim.ts",
+  "packages/core/src/dersler/takvim.ts",
+  "packages/core/src/dersler/normallestir.ts",
+  "packages/core/src/dersler/cakisma.ts",
+  "packages/core/src/dersler/uretim.test.ts",
+  "packages/core/src/dersler/takvim.test.ts",
+  "packages/core/src/dersler/normallestir.test.ts",
+  "packages/core/src/dersler/cakisma.test.ts",
+  "apps/server/test/features/dersler/ders-ve-program.feature",
+  "apps/server/test/features/dersler/oturum-uretimi.feature",
+  "apps/server/test/features/dersler/telafi-iptal-ve-duzenleme.feature",
+  "apps/server/test/features/dersler/ders-yapildi-mi.feature",
+  "apps/server/test/features/dersler/takvim-ve-kilit.feature",
+  "apps/server/test/features/dersler/yetki.feature",
+  "apps/server/test/features/dersler/birim-ve-donem.feature",
+  "apps/server/test/features/dersler/cakismalar.feature",
+  "apps/server/test/features/dersler/indirme.feature",
+  "apps/server/test/features/dersler/deneme-dersi.feature",
+  "apps/server/test/features/dersler/saat-dilimi.feature",
+  "apps/server/test/features/dersler/sozlesme.feature",
+  "apps/server/test/steps/dersler/ders-adimlari.ts",
+  "apps/server/test/steps/dersler/oturum-adimlari.ts",
+  "apps/server/test/steps/dersler/takvim-adimlari.ts",
+  "apps/server/test/steps/dersler/yonetim-adimlari.ts",
+  "apps/server/test/steps/dersler/sozlesme-adimlari.ts",
+  "apps/server/test/support/kurucular/dersler.ts"
+ ],
+ "tests": [
+  {
+   "name": "Program kaydı dönemin bütün oturumlarını üretir",
+   "kind": "behavior",
+   "asserts": "MAT101 pazartesi 09:00 ile 11:00 (teori 2), 14 haftalık takvim, bir pazartesi tam gün tatil: planlı oturum sayısı takvim günlerini gezen kaba sayımla aynı (13), ilk oturumun açılışı 06:00Z; kontrol: tatil kaldırılıp yeniden üretim işi çalışınca 14 olur. Beklenen sayı adımda sabit yazılmaz, kurucunun takviminden hesaplanır."
+  },
+  {
+   "name": "Yarım gün tatil yalnız tatil saatinden sonra başlayan oturumu iptal eder",
+   "kind": "behavior",
+   "asserts": "Tatil 13:00'te başlıyor: aynı günün 09:00 oturumu planlı kalır (pozitif kontrol), 14:00 oturumu iptal (tatil) olur; tatil saati 15:00'e alınınca 14:00 oturumu yeniden planlı olur."
+  },
+  {
+   "name": "Ders yapılmayan sınav haftasında oturum üretilmez",
+   "kind": "behavior",
+   "asserts": "dersYapilir false iken haftada oturum yok; aynı hafta dersYapilir true yapılıp iş çalışınca oluşumlar üretilir; tekrar false yapılınca başlamamış olanlar iptal (sinav_haftasi) olur (iki yönlü kontrol)."
+  },
+  {
+   "name": "Program değişikliği yalnız başlamamış oturumlara uygulanır",
+   "kind": "behavior",
+   "asserts": "Saat 5. haftanın salısına kurulu, program 10:00'a alınır: 1 ile 5. hafta oturumlarının anları değişmez (önceki anlarla tek tek karşılaştırılır), 6. haftadan sonrakiler değişir; değişen her oturum için oturum_degisiklikleri satırında önceki anlar durur."
+  },
+  {
+   "name": "Hoca iptali yeniden üretimle geri gelmez",
+   "kind": "behavior",
+   "asserts": "Hoca 8. hafta oturumunu iptal eder, sonra derslik değişikliğiyle program kaydedilir: oturum iptal (hoca) kalır; kontrol: tatil nedeniyle iptal olan oturum tatil kaldırılınca planlı olur; iptaliGeriAl hoca iptalini geri getirir."
+  },
+  {
+   "name": "Aynı program ikinci kez kaydedilince hiçbir şey yazılmaz",
+   "kind": "behavior",
+   "asserts": "İkinci PUT 200 döner; degisiklik_sayaci, oturum satırları, denetim kaydı sayısı, D08 iş sayısı ve düzenleme numarası değişmez; kontrol: tek alan değişince sayaç ve numara birer artar."
+  },
+  {
+   "name": "Eski düzenleme numarasıyla program kaydı reddedilir",
+   "kind": "behavior",
+   "asserts": "409 DERSLER_SURUM_UYUSMUYOR ve cevapta güncel program; aynı gövde doğru numarayla 200."
+  },
+  {
+   "name": "Yazım yarıda kalırsa hiçbir şey kalmaz",
+   "kind": "behavior",
+   "asserts": "Sahte üretim dinleyicisi hata verince program PUT'u 500 döner: oturum yok, sayaç artmamış, denetim ve D08 işi yok, düzenleme numarası aynı; kontrol: dinleyici düzelince aynı istek oturumları yazar."
+  },
+  {
+   "name": "Her yazım telefona inen satırları tek sürümle damgalar",
+   "kind": "behavior",
+   "asserts": "Program kaydında değişen bütün program saati ve oturum satırlarının surum değeri birbirine ve sayaçtaki değere eşittir; kafaSayisiniYaz ve yapıldı cevabı sayacı artırmaz (inmeyen sütun)."
+  },
+  {
+   "name": "Aynı gün telafi uyarıyla oluşur, taşıma eskisini iptal eder",
+   "kind": "behavior",
+   "asserts": "Bugün 15:00 telafisi AYNI_GUN uyarısı ve kısa kodla oluşur, D04 dinleyicisi tek yeni oturumla çağrılır; eskisiniIptalEt ile eski oturum aynı işlemde iptal (tasindi) olur; telafi bir kısıta takılırsa eski oturum da planlı kalır."
+  },
+  {
+   "name": "Başlamış oturum düzenlenemez, iptal edilemez, taşınamaz",
+   "kind": "behavior",
+   "asserts": "Başlangıçtan bir dakika sonra PATCH, iptal ve eskisiniIptalEt 409 DERSLER_OTURUM_BASLAMIS; kontrol: başlangıçtan bir dakika önce üçü de 200 (sahte saatle)."
+  },
+  {
+   "name": "Kafa sayısı yapıldı yapar, yapılmadı cevabından sonra çelişki açar",
+   "kind": "behavior",
+   "asserts": "Hoca yapılmadı der, sonra kafaSayisiniYaz 30 ile gelir: sonuç celiski, oturum onaysız listede celiskili true; hoca yapıldı deyince listeden çıkar ve tek D08 işi konur; kontrol: cevapsız oturuma gelen kafa sayısı doğrudan yapıldı yapar."
+  },
+  {
+   "name": "\"Ders yapıldı mı?\" listesi yalnız bitmiş ve cevapsız oturumları gösterir",
+   "kind": "behavior",
+   "asserts": "Bitişten bir dakika önce oturum listede yok, bir dakika sonra var (pozitif kontrol); kafa sayısı gelince çıkar; deneme dersinin oturumları hiç görünmez."
+  },
+  {
+   "name": "Toplu cevap öğe başına sonuç döner",
+   "kind": "behavior",
+   "asserts": "Dört öğe: cevapsız oturum yazildi, aynı cevaplı oturum degismedi, başka hocanın oturumu bulunamadi, başlamamış oturum baslamadi; denetim kaydına yalnız yazılan öğe girer, D08 işi ders başına bir."
+  },
+  {
+   "name": "Kilit anı son günün ertesi 00:00 İstanbul saatidir",
+   "kind": "behavior",
+   "asserts": "Son gün 2 Ocak: 2 Ocak 23:59:59.999 İstanbul anında kilitDurumu false ve program kaydı 200; 3 Ocak 00:00:00.000 anında true ve program kaydı 409 DERSLER_DONEM_KILITLI (sahte saat setTime ile)."
+  },
+  {
+   "name": "Kilitten sonra cevapsız oturum cevaplanır, değişiklik reddedilir",
+   "kind": "behavior",
+   "asserts": "Kilitten sonra cevapsız oturuma yapıldı cevabı 200; yapıldı cevabı olan oturumu yapılmadı yapmak 409 DERSLER_DONEM_KILITLI; telafi, iptal ve şube eklemek 409."
+  },
+  {
+   "name": "Dönem kilidi işi yan etkileri bir kez uygular",
+   "kind": "behavior",
+   "asserts": "İş iki kez çalışır: kayıtlı sahte kilit adımı bir kez çağrılır, dersler arşivlenir (kilit), ders başına bir D08 işi ve bir denetim olayı yazılır, birim dönemi sürüm alır; ikinci çalışma hiçbir satır yazmaz."
+  },
+  {
+   "name": "Kilit adımı hata verirse kilit uygulanmaz",
+   "kind": "behavior",
+   "asserts": "Sahte adım hata verir: kilit_uygulandi_ani boş, dersler etkin, denetim yok, D08 işi yok; adım düzelince sonraki çalışma uygular. Kilit durumu bu arada da saatten true döner."
+  },
+  {
+   "name": "Takvim değişince yeniden üretim aynı işlemde kuyruğa girer",
+   "kind": "behavior",
+   "asserts": "Tatil eklenen takvim PUT'u takvim_oturumlarini_yenile işini koyar; aynı PUT işlemi zorla geri alınırsa iş de yoktur; iş çalışınca o günün oturumu iptal (tatil) olur, ikinci çalışma boş fark bulur."
+  },
+  {
+   "name": "Başka hocanın dersi görülmez ve değiştirilemez",
+   "kind": "behavior",
+   "asserts": "B hocası A'nın dersine GET, PATCH, program PUT, telafi, çakışma ve \"Ders yapıldı mı?\" isteğinde 404 alır, gövdede dersin kodu ve adı geçmez; kontrol: A aynı isteklerde 200 (plan.html#baslangic yetki senaryosu, önce kırmızı yazılır)."
+  },
+  {
+   "name": "Yönetici uçları hocaya kapalıdır",
+   "kind": "behavior",
+   "asserts": "Hoca rolüyle /v1/dersler/yonetim altındaki her uca istek 403, yönetici rolüyle 200; uç listesi rota tablosundan okunur, elle yazılmaz."
+  },
+  {
+   "name": "Girişsiz birim listesi yalnız etkin birim ve bölümleri verir",
+   "kind": "behavior",
+   "asserts": "Pasif birim ve pasif bölüm listede yok, etkin olanlar var (pozitif kontrol); oturumsuz istek 200."
+  },
+  {
+   "name": "Takvimsiz birime ders açılamaz, aynı kimlikle tekrar güvenlidir",
+   "kind": "behavior",
+   "asserts": "Takvim bağlı değilken 409 DERSLER_TAKVIM_YOK; bağlandıktan sonra 201; aynı id ve içerikle ikinci istek 200 ve tek ders; aynı id farklı kodla 409 DERSLER_KIMLIK_CAKISMASI."
+  },
+  {
+   "name": "Başlamış oturumu olan ders hoca tarafından arşivlenemez",
+   "kind": "behavior",
+   "asserts": "İlk oturum başladıktan sonra arşivle 409 DERSLER_DERS_BASLAMIS; kontrol: hiç oturumu başlamamış derste 200 ve gelecekteki oturumlar iptal (arsiv) olur, ders öğrencinin ve hocanın indirmesinde kapsamdanCikti ile iner."
+  },
+  {
+   "name": "Devir: yeni hoca dersi görür, eski hoca kapsamdan çıkar",
+   "kind": "behavior",
+   "asserts": "Devirden sonra eski hocaya 404, yeni hocaya 200; eski hocanın indirmesinde ders kapsamdanCikti, yeni hocanın indirmesinde dersin imleçten eski sürümlü oturumları da gelir."
+  },
+  {
+   "name": "Çakışma: kesişen saatler görünür, bitişik saatler görünmez",
+   "kind": "behavior",
+   "asserts": "Aynı numara iki dersin listesinde: 09:00 ile 10:00 ve 09:30 ile 10:30 çakışır; 10:00 ile 11:00 çakışmaz (yarı açık aralık); iptal oturum çakışmaz; cevapta numara ve isim yok, liste satırı kimliği var."
+  },
+  {
+   "name": "İndirme: öğrenciye yalnız şubesinin oturumları iner",
+   "kind": "behavior",
+   "asserts": "A şubesindeki öğrenciye yalnız A'yı kapsayan oturumlar iner; yalnız B'yi kapsayan oturum inmez, B öğrencisine iner (pozitif kontrol); satırlarda kafa sayısı ve yapıldı alanı yok."
+  },
+  {
+   "name": "İndirme: derse sonradan eklenen öğrenci dersin bütün satırlarını alır",
+   "kind": "behavior",
+   "asserts": "Liste satırı imleçten sonra eklenir: imleçten eski sürümlü ders, program, oturum, tatil ve kilit satırları da gelir; listesinde olmadığı dersin satırları gelmez."
+  },
+  {
+   "name": "İndirme: pasifleşen liste satırı dersi kapsamdan çıkarır",
+   "kind": "behavior",
+   "asserts": "Satırı pasif olan öğrenciye ders kapsamdanCikti ile iner; aynı derste başka etkin şubesi varsa inmez (kontrol)."
+  },
+  {
+   "name": "İndirme: şube kümesi daralan oturum öğrenciye silindi olarak iner",
+   "kind": "behavior",
+   "asserts": "Başlamamış bir oturumdan B şubesi çıkarılır: B öğrencisinin sonraki indirmesinde o oturum { id, silindi: true } gelir; A öğrencisine oturum güncel haliyle gelir (pozitif kontrol); değişmeyen oturum ikisine de gelmez."
+  },
+  {
+   "name": "İndirme: takvim bağı değişince yeni takvimin tatilleri iner",
+   "kind": "behavior",
+   "asserts": "Birim başka takvime bağlanır: birim dönemi satırı yeni sürüm alır ve yeni takvimin imleçten eski sürümlü tatilleri de iner; bağ değişmeyen birimin öğrencisine bu tatiller inmez (kontrol)."
+  },
+  {
+   "name": "Deneme dersi her gün 14 gün ileriye oturum taşır",
+   "kind": "behavior",
+   "asserts": "İş iki kez çalışır: 14 oturum, her biri 00:00 ile 24:00 İstanbul; ertesi gün çalışınca 15. gün eklenir; kilitDurumu false; onaysız listede ve çakışmada görünmez."
+  },
+  {
+   "name": "Yerel saat veritabanının saat dilimi verisiyle çevrilir",
+   "kind": "behavior",
+   "asserts": "2015-12-07 09:00 İstanbul 07:00Z, 2015-07-06 09:00 06:00Z, 2026-12-07 09:00 06:00Z olur; sabit +03:00 kullanan uygulama ilk örnekte kırmızıya döner (testler TZ=UTC ile koşar)."
+  },
+  {
+   "name": "Şubede öğrenci varken şube pasifleştirilemez",
+   "kind": "behavior",
+   "asserts": "Sahte liste kaynağı etkin satır döndürünce 409 DERSLER_SUBEDE_OGRENCI_VAR; boş dönünce 200 ve şube başlamamış oturumlardan çıkar; dersin son etkin şubesi 409 DERSLER_SON_ETKIN_SUBE."
+  },
+  {
+   "name": "Kilitten sonra son gün geri alınamaz, gerekçeyle ileri alınır",
+   "kind": "behavior",
+   "asserts": "Kilit uygulandıktan sonra son günü geri almak 409 DERSLER_SON_GUN_GERI_ALINAMAZ; gerekçesiz ileri alma 400 DERSLER_GEREKCE_GEREKLI; gerekçeyle 200, kilit_uygulandi_ani boşalır, iş yeni anda yeniden uygular; kilitten önce geçmişe çekmek hemenKilitle olmadan 409 DERSLER_KILIT_HEMEN_OLUR."
+  },
+  {
+   "name": "Kısa kod tekil, değişmez ve 10 rakamlık metindir",
+   "kind": "behavior",
+   "asserts": "İki oturumun kısa kodu farklı, cevapta ^[0-9]{10}$ biçiminde; oturum düzenlenince kod aynı kalır; kisa_kod ya da tarih değiştiren doğrudan UPDATE tetikleyiciye takılır."
+  },
+  {
+   "name": "Üretim planı deterministik ve idempotenttir",
+   "kind": "property",
+   "asserts": "fast-check, numRuns 1000: rastgele takvim, tatil, yarım gün tatil, sınav haftası, geçerlilik aralığı ve 0 ile 20 program saatiyle aynı girdi aynı planı verir; plan uygulanıp yeniden hesaplanınca boş plan çıkar."
+  },
+  {
+   "name": "Tatilde ve ders yapılmayan sınav haftasında planlı oturum kalmaz",
+   "kind": "property",
+   "asserts": "numRuns 1000: uygulanan plandan sonra hiçbir gelecekteki planlı normal oturum tam gün tatilde, yarım gün tatilin saatinden sonra ya da ders yapılmayan sınav haftasında değildir."
+  },
+  {
+   "name": "Geçmiş oturuma dokunulmaz, hoca iptali geri gelmez",
+   "kind": "property",
+   "asserts": "numRuns 1000: planın hiçbir öğesi başlamış oturumu hedeflemez; iptal nedeni hoca, tasindi ya da arsiv olan oturum geri alma listesine girmez; elle düzenlenmiş oturumun alanları güncellenmez."
+  },
+  {
+   "name": "Oturum sayısı gün gün sayımla eşittir",
+   "kind": "property",
+   "asserts": "numRuns 1000: gelecekteki planlı normal oturum sayısı, takvim günlerini tek tek gezip hafta günü, geçerlilik, tatil ve sınav haftası kuralını uygulayan kaba sayımla eşittir; her yeni oluşumun hafta günü program saatinin günüdür."
+  },
+  {
+   "name": "Çakışma aralığı yarı açıktır",
+   "kind": "property",
+   "asserts": "numRuns 500: [a, b) ile [c, d) ancak ve ancak a < d ve c < b ise kesişir; bitişik aralıklar (b = c) kesişmez; ilişki simetriktir."
+  },
+  {
+   "name": "Normalleştirme sabit noktadır ve Türkçe harfi doğru büyütür",
+   "kind": "property",
+   "asserts": "numRuns 500: normallestir(normallestir(x)) = normallestir(x); \"bil 301\" BİL 301, \"ısı\" ISI olur; baş, son ve çoklu boşluk sadeleşir; Intl kullanılmaz."
+  },
+  {
+   "name": "Son hafta, kilit günü ve dönem arası",
+   "kind": "property",
+   "asserts": "numRuns 500: son hafta son gün dahil geriye 7 takvim günüdür, kilit günü son günün ertesidir, ay ve yıl geçişlerinde doğrudur; dönem arası, rastgele birim dönemlerinde dersleri başlamış ve kilitlenmemiş hiçbir satır yokken doğrudur."
+  },
+  {
+   "name": "Dersler rota listesi sözleşmesi",
+   "kind": "contract",
+   "asserts": "packages/contracts/src/dersler.ts'ten içe aktarılan rota listesinde 31 uç var ve D13'ün birleştirilmiş rota tablosundaki /v1/dersler öğeleriyle birebir; her yol /v1/dersler ile başlar; yönetici uçları /v1/dersler/yonetim altında ve yalnız yonetici rolüyle; tek girişsiz uç GET /v1/dersler/birimler; her uçta hız sınıfı ve gövde sınırı dolu."
+  },
+  {
+   "name": "Hata kataloğu ve genişleyen değerler",
+   "kind": "contract",
+   "asserts": "DERSLER_ önekli her kod katalogda ve tek HTTP durumuna bağlı; uçların döndürdüğü her kod katalogda; cevap şemalarında durum, tur, iptalNedeni, yapildi.durum, uyarilar ve toplu sonuç alanları OpenAPI belgesinde x-extensible-enum taşır, enum anahtarı taşımaz."
+  },
+  {
+   "name": "Cevaplar sözleşme şemasına uyar",
+   "kind": "contract",
+   "asserts": "Her davranış senaryosunda D02 cevapları packages/contracts şemasıyla doğrulanır: tarih YYYY-MM-DD, saat HH:MM, an Z ile ve milisaniyeli, sürüm ve kısa kod metin; inen satır şeması rol başına (öğrencide kafa sayısı ve yapıldı alanı yok)."
+  },
+  {
+   "name": "500 dersli birimde takvim değişikliği",
+   "kind": "load",
+   "asserts": "Sahte veriyle 500 ders ve 1000 program saati: takvim PUT'u 1 saniyenin altında biter (yalnız iş kuyruğa girer); iş bütün dersleri 60 saniyede yeniden üretir, ders başına işlem p95 200 ms altında; ölçüm geliştirme makinesinde, gerçek boyuttaki koşu yayından önce."
+  },
+  {
+   "name": "Ders çıkışında D02 indirme kaynağının payı",
+   "kind": "load",
+   "asserts": "D15'in k6 ders çıkışı koşusunda değişenler isteğinde D02 kaynağı 6 dersli öğrenci için p95 15 ms altında ve değişiklik yokken en çok 4 sorgu çalıştırır (pg_stat_statements ile sayılır)."
+  },
+  {
+   "name": "Ortak kural paketi mutasyon kapısı",
+   "kind": "mutation",
+   "asserts": "packages/core/src/dersler üzerinde Stryker (komut çalıştırıcısıyla, haftalık iş) kırma oranı en az yüzde 85; altında kalırsa iş kırmızı."
+  },
+  {
+   "name": "Bilinçli hatalar testleri kırmızıya çevirir",
+   "kind": "mutation",
+   "asserts": "Beş hata tek tek yerleştirilir ve md5 denetimiyle özgün baytlar geri yazılır: yarım gün kuralında >= yerine > (yarım gün ve tatil özelliği kırmızı); AT TIME ZONE yerine sabit +03 (saat dilimi senaryosu kırmızı); kilit anında +1 gün eksik (kilit anı senaryosu kırmızı); hoca iptalinin geri alınması (hoca iptali senaryosu ve özelliği kırmızı); indirmede şube süzgecinin kaldırılması (şube indirme senaryosu kırmızı). Yeşil kalan olursa test eksik sayılır ve yazılır."
+  }
+ ],
+ "resolved_gaps": [
+  {
+   "gap": "D02-B01",
+   "decision": "Ders bir hocanın bir dönemdeki ders açılışıdır: tek sahip (hoca_kisi_id), altında şubeler; tekillik etkin dersler arasında (dönem, sahip, kod). Aynı kodu farklı hocalar ayrı ders olarak açar.",
+   "why": "Plan dersi tek hocaya bağlıyor (plan.html#kararlar-indirme), asistan ve ortak hoca sonraya kaldı (plan.html#kararlar-roller); yetki tek sütunla denetlenir, genişleme yolu dersYetkisi (D02-A09)."
+  },
+  {
+   "gap": "D02-B02",
+   "decision": "Program saati derse bağlıdır ve şube kümesi taşır (program_saati_subeleri); oturum üretimde kümeyi kopyalar (oturum_subeleri). Kayıt kabulü ve indirme \"öğrencinin şubesi oturumun kümesinde mi\" sorusuyla yapılır (oturumSubeleri).",
+   "why": "Farklı saatli şubeleri de birlikte işlenen şubeleri de tek yapı karşılar (teknik.html#kod-veri-modeli); başka şubenin oturumu öğrenciye inmez."
+  },
+  {
+   "gap": "D02-B03",
+   "decision": "Oturum bir program saatinin bir günkü oluşumudur; ardışık saatler tek program saatinde (blok) toplanır, aynı gün ayrık iki buluşma iki oturumdur. API ve panel oturumu tarihle değil kimlikle adresler.",
+   "why": "Sözlükteki \"tek buluşma\" tanımı (plan.html#sozluk) ve blok ders kuralı (plan.html#kararlar-kafa-sayisi); D02-C01'in çözümü."
+  },
+  {
+   "gap": "D02-B04",
+   "decision": "Program saati ve oturum türe göre açık ders saati sayısı taşır (teori_saat, uygulama_saat; toplam 1 ile 12); süreden türetilmez.",
+   "why": "Ders saati 50 dakika olduğundan 10:00 ile 11:50 iki saattir (tasarim.html#ph-home); karışık blok tek oturumda kalır, hak formülü türe göre T ister (plan.html#devam-uyari-seviyeleri)."
+  },
+  {
+   "gap": "D02-B05",
+   "decision": "Program kaydedilince dönemin bütün oturumları aynı işlemde üretilir; her değişiklikte yalnız başlamamış oturumlar packages/core/src/dersler içindeki saf plan fonksiyonuyla yeniden hesaplanır ve fark yazılır.",
+   "why": "Telefon kalan planlı saatleri ve sonraki oturumu yerelde hesaplar, pencere internetsiz açılır; ders başına yaklaşık 30 satır küçük bir yazımdır; tatil ve iptal kararı sunucuda kalır (plan.html#gun-kenar-durumlar)."
+  },
+  {
+   "gap": "D02-B07",
+   "decision": "Tatil tarih aralığı ve isteğe bağlı yarım gün başlangıç saatidir; o gün tatil saatinden önce başlayan oturum kalır. Sonradan girilen tatil gelecekteki oturumu iptal (tatil) yapar, silmez; tatil kalkınca oturum geri gelir.",
+   "why": "Basit ve izlenebilir; iptal oturumun kimliği internetsiz telefondan gelen kayıt için geçerli kalır, son karar sunucudadır."
+  },
+  {
+   "gap": "D02-B08",
+   "decision": "Dönem genel akademik dönemdir (yıl ve yarıyıl); birim ile dönem çifti birim_donemleri satırında takvimi ve kilidi taşır.",
+   "why": "Yoklama kaydının tekil ve bölme anahtarı tek dönem kimliği ister (teknik.html#veritabani-donem-alani); farklı birimden ders alan çift anadal öğrencisi aynı dönemde kalır; D12-B13 ile aynı."
+  },
+  {
+   "gap": "D02-B09",
+   "decision": "Takvim ayrı varlıktır; birden çok birim aynı takvime bağlanır, ayrı takvimli birim kendi takvimine bağlanır.",
+   "why": "Tek genel takvim varsayılmaz (plan.html#hoca); ortak tarih bir kez girilir, alan alan geçersiz kılma mantığı gerekmez."
+  },
+  {
+   "gap": "D02-B10",
+   "decision": "Birim türleri fakülte, enstitü, yüksekokul, meslek yüksekokulu, konservatuvar; bölüm birimin alt satırıdır ve takvimi yoktur. Ders birimini kendisi taşır; panel varsayılanı hocanın bölümünün biriminden önerir.",
+   "why": "Takvim ve kilit fakülte ve enstitü düzeyinde (plan.html#hoca); servis dersinde hocanın birimi dersinkinden farklı olabilir. D02-C03'ün çözümü."
+  },
+  {
+   "gap": "D02-B11",
+   "decision": "Kod ve ad serbest metindir: NFC, baş ve son boşluk silinir, çoklu boşluk teke iner; kod ayrıca Türkçe kuralla büyür (Intl kullanmadan). Tekillik etkin dersler arasında (dönem, sahip, kod) ve derste şube etiketi. Kod ve ad kilitten önce değişir, denetim kaydına yazılır.",
+   "why": "AKSİS'e otomatik bağlantı yok, ders kataloğu gerekmez; hoca özeti AKSİS'teki dersle elle eşleştirir (plan.html#acik-aksis)."
+  },
+  {
+   "gap": "D02-B12",
+   "decision": "Derslik serbest metindir (1 ile 40 karakter); program saatinde ve oturumda kopyası vardır, tek oturumda değiştirilebilir.",
+   "why": "Aşama 3'te sınıf konumu telefona gönderilmiyor (plan.html#asama23-gps), Aşama 2 eşleştirmesi tarayıcı ile ders arasında; katalog gerekmez."
+  },
+  {
+   "gap": "D02-B13",
+   "decision": "Aynı gün içinde saat, derslik ve saat sayısı değişikliğinde kimlik korunur, önceki değerler oturum_degisiklikleri satırına yazılır. Gün değişikliği taşımadır: telafi ucunda eskisiniIptalEt ile eski oturum iptal (tasindi), yenisi telafi olarak aynı işlemde açılır. Oturum hiç silinmez.",
+   "why": "Kayıtlar kimlikle oturuma bağlı kalır; eski anlar D07'nin internetsiz kayıt kararında kanıttır (plan.html#gun-kenar-durumlar)."
+  },
+  {
+   "gap": "D02-B14",
+   "decision": "Değişiklik yalnız başlangıcı saat arayüzüne göre gelecekte olan oturumlara uygulanır; program saatinde isteğe bağlı geçerlilik aralığı vardır; başlamış oturumda yalnız \"Ders yapıldı mı?\" cevabı, kafa sayısı ve D04'ün ders içi ayarları değişir; kilitli dönemde yalnız cevapsız oturumun cevabı yazılır.",
+   "why": "Geçmiş sayım sessizce değişmez; geçmişi düzeltmenin yolu denetim kayıtlı düzeltmedir (D09)."
+  },
+  {
+   "gap": "D02-B18",
+   "decision": "Onaysız oturum bitmiş, planlı ve yapıldı bilgisi olmayan oturumdur; panelde ve hoca telefonunda listelenir. \"Yapıldı\" cevabı kafa sayısız yapıldı yapar. \"Yapılmadı\" cevabından sonra (ya da iptal oturuma) gelen kafa sayısı çelişki açar: yapildi boşalır, oturum listede çelişkili görünür. Toplu cevap ucu vardır; her cevap denetim kaydına yazılır.",
+   "why": "Kafa sayısı internetsiz kuyrukta gecikebilir; çelişki sessizce çözülürse sayım değişir; dönem sonu çıktısı zaten cevap bekliyor (plan.html#kararlar-kafa-sayisi)."
+  },
+  {
+   "gap": "D02-B19",
+   "decision": "Kilit otomatiktir: kilit anı son günün ertesi 00:00 Europe/Istanbul; durum her okumada saat arayüzünden türetilir, donem_kilidi işi yalnız kalıcı yan etkileri uygular; yönetici ekranı tarihi ve durumu gösterir.",
+   "why": "Plan kilidi son güne bağlıyor ve süre en geç o gündür (plan.html#devam-donem-sonu); iş gecikse de kilit doğru görünür; kural için SQL now() yok (teknik.html#testler-veritabani-sifirlama); D14-B09 ile aynı."
+  },
+  {
+   "gap": "D02-B20",
+   "decision": "Kilitte: kilitDurumu doğru olur (D05 ve D07 son günden sonra gelen kaydı yalnız saklar); kayıtlı kilit adımları çalışır (D07: onaysız Kendi beyanı sayılmış haliyle, kararsızlar denetim kaydıyla); birimin dersleri arşivlenir; program, telafi, iptal, düzenleme, şube, ders ayarı, devir ve D03 liste yazımı kapanır; cevapsız oturuma cevap ve D09 düzeltmesi sürer; kilit telefona iner, eski saat belgesi ve QR anahtarları kilitliBirimDonemleri ile bırakılabilir.",
+   "why": "Plan kilitten sonra sayımın ancak denetim kaydı bırakan düzeltmeyle değişeceğini söylüyor (plan.html#kararlar-gonderme-suresi); düzeltme yolu açık kalmalı."
+  },
+  {
+   "gap": "D02-B25",
+   "decision": "Birim ve dönemin takvimi bağlı değilse ya da dönem kilitliyse ders açma ve program kaydı açık hata koduyla reddedilir (DERSLER_TAKVIM_YOK, DERSLER_DONEM_KILITLI); ders açmak için ayrı onay yoktur.",
+   "why": "Oturum üretimi takvim ister; hoca zaten onaylıdır; sıra hatası çıkmaz, ilk yönetici takvimi önce girer."
+  },
+  {
+   "gap": "D02-B26",
+   "decision": "Yoklama süresi ders ayarıdır (boş: süre seçilmedi); oturum üretimde kopyalar; ayar değişince başlamamış oturumlarda güncellenir ve pencere D04 dinleyicisiyle yeniden hesaplanır; ders içi değişiklik D04'ün pencere tablosundadır.",
+   "why": "Plan \"hoca ders ayarında süre seçtiyse\" diyor (plan.html#kararlar-inceleme-hesaplari, Yoklama penceresi)."
+  },
+  {
+   "gap": "D02-B27",
+   "decision": "Takvim yazımı aynı işlemde takvim_oturumlarini_yenile işini koyar; iş dersleri tek tek, her birini kendi işleminde yeniden hesaplar; fark temelli olduğundan iki kez çalışmak sonucu değiştirmez.",
+   "why": "Bir birimde yüzlerce ders var, tek istekte hepsi uzun sürer; işler veritabanı işlemiyle birlikte kuyruğa girer (teknik.html#sunucu-arka-plan)."
+  },
+  {
+   "gap": "D02-B28",
+   "decision": "Çakışma: iki planlı oturumun [başlangıç, bitiş) aralıkları kesişirse. Öğrenci eşleşmesi liste satırının öğrenci numarasıyla (D03 liste kaynağı, D02-A12); ikinci programın listesindeki aynı numara dahil, farklı numarayla iki programda olan öğrenci eşleşmez (iki hesap gerekir, D03 kuralı). Panelde ders sayfasında liste satırı kimliği, öbür dersin kodu, adı ve saatleri; ayrı tablo yok.",
+   "why": "Plan çakışmanın hocalara gösterilmesini ve çift anadal listeleri arasında da denetlenmesini istiyor (plan.html#kararlar-kafa-sayisi); \"tek derse yoklama\" kararı D04 ve D07'de kalır."
+  },
+  {
+   "gap": "D02-B29",
+   "decision": "İnen ders satırı: kod, ad, hocanın görünen adı (D01.kisiGetir), teori ve uygulama p, süre, QR ayarı, durum, arşiv nedeni, şubeler. Program saati satırı: gün, saatler, saat sayıları, derslik, geçerlilik, şubeler. Oturum satırı: tarih, yerel saatler, UTC anlar, saat sayıları, derslik, süre, QR ayarı, tür, durum, iptal nedeni, kısa kod, şubeler. Tatil ve kilit satırları (son gün, kilit anı, uygulandı). Kafa sayısı ve yapıldı inmez.",
+   "why": "Tasarımdaki Bugün ekranı bu alanları gösteriyor (tasarim.html#ph-home); telefon hak uyarısını yerelde hesaplar (p gerekir); hoca adı başka öğrencinin verisi değil."
+  },
+  {
+   "gap": "D02-B30",
+   "decision": "Deneme dersi: derste deneme_dersi işareti, birimsiz, süresiz ve kilitsiz inceleme döneminde; deneme_dersi_oturumlari işi her gün 00:00 ile 24:00 oturumunu 14 gün ileriye üretir; onaysız liste, çakışma, kilit, dönem arası, ölçüm ve raporlar dışlar. Dersi D01'in kurulum işi denemeDersiniKur ile kurar (D02-A13).",
+   "why": "Kayıt oturuma bağlı olduğundan her an açık bir oturum gerekir (plan.html#kararlar-inceleme-hesaplari); oturumsuz pencere kayıt modelini bozar."
+  },
+  {
+   "gap": "D02-B31",
+   "decision": "Ekle-bırak bitişi bilgi alanıdır: takvimGetir ile D03'e gider, geç eklenen öğrencide seçim ekranı Md.9/4 seçeneğini açıklamayla gösterir; varsayılan değişmez, sunucu kuralı yok.",
+   "why": "Plandaki varsayılan ekle-bırak seçeneğidir (plan.html#devam); kuralı değiştirmek ürün kararı olurdu."
+  },
+  {
+   "gap": "D02-B32",
+   "decision": "Son hafta: birimin son günü dahil geriye 7 takvim günü (İstanbul). Son oturum: dersin iptal edilmemiş son oturumu, son ders günü onun tarihi. Son gün ve kilit anı kilit satırıyla telefona iner.",
+   "why": "Gönderme süresi kuralıyla aynı ölçü (plan.html#kararlar-gonderme-suresi); telefon hatırlatmayı internetsiz hesaplar (plan.html#devam-donem-sonu); D08-B23 ile aynı."
+  },
+  {
+   "gap": "D02-B33",
+   "decision": "Takvim alanları ders_baslangic, ders_bitis, ekle_birak_bitis, devamsizlik_son_gun (hepsi zorunlu date); tatiller ve sınav haftaları ayrı tablolarda. CHECK: ders başlangıcı < ders bitişi <= son gün, ekle-bırak bitişi <= ders bitişi.",
+   "why": "Son gün ders bitişine eşit olabilir (Eczacılık örneği, plan.html#devam-donem-sonu); ekle-bırak dersler başlamadan bitebilir."
+  },
+  {
+   "gap": "D02-B34",
+   "decision": "Yarıyıl metin ve CHECK: guz, bahar, yaz (yaz okulu ilk sürümde kullanılmasa da değer var); inceleme yalnız deneme dersinin dönemi; cevapta x-extensible-enum.",
+   "why": "Liste sonradan genişlerse istemciler kırılmaz (teknik.html#sunucu-mimari)."
+  },
+  {
+   "gap": "D02-B35",
+   "decision": "Dönem arası: hiçbir etkin birimde dersleri başlamış ve kilitlenmemiş birim dönemi yoksa (inceleme dönemi hariç). Tek fonksiyon donemArasiMi (D02-A14); yönetici kilit ekranı aynı değeri gösterir.",
+   "why": "En düşük sürüm uygulama genelinde tek değerdir ve yalnız dönem arasında yükselir (plan.html#dagitim-guncelleme-ilkesi); D13-B17 ile aynı tanım."
+  },
+  {
+   "gap": "D02-B36",
+   "decision": "Arşiv salt okunurdur ve etkin listelerden çıkıştır. Kilitte birimin dersleri kendiliğinden arşivlenir (telefonda Dönem kapandı olarak kalır). Hoca, başlamış ve iptal edilmemiş oturumu olmayan kendi dersini arşivleyebilir; gelecekteki oturumlar iptal (arsiv) olur, ders telefonlardan kalkar. Raporlar arşivli dersi gösterir.",
+   "why": "Yanlış açılan dersi kaldırmanın silmesiz yolu (plan.html#devam-donem-sonu). Kayıt ancak başlamış oturuma verilebildiğinden D02 bu koşulu yoklama kayıtlarını okumadan denetler (contracts.json'da D02 D05'i okumaz)."
+  },
+  {
+   "gap": "D02-B37",
+   "decision": "Oturum hiç silinmez, iptal durum alanıyla iner; kaldırılan program saati ve tatil silindi işaretiyle iner; şube kümesi daralınca öğrencinin şubesini artık kapsamayan değişmiş program saati ve oturum ona silindi olarak iner. Derse sonradan eklenen öğrenciye ve devirle yeni hocaya dersin bütün satırları sürüme bakılmadan iner; takvim bağı değişince yeni takvimin tatilleri de. Pasifleşen liste satırında, hoca arşivinde ve devirde eski hocaya ders kapsamdanCikti işaretiyle iner.",
+   "why": "Öğrenci iptali görür; değişiklik sürümü tek sayaçtan (teknik.html#kod-veri-modeli); kapsam olayı D06-B15'teki gibi."
+  },
+  {
+   "gap": "D02-B38",
+   "decision": "Oturum kısa kodu sütunu, dizisi ve tekil dizini ilk göçte açılır; her oturuma üretimde verilir; 1 ile 9.999.999.999 arası.",
+   "why": "Sonradan eklemek dolu tabloda doldurma ve dizin ister; önce genişlet ilkesine uygun (teknik.html#telefon-kamera-qr)."
+  },
+  {
+   "gap": "D02-B39",
+   "decision": "Tarih genişletme packages/core/src/dersler içinde saf fonksiyondur (sivil tarih ve saatle çalışır, Intl kullanmaz). Yerel saatten UTC ana çeviri yazımla aynı SQL deyiminde (tarih + saat) AT TIME ZONE 'Europe/Istanbul' ile yapılır; gece işi başlamamış oturumlarda eşitliği denetleyip düzeltir. D04-B21'deki Node Intl önerisi seçilmedi.",
+   "why": "Intl yalnız UTC'den yerele biçimler, tersi elle yazılmış bir yaklaşım döngüsü ister; API ve işçi süreçleri yayın sırasında farklı saat dilimi verisi taşıyabilir, veritabanı tek kaynaktır; sabit +03:00 saat dilimi kuralı değişirse sessizce kayar."
+  },
+  {
+   "gap": "D02-B40",
+   "decision": "Ders açma ve değişikliği, arşiv, devir, şube, program, telafi, oturum düzenleme ve iptali, yapıldı cevabı, yeniden üretim, birim, bölüm, dönem, takvim, birim dönemi bağı ve kilit D09.denetimeYaz ile yazılır; olay türleri dersler.* olarak sözleşme dosyasında; önceki ve sonraki değer taşır, isim ve numara taşımaz. p değişikliğinin olayını D08 yazar.",
+   "why": "Program değişikliği sayımı değiştirir; itirazda kanıt ve Haksız devamsız hesabı için gerekir (plan.html#hedefler)."
+  },
+  {
+   "gap": "D02-B41",
+   "decision": "contracts.json kararıyla tek modül dersler (D02): bütün uçlar /v1/dersler altında, yönetici uçları /v1/dersler/yonetim altında; ders oturumu tablosu oturumlar, giriş oturumu tablosu giris_oturumlari (D01).",
+   "why": "Uç sahibi yolun ikinci bölümünden okunur (teknik.html#sunucu); oturum sözcüğü şemada hep ders oturumudur."
+  },
+  {
+   "gap": "D02-B42",
+   "decision": "İlk sürümde yalnız aynı dersin şubeleri birlikte işlenir (oturum_subeleri); farklı kodlu iki ders birlikte işleniyorsa tek ders altında iki şube olarak açılır, listeler ayrı yüklenir; AKSİS özeti şube başınadır (D10-B12).",
+   "why": "Birlikte işlenen şube var mı sorusu açık (plan.html#acik); en sade yol, sonra genişletilebilir."
+  },
+  {
+   "gap": "D02-B43",
+   "decision": "Program, telafi, iptal ve düzenleme panel uçlarıdır; hoca telefonu programı indirmeyle gösterir, \"Ders yapıldı mı?\" listesini ve cevabını internetliyken aynı uçlardan çağırır.",
+   "why": "Plan bunları \"Web paneli, hoca\" altında sayıyor (plan.html#hoca); uçlar istemciden bağımsız, telefon ekranı sonra eklenebilir."
+  },
+  {
+   "gap": "D02-B44",
+   "decision": "Süre seçilmemiş derste de her bitmiş oturum için sorulur; toplu cevap ucu (200 oturuma kadar) hocanın işini kısa tutar.",
+   "why": "Kayıt gelmiş oturumu kendiliğinden yapıldı saymak sayım tabanını hocasız değiştirir; hedef ders başına en çok 2 dakika (plan.html#hedefler)."
+  },
+  {
+   "gap": "D02-B45",
+   "decision": "Kayıtların sayılan işareti ve kararı değişmez; \"yapılmadı\" ve iptal oturumun kayıtları ve saatleri sayımda oturum durumuyla dışlanır (D08 ve D10 oturumlariGetir ile okur). D02 her yapıldı ve iptal değişikliğinde aynı işlemde D08.devamHesaplaIsiKoy koyar.",
+   "why": "contracts.json'a göre D02 D07'yi çağırmaz; ham kayıt kanıt olarak kalır, hoca fikrini değiştirirse karar geri alınmaz; D07-B27 ile aynı."
+  },
+  {
+   "gap": "D02-B48",
+   "decision": "İyimser eşzamanlılık: ders ve program yazımında dersler.duzenleme_no, takvimde takvimler.surum_no istekte beklenen numara olarak gelir; uyuşmazsa 409 DERSLER_SURUM_UYUSMUYOR ve cevapta güncel hal; gövde kayıtlı halle aynıysa numaraya bakılmaz. Derse yazan her işlem önce ders satırını FOR UPDATE ile kilitler.",
+   "why": "İki sekmenin ya da iki yöneticinin yazımı sessizce ezilmez; tekrarlanan aynı istek 409 almaz."
+  },
+  {
+   "gap": "D02-B49",
+   "decision": "Sınırlar sözleşmede: ders başına 20 program saati ve 20 şube, dönemde ders başına 30 telafi ve 400 oturum; kod 20, ad 120, şube etiketi 20, derslik 40 karakter (uzunluklar ayrıca CHECK'te); takvimde 60 tatil ve 10 sınav haftası; toplu cevapta 200 oturum; liste cevaplarında 1000 ile 2000 satır üst sınırı, aşılırsa kesik liste değil hata.",
+   "why": "Sınırsız liste tek istekte binlerce oturum üretir; sayılar başlangıç değeridir, ilk dönemin gerçek verisiyle ayarlanır (D13-B13 deseni)."
+  }
+ ],
+ "contradictions_resolved": [
+  {
+   "id": "D02-C01",
+   "resolution": "Plan sözlüğü esas alınır: oturum bir dersin tek buluşmasıdır, yani bir program saatinin bir günkü oluşumu; aynı gün ayrık iki buluşma iki oturumdur, blok ders tek oturumdur. teknik.html'deki \"her ders günü\" ifadesi günde tek buluşmalı olağan durumu anlatan ilk taslak sözü olarak okunur; Hacim satırı (\"iki gün işlenen derste 2\") bununla çelişmez. API ve panel oturumu kimlikle adresler; tasarımdaki tarihli adres yalnız görünümdür."
+  },
+  {
+   "id": "D02-C02",
+   "resolution": "D02 unvan ve isim tutmaz: ders indirme satırındaki hocanın görünen adı D01.kisiGetir'den gelir. Unvan alanı D01'in kararıdır; D01 eklerse aynı satıra kendiliğinden girer, D02 tablosu değişmez."
+  },
+  {
+   "id": "D02-C03",
+   "resolution": "Takvim ve kilit birim düzeyindedir: fakülte, enstitü, yüksekokul, meslek yüksekokulu, konservatuvar (plan.html#hoca). Bölüm birimin alt satırıdır ve kendi takvimi yoktur; teknik.html'deki \"fakülte, bölüm\" birim ve bölüm alanlarının ikisinin de modelde olduğu anlamında okunur. Ayrı takvimi olan bir bölüm gerekirse ayrı birim olarak açılır."
+  }
+ ],
+ "open_points": [
+  {
+   "id": "D02-A01",
+   "question": "D02-B06: Sınav haftalarında ders yapılır mı; varsayılan ne olsun?",
+   "recommendation": "Tatilde hiç oturum üretilmez. Sınav haftası satırında \"ders yapılır\" seçimi olsun, varsayılan yapılmaz; ders yapan birim seçimi açar, hoca gerekirse telafi ekler. Sunucu bu varsayılanla kurulur, karar değişirse yalnız varsayılan değer değişir.",
+   "needs_owner": true
+  },
+  {
+   "id": "D02-A02",
+   "question": "D02-B15: Hangi iptal telafi borcu doğurur, \"yapılmayıp telafi edilmeyen saat\" nasıl sayılır?",
+   "recommendation": "Oturum iptal nedenini (hoca, tasindi, tatil, sinav_haftasi, takvim, program, arsiv) ve isteğe bağlı telafi bağını tutar. Borç, tür başına hoca iptali ve \"yapılmadı\" saatleri eksi yapılan telafi saatleri; tatil, sınav haftası, takvim ve program iptali borç değildir, taşınan oturumun telafisi borcu kapatır. Hesap D08 ve D10'da (D08-B15, D10-B19); D02 alanları baştan taşır.",
+   "needs_owner": true
+  },
+  {
+   "id": "D02-A03",
+   "question": "D02-B16: Telafi geçmiş bir güne girilebilir mi?",
+   "recommendation": "Evet, kilitten önce ve dönemin ders başlangıcı ile birimin son günü arasında. Aynı gün ya da geçmiş girişte cevap uyarı taşır: telefonlar bilemez, kaydı olmayanları listeden işaretleyin. Sunucu bu kuralla kurulur.",
+   "needs_owner": true
+  },
+  {
+   "id": "D02-A04",
+   "question": "D02-B17: Telafi telefona inmediği için listeden işaretlenen öğrenci hangi sebep koduyla eklenir?",
+   "recommendation": "Tarafsız yeni kod \"telafi telefona inmedi\", son durum Elle eklendi, Haksız devamsız sayımında ayrı görünür. Kod kataloğu D09'un; karar gelene kadar D02'nin telafi uyarısı yalnız listeden işaretlemeyi söyler, hangi kodun seçileceğini D09 kataloğu belirler.",
+   "needs_owner": true
+  },
+  {
+   "id": "D02-A05",
+   "question": "D02-B21: Son gün geçtikten sonra değiştirilebilir mi, kilit geri alınır mı?",
+   "recommendation": "Son gün geçmeden serbest değişir; bir birimi hemen kilitleyecek değişiklik \"hemen kilitle\" onayı ister. Geçtikten sonra yalnız ileri alınır, gerekçe koduyla (birim kararı, yanlış giriş) ve denetim kaydıyla; uygulanmış etkiler geri alınmaz, kilit yeni anda yeniden uygulanır. Sunucu bu kuralla kurulur.",
+   "needs_owner": true
+  },
+  {
+   "id": "D02-A06",
+   "question": "D02-B22: Yönetici bütün birimlerde mi yetkili, yalnız kendi biriminde mi?",
+   "recommendation": "İlk sürümde genel yönetici. Her yönetici ucu yetkiyi D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorar ve dersYetkisi kapsamı kanca nesnesinden okur; kapsam alanı D01'de baştan durursa (D01-B02) birim bazlı yetki göçsüz açılır.",
+   "needs_owner": true
+  },
+  {
+   "id": "D02-A07",
+   "question": "D02-B23: Ders başka hocaya devredilebilir mi (hoca ayrıldı, izinde, hesabı silindi)? plan.html#kararlar-hesap-silme silinen hocanın derslerinin arşivlendiğini söyler ama anını yazmaz; hemen arşiv dönem ortasında öğrencilerin yoklamasını keser.",
+   "recommendation": "Evet: yönetici dersi etkin ve onaylı başka hocaya, kilitten önce, gerekçe koduyla ve denetim kaydıyla devreder; silinen ya da ayrılan hocanın dersi devredilene kadar açık kalır, kilitte arşivlenir (D01-B31 ile aynı); bekleyen onaylar ve cevapsız \"Ders yapıldı mı?\" soruları yeni hocaya geçer (D09-B25). Kilitten sonra yalnız sahibi silinmiş ya da pasif ve cevapsız oturumu kalmış ders devredilir, yoksa dönem sonu çıktısı hiç alınamaz (D10-B09). Uç hazırdır; sahip istemezse genişlet ve daralt yoluyla kaldırılır.",
+   "needs_owner": true
+  },
+  {
+   "id": "D02-A08",
+   "question": "D02-B24: Yönetici dersleri, öğrenci listelerini ve yoklamaları görebilir mi?",
+   "recommendation": "Yönetici ders listesinde kod, ad, hoca, birim, p, süre ve durum görür; öğrenci listesi, yoklama ve kafa sayısı görmez (D01-B03 ile aynı). Uç bu kurala göre yazılır.",
+   "needs_owner": true
+  },
+  {
+   "id": "D02-A09",
+   "question": "D02-B46: Uygulama (lab) oturumlarını asistan yürütüyorsa sahiplik ve yetki modeli ne olur; blok derste ikinci okutma oturumu böler mi?",
+   "recommendation": "Cevap gelene kadar tek sahip. Asistan rolü gelirse ders başına görevli tablosu önce genişlet sonra daralt yoluyla eklenir ve yetki yalnız dersYetkisi içinde genişler (D01-B52). İkinci okutma oturumu bölmez, oturum içinde ikinci denetim olarak D11'e kalır.",
+   "needs_owner": true
+  },
+  {
+   "id": "D02-A10",
+   "question": "D02-B47: QR'lı ders ayarı nerede, kim açar, dönem ortasında değişir mi; QR gösterilmeyen oturum QR'lı sayılır mı?",
+   "recommendation": "Derste hocanın açtığı ayar, başlamamış oturumlara kopyalanır; o oturumda QR hiç gösterilmediyse Aşama 1 kuralı uygulanır (D11-B01 üçüncü seçenek, kararı D07 ve D11 verir). Sütunlar baştan var; ayarı true yapan istek bileşim kökünden gelen QR ayarı bayrağı kapalıyken DERSLER_QR_AYARI_KAPALI alır.",
+   "needs_owner": true
+  },
+  {
+   "id": "D02-A11",
+   "question": "D02-B50: Dönem başladıktan sonra sisteme alınan derste geçmiş haftaların oturumları üretilir mi?",
+   "recommendation": "Hayır: yalnız gelecekteki oturumlar üretilir, derste takip başlangıcı tarihi tutulur, AKSİS özeti ve raporlar bu tarihi yazar; kâğıtla alınan yoklama sisteme taşınmaz. Sunucu bu kuralla kurulur.",
+   "needs_owner": true
+  },
+  {
+   "id": "D02-A12",
+   "question": "Sözleşme eki: öğrenci indirme kapsamı, çakışma ucu ve şube pasifleştirme liste satırlarını ister, ama contracts.json'da D02 D03'ü okumaz. Liste verisi D02'ye nasıl gelir?",
+   "recommendation": "D02 dış yüzüne listeKaynagiKaydet(kaynak) eklenir; D03 kendi eklentisinde etkinSatirlar ve pasiflesenSatirlar işlevleriyle kaydolur (kayıt deseni: alt modül dinleyici kaydı açar). contracts.json'daki D02 dış yüz listesine ve D03 notlarına yazılmalı; D02 uygulama hazır olurken kaydı denetler.",
+   "needs_owner": false
+  },
+  {
+   "id": "D02-A13",
+   "question": "Sözleşme eki: deneme dersini kim kurar? D01'in inceleme_hesaplari_kurulumu işi dersi kurmak istiyor ama D02 dış yüzünde kurucu işlev yok.",
+   "recommendation": "D02 dış yüzüne denemeDersiniKur(tx, hocaKisiId) eklenir; D01'in kurulum işi (jobs/kimlik altında, dosya döngüsü kurmaz) çağırır ve dönen şubeye deneme öğrencisinin liste satırını D03'ün bir dış yüz işleviyle kurdurur (D03-B26; D03'e eklenmesi gerekir). contracts.json güncellenmeli.",
+   "needs_owner": false
+  },
+  {
+   "id": "D02-A14",
+   "question": "Sözleşme eki: \"dönem arası\" bilgisini en düşük sürüm koruması (D13-B17) ve yayın penceresi istiyor; D13 ve D15 D02'yi okumuyor.",
+   "recommendation": "D02 dış yüzüne donemArasiMi(tx, an?) eklenir; app.ts (D13) bu işlevi en düşük sürüm denetimine parametre olarak verir, D15 de aynı yoldan alır. contracts.json güncellenmeli.",
+   "needs_owner": false
+  }
+ ]
+}

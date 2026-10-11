@@ -1,0 +1,122 @@
+{"modules": [{"id": "D01", "name": "kimlik", "title": "Kimlik, giriş ve yetki", "path": "apps/server/src/modules/kimlik/", "contracts_file": "packages/contracts/src/kimlik.ts", "migration_dir": "apps/server/migrations/<14 haneli UTC>_kimlik_<açıklama>/ (tek Drizzle klasörü; D01 yalnız bu adla klasör açar, göçü yalnız D01 tablolarına dokunur; klasör kuralı ve CI denetimi D12'nin)", "owns_tables": ["kisiler", "personel_rolleri", "giris_kodlari", "eposta_giris_durumlari", "giris_oturumlari", "ogrenci_hesaplari", "cihazlar", "cihaz_anahtarlari", "cihaz_degisim_talepleri", "kayit_kodlari", "hesap_silme_istekleri"], "owns_endpoints": ["POST /v1/kimlik/kod", "POST /v1/kimlik/giris", "POST /v1/kimlik/cikis", "GET /v1/kimlik/oturumlar", "DELETE /v1/kimlik/oturumlar/{girisOturumuId}", "GET /v1/kimlik/ben", "POST /v1/kimlik/basvuru", "POST /v1/kimlik/basvuru/dogrula", "POST /v1/kimlik/basvuru/silme", "POST /v1/kimlik/ogrenci/kayit", "POST /v1/kimlik/cihaz/app-attest-yenile", "POST /v1/kimlik/cihaz-degisimi", "GET /v1/kimlik/cihaz-degisimi/{talepId}", "POST /v1/kimlik/cihaz-degisimi/{talepId}/onay", "POST /v1/kimlik/cihaz-degisimi/{talepId}/ret", "POST /v1/kimlik/hesap-silme", "DELETE /v1/kimlik/hesap-silme", "POST /v1/kimlik/ogrenciler/{kisiId}/hesap-silme", "POST /v1/kimlik/kayit-kodlari", "GET /v1/kimlik/yonetim/basvurular", "POST /v1/kimlik/yonetim/basvurular/{kisiId}/onay", "POST /v1/kimlik/yonetim/basvurular/{kisiId}/ret", "GET /v1/kimlik/yonetim/hesaplar", "POST /v1/kimlik/yonetim/hesaplar/{kisiId}/oturumlari-kapat", "POST /v1/kimlik/yonetim/hesaplar/{kisiId}/pasif", "POST /v1/kimlik/yonetim/hesaplar/{kisiId}/etkin", "POST /v1/kimlik/yonetim/yoneticiler", "DELETE /v1/kimlik/yonetim/yoneticiler/{kisiId}"], "owns_jobs": ["kimlik_temizligi", "giris_oturumu_temizligi", "hesap_silme_yurutucu", "inceleme_hesaplari_kurulumu", "bekleyen_kayit_kapatma"], "exports": ["oturumDogrula(bilgi, baglam): OturumSonucu, kökteki oturum kancası", "yetkiDenetle(kimlik, rol, kapsam?) [yaprak]", "kisiGetir(tx, kisiId) [yaprak]", "personelRolleri(tx, kisiId) [yaprak]", "hesapSilindiMi(tx, kisiId): boolean, kişi satırı FOR SHARE [yaprak]", "ogrenciHesabiGetir(tx, { kisiId } | { numara } | { numaralar } | { kisiIdler }) [yaprak]", "cihazGetir(tx, cihazId) [yaprak]", "cihazAnahtariGetir(tx, anahtarId) [yaprak]", "girisOturumuGetir(tx, girisOturumuId) [yaprak]", "cihazDogrulamaSonucunuYaz(tx, cihazId, sonuc)", "ogrenciTeyitEt(tx, istek)", "ogrenciTeyidiniReddet(tx, istek)", "bekleyenKayitlariEslestir(tx, subeId, s?: { ogrenciNolari })", "kimlikDinleyicileriniKur(aboneler: { dersler, esitleme, projeksiyon, isletim })", "oturumlariKapat(tx, suzgec, neden)", "hesabiSil(tx, istek)", "epostaNormallestir(ham): packages/core/src/kimlik", "topluTeyitUygunMu(girdi): packages/core/src/kimlik", "kimlikEklentisi"], "reads_from": ["D02", "D03", "D07", "D09", "D12", "D13", "D14", "D15"], "queue_items": [], "notes": ["Kökteki oturum kancasının işlevi bu modülün dış yüzündedir; kökte D13 kaydede
+##### D04 keys ['id', 'module', 'summary', 'tables', 'endpoints', 'jobs', 'state_machines', 'invariants', 'exports', 'files', 'tests', 'resolved_gaps', 'contradictions_resolved', 'open_points', 'queue_items', 'registrations', 'dis_yuz_kullanimi']
+{
+ "id": "D04",
+ "module": "saat",
+ "summary": "Saat modülü (D04) yoklama penceresinin ve saat kanıtının sunucu tarafıdır: her ders oturumunun pencere satırı, hocanın ders içi süre değişikliği ve erken kapatma geçmişi, saat belgesinin üretimi ve doğrulaması, sunucu saat eşitlemesinin izlenmesi ve kesinti kaydı. Pencere oturumun üretildiği işlemde D02'nin dinleyicisiyle açılır; ders içi değişikliklerden etkin basma anı sırasıyla baştan hesaplanır, bu yüzden aynı değişiklikler hangi sırayla ulaşırsa ulaşsın aynı pencereyi verir ve hiçbir değişiklik pencereyi basıldığı andan geriye kısaltamaz. Kayıt kararı pencereyi satır kilidiyle okuduğundan ders içi değişiklikle yarışmaz; eski programla gelen kayıt ayrı bir sonuçla ayrılır. Saat belgesi kid ve HMAC-SHA256 taşıyan 82 baytlık sabit ikili bir metindir (base64url 110 karakter), veritabanına dokunmadan üretilir ve eşitleme bozukken ne uçtan ne başlıktan verilir. Çapa aralığı, pay, 7 gün ve pencere kuralları packages/core/src/saat içinde saf fonksiyondur; telefon, sunucu ve panel aynı fonksiyonu aynı testlerle kullanır. Modül karar vermez: pencere ve saat sonucunu D07'ye verir, kapanış, pencere değişikliği ve kesinti olaylarını kayıtlı dinleyicilere iletir.",
+ "tables": [
+  {
+   "name": "oturum_pencereleri",
+   "purpose": "Her ders oturumunun yoklama penceresi, oturumla bire bir: açılış, plandaki ve geçerli kapanış, en geç kapanış, süre ayarı ve kaynağı, son taşıma anı, birim ve şubeler, kapanışın işlendiği an, telefona inen sürüm. Ayarın kesinleşmesini bu tablo tutmaz, D07 izler (D04-B03). Planlanan pencere ve uygulanmış ders içi değişikliklerden baştan hesaplanan özet satırdır; değişikliklerin kendisi pencere_degisiklikleri tablosundadır. Satır oturumun üretildiği işlemde açılır, hiç silinmez. Pencereyi değiştiren işlem satırı FOR UPDATE ile, kayıt kararı için okuyan işlem FOR KEY SHARE ile kilitler (Durumlar ve kurallar, Kilit sözleşmesi).",
+   "columns": [
+    {
+     "name": "oturum_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Birincil anahtar; oturumla bire bir. (oturum_id, donem_id) ve (oturum_id, ders_id) bileşik yabancı anahtarlarıyla oturumlar satırına (D02) bağlıdır."
+    },
+    {
+     "name": "donem_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Oturumun dönemi; bileşik yabancı anahtar oturumun dönemiyle aynı olmasını zorlar."
+    },
+    {
+     "name": "ders_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Oturumun dersi; bileşik yabancı anahtar oturumun dersiyle aynı olmasını zorlar. İndirme kapsamı ve yetki için."
+    },
+    {
+     "name": "birim_id",
+     "type": "uuid",
+     "null": true,
+     "default": "",
+     "note": "Dersin birimi (D02.dersGetir, olay başına bir okuma); NULL birimsiz deneme dersidir. Kilit kararı (D02.kilitDurumu) ve saklama partisi için; yabancı anahtar yok, değeri D02 olayıyla güncellenir."
+    },
+    {
+     "name": "sube_idleri",
+     "type": "uuid[]",
+     "null": false,
+     "default": "",
+     "note": "Oturumun şubeleri (D02 olayındaki subeIdleri, D04-A09). Öğrenci indirmesinin şube süzgeci; şube eklenince D02 olayı satırı yeniden damgalatır."
+    },
+    {
+     "name": "acilis_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Pencerenin açıldığı an: oturumun başlangıcı (UTC). Ders içi değişiklik açılışı değiştirmez; yalnız D02 olayı taşır."
+    },
+    {
+     "name": "ders_bitis_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Oturumun bitişi (UTC): süre seçilmeyen derste kapanış ve her değişikliğin üst sınırı."
+    },
+    {
+     "name": "planlanan_sure_dk",
+     "type": "integer",
+     "null": true,
+     "default": "",
+     "note": "Olaydaki yoklamaSuresiDk (D02 dersin ayarından verir); NULL ders boyunca demektir."
+    },
+    {
+     "name": "planlanan_kapanis_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Plandaki kapanış: süre varsa en erken(acilis_ani + planlanan_sure_dk, ders_bitis_ani), yoksa ders_bitis_ani. Telefonların dersten önce indirdiği pencere budur."
+    },
+    {
+     "name": "kapanis_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Geçerli kapanış: plan ve uygulanmış değişikliklerin etkin basma anı sırasıyla baştan hesabı (core pencereHesapla); tasima_ani doluysa ondan önce basılmış değişiklikler katılmaz."
+    },
+    {
+     "name": "en_gec_kapanis_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Plan ve ara pencerelerin en geç kapanışı; pencereSonucu DEGISIM_DILIMI sonucunun sınırı. Değişiklik yoksa planlanan_kapanis_ani ile aynı."
+    },
+    {
+     "name": "sure_dk",
+     "type": "integer",
+     "null": true,
+     "default": "",
+     "note": "Geçerli süre (dakika, açılıştan ölçülür); NULL ders boyunca açık demektir (Kendi beyanı kuralı D07-B20, girdisi pencereSonucu.kayitAnindaSureSecildi)."
+    },
+    {
+     "name": "sure_kaynagi",
+     "type": "text",
+     "null": false,
+     "default": "'DERS'",
+     "note": "DERS: süre olaydan (ders ayarı); OTURUM: bu oturumda PENCERE_SURESI uygulandı."
+    },
+    {
+     "name": "tasima_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "Son program taşımasının anı (D02 olayındaki onceki.an, D04-A09); NULL oturum hiç taşınmadı. Etkin basma anı bundan önce olan değişiklikler bu pencereye uygulanmaz, eski programın penceresine aittir (ESKI_PROGRAM)."
+    },
+    {
+     "name": "degisiklik_sayisi",
+     "type": "integer",
+     "null": false,
+     "default": "0",
+     "note": "Bu pencereye uygulanmış ders içi değişiklik sayısı; telefonda ayar değişti işareti ve pencereSonucu.ayarDegisikligiVar."
+    },
+    {
+     "name": "kapandi_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "Kapanışın işlendiği an (oturum_pencere_kapat ya da kapatan değişiklik). NULL: açılmamış, açık ya da yeniden açılmış.

@@ -1,0 +1,427 @@
+{
+ "verdicts": [
+  {
+   "id": "S02-01",
+   "verdict": "CONFIRMED",
+   "note": "Confirmed against issue #2874 (2026-09-19: maintenance mode, no updates, no hand-off), discussion #2559 (2025-12-29: openapi-fetch frozen) and the npm registry (openapi-typescript 7.13.0 and openapi-fetch 0.17.0, both 2026-02-11, nothing published since). Line 739 forbids unmaintained packages, so lines 580, 680, 706, 717, 741, 767, 814 and 818 must change. In one TypeScript repo, importing the Zod schemas directly from packages/contracts is the most compact replacement. One condition is listed under recommendation_issues.",
+   "evidence": [
+    {
+     "url": "https://github.com/openapi-ts/openapi-typescript/issues/2874",
+     "quote": "openapi-typescript is in maintenance mode and won't be getting any more updates.",
+     "date": "2026-09-19"
+    },
+    {
+     "url": "https://github.com/openapi-ts/openapi-typescript/issues/2874",
+     "quote": "No. The maintainers I've worked with on the project are unable to take over in full capacity, and I am no longer able to lead it.",
+     "date": "2026-09-19"
+    },
+    {
+     "url": "https://github.com/openapi-ts/openapi-typescript/discussions/2559",
+     "quote": "openapi-fetch, openapi-react-query, and openapi-metadata will be put into maintenance mode and won't get future updates",
+     "date": "2025-12-29"
+    },
+    {
+     "url": "https://registry.npmjs.org/openapi-typescript",
+     "quote": "\"7.13.0\": \"2026-02-11T16:02:25.378Z\" (latest; npm view, no later version)",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://registry.npmjs.org/openapi-fetch",
+     "quote": "\"0.17.0\": \"2026-02-11T16:02:21.454Z\" (latest; npm view, no later version)",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S02-02",
+   "verdict": "CORRECTED",
+   "note": "Partly right. The official package exists (npm: only 1.0.0, 2026-04-19; peer zod >=4.2.0, fastify ^5.5.0; 16 org maintainers), and Fastify's Type-Providers reference names it as the zod wrapper. Two points are wrong: the Ecosystem page does not list it under Core (the only zod type-provider entry there is the community turkerdev package), and its single release is older than the community 7.0.0.",
+   "correction": "Keep fastify-type-provider-zod 7.0.0 pinned for now. It shipped on 2026-06-24, after the official 1.0.0. Its fixes (the fastify types import and schema resolution at startup) reached the official repo only as PR #29 on 2026-09-10, and that work is still unreleased. Its lead maintainer, kibertoad, is also an npm maintainer of @fastify/type-provider-zod, so the single-maintainer risk is lower than the plan assumes. Switch to @fastify/type-provider-zod (same exports, so only the import path changes) at its first release that contains PR #29. Dropping fastify-zod-openapi as a fallback still stands: the fallback is the official fork, or Fastify's setValidatorCompiler/setSerializerCompiler with Zod 4's native JSON Schema.",
+   "evidence": [
+    {
+     "url": "https://fastify.dev/docs/latest/Reference/Type-Providers/",
+     "quote": "Official Type Provider packages follow the `@fastify/type-provider-{provider-name}` naming convention.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/fastify/fastify/main/docs/Guides/Ecosystem.md",
+     "quote": "[`fastify-type-provider-zod`](https://github.com/turkerdev/fastify-type-provider-zod)",
+     "date": "accessed 2026-10-05 (listed under Community; Core lists only @fastify/type-provider-json-schema-to-ts and @fastify/type-provider-typebox)"
+    },
+    {
+     "url": "https://registry.npmjs.org/@fastify/type-provider-zod",
+     "quote": "\"1.0.0\": \"2026-04-19T17:02:10.940Z\" (only version)",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://github.com/turkerdev/fastify-type-provider-zod/releases",
+     "quote": "Fix compatibility with fastify types by @kibertoad",
+     "date": "2026-06-24 (release 7.0.0)"
+    },
+    {
+     "url": "https://github.com/fastify/fastify-type-provider-zod/pull/29",
+     "quote": "fix: port upstream fixes for schema resolution and fastify types import",
+     "date": "merged 2026-09-10, unreleased"
+    }
+   ]
+  },
+  {
+   "id": "S02-03",
+   "verdict": "CONFIRMED",
+   "note": "Confirmed. The advisory list shows 10 Fastify advisories in 2026: 5 are High (GHSA-9q9j, -hwr6, -p68q, -667r, -247c) and 6 concern validation. GHSA-p68q is High, published 2026-09-04, and affects >=4.0.0 <5.12.2. GHSA-4mh8 (HTTP/2 trailer DoS, 2026-09-16) is fixed only in 5.12.5, which supports the 5.12.5 floor. A single root-level not-found handler is a sound rule.",
+   "evidence": [
+    {
+     "url": "https://github.com/fastify/fastify/security/advisories/GHSA-p68q-wchp-6fh7",
+     "quote": "Fastify routes a malformed URL under one plugin prefix to the custom not-found handler of a different sibling plugin, invoking the handler registered last and skipping the `preHandler` declared in its `setNotFoundHandler()`.",
+     "date": "2026-09-04"
+    },
+    {
+     "url": "https://github.com/fastify/fastify/security/advisories/GHSA-4mh8-r7rc-xpvc",
+     "quote": "fastify vulnerable to Denial of Service via unhandled exception on HTTP/2 trailer responses (affected < 5.12.5, patched 5.12.5)",
+     "date": "2026-09-16"
+    }
+   ]
+  },
+  {
+   "id": "S02-04",
+   "verdict": "CORRECTED",
+   "note": "The v6 facts hold (6.0.0-alpha.0, 2026-08-11: error handler overrides disabled by default; FSTDEP022 to 025 removed), but both enforcement claims go too far.",
+   "correction": "allowErrorHandlerOverride: false only rejects a second setErrorHandler in the same scope. Fastify resets the flag in every child context (lib/plugin-override.js: instance[kErrorHandlerAlreadySet] = false), so a module plugin under /v1/<module> can still install its own handler without any error. The single-root-handler rule needs a behavioural check instead: a scenario that makes each module throw and asserts the root error shape. --throw-deprecation turns every DeprecationWarning in the process into an exception, not only Fastify's FSTDEP codes. A deprecation inside Better Auth, pg or Drizzle would therefore turn CI red and could hold up a security update that line 720 lets skip the waiting period. Fail only on FSTDEP codes, or run the flag in a separate job that does not block security updates.",
+   "evidence": [
+    {
+     "url": "https://fastify.dev/docs/latest/Reference/Server/",
+     "quote": "When set to `false`, it prevents `setErrorHandler` from being called multiple times within the same scope, ensuring that the previous error handler is not unintentionally overridden.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/fastify/fastify/main/lib/plugin-override.js",
+     "quote": "instance[kErrorHandlerAlreadySet] = false",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://nodejs.org/api/process.html#processemitwarningwarning-options",
+     "quote": "If the `--throw-deprecation` command-line flag is used, the deprecation warning is thrown as an exception rather than being emitted as an event.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://github.com/fastify/fastify/releases/tag/v6.0.0-alpha.0",
+     "quote": "refactor!: disable error handler overrides by default",
+     "date": "2026-08-11"
+    }
+   ]
+  },
+  {
+   "id": "S02-05",
+   "verdict": "CORRECTED",
+   "note": "The facts hold: basePath defaults to /api/auth, the openAPI plugin ships in better-auth/plugins, and generateOpenAPISchema returns an OpenAPI 3.1.1 document. The risk is overstated, though, and the plugin is a weaker guard than the finding presents.",
+   "correction": "'No CI signal' is too strong. The plan's scenarios reach the server through Fastify inject (line 641), so every auth call a scenario makes, such as instructor code login, already goes through Better Auth's real HTTP routes and fails if that request breaks. What stays uncovered is the exact request shape @better-auth/expo sends and any endpoint no scenario touches. Better Auth's docs say the openAPI plugin 'is still in the early stages of development', so its document is only a partial signal. Moving basePath under /v1 adds nothing for oasdiff and would put third-party endpoints the project does not control into the additive-only /v1 space. A cheaper and stronger guard: login scenarios send the same requests and headers as @better-auth/expo, the version stays exactly pinned (line 586), and the Better Auth OpenAPI diff becomes optional.",
+   "evidence": [
+    {
+     "url": "https://www.better-auth.com/docs/plugins/open-api",
+     "quote": "This plugin is still in the early stages of development. We are working on adding more features to it and filling in the gaps.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://fastify.dev/docs/latest/Guides/Testing/",
+     "quote": "Fastify comes with built-in support for fake HTTP injection thanks to light-my-request.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/reference/options",
+     "quote": "Base path for Better Auth. This is typically the path where the Better Auth routes are mounted. It will be overridden if there is a path component within `baseURL`.",
+     "date": "accessed 2026-10-05 (default /api/auth)"
+    }
+   ]
+  },
+  {
+   "id": "S02-06",
+   "verdict": "CONFIRMED",
+   "note": "Confirmed. Plan lines 130, 133, 192 and 816 say what the finding quotes. The k6 docs confirm that the closed model tapers off under stress and that constant-arrival-rate and ramping-arrival-rate are the open-model executors. Fastify's page shows 50,373 req/s for 5.12.5, updated 2026-10-01, with an 'illustrative' caveat. Folding a fresh clock certificate into the submit response is a sound way to cut requests. The k6 scenario should also mix batch sizes up to 200 records (line 127), because signature checks grow with records, not with requests.",
+   "evidence": [
+    {
+     "url": "https://grafana.com/docs/k6/latest/using-k6/scenarios/concepts/open-vs-closed/",
+     "quote": "when the target system is stressed and starts to respond more slowly, a closed model load test will wait, resulting in increased iteration durations and a tapering off of the arrival rate of new VU iterations.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://fastify.dev/benchmarks/",
+     "quote": "These figures are illustrative. Real-world results depend on your hardware, Node.js version, and workload.",
+     "date": "updated 2026-10-01"
+    }
+   ]
+  },
+  {
+   "id": "S02-07",
+   "verdict": "CONFIRMED",
+   "note": "Confirmed. max defaults to 1000 per minute, global defaults to true, and the key is normalizeIP(request.ip). Hop-count trust is disabled in current Fastify (GHSA-3m5p fix, 5.12.1). RFC 6269 section 13.1 says what the finding quotes. The recommendation needs two additions, listed under recommendation_issues.",
+   "evidence": [
+    {
+     "url": "https://fastify.dev/docs/latest/Reference/Server/",
+     "quote": "Hop-count-only trust is disabled because it cannot validate the immediate peer and lets direct clients spoof `X-Forwarded-*` values.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://github.com/fastify/fastify/security/advisories/GHSA-3m5p-2c4r-xxw2",
+     "quote": "The numeric form of `trustProxy` is now disabled at runtime and removed from the TypeScript type union.",
+     "date": "2026-08-18"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/fastify/fastify-rate-limit/main/README.md",
+     "quote": "hook: 'preHandler', // default 'onRequest'",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/concepts/rate-limit",
+     "quote": "The default header checked is `x-forwarded-for`, which is commonly used in production environments.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S02-08",
+   "verdict": "CONFIRMED",
+   "note": "Confirmed. Better Auth's rate-limit storage accepts memory (the default), database (a rateLimit table) or secondary-storage, and @fastify/rate-limit accepts a custom store. The flood-control half of the argument holds only once under-pressure thresholds are set, and those are off by default (see the miss on line 729).",
+   "evidence": [
+    {
+     "url": "https://www.better-auth.com/docs/reference/options",
+     "quote": "The name of the table to use for rate limiting if database is used as storage.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/concepts/rate-limit",
+     "quote": "By default, rate limit data is stored in memory, which may not be suitable for many use cases, particularly in serverless environments.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S02-09",
+   "verdict": "CONFIRMED",
+   "note": "Confirmed. Drizzle declares a foreign key by referencing the other table object. dependency-cruiser group matching with $1 and pathNot works as described. GitHub contributors show sverweij at 2,386 and the next human at 7 (npm also lists a second maintainer, foureightone). Biome's noRestrictedImports gained gitignore-style patterns in 2.2.0. One more exception is needed: Drizzle 1.0 declares relations with defineRelations(schema, ...) over all tables, so the central schema or relations file must be allowed to import every module's tables.",
+   "evidence": [
+    {
+     "url": "https://orm.drizzle.team/docs/indexes-constraints",
+     "quote": "authorId: integer(\"author_id\").references(() => user.id)",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://orm.drizzle.team/docs/relations-v2",
+     "quote": "export const relations = defineRelations(schema, (r) => ({",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://api.github.com/repos/sverweij/dependency-cruiser/contributors",
+     "quote": "sverweij 2,386; dependabot[bot] 14; ajafff 7",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S02-10",
+   "verdict": "CONFIRMED",
+   "note": "Confirmed. lint/correctness/noNodejsModules exists, is not on by default, and ignores type-only imports. A related guard that needs no tool: TypeScript 6 defaults 'types' to [], so packages/core sees no Node globals (Buffer, process) unless its tsconfig adds 'node'. Keep it that way for core and contracts.",
+   "evidence": [
+    {
+     "url": "https://biomejs.dev/linter/rules/no-nodejs-modules/",
+     "quote": "Forbid the use of Node.js builtin modules.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://devblogs.microsoft.com/typescript/announcing-typescript-6-0/",
+     "quote": "In TypeScript 6.0, the default `types` value will be `[]` (an empty array).",
+     "date": "2026-03-23"
+    }
+   ]
+  },
+  {
+   "id": "S02-11",
+   "verdict": "CONFIRMED",
+   "note": "Confirmed. @fastify/swagger defaults to 3.0.3, and the type provider uses draft-2020-12 for 3.1.x documents. Pinning 3.1 is right even though @fastify/swagger and oasdiff also read 3.2, because the type provider documents mappings only for 3.0.x and 3.1.x.",
+   "evidence": [
+    {
+     "url": "https://github.com/fastify/fastify-swagger",
+     "quote": "The OpenAPI version of the generated document is taken from the `openapi.openapi` string (`3.0.3` by default).",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/fastify/fastify-type-provider-zod/main/README.md",
+     "quote": "By default target 'openapi-3.0' is used for documents with 'openapi' field set to '3.0.x', and target 'draft-2020-12' is used for documents with 'openapi' field set to '3.1.x'.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S02-12",
+   "verdict": "CORRECTED",
+   "note": "The description of breaking-files is accurate, and per-version runs against stored documents are the right shape. The fail-level advice overlooks oasdiff's default for enum additions.",
+   "correction": "oasdiff treats adding a value to a response enum as ERR by default (checker/rules.go: newBackwardCompatibilityRule(ResponsePropertyEnumValueAddedId, ERR, ...)). Stopping on ERR would therefore block the additive label changes the plan expects. Either downgrade that one check with a --severity-levels file (line: response-property-enum-value-added warn) or mark those fields with x-extensible-enum. This also answers the researcher's open question.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/oasdiff/oasdiff/main/checker/rules.go",
+     "quote": "newBackwardCompatibilityRule(ResponsePropertyEnumValueAddedId, ERR, ResponsePropertyEnumValueAddedCheck, DirectionResponse",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://github.com/oasdiff/oasdiff/blob/main/docs/BREAKING-FILES.md",
+     "quote": "makes one per spec and reports each separately, so it can name the spec that broke, and it exits non-zero if any of them has changes at or above `--fail-on`.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S02-13",
+   "verdict": "CONFIRMED",
+   "note": "Confirmed. --wait waits until services are running or healthy and implies detached mode. The recommendation has one gap, listed under recommendation_issues.",
+   "evidence": [
+    {
+     "url": "https://docs.docker.com/reference/cli/docker/compose/up/",
+     "quote": "Wait for services to be running|healthy. Implies detached mode.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://docs.docker.com/compose/how-tos/profiles/",
+     "quote": "Services without a `profiles` attribute are always enabled.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  }
+ ],
+ "recommendation_issues": [
+  {
+   "id": "S02-01",
+   "problem": "If the phone or panel parses responses at runtime with the shared Zod schemas, a strict z.enum rejects any value added later. That contradicts the plan's tolerant-client rule (line 580) and additive-only /v1 (line 723): phones already in students' hands would fail on a new label. The plan text must say that response types are imported type-only, or that response enums are parsed leniently with a fallback for unknown values. packages/contracts must also stay free of Fastify and Node imports so that the phone bundle never pulls in server code."
+  },
+  {
+   "id": "S02-02",
+   "problem": "Switching now means pinning @fastify/type-provider-zod 1.0.0 (2026-04-19). That release is older than the community 7.0.0 (2026-06-24) and lacks fixes that reached the official main branch only on 2026-09-10 and are still unreleased. It fails the 'current' lens today. Switch at the official package's next release instead."
+  },
+  {
+   "id": "S02-04",
+   "problem": "--throw-deprecation applies to the whole process, so it would fail CI on third-party deprecations and could stall security updates. allowErrorHandlerOverride does not catch a handler set inside a module plugin, so the promised red test never fires for the case the plan cares about."
+  },
+  {
+   "id": "S02-05",
+   "problem": "Moving Better Auth's basePath under /v1 adds no detection power and mixes third-party endpoints into the additive-only /v1 promise. Better Auth itself calls the openAPI plugin early-stage, so the plan should not present it as the guard."
+  },
+  {
+   "id": "S02-07",
+   "problem": "Keying the submit limit by device works only if the key is the verified device. By default the limiter runs in onRequest, before the body and signature are checked, so a client can rotate a self-supplied device id to get around it. Run the per-device limit after signature verification (hook preHandler), and keep a generous per-IP ceiling, sized for NAT, on every route for flood control. Better Auth's own limiter reads x-forwarded-for by default, so the proxy must go into Better Auth's trustedProxies as well as Fastify's trustProxy."
+  },
+  {
+   "id": "S02-12",
+   "problem": "With oasdiff's default levels, 'stop on ERR' blocks response enum additions, which the plan treats as additive. The recommendation must include the severity override or x-extensible-enum."
+  },
+  {
+   "id": "S02-13",
+   "problem": "Line 714 puts the API, worker and xprem in the same Compose file. Run with no service names, 'docker compose up -d --wait' starts them too, and the API container would clash with the server that pnpm dev starts. Name the services (PostgreSQL, Mailpit) or put the app services behind a Compose profile."
+  }
+ ],
+ "checked_ok_disputes": [
+  {
+   "plan_line": 723,
+   "claim": "Additive-only /v1 plus tolerant clients matches oasdiff's model: ERR for definite breaks, WARN for potential ones, and x-extensible-enum exists to allow new response enum values.",
+   "problem": "With default settings the two do not match. oasdiff classifies adding a value to a response enum as ERR, which is the level the plan's gate stops on, so a purely additive new label fails CI. They match only if each such field carries x-extensible-enum or that one check is downgraded with --severity-levels.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/oasdiff/oasdiff/main/checker/rules.go",
+     "quote": "newBackwardCompatibilityRule(ResponsePropertyEnumValueAddedId, ERR, ResponsePropertyEnumValueAddedCheck, DirectionResponse",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/oasdiff/oasdiff/main/checker/check_response_property_enum_value_added.go",
+     "quote": "ResponsePropertyEnumValueAddedId = \"response-property-enum-value-added\"",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://github.com/oasdiff/oasdiff/blob/main/docs/BREAKING-CHANGES.md",
+     "quote": "Where the file `oasdiff-levels.txt` contains a single line: `api-security-removed    err`",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  }
+ ],
+ "misses": [
+  {
+   "plan_line": 731,
+   "plan_quote": "Sunucu kendi içinde durum tutmadığı için aynı imajdan birden çok kopya, önünde yük dengeleyiciyle çalışabilir.",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "The plan puts a proxy in front of the server only at scale-out, and the Docker Compose stack (line 714) has no TLS terminator. Phones cannot use a plain-HTTP API: Android 9 and later disable cleartext by default, and iOS App Transport Security requires TLS. Fastify's own guide calls exposing Node directly to the Internet an anti-pattern that prevents horizontal scaling. The proxy also decides which client IP to trust. Better Auth reads x-forwarded-for by default, and its docs warn that clients can spoof that header when the origin is directly reachable. Until a proxy overwrites the header and trustedProxies is set, the IP-based limits on the code endpoints (line 586) can be bypassed. The plan's later load balancer is this same component, so adding it on day one costs nothing at scale-out.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/fastify/fastify/main/docs/Guides/Recommendations.md",
+     "quote": "The Fastify team strongly considers this to be an anti-pattern and extremely bad practice: (1) It adds unnecessary complexity to the application by diluting its focus. (2) It prevents horizontal scalability.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.android.com/privacy-and-security/security-config",
+     "quote": "The default configuration for apps targeting Android 9 (API level 28) and higher is as follows: <base-config cleartextTrafficPermitted=\"false\">",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/security/preventing-insecure-network-connections",
+     "quote": "ATS blocks connections that don't meet minimum security requirements.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://www.better-auth.com/docs/concepts/rate-limit",
+     "quote": "Keep your origin reachable only through these proxies, and make each proxy overwrite or sanitize the forwarded IP headers.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://caddyserver.com/docs/automatic-https",
+     "quote": "Automatic HTTPS provisions TLS certificates for all your sites and keeps them renewed.",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "İlk günden API'nin önüne tek bir ters vekil koyarım: Caddy ya da üniversitenin hazır ters vekili. HTTPS sertifikasını o yönetir, API ve işçinin portları dışarı açılmaz. Vekil X-Forwarded-For başlığını kendisi yazar; Fastify'ın trustProxy ayarına ve Better Auth'un trustedProxies ayarına yalnız vekilin adresi girer. Kopya sayısı artınca aynı vekil yük dengeleyici olur, ayrı bir parça eklenmez."
+  },
+  {
+   "plan_line": 723,
+   "plan_quote": "/v1 ile başlar, yalnız ekleme yapılarak değişir.",
+   "kind": "RISK",
+   "severity": "medium",
+   "finding": "By default oasdiff treats adding a value to a response enum as a definite break (ERR). The plan expects response values to grow, for example new record labels such as Doğrulanmış in Aşama 2 or new final statuses, and it relies on tolerant clients. A plain breaking check that fails on ERR would therefore block these additive changes, or tempt the developer to loosen the whole gate. oasdiff offers two built-in ways out: a severity-levels file that downgrades that one check, or x-extensible-enum on the field. The researcher left this as an open question only.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/oasdiff/oasdiff/main/checker/rules.go",
+     "quote": "newBackwardCompatibilityRule(ResponsePropertyEnumValueAddedId, ERR, ResponsePropertyEnumValueAddedCheck, DirectionResponse",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://github.com/oasdiff/oasdiff/blob/main/docs/BREAKING-CHANGES.md",
+     "quote": "allows adding new entries to enums used in responses which is very usable in many cases but requires clients to support a fallback to default logic when they receive an unknown value",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://github.com/oasdiff/oasdiff/blob/main/docs/BREAKING-CHANGES.md",
+     "quote": "Where the file `oasdiff-levels.txt` contains a single line: `api-security-removed    err`",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "oasdiff için tek satırlık bir seviye dosyası eklerim: cevaptaki bir listeye yeni değer eklenmesi (response-property-enum-value-added) hata değil uyarı sayılır. Telefon ve panel bilinmeyen değeri varsayılan görünüme düşürür ve bunun bir testi vardır. Böylece yeni etiket eklemek CI'ı durdurmaz, gerçek kırılmalar yine durdurur."
+  },
+  {
+   "plan_line": 729,
+   "plan_quote": "Gönderimler rastgele kaydırıldığı için ders çıkışı yığılması yumuşar.",
+   "kind": "RISK",
+   "severity": "low",
+   "finding": "The plan's load shedding (line 598: @fastify/under-pressure answering 503 'try later') does nothing until thresholds are set, because every pressure check defaults to 0, which turns it off. @fastify/rate-limit answers 429 with a retry-after header, but the phone's retry rule (line 130: 2 s to 10 min with jitter) does not say it honours Retry-After. Without both, an overloaded server keeps taking work while latency climbs, and phones retry on their own schedule instead of the server's.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/fastify/under-pressure/main/README.md",
+     "quote": "The default value for `maxEventLoopDelay`, `maxHeapUsedBytes`, `maxRssBytes`, and `maxEventLoopUtilization` is `0`. If the value is `0` the check will not be performed.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/fastify/fastify-rate-limit/main/README.md",
+     "quote": "if the max has been reached, the seconds the client must wait before they can make new requests",
+     "date": "accessed 2026-10-05 (retry-after header)"
+    }
+   ],
+   "recommendation_tr": "@fastify/under-pressure için olay döngüsü gecikmesi ve kullanım eşiğini açıkça yazarım; aşırı yükte sunucu 503 ve Retry-After döner. Telefon 429 ya da 503 aldığında kendi bekleme süresiyle Retry-After'dan uzun olanı bekler. k6 testi aşırı yükte 503 geldiğini, telefonların geri çekildiğini ve hiçbir kaydın kaybolmadığını gösterir."
+  }
+ ],
+ "slice_verdict": "PASS",
+ "verdict_reason": "PASS. The only high-severity finding, S02-01 (openapi-typescript and openapi-fetch frozen), is confirmed by the maintainers' own posts and by the npm registry. Four findings are corrected, none of them high. S02-02: the official Zod type provider's only release is behind the community 7.0.0 today, and it is not on the Ecosystem Core list. S02-04: allowErrorHandlerOverride does not reach child plugins, and --throw-deprecation applies to the whole process. S02-05: the Better Auth risk is overstated, and its openAPI plugin is early-stage. S02-12: oasdiff flags response enum additions as ERR by default. The other nine findings are confirmed, three of them with conditions listed under recommendation_issues. One checked_ok item is disputed on that same oasdiff default. Three misses are added, none high: no TLS-terminating proxy until scale-out (medium), the oasdiff enum default against additive-only /v1 (medium), and load shedding that is off by default with no Retry-After handling (low). Process note: besides npm view, Bash was used twice, once with wc -l to count plan lines and once with curl to grep the public Fastify Ecosystem.md. Both were read-only and wrote no files. The Ecosystem result was re-read through WebFetch."
+}

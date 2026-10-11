@@ -1,0 +1,207 @@
+##### FILES
+  apps/server/src/modules/dersler/index.ts
+  apps/server/src/modules/dersler/yaprak.ts
+  apps/server/src/modules/dersler/tablolar.ts
+  apps/server/src/modules/dersler/eklenti.ts
+  apps/server/src/modules/dersler/rotalar-dersler.ts
+  apps/server/src/modules/dersler/rotalar-oturumlar.ts
+  apps/server/src/modules/dersler/rotalar-yonetim.ts
+  apps/server/src/modules/dersler/servis-ders.ts
+  apps/server/src/modules/dersler/servis-program.ts
+  apps/server/src/modules/dersler/servis-oturum.ts
+  apps/server/src/modules/dersler/servis-takvim.ts
+  apps/server/src/modules/dersler/servis-kilit.ts
+  apps/server/src/modules/dersler/servis-cakisma.ts
+  apps/server/src/modules/dersler/servis-deneme.ts
+  apps/server/src/modules/dersler/uretim.ts
+  apps/server/src/modules/dersler/indirme.ts
+  apps/server/src/modules/dersler/kayitlar.ts
+  apps/server/src/modules/dersler/sorgular.ts
+  apps/server/src/modules/dersler/denetim.ts
+  apps/server/src/modules/dersler/saat.ts
+  apps/server/src/jobs/dersler/index.ts
+  apps/server/src/jobs/dersler/takvim-oturumlarini-yenile.ts
+  apps/server/src/jobs/dersler/donem-kilidi.ts
+  apps/server/src/jobs/dersler/deneme-dersi-oturumlari.ts
+  packages/contracts/src/dersler.ts
+  packages/core/src/dersler/index.ts
+  packages/core/src/dersler/uretim.ts
+  packages/core/src/dersler/takvim.ts
+  packages/core/src/dersler/normallestir.ts
+  packages/core/src/dersler/cakisma.ts
+  packages/core/src/dersler/uretim.test.ts
+  packages/core/src/dersler/takvim.test.ts
+  packages/core/src/dersler/normallestir.test.ts
+  packages/core/src/dersler/cakisma.test.ts
+  apps/server/test/features/dersler/ders-ve-program.feature
+  apps/server/test/features/dersler/oturum-uretimi.feature
+  apps/server/test/features/dersler/telafi-iptal-ve-duzenleme.feature
+  apps/server/test/features/dersler/ders-yapildi-mi.feature
+  apps/server/test/features/dersler/takvim-ve-kilit.feature
+  apps/server/test/features/dersler/yetki.feature
+  apps/server/test/features/dersler/birim-ve-donem.feature
+  apps/server/test/features/dersler/cakismalar.feature
+  apps/server/test/features/dersler/indirme.feature
+  apps/server/test/features/dersler/deneme-dersi.feature
+  apps/server/test/features/dersler/saat-dilimi.feature
+  apps/server/test/features/dersler/sozlesme.feature
+  apps/server/test/steps/dersler/ders-adimlari.ts
+  apps/server/test/steps/dersler/oturum-adimlari.ts
+  apps/server/test/steps/dersler/takvim-adimlari.ts
+  apps/server/test/steps/dersler/yonetim-adimlari.ts
+  apps/server/test/steps/dersler/sozlesme-adimlari.ts
+  apps/server/test/support/kurucular/dersler.ts
+
+##### TESTS
+ T0 [behavior] Program kaydı dönemin bütün oturumlarını üretir :: MAT101 pazartesi 09:00 ile 11:00 (teori 2), 14 haftalık takvim, bir pazartesi tam gün tatil: planlı oturum sayısı takvim günlerini gezen kaba sayımla aynı (13), ilk oturumun açılışı 06:00Z; kontrol: tatil kaldırılıp yeniden üretim işi çalışınca 14 olur. Beklenen sayı adımda sabit yazılmaz, kurucunun takviminden hesaplanır.
+ T1 [behavior] Yarım gün tatil yalnız tatil saatinden sonra başlayan oturumu iptal eder :: Tatil 13:00'te başlıyor: aynı günün 09:00 oturumu planlı kalır (pozitif kontrol), 14:00 oturumu iptal (tatil) olur; tatil saati 15:00'e alınınca 14:00 oturumu yeniden planlı olur.
+ T2 [behavior] Ders yapılmayan sınav haftasında oturum üretilmez :: dersYapilir false iken haftada oturum yok; aynı hafta dersYapilir true yapılıp iş çalışınca oluşumlar üretilir; tekrar false yapılınca başlamamış olanlar iptal (sinav_haftasi) olur (iki yönlü kontrol).
+ T3 [behavior] Program değişikliği yalnız başlamamış oturumlara uygulanır :: Saat 5. haftanın salısına kurulu, program 10:00'a alınır: 1 ile 5. hafta oturumlarının anları değişmez (önceki anlarla tek tek karşılaştırılır), 6. haftadan sonrakiler değişir; değişen her oturum için oturum_degisiklikleri satırında önceki anlar durur.
+ T4 [behavior] Hoca iptali yeniden üretimle geri gelmez :: Hoca 8. hafta oturumunu iptal eder, sonra derslik değişikliğiyle program kaydedilir: oturum iptal (hoca) kalır; kontrol: tatil nedeniyle iptal olan oturum tatil kaldırılınca planlı olur; iptaliGeriAl hoca iptalini geri getirir.
+ T5 [behavior] Aynı program ikinci kez kaydedilince hiçbir şey yazılmaz :: İkinci PUT 200 döner; degisiklik_sayaci, oturum satırları, denetim kaydı sayısı, D08 iş sayısı ve düzenleme numarası değişmez; kontrol: tek alan değişince sayaç ve numara birer artar.
+ T6 [behavior] Eski düzenleme numarasıyla program kaydı reddedilir :: 409 DERSLER_SURUM_UYUSMUYOR ve cevapta güncel program; aynı gövde doğru numarayla 200.
+ T7 [behavior] Yazım yarıda kalırsa hiçbir şey kalmaz :: Sahte üretim dinleyicisi hata verince program PUT'u 500 döner: oturum yok, sayaç artmamış, denetim ve D08 işi yok, düzenleme numarası aynı; kontrol: dinleyici düzelince aynı istek oturumları yazar.
+ T8 [behavior] Her yazım telefona inen satırları tek sürümle damgalar :: Program kaydında değişen bütün program saati ve oturum satırlarının surum değeri birbirine ve sayaçtaki değere eşittir; kafaSayisiniYaz ve yapıldı cevabı sayacı artırmaz (inmeyen sütun).
+ T9 [behavior] Aynı gün telafi uyarıyla oluşur, taşıma eskisini iptal eder :: Bugün 15:00 telafisi AYNI_GUN uyarısı ve kısa kodla oluşur, D04 dinleyicisi tek yeni oturumla çağrılır; eskisiniIptalEt ile eski oturum aynı işlemde iptal (tasindi) olur; telafi bir kısıta takılırsa eski oturum da planlı kalır.
+ T10 [behavior] Başlamış oturum düzenlenemez, iptal edilemez, taşınamaz :: Başlangıçtan bir dakika sonra PATCH, iptal ve eskisiniIptalEt 409 DERSLER_OTURUM_BASLAMIS; kontrol: başlangıçtan bir dakika önce üçü de 200 (sahte saatle).
+ T11 [behavior] Kafa sayısı yapıldı yapar, yapılmadı cevabından sonra çelişki açar :: Hoca yapılmadı der, sonra kafaSayisiniYaz 30 ile gelir: sonuç celiski, oturum onaysız listede celiskili true; hoca yapıldı deyince listeden çıkar ve tek D08 işi konur; kontrol: cevapsız oturuma gelen kafa sayısı doğrudan yapıldı yapar.
+ T12 [behavior] "Ders yapıldı mı?" listesi yalnız bitmiş ve cevapsız oturumları gösterir :: Bitişten bir dakika önce oturum listede yok, bir dakika sonra var (pozitif kontrol); kafa sayısı gelince çıkar; deneme dersinin oturumları hiç görünmez.
+ T13 [behavior] Toplu cevap öğe başına sonuç döner :: Dört öğe: cevapsız oturum yazildi, aynı cevaplı oturum degismedi, başka hocanın oturumu bulunamadi, başlamamış oturum baslamadi; denetim kaydına yalnız yazılan öğe girer, D08 işi ders başına bir.
+ T14 [behavior] Kilit anı son günün ertesi 00:00 İstanbul saatidir :: Son gün 2 Ocak: 2 Ocak 23:59:59.999 İstanbul anında kilitDurumu false ve program kaydı 200; 3 Ocak 00:00:00.000 anında true ve program kaydı 409 DERSLER_DONEM_KILITLI (sahte saat setTime ile).
+ T15 [behavior] Kilitten sonra cevapsız oturum cevaplanır, değişiklik reddedilir :: Kilitten sonra cevapsız oturuma yapıldı cevabı 200; yapıldı cevabı olan oturumu yapılmadı yapmak 409 DERSLER_DONEM_KILITLI; telafi, iptal ve şube eklemek 409.
+ T16 [behavior] Dönem kilidi işi yan etkileri bir kez uygular :: İş iki kez çalışır: kayıtlı sahte kilit adımı bir kez çağrılır, dersler arşivlenir (kilit), ders başına bir D08 işi ve bir denetim olayı yazılır, birim dönemi sürüm alır; ikinci çalışma hiçbir satır yazmaz.
+ T17 [behavior] Kilit adımı hata verirse kilit uygulanmaz :: Sahte adım hata verir: kilit_uygulandi_ani boş, dersler etkin, denetim yok, D08 işi yok; adım düzelince sonraki çalışma uygular. Kilit durumu bu arada da saatten true döner.
+ T18 [behavior] Takvim değişince yeniden üretim aynı işlemde kuyruğa girer :: Tatil eklenen takvim PUT'u takvim_oturumlarini_yenile işini koyar; aynı PUT işlemi zorla geri alınırsa iş de yoktur; iş çalışınca o günün oturumu iptal (tatil) olur, ikinci çalışma boş fark bulur.
+ T19 [behavior] Başka hocanın dersi görülmez ve değiştirilemez :: B hocası A'nın dersine GET, PATCH, program PUT, telafi, çakışma ve "Ders yapıldı mı?" isteğinde 404 alır, gövdede dersin kodu ve adı geçmez; kontrol: A aynı isteklerde 200 (plan.html#baslangic yetki senaryosu, önce kırmızı yazılır).
+ T20 [behavior] Yönetici uçları hocaya kapalıdır :: Hoca rolüyle /v1/dersler/yonetim altındaki her uca istek 403, yönetici rolüyle 200; uç listesi rota tablosundan okunur, elle yazılmaz.
+ T21 [behavior] Girişsiz birim listesi yalnız etkin birim ve bölümleri verir :: Pasif birim ve pasif bölüm listede yok, etkin olanlar var (pozitif kontrol); oturumsuz istek 200.
+ T22 [behavior] Takvimsiz birime ders açılamaz, aynı kimlikle tekrar güvenlidir :: Takvim bağlı değilken 409 DERSLER_TAKVIM_YOK; bağlandıktan sonra 201; aynı id ve içerikle ikinci istek 200 ve tek ders; aynı id farklı kodla 409 DERSLER_KIMLIK_CAKISMASI.
+ T23 [behavior] Başlamış oturumu olan ders hoca tarafından arşivlenemez :: İlk oturum başladıktan sonra arşivle 409 DERSLER_DERS_BASLAMIS; kontrol: hiç oturumu başlamamış derste 200 ve gelecekteki oturumlar iptal (arsiv) olur, ders öğrencinin ve hocanın indirmesinde kapsamdanCikti ile iner.
+ T24 [behavior] Devir: yeni hoca dersi görür, eski hoca kapsamdan çıkar :: Devirden sonra eski hocaya 404, yeni hocaya 200; eski hocanın indirmesinde ders kapsamdanCikti, yeni hocanın indirmesinde dersin imleçten eski sürümlü oturumları da gelir.
+ T25 [behavior] Çakışma: kesişen saatler görünür, bitişik saatler görünmez :: Aynı numara iki dersin listesinde: 09:00 ile 10:00 ve 09:30 ile 10:30 çakışır; 10:00 ile 11:00 çakışmaz (yarı açık aralık); iptal oturum çakışmaz; cevapta numara ve isim yok, liste satırı kimliği var.
+ T26 [behavior] İndirme: öğrenciye yalnız şubesinin oturumları iner :: A şubesindeki öğrenciye yalnız A'yı kapsayan oturumlar iner; yalnız B'yi kapsayan oturum inmez, B öğrencisine iner (pozitif kontrol); satırlarda kafa sayısı ve yapıldı alanı yok.
+ T27 [behavior] İndirme: derse sonradan eklenen öğrenci dersin bütün satırlarını alır :: Liste satırı imleçten sonra eklenir: imleçten eski sürümlü ders, program, oturum, tatil ve kilit satırları da gelir; listesinde olmadığı dersin satırları gelmez.
+ T28 [behavior] İndirme: pasifleşen liste satırı dersi kapsamdan çıkarır :: Satırı pasif olan öğrenciye ders kapsamdanCikti ile iner; aynı derste başka etkin şubesi varsa inmez (kontrol).
+ T29 [behavior] İndirme: şube kümesi daralan oturum öğrenciye silindi olarak iner :: Başlamamış bir oturumdan B şubesi çıkarılır: B öğrencisinin sonraki indirmesinde o oturum { id, silindi: true } gelir; A öğrencisine oturum güncel haliyle gelir (pozitif kontrol); değişmeyen oturum ikisine de gelmez.
+ T30 [behavior] İndirme: takvim bağı değişince yeni takvimin tatilleri iner :: Birim başka takvime bağlanır: birim dönemi satırı yeni sürüm alır ve yeni takvimin imleçten eski sürümlü tatilleri de iner; bağ değişmeyen birimin öğrencisine bu tatiller inmez (kontrol).
+ T31 [behavior] Deneme dersi her gün 14 gün ileriye oturum taşır :: İş iki kez çalışır: 14 oturum, her biri 00:00 ile 24:00 İstanbul; ertesi gün çalışınca 15. gün eklenir; kilitDurumu false; onaysız listede ve çakışmada görünmez.
+ T32 [behavior] Yerel saat veritabanının saat dilimi verisiyle çevrilir :: 2015-12-07 09:00 İstanbul 07:00Z, 2015-07-06 09:00 06:00Z, 2026-12-07 09:00 06:00Z olur; sabit +03:00 kullanan uygulama ilk örnekte kırmızıya döner (testler TZ=UTC ile koşar).
+ T33 [behavior] Şubede öğrenci varken şube pasifleştirilemez :: Sahte liste kaynağı etkin satır döndürünce 409 DERSLER_SUBEDE_OGRENCI_VAR; boş dönünce 200 ve şube başlamamış oturumlardan çıkar; dersin son etkin şubesi 409 DERSLER_SON_ETKIN_SUBE.
+ T34 [behavior] Kilitten sonra son gün geri alınamaz, gerekçeyle ileri alınır :: Kilit uygulandıktan sonra son günü geri almak 409 DERSLER_SON_GUN_GERI_ALINAMAZ; gerekçesiz ileri alma 400 DERSLER_GEREKCE_GEREKLI; gerekçeyle 200, kilit_uygulandi_ani boşalır, iş yeni anda yeniden uygular; kilitten önce geçmişe çekmek hemenKilitle olmadan 409 DERSLER_KILIT_HEMEN_OLUR.
+ T35 [behavior] Kısa kod tekil, değişmez ve 10 rakamlık metindir :: İki oturumun kısa kodu farklı, cevapta ^[0-9]{10}$ biçiminde; oturum düzenlenince kod aynı kalır; kisa_kod ya da tarih değiştiren doğrudan UPDATE tetikleyiciye takılır.
+ T36 [property] Üretim planı deterministik ve idempotenttir :: fast-check, numRuns 1000: rastgele takvim, tatil, yarım gün tatil, sınav haftası, geçerlilik aralığı ve 0 ile 20 program saatiyle aynı girdi aynı planı verir; plan uygulanıp yeniden hesaplanınca boş plan çıkar.
+ T37 [property] Tatilde ve ders yapılmayan sınav haftasında planlı oturum kalmaz :: numRuns 1000: uygulanan plandan sonra hiçbir gelecekteki planlı normal oturum tam gün tatilde, yarım gün tatilin saatinden sonra ya da ders yapılmayan sınav haftasında değildir.
+ T38 [property] Geçmiş oturuma dokunulmaz, hoca iptali geri gelmez :: numRuns 1000: planın hiçbir öğesi başlamış oturumu hedeflemez; iptal nedeni hoca, tasindi ya da arsiv olan oturum geri alma listesine girmez; elle düzenlenmiş oturumun alanları güncellenmez.
+ T39 [property] Oturum sayısı gün gün sayımla eşittir :: numRuns 1000: gelecekteki planlı normal oturum sayısı, takvim günlerini tek tek gezip hafta günü, geçerlilik, tatil ve sınav haftası kuralını uygulayan kaba sayımla eşittir; her yeni oluşumun hafta günü program saatinin günüdür.
+ T40 [property] Çakışma aralığı yarı açıktır :: numRuns 500: [a, b) ile [c, d) ancak ve ancak a < d ve c < b ise kesişir; bitişik aralıklar (b = c) kesişmez; ilişki simetriktir.
+ T41 [property] Normalleştirme sabit noktadır ve Türkçe harfi doğru büyütür :: numRuns 500: normallestir(normallestir(x)) = normallestir(x); "bil 301" BİL 301, "ısı" ISI olur; baş, son ve çoklu boşluk sadeleşir; Intl kullanılmaz.
+ T42 [property] Son hafta, kilit günü ve dönem arası :: numRuns 500: son hafta son gün dahil geriye 7 takvim günüdür, kilit günü son günün ertesidir, ay ve yıl geçişlerinde doğrudur; dönem arası, rastgele birim dönemlerinde dersleri başlamış ve kilitlenmemiş hiçbir satır yokken doğrudur.
+ T43 [contract] Dersler rota listesi sözleşmesi :: packages/contracts/src/dersler.ts'ten içe aktarılan rota listesinde 31 uç var ve D13'ün birleştirilmiş rota tablosundaki /v1/dersler öğeleriyle birebir; her yol /v1/dersler ile başlar; yönetici uçları /v1/dersler/yonetim altında ve yalnız yonetici rolüyle; tek girişsiz uç GET /v1/dersler/birimler; her uçta hız sınıfı ve gövde sınırı dolu.
+ T44 [contract] Hata kataloğu ve genişleyen değerler :: DERSLER_ önekli her kod katalogda ve tek HTTP durumuna bağlı; uçların döndürdüğü her kod katalogda; cevap şemalarında durum, tur, iptalNedeni, yapildi.durum, uyarilar ve toplu sonuç alanları OpenAPI belgesinde x-extensible-enum taşır, enum anahtarı taşımaz.
+ T45 [contract] Cevaplar sözleşme şemasına uyar :: Her davranış senaryosunda D02 cevapları packages/contracts şemasıyla doğrulanır: tarih YYYY-MM-DD, saat HH:MM, an Z ile ve milisaniyeli, sürüm ve kısa kod metin; inen satır şeması rol başına (öğrencide kafa sayısı ve yapıldı alanı yok).
+ T46 [load] 500 dersli birimde takvim değişikliği :: Sahte veriyle 500 ders ve 1000 program saati: takvim PUT'u 1 saniyenin altında biter (yalnız iş kuyruğa girer); iş bütün dersleri 60 saniyede yeniden üretir, ders başına işlem p95 200 ms altında; ölçüm geliştirme makinesinde, gerçek boyuttaki koşu yayından önce.
+ T47 [load] Ders çıkışında D02 indirme kaynağının payı :: D15'in k6 ders çıkışı koşusunda değişenler isteğinde D02 kaynağı 6 dersli öğrenci için p95 15 ms altında ve değişiklik yokken en çok 4 sorgu çalıştırır (pg_stat_statements ile sayılır).
+ T48 [mutation] Ortak kural paketi mutasyon kapısı :: packages/core/src/dersler üzerinde Stryker (komut çalıştırıcısıyla, haftalık iş) kırma oranı en az yüzde 85; altında kalırsa iş kırmızı.
+ T49 [mutation] Bilinçli hatalar testleri kırmızıya çevirir :: Beş hata tek tek yerleştirilir ve md5 denetimiyle özgün baytlar geri yazılır: yarım gün kuralında >= yerine > (yarım gün ve tatil özelliği kırmızı); AT TIME ZONE yerine sabit +03 (saat dilimi senaryosu kırmızı); kilit anında +1 gün eksik (kilit anı senaryosu kırmızı); hoca iptalinin geri alınması (hoca iptali senaryosu ve özelliği kırmızı); indirmede şube süzgecinin kaldırılması (şube indirme senaryosu kırmızı). Yeşil kalan olursa test eksik sayılır ve yazılır.
+
+##### RESOLVED GAPS
+ D02-B01: Ders bir hocanın bir dönemdeki ders açılışıdır: tek sahip (sahip_kisi_id), altında şubeler; tekillik etkin dersler arasında (dönem, sahip, kod). Aynı kodu farklı hocalar ayrı ders olarak açar.
+    WHY: Plan dersi tek hocaya bağlıyor (plan.html#kararlar-indirme), asistan ve ortak hoca sonraya kaldı (plan.html#kararlar-roller); yetki tek sütunla denetlenir, genişleme yolu dersYetkisi (D02-A09).
+ D02-B02: Program saati derse bağlıdır ve şube kümesi taşır (program_saati_subeleri); oturum üretimde kümeyi kopyalar (oturum_subeleri). Kayıt kabulü ve indirme "öğrencinin şubesi oturumun kümesinde mi" sorusuyla yapılır (oturumSubeleri).
+    WHY: Farklı saatli şubeleri de birlikte işlenen şubeleri de tek yapı karşılar (teknik.html#kod-veri-modeli); başka şubenin oturumu öğrenciye inmez.
+ D02-B03: Oturum bir program saatinin bir günkü oluşumudur; ardışık saatler tek program saatinde (blok) toplanır, aynı gün ayrık iki buluşma iki oturumdur. API ve panel oturumu tarihle değil kimlikle adresler.
+    WHY: Sözlükteki "tek buluşma" tanımı (plan.html#sozluk) ve blok ders kuralı (plan.html#kararlar-kafa-sayisi); D02-C01'in çözümü.
+ D02-B04: Program saati ve oturum türe göre açık ders saati sayısı taşır (teori_saat, uygulama_saat; toplam 1 ile 12); süreden türetilmez.
+    WHY: Ders saati 50 dakika olduğundan 10:00 ile 11:50 iki saattir (tasarim.html#ph-home); karışık blok tek oturumda kalır, hak formülü türe göre T ister (plan.html#devam-uyari-seviyeleri).
+ D02-B05: Program kaydedilince dönemin bütün oturumları aynı işlemde üretilir; her değişiklikte yalnız başlamamış oturumlar packages/core/src/dersler içindeki saf plan fonksiyonuyla yeniden hesaplanır ve fark yazılır.
+    WHY: Telefon kalan planlı saatleri ve sonraki oturumu yerelde hesaplar, pencere internetsiz açılır; ders başına yaklaşık 30 satır küçük bir yazımdır; tatil ve iptal kararı sunucuda kalır (plan.html#gun-kenar-durumlar).
+ D02-B07: Tatil tarih aralığı ve isteğe bağlı yarım gün başlangıç saatidir; o gün tatil saatinden önce başlayan oturum kalır. Sonradan girilen tatil gelecekteki oturumu iptal (tatil) yapar, silmez; tatil kalkınca oturum geri gelir.
+    WHY: Basit ve izlenebilir; iptal oturumun kimliği internetsiz telefondan gelen kayıt için geçerli kalır, son karar sunucudadır.
+ D02-B08: Dönem genel akademik dönemdir (yıl ve yarıyıl); birim ile dönem çifti birim_donemleri satırında takvimi ve kilidi taşır.
+    WHY: Yoklama kaydının tekil ve bölme anahtarı tek dönem kimliği ister (teknik.html#veritabani-donem-alani); farklı birimden ders alan çift anadal öğrencisi aynı dönemde kalır; D12-B13 ile aynı.
+ D02-B09: Takvim ayrı varlıktır; birden çok birim aynı takvime bağlanır, ayrı takvimli birim kendi takvimine bağlanır.
+    WHY: Tek genel takvim varsayılmaz (plan.html#hoca); ortak tarih bir kez girilir, alan alan geçersiz kılma mantığı gerekmez.
+ D02-B10: Birim türleri fakülte, enstitü, yüksekokul, meslek yüksekokulu, konservatuvar; bölüm birimin alt satırıdır ve takvimi yoktur. Ders birimini kendisi taşır; panel varsayılanı hocanın bölümünün biriminden önerir.
+    WHY: Takvim ve kilit fakülte ve enstitü düzeyinde (plan.html#hoca); servis dersinde hocanın birimi dersinkinden farklı olabilir. D02-C03'ün çözümü.
+ D02-B11: Kod ve ad serbest metindir: NFC, baş ve son boşluk silinir, çoklu boşluk teke iner; kod ayrıca Türkçe kuralla büyür (Intl kullanmadan). Tekillik etkin dersler arasında (dönem, sahip, kod) ve derste şube etiketi. Kod ve ad kilitten önce değişir, denetim kaydına yazılır.
+    WHY: AKSİS'e otomatik bağlantı yok, ders kataloğu gerekmez; hoca özeti AKSİS'teki dersle elle eşleştirir (plan.html#acik-aksis).
+ D02-B12: Derslik serbest metindir (1 ile 40 karakter); program saatinde ve oturumda kopyası vardır, tek oturumda değiştirilebilir.
+    WHY: Aşama 3'te sınıf konumu telefona gönderilmiyor (plan.html#asama23-gps), Aşama 2 eşleştirmesi tarayıcı ile ders arasında; katalog gerekmez.
+ D02-B13: Aynı gün içinde saat, derslik ve saat sayısı değişikliğinde kimlik korunur, önceki değerler oturum_degisiklikleri satırına yazılır. Gün değişikliği taşımadır: telafi ucunda eskisiniIptalEt ile eski oturum iptal (tasindi), yenisi telafi olarak aynı işlemde açılır. Oturum hiç silinmez.
+    WHY: Kayıtlar kimlikle oturuma bağlı kalır; eski anlar D07'nin internetsiz kayıt kararında kanıttır (plan.html#gun-kenar-durumlar).
+ D02-B14: Değişiklik yalnız başlangıcı saat arayüzüne göre gelecekte olan oturumlara uygulanır; program saatinde isteğe bağlı geçerlilik aralığı vardır; başlamış oturumda yalnız "Ders yapıldı mı?" cevabı, kafa sayısı ve D04'ün ders içi ayarları değişir; kilitli dönemde yalnız cevapsız oturumun cevabı yazılır.
+    WHY: Geçmiş sayım sessizce değişmez; geçmişi düzeltmenin yolu denetim kayıtlı düzeltmedir (D09).
+ D02-B18: Onaysız oturum bitmiş, planlı ve yapıldı bilgisi olmayan oturumdur; panelde ve hoca telefonunda listelenir. "Yapıldı" cevabı kafa sayısız yapıldı yapar. "Yapılmadı" cevabından sonra (ya da iptal oturuma) gelen kafa sayısı çelişki açar: yapildi boşalır, oturum listede çelişkili görünür. Toplu cevap ucu vardır; her cevap denetim kaydına yazılır.
+    WHY: Kafa sayısı internetsiz kuyrukta gecikebilir; çelişki sessizce çözülürse sayım değişir; dönem sonu çıktısı zaten cevap bekliyor (plan.html#kararlar-kafa-sayisi).
+ D02-B19: Kilit otomatiktir: kilit anı son günün ertesi 00:00 Europe/Istanbul; durum her okumada saat arayüzünden türetilir, donem_kilidi işi yalnız kalıcı yan etkileri uygular; yönetici ekranı tarihi ve durumu gösterir.
+    WHY: Plan kilidi son güne bağlıyor ve süre en geç o gündür (plan.html#devam-donem-sonu); iş gecikse de kilit doğru görünür; kural için SQL now() yok (teknik.html#testler-veritabani-sifirlama); D14-B09 ile aynı.
+ D02-B20: Kilitte: kilitDurumu doğru olur (D05 ve D07 son günden sonra gelen kaydı yalnız saklar); kayıtlı kilit adımları çalışır (D07: onaysız Kendi beyanı sayılmış haliyle, kararsızlar denetim kaydıyla); birimin dersleri arşivlenir; program, telafi, iptal, düzenleme, şube, ders ayarı, devir ve D03 liste yazımı kapanır; cevapsız oturuma cevap ve D09 düzeltmesi sürer; kilit telefona iner, eski saat belgesi ve QR anahtarları kilitliBirimDonemleri ile bırakılabilir.
+    WHY: Plan kilitten sonra sayımın ancak denetim kaydı bırakan düzeltmeyle değişeceğini söylüyor (plan.html#kararlar-gonderme-suresi); düzeltme yolu açık kalmalı.
+ D02-B25: Birim ve dönemin takvimi bağlı değilse ya da dönem kilitliyse ders açma ve program kaydı açık hata koduyla reddedilir (DERSLER_TAKVIM_YOK, DERSLER_DONEM_KILITLI); ders açmak için ayrı onay yoktur.
+    WHY: Oturum üretimi takvim ister; hoca zaten onaylıdır; sıra hatası çıkmaz, ilk yönetici takvimi önce girer.
+ D02-B26: Yoklama süresi ders ayarıdır (boş: süre seçilmedi); oturum üretimde kopyalar; ayar değişince başlamamış oturumlarda güncellenir ve pencere D04 dinleyicisiyle yeniden hesaplanır; ders içi değişiklik D04'ün pencere tablosundadır.
+    WHY: Plan "hoca ders ayarında süre seçtiyse" diyor (plan.html#kararlar-inceleme-hesaplari, Yoklama penceresi).
+ D02-B27: Takvim yazımı aynı işlemde takvim_oturumlarini_yenile işini koyar; iş dersleri tek tek, her birini kendi işleminde yeniden hesaplar; fark temelli olduğundan iki kez çalışmak sonucu değiştirmez.
+    WHY: Bir birimde yüzlerce ders var, tek istekte hepsi uzun sürer; işler veritabanı işlemiyle birlikte kuyruğa girer (teknik.html#sunucu-arka-plan).
+ D02-B28: Çakışma: iki planlı oturumun [başlangıç, bitiş) aralıkları kesişirse. Öğrenci eşleşmesi liste satırının öğrenci numarasıyla (D03 liste kaynağı, D02-A12); ikinci programın listesindeki aynı numara dahil, farklı numarayla iki programda olan öğrenci eşleşmez (iki hesap gerekir, D03 kuralı). Panelde ders sayfasında liste satırı kimliği, öbür dersin kodu, adı ve saatleri; ayrı tablo yok.
+    WHY: Plan çakışmanın hocalara gösterilmesini ve çift anadal listeleri arasında da denetlenmesini istiyor (plan.html#kararlar-kafa-sayisi); "tek derse yoklama" kararı D04 ve D07'de kalır.
+ D02-B29: İnen ders satırı: kod, ad, hocanın görünen adı (D01.kisiGetir), teori ve uygulama p, süre, QR ayarı, durum, arşiv nedeni, şubeler. Program saati satırı: gün, saatler, saat sayıları, derslik, geçerlilik, şubeler. Oturum satırı: tarih, yerel saatler, UTC anlar, saat sayıları, derslik, süre, QR ayarı, tür, durum, iptal nedeni, kısa kod, şubeler. Tatil ve kilit satırları (son gün, kilit anı, uygulandı). Kafa sayısı ve yapıldı inmez.
+    WHY: Tasarımdaki Bugün ekranı bu alanları gösteriyor (tasarim.html#ph-home); telefon hak uyarısını yerelde hesaplar (p gerekir); hoca adı başka öğrencinin verisi değil.
+ D02-B30: Deneme dersi: derste deneme_dersi işareti, birimsiz, süresiz ve kilitsiz inceleme döneminde; deneme_dersi_oturumlari işi her gün 00:00 ile 24:00 oturumunu 14 gün ileriye üretir; onaysız liste, çakışma, kilit, dönem arası, ölçüm ve raporlar dışlar. Dersi D01'in kurulum işi denemeDersiniKur ile kurar (D02-A13).
+    WHY: Kayıt oturuma bağlı olduğundan her an açık bir oturum gerekir (plan.html#kararlar-inceleme-hesaplari); oturumsuz pencere kayıt modelini bozar.
+ D02-B31: Ekle-bırak bitişi bilgi alanıdır: takvimGetir ile D03'e gider, geç eklenen öğrencide seçim ekranı Md.9/4 seçeneğini açıklamayla gösterir; varsayılan değişmez, sunucu kuralı yok.
+    WHY: Plandaki varsayılan ekle-bırak seçeneğidir (plan.html#devam); kuralı değiştirmek ürün kararı olurdu.
+ D02-B32: Son hafta: birimin son günü dahil geriye 7 takvim günü (İstanbul). Son oturum: dersin iptal edilmemiş son oturumu, son ders günü onun tarihi. Son gün ve kilit anı kilit satırıyla telefona iner.
+    WHY: Gönderme süresi kuralıyla aynı ölçü (plan.html#kararlar-gonderme-suresi); telefon hatırlatmayı internetsiz hesaplar (plan.html#devam-donem-sonu); D08-B23 ile aynı.
+ D02-B33: Takvim alanları ders_baslangic, ders_bitis, ekle_birak_bitis, devamsizlik_son_gun (hepsi zorunlu date); tatiller ve sınav haftaları ayrı tablolarda. CHECK: ders başlangıcı < ders bitişi <= son gün, ekle-bırak bitişi <= ders bitişi.
+    WHY: Son gün ders bitişine eşit olabilir (Eczacılık örneği, plan.html#devam-donem-sonu); ekle-bırak dersler başlamadan bitebilir.
+ D02-B34: Yarıyıl metin ve CHECK: guz, bahar, yaz (yaz okulu ilk sürümde kullanılmasa da değer var); inceleme yalnız deneme dersinin dönemi; cevapta x-extensible-enum.
+    WHY: Liste sonradan genişlerse istemciler kırılmaz (teknik.html#sunucu-mimari).
+ D02-B35: Dönem arası: hiçbir etkin birimde dersleri başlamış ve kilitlenmemiş birim dönemi yoksa (inceleme dönemi hariç). Tek fonksiyon donemArasiMi (D02-A14); yönetici kilit ekranı aynı değeri gösterir.
+    WHY: En düşük sürüm uygulama genelinde tek değerdir ve yalnız dönem arasında yükselir (plan.html#dagitim-guncelleme-ilkesi); D13-B17 ile aynı tanım.
+ D02-B36: Arşiv salt okunurdur ve etkin listelerden çıkıştır. Kilitte birimin dersleri kendiliğinden arşivlenir (telefonda Dönem kapandı olarak kalır). Hoca, başlamış ve iptal edilmemiş oturumu olmayan kendi dersini arşivleyebilir; gelecekteki oturumlar iptal (arsiv) olur, ders telefonlardan kalkar. Raporlar arşivli dersi gösterir.
+    WHY: Yanlış açılan dersi kaldırmanın silmesiz yolu (plan.html#devam-donem-sonu). Kayıt ancak başlamış oturuma verilebildiğinden D02 bu koşulu yoklama kayıtlarını okumadan denetler (contracts.json'da D02 D05'i okumaz).
+ D02-B37: Oturum hiç silinmez, iptal durum alanıyla iner; kaldırılan program saati ve tatil silindi işaretiyle iner; şube kümesi daralınca öğrencinin şubesini artık kapsamayan değişmiş program saati ve oturum ona silindi olarak iner. Derse sonradan eklenen öğrenciye ve devirle yeni hocaya dersin bütün satırları sürüme bakılmadan iner; takvim bağı değişince yeni takvimin tatilleri de. Pasifleşen liste satırında, hoca arşivinde ve devirde eski hocaya ders kapsamdanCikti işaretiyle iner.
+    WHY: Öğrenci iptali görür; değişiklik sürümü tek sayaçtan (teknik.html#kod-veri-modeli); kapsam olayı D06-B15'teki gibi.
+ D02-B38: Oturum kısa kodu sütunu, dizisi ve tekil dizini ilk göçte açılır; her oturuma üretimde verilir; 1 ile 9.999.999.999 arası.
+    WHY: Sonradan eklemek dolu tabloda doldurma ve dizin ister; önce genişlet ilkesine uygun (teknik.html#telefon-kamera-qr).
+ D02-B39: Tarih genişletme packages/core/src/dersler içinde saf fonksiyondur (sivil tarih ve saatle çalışır, Intl kullanmaz). Yerel saatten UTC ana çeviri yazımla aynı SQL deyiminde (tarih + saat) AT TIME ZONE 'Europe/Istanbul' ile yapılır; gece işi başlamamış oturumlarda eşitliği denetleyip düzeltir. D04-B21'deki Node Intl önerisi seçilmedi.
+    WHY: Intl yalnız UTC'den yerele biçimler, tersi elle yazılmış bir yaklaşım döngüsü ister; API ve işçi süreçleri yayın sırasında farklı saat dilimi verisi taşıyabilir, veritabanı tek kaynaktır; sabit +03:00 saat dilimi kuralı değişirse sessizce kayar.
+ D02-B40: Ders açma ve değişikliği, arşiv, devir, şube, program, telafi, oturum düzenleme ve iptali, yapıldı cevabı, yeniden üretim, birim, bölüm, dönem, takvim, birim dönemi bağı ve kilit D09.denetimeYaz ile yazılır; olay türleri dersler.* olarak sözleşme dosyasında; önceki ve sonraki değer taşır, isim ve numara taşımaz. p değişikliğinin olayını D08 yazar.
+    WHY: Program değişikliği sayımı değiştirir; itirazda kanıt ve Haksız devamsız hesabı için gerekir (plan.html#hedefler).
+ D02-B41: contracts.json kararıyla tek modül dersler (D02): bütün uçlar /v1/dersler altında, yönetici uçları /v1/dersler/yonetim altında; ders oturumu tablosu oturumlar, giriş oturumu tablosu giris_oturumlari (D01).
+    WHY: Uç sahibi yolun ikinci bölümünden okunur (teknik.html#sunucu); oturum sözcüğü şemada hep ders oturumudur.
+ D02-B42: İlk sürümde yalnız aynı dersin şubeleri birlikte işlenir (oturum_subeleri); farklı kodlu iki ders birlikte işleniyorsa tek ders altında iki şube olarak açılır, listeler ayrı yüklenir; AKSİS özeti şube başınadır (D10-B12).
+    WHY: Birlikte işlenen şube var mı sorusu açık (plan.html#acik); en sade yol, sonra genişletilebilir.
+ D02-B43: Program, telafi, iptal ve düzenleme panel uçlarıdır; hoca telefonu programı indirmeyle gösterir, "Ders yapıldı mı?" listesini ve cevabını internetliyken aynı uçlardan çağırır.
+    WHY: Plan bunları "Web paneli, hoca" altında sayıyor (plan.html#hoca); uçlar istemciden bağımsız, telefon ekranı sonra eklenebilir.
+ D02-B44: Süre seçilmemiş derste de her bitmiş oturum için sorulur; toplu cevap ucu (200 oturuma kadar) hocanın işini kısa tutar.
+    WHY: Kayıt gelmiş oturumu kendiliğinden yapıldı saymak sayım tabanını hocasız değiştirir; hedef ders başına en çok 2 dakika (plan.html#hedefler).
+ D02-B45: Kayıtların sayılan işareti ve kararı değişmez; "yapılmadı" ve iptal oturumun kayıtları ve saatleri sayımda oturum durumuyla dışlanır (D08 ve D10 oturumlariGetir ile okur). D02 her yapıldı ve iptal değişikliğinde aynı işlemde D08.devamHesaplaIsiKoy koyar.
+    WHY: contracts.json'a göre D02 D07'yi çağırmaz; ham kayıt kanıt olarak kalır, hoca fikrini değiştirirse karar geri alınmaz; D07-B27 ile aynı.
+ D02-B48: İyimser eşzamanlılık: ders ve program yazımında dersler.duzenleme_no, takvimde takvimler.surum_no istekte beklenen numara olarak gelir; uyuşmazsa 409 DERSLER_SURUM_UYUSMUYOR ve cevapta güncel hal; gövde kayıtlı halle aynıysa numaraya bakılmaz. Derse yazan her işlem önce ders satırını FOR UPDATE ile kilitler.
+    WHY: İki sekmenin ya da iki yöneticinin yazımı sessizce ezilmez; tekrarlanan aynı istek 409 almaz.
+ D02-B49: Sınırlar sözleşmede: ders başına 20 program saati ve 20 şube, dönemde ders başına 30 telafi ve 400 oturum; kod 20, ad 120, şube etiketi 20, derslik 40 karakter (uzunluklar ayrıca CHECK'te); takvimde 60 tatil ve 10 sınav haftası; toplu cevapta 200 oturum; liste cevaplarında 1000 ile 2000 satır üst sınırı, aşılırsa kesik liste değil hata.
+    WHY: Sınırsız liste tek istekte binlerce oturum üretir; sayılar başlangıç değeridir, ilk dönemin gerçek verisiyle ayarlanır (D13-B13 deseni).
+
+##### CONTRADICTIONS
+ {"id":"D02-C01","resolution":"Plan sözlüğü esas alınır: oturum bir dersin tek buluşmasıdır, yani bir program saatinin bir günkü oluşumu; aynı gün ayrık iki buluşma iki oturumdur, blok ders tek oturumdur. teknik.html'deki \"her ders günü\" ifadesi günde tek buluşmalı olağan durumu anlatan ilk taslak sözü olarak okunur; Hacim satırı (\"iki gün işlenen derste 2\") bununla çelişmez. API ve panel oturumu kimlikle adresler; tasarımdaki tarihli adres yalnız görünümdür."}
+ {"id":"D02-C02","resolution":"D02 unvan ve isim tutmaz: ders indirme satırındaki hocanın görünen adı D01.kisiGetir'den gelir. Unvan alanı D01'in kararıdır; D01 eklerse aynı satıra kendiliğinden girer, D02 tablosu değişmez."}
+ {"id":"D02-C03","resolution":"Takvim ve kilit birim düzeyindedir: fakülte, enstitü, yüksekokul, meslek yüksekokulu, konservatuvar (plan.html#hoca). Bölüm birimin alt satırıdır ve kendi takvimi yoktur; teknik.html'deki \"fakülte, bölüm\" birim ve bölüm alanlarının ikisinin de modelde olduğu anlamında okunur. Ayrı takvimi olan bir bölüm gerekirse ayrı birim olarak açılır."}
+
+##### OPEN POINTS
+ {"id":"D02-A01","question":"D02-B06: Sınav haftalarında ders yapılır mı; varsayılan ne olsun?","recommendation":"Tatilde hiç oturum üretilmez. Sınav haftası satırında \"ders yapılır\" seçimi olsun, varsayılan yapılmaz; ders yapan birim seçimi açar, hoca gerekirse telafi ekler. Sunucu bu varsayılanla kurulur, karar değişirse yalnız varsayılan değer değişir.","needs_owner":true}
+ {"id":"D02-A02","question":"D02-B15: Hangi iptal telafi borcu doğurur, \"yapılmayıp telafi edilmeyen saat\" nasıl sayılır?","recommendation":"Oturum iptal nedenini (hoca, tasindi, tatil, sinav_haftasi, takvim, program, arsiv) ve isteğe bağlı telafi bağını tutar. Borç, tür başına hoca iptali ve \"yapılmadı\" saatleri eksi yapılan telafi saatleri; tatil, sınav haftası, takvim ve program iptali borç değildir, taşınan oturumun telafisi borcu kapatır. Hesap D08 ve D10'da (D08-B15, D10-B19); D02 alanları baştan taşır.","needs_owner":true}
+ {"id":"D02-A03","question":"D02-B16: Telafi geçmiş bir güne girilebilir mi?","recommendation":"Evet, kilitten önce ve dönemin ders başlangıcı ile birimin son günü arasında. Aynı gün ya da geçmiş girişte cevap uyarı taşır: telefonlar bilemez, kaydı olmayanları listeden işaretleyin. Sunucu bu kuralla kurulur.","needs_owner":true}
+ {"id":"D02-A04","question":"D02-B17: Telafi telefona inmediği için listeden işaretlenen öğrenci hangi sebep koduyla eklenir?","recommendation":"Tarafsız yeni kod \"telafi telefona inmedi\", son durum Elle eklendi, Haksız devamsız sayımında ayrı görünür. Kod kataloğu D09'un; karar gelene kadar D02'nin telafi uyarısı yalnız listeden işaretlemeyi söyler, hangi kodun seçileceğini D09 kataloğu belirler.","needs_owner":true}
+ {"id":"D02-A05","question":"D02-B21: Son gün geçtikten sonra değiştirilebilir mi, kilit geri alınır mı?","recommendation":"Son gün geçmeden serbest değişir; bir birimi hemen kilitleyecek değişiklik \"hemen kilitle\" onayı ister. Geçtikten sonra yalnız ileri alınır, gerekçe koduyla (birim kararı, yanlış giriş) ve denetim kaydıyla; uygulanmış etkiler geri alınmaz, kilit yeni anda yeniden uygulanır. Sunucu bu kuralla kurulur.","needs_owner":true}
+ {"id":"D02-A06","question":"D02-B22: Yönetici bütün birimlerde mi yetkili, yalnız kendi biriminde mi?","recommendation":"İlk sürümde genel yönetici. Her yönetici ucu yetkiyi D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorar ve dersYetkisi kapsamı kanca nesnesinden okur; kapsam alanı D01'de baştan durursa (D01-B02) birim bazlı yetki göçsüz açılır.","needs_owner":true}
+ {"id":"D02-A07","question":"D02-B23: Ders başka hocaya devredilebilir mi (hoca ayrıldı, izinde, hesabı silindi)? plan.html#kararlar-hesap-silme silinen hocanın derslerinin arşivlendiğini söyler ama anını yazmaz; hemen arşiv dönem ortasında öğrencilerin yoklamasını keser.","recommendation":"Evet: yönetici dersi etkin ve onaylı başka hocaya, kilitten önce, gerekçe koduyla ve denetim kaydıyla devreder; silinen ya da ayrılan hocanın dersi devredilene kadar açık kalır, kilitte arşivlenir (D01-B31 ile aynı); bekleyen onaylar ve cevapsız \"Ders yapıldı mı?\" soruları yeni hocaya geçer (D09-B25). Kilitten sonra yalnız sahibi silinmiş ya da pasif ve cevapsız oturumu kalmış ders devredilir, yoksa dönem sonu çıktısı hiç alınamaz (D10-B09). Uç hazırdır; sahip istemezse genişlet ve daralt yoluyla kaldırılır.","needs_owner":true}
+ {"id":"D02-A08","question":"D02-B24: Yönetici dersleri, öğrenci listelerini ve yoklamaları görebilir mi?","recommendation":"Yönetici ders listesinde kod, ad, hoca, birim, p, süre ve durum görür; öğrenci listesi, yoklama ve kafa sayısı görmez (D01-B03 ile aynı). Uç bu kurala göre yazılır.","needs_owner":true}
+ {"id":"D02-A09","question":"D02-B46: Uygulama (lab) oturumlarını asistan yürütüyorsa sahiplik ve yetki modeli ne olur; blok derste ikinci okutma oturumu böler mi?","recommendation":"Cevap gelene kadar tek sahip. Asistan rolü gelirse ders başına görevli tablosu önce genişlet sonra daralt yoluyla eklenir ve yetki yalnız dersYetkisi içinde genişler (D01-B52). İkinci okutma oturumu bölmez, oturum içinde ikinci denetim olarak D11'e kalır.","needs_owner":true}
+ {"id":"D02-A10","question":"D02-B47: QR'lı ders ayarı nerede, kim açar, dönem ortasında değişir mi; QR gösterilmeyen oturum QR'lı sayılır mı?","recommendation":"Derste hocanın açtığı ayar, başlamamış oturumlara kopyalanır; o oturumda QR hiç gösterilmediyse Aşama 1 kuralı uygulanır (D11-B01 üçüncü seçenek, kararı D07 ve D11 verir). Sütunlar baştan var; ayarı true yapan istek bileşim kökünden gelen QR ayarı bayrağı kapalıyken DERSLER_QR_AYARI_KAPALI alır.","needs_owner":true}
+ {"id":"D02-A11","question":"D02-B50: Dönem başladıktan sonra sisteme alınan derste geçmiş haftaların oturumları üretilir mi?","recommendation":"Hayır: yalnız gelecekteki oturumlar üretilir, derste takip başlangıcı tarihi tutulur, AKSİS özeti ve raporlar bu tarihi yazar; kâğıtla alınan yoklama sisteme taşınmaz. Sunucu bu kuralla kurulur.","needs_owner":true}
+ {"id":"D02-A12","question":"Sözleşme eki: öğrenci indirme kapsamı, çakışma ucu ve şube pasifleştirme liste satırlarını ister, ama contracts.json'da D02 D03'ü okumaz. Liste verisi D02'ye nasıl gelir?","recommendation":"D02 dış yüzüne listeKaynagiKaydet(kaynak) eklenir; D03 kendi eklentisinde etkinSatirlar ve pasiflesenSatirlar işlevleriyle kaydolur (kayıt deseni: alt modül dinleyici kaydı açar). contracts.json'daki D02 dış yüz listesine ve D03 notlarına yazılmalı; D02 uygulama hazır olurken kaydı denetler.","needs_owner":false}
+ {"id":"D02-A13","question":"Sözleşme eki: deneme dersini kim kurar? D01'in inceleme_hesaplari_kurulumu işi dersi kurmak istiyor ama D02 dış yüzünde kurucu işlev yok.","recommendation":"D02 dış yüzüne denemeDersiniKur(tx, hocaKisiId) eklenir; D01'in kurulum işi (jobs/kimlik altında, dosya döngüsü kurmaz) çağırır ve dönen şubeye deneme öğrencisinin liste satırını D03'ün bir dış yüz işleviyle kurdurur (D03-B26; D03'e eklenmesi gerekir). contracts.json güncellenmeli.","needs_owner":false}
+ {"id":"D02-A14","question":"Sözleşme eki: \"dönem arası\" bilgisini en düşük sürüm koruması (D13-B17) ve yayın penceresi istiyor; D13 ve D15 D02'yi okumuyor.","recommendation":"D02 dış yüzüne donemArasiMi(tx, an?) eklenir; app.ts (D13) bu işlevi en düşük sürüm denetimine parametre olarak verir, D15 de aynı yoldan alır. contracts.json güncellenmeli.","needs_owner":false}
+EXTRA KEYS: []

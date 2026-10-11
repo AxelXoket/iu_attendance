@@ -1,0 +1,1341 @@
+# Short research digest (generated). Full detail: digest.md. Void recommendations are omitted (owner lock).
+
+## R01 Kırık beyaz ve gri ölçek (nötr renkler)
+
+Kırık beyazın krem okunup okunmayacağını asıl belirleyen şey CIELAB b* ekseninin (sarı ile mavi arası) işareti: isimli sıcak beyazların hepsinde b* artı (Cream 21.83, Linen 6.02, Bone white 4.19), serin beyazlarda eksi. Apple (#F2F2F7), IBM Carbon (Cool Gray 10, #f2f4f8), GitHub Primer (#f6f8fa) ve Tailwind slate ile gray açık yüzeylerde 0.002 ile 0.007 arası küçük bir mavi kroma kullanıyor; Material 3'ün 0.0118 ile 0.0148 arası kroması ise zemini açıkça leylak gösteriyor. Gece mavisi alt tonu için tonu H 270'e sabitledik: OKLab'da bu açı kromanın tamamını kırmızı ile yeşil eksenine dokunmadan mavi (eksi b) yöne verir, CSS midnightblue'nun tonu da 272.8. Bu tonla 12 adımlı üç ölçek üretip hepsini color.js ile ölçtük; önerdiğimiz A ölçeğinde sayfa zemini #F2F4F8 (oklch 0.9668 0.0058 264.5, b* -2.15), yani IBM Carbon Cool Gray 10'un birebir aynısı. Kartlar #FEFEFF, sayfa ile kart arasındaki fark 1.09:1; bu Apple (1.12:1) ve Carbon Gray 10 (1.10:1) ayrımına yakın ve bir piksellik ince kenarlıkla gölgesiz katman kurmaya yetiyor. İkincil metin #596074 en koyu basılı zeminde bile 4.67:1, birincil metin #1A2030 sayfa üstünde 14.75:1 veriyor; tek gösterge olan form kenarlıkları için #7D8497 tüm açık zeminlerde 3:1'i geçiyor. Saf beyaza göre kırık beyazın göz yorgunluğunu azalttığını gösteren bir çalışma bulamadık: açık mod okuma başarısında önde, yorgunlukta fark yok; kırık beyaz seçimi görünüm kararıdır. Rello ve Bigham'ın 341 kişilik çalışmasında belirgin mavi gri zemin (#DBE1F1) en yavaş okunan zemin çıktı, bu yüzden sayfa kromasını onun dörtte biri civarında tutuyoruz. Night Shift ve True Tone ekranı sarıya çekiyor; sayfanın eksi b* değeri bir pay bırakıyor, ama payın yeterli olup olmadığı gece ayarlarıyla gerçek telefonda denenmeli.
+
+- **R01-K01 Önerilen nötr ölçek: A, Gece Sisi (H 270)**: Uygulamanın ve web panelinin tüm nötr renkleri bu 12 adımdan gelsin. Ton H 270'te sabit, kroma uçlarda düşük ve orta ile koyu adımlarda en yüksek. Hex değerleri iki platformda da birebir aynı kullanılsın; OKLCH hedefleri belgede üretim kaynağı olarak dursun. Her adımın görevi aşağıda; görev dışı kullanım (örneğin 7. adımı tek gösterge kenarlığı yapmak) yasak.
+  - n-1 yükseltilmiş yüzey = #FEFEFF / oklch(0.9973 0.0013 286.4) / lab(99.68 0.18 -0.48)
+  - n-2 sayfa zemini (kırık beyaz) = #F2F4F8 / oklch(0.9668 0.0058 264.5) / lab(96.14 0.05 -2.15)
+  - n-3 gömük yüzey = #EAECF1 / oklch(0.943 0.0071 268.5) / lab(93.38 0.24 -2.65)
+  - n-4 hover = #E3E6EC / oklch(0.9244 0.0087 264.5) / lab(91.23 0.09 -3.26)
+  - n-5 basılı ve seçili = #DCDEE6 / oklch(0.9014 0.0111 274.9) / lab(88.53 0.8 -4.14)
+  - n-6 ince kenarlık = #D3D7E0 / oklch(0.8787 0.0131 266.7) / lab(85.92 0.33 -4.89)
+  - n-7 kenarlık = #C3C8D3 / oklch(0.8322 0.0163 266.3) / lab(80.52 0.39 -6.07)
+  - n-8 güçlü kenarlık = #A6ABBB / oklch(0.7423 0.0236 272) / lab(70.05 1.45 -8.78)
+  - n-9 pasif metin, tek gösterge kenarlık, ikincil ikon = #7D8497 / oklch(0.6141 0.0299 269.5) / lab(55.17 1.58 -11.03)
+  - n-10 nötr dolgu hover = #6E7589 / oklch(0.5636 0.0321 270.1) / lab(49.31 1.9 -11.79)
+  - n-11 ikincil metin = #596074 / oklch(0.4905 0.0333 270) / lab(40.82 2.07 -12.18)
+  - n-12 birincil metin = #1A2030 / oklch(0.2455 0.0319 268.2) / lab(12.39 2.37 -11.46)
+  - üretim girdisi = H 270; L 0.997, 0.966, 0.944, 0.924, 0.902, 0.878, 0.832, 0.742, 0.615, 0.565, 0.490, 0.245; C 0.0015, 0.0055, 0.007, 0.009, 0.011, 0.013, 0.017, 0.023, 0.030, 0.032, 0.034, 0.032
+- **R01-K02 Sayfa zemini: #F2F4F8 ve neden krem okunmaz**: Sayfa zemini #F2F4F8 olsun. Krem okunmamasının ölçülmüş üç nedeni var: CIELAB b* eksi (-2.15), a* nötr (0.05) ve OKLCH tonu 264.5, yani sarı bölgenin (67 ile 107) karşı tarafında. Kroma 0.0058, renk olarak değil serin beyaz olarak okunacak düzeyde.
+  - hex = #F2F4F8
+  - OKLCH = oklch(0.9668 0.0058 264.5)
+  - CIELAB = lab(96.14 0.05 -2.15)
+  - göreli parlaklık (WCAG Y) = 0.9036
+  - karşılaştırma = Cream #FFFDD0 b* 21.83; Linen #FAF0E6 b* 6.02; Bone white #F9F6EE b* 4.19; Baby powder #FEFEFA b* 1.91; White smoke #F5F5F5 b* 0; iOS #F2F2F7 b* -2.4
+- **R01-K03 Yüzey ayrımı: gölgesiz katman**: Sayfa n-2, kart ve paneller n-1, kartın içindeki form alanları ve tablo başlıkları n-3 olsun. Kartın çevresinde 1 piksel n-6 kenarlık, dinlenme halinde gölge yok. Gölge yalnızca içeriğin üstünde açılan katmanlarda (açılır menü, alt sayfa, diyalog) düşünülsün; bunun ayrıntısı panel animasyonlarıyla birlikte konuşulacak.
+  - sayfa ile kart = #F2F4F8 ile #FEFEFF: 1.09:1
+  - sayfa ile gömük yüzey = #EAECF1 ile #F2F4F8: 1.07:1
+  - kart kenarlığı = #D3D7E0, 1 px, kart üstünde 1.43:1
+  - referans = iOS 1.12:1; Carbon Gray 10 1.10:1; Material 3 Low ile Lowest 1.10:1; Primer 1.06:1; Radix 1 ile 2 1.03:1
+- **R01-K04 Metin ve kontrol kontrastı**: Birincil metin n-12, ikincil metin n-11, tek gösterge olan form kenarlığı ve pasif öğe n-9 olsun. Saf siyah kullanılmasın. n-11'den açık hiçbir adım okunacak metin için kullanılmasın. Pasif metin rengi için projedeki 4.5:1 kuralının devre dışı öğeleri kapsayıp kapsamadığı sahibe sorulsun (açık soru).
+  - n-12 üstünde ölçüm = #1A2030: n-2 üstünde 14.75:1, n-5 üstünde 12.09:1
+  - n-11 üstünde ölçüm = #596074: n-1 6.22:1, n-2 5.69:1, n-3 5.30:1, n-4 5.01:1, n-5 4.67:1
+  - n-9 üstünde ölçüm = #7D8497: n-1 3.71:1, n-2 3.39:1, n-3 3.16:1
+  - APCA = n-11 sayfa üstünde Lc 74.6; n-12 sayfa üstünde Lc 96.5
+- **R01-K05 Ton ve kroma sınırları**: Tüm nötrler H 270'te kalsın. Zemin adımlarında (1 ile 3) kroma 0.0071'i, sayfada 0.006'yı geçmesin; metin adımlarında 0.034 civarında dursun. Vurgu rengi olarak gece mavisi seçilirse tonu 270 ile 273 arasında tutulsun ki nötrlerle aynı aileden görünsün.
+  - ton = H 270
+  - sayfa kroması üst sınırı = 0.006
+  - metin kroması = 0.032 ile 0.034
+  - kaçınılacak ton bölgesi = H 60 ile 110 (krem, bej), H 300 üstü (leylak, pembe)
+- **R01-K08 Gerçek cihazda doğrulama**: Seçimden önce A, B ve C sayfa ve kart çiftleri saf beyazla yan yana, gerçek telefonlarda ve gece ayarlarında gösterilsin. Sahip krem ya da belirgin mavi gördüğü ölçeği eler.
+  - cihazlar = orta ve alt segment bir Android (LCD), bir OLED Android, bir iPhone; panel için sıradan bir dizüstü ekranı ve projektör
+  - ekran ayarları = Night Shift en sıcak ayar; True Tone açık; Android gece ışığı ya da göz koruma modu açık; parlaklık %30 ile %50 ve %100
+  - karşılaştırma = #F2F4F8, #F1F4FB, #F3F4F6 ve kontrol olarak #F4F4F4 ile #FFFFFF yan yana
+  - geçme ölçütü = Gece ayarı açıkken A sayfasının #F4F4F4'ten daha serin, #FFFFFF'ten daha koyu görünmesi
+- **R01-K09 Tokenların uygulanması**: Renkler anlam adlı tokenlarla verilsin (örneğin zemin-sayfa, zemin-kart, kenar-ince, metin-ikincil), bileşen kodunda hex yazılmasın. Ölçek değişirse color.js ile yeniden üretilip yeniden ölçülsün; tek tek hex elle oynanmasın.
+  - zemin-kart = n-1 #FEFEFF
+  - zemin-sayfa = n-2 #F2F4F8
+  - zemin-gömük = n-3 #EAECF1
+  - zemin-hover = n-4 #E3E6EC
+  - zemin-basılı = n-5 #DCDEE6
+  - kenar-ince = n-6 #D3D7E0
+  - kenar = n-7 #C3C8D3
+  - kenar-güçlü = n-8 #A6ABBB
+  - kenar-kontrol ve metin-pasif = n-9 #7D8497
+  - metin-ikincil = n-11 #596074
+  - metin-birincil = n-12 #1A2030
+
+Fact-checker issues:
+- R01-K04: 'n-9 her açık zeminde 3:1 üstünde' (K04 gerekçesi, özette de 'tüm açık zeminlerde') yanlış: color.js ile #7D8497, n-4 #E3E6EC üstünde 2.99:1, n-5 #DCDEE6 üstünde 2.78:1. K01 n-4'ü satır hover, n-5'i seçili satır zemini yapıyor; seçili ya da hover satırdaki onay kutusu veya form kenarlığı WCAG 1.4.11'i (F21) geçemez. B ölçeğinde 2.98 ve 2.77, C ölçeğinde 2.99 ve 2.78, aynı sorun. Çözüm: n-4 ve n-5 üstündeki tek gösterge kenarlıklarda n-10 (#6E7589, n-5 üstünde 3.42:1) kullanılsın ya da n-9'un tek gösterge rolü n-1 ile n-3 zeminleriyle sınırlansın.
+- R01-K02: 'IBM Carbon Cool Gray 10 ile aynı, yani sahada denenmiş bir bölgede' gerekçesi Carbon için doğrulanmadı: Carbon'un dört hazır teması (white, g10, g90, g100) #f2f4f8'i hiç kullanmıyor, açık temalar nötr Gray 10 #f4f4f4 ile çalışıyor (F05); Cool Gray 10 yalnızca @carbon/colors paletinde bir renk. Sahada denenmişlik için geçerli dayanak iOS #F2F2F7 yakınlığı; cümle 'büyük bir sistemin paletinde yer alan değer' diye düzeltilmeli.
+- R01-K05: Kaçınılacak ton bölgesi (H 60 ile 110, H 300 üstü) H 0 ile 60 arasını kapsamıyor; F01 kaynağındaki sıcak beyazların bir kısmı bu bölgede ve hepsi b* artı: Snow H 17.2, Sunlight H 39.4, Seashell H 57.6. Bölge 'H 0 ile 110 ve H 300 üstü' ya da doğrudan 'b* artı veren her ton' diye yazılmalı. Aynı öneride alternatif olarak geçen 'H 286 kümesi: Radix slate' ifadesi de yalnızca slate'in açık adımları için doğru (bkz. R01-K01).
+- R01-K01: Alternatiflerdeki 'Radix slate H 286 civarında hafif mora çalıyor' ifadesi yalnızca açık ve orta adımlar için doğru (1 ile 9 arası 277.2 ile 286.4); slate'in metin adımları 264.4 (11) ve 248.2 (12), yani mor değil. Zemin adımları için ret gerekçesi geçerli kalır, ama ifade Tailwind slate için yapıldığı gibi 'açık adımlarda' diye daraltılmalı.
+
+Load-bearing findings:
+- R01-F01 Kremleşmeyi b* ekseni belirliyor: Bir kırık beyazın krem mi temiz mi okunacağını belirleyen asıl değer CIELAB b* (sarı ile mavi arası eksen) işaretidir: isimli sıcak beyazlarda b* artı, serin beyazlarda eksidir. OKLCH'de sarıya kayan beyazlar 67 ile 107 derece arası tonda durur. [kısmen: Off-white adresi 'Shades of white' sayfasına yönleniyor. Sayfa beyaz tonlarını CIE D65 beyaz noktasından hafifçe sapan renkler olarak tanımlıyor ve dokuz hex değerinin hepsi (Cream #FFFDD0, Ivory #FFFFF0, Linen #FAF0E6, Eggshell #F0EAD6, Bone white #F9F6EE, Baby powder #FEFEFA, Ghost white #F8F8FF, White solid #F4F5FA, White smoke #F5F5F5) birebir orada; color.js ölçümleri aynen tekrar üretildi. Sayfadaki 28 isimli rengin tamamında sıcak adlılar b* artı, serinler (Ghost white, White solid, Chalk white) eksi; sarı yönlüler için 67 ile 107 aralığı doğru (Linen 67.6, Beige 107.0). Ancak 'kremleşmeyi asıl b* işareti belirler' cümlesi kaynakta yok, araştırmacının çıkarımı. Ayrıca b* artı olup krem değil pembe ya da şeftali okunan isimli beyazlar var: Snow H 17.2, Sunlight H 39.4, Seashell H 57.6. Yani b* eksi olması kremden kaçmaya yeter, ama b* artı her beyaz krem değildir; öneri (sayfa b* eksi) bundan etkilenmez.]
+- R01-F03 iOS: kırık beyaz sayfa, beyaz hücre: Apple iOS açık modda gruplanmış ekranlarda sayfa zeminini #F2F2F7, hücreleri #FFFFFF yapar; bu kırık beyaz serin taraftadır.
+- R01-F05 Carbon: gölgesiz katman, beyaz ve Gray 10 sırayla: IBM Carbon açık temalarda yüzeyleri gölge yerine renk sırasıyla ayırır: katmanlar beyaz ile Gray 10 arasında gidip gelir.
+- R01-F06 Carbon Cool Gray 10, önerilen sayfa rengiyle aynı: Carbon'un serin gri ölçeği mavimsi bir nötr ailedir ve en açık adımı #f2f4f8, bizim H 270 ile ürettiğimiz sayfa zemininin birebir aynısıdır.
+- R01-F07 Radix: 12 adımın her birinin görevi var: Radix Colors 12 adımlı ölçekte her adıma bir görev verir; bu dağılım nötr ölçeğimiz için hazır bir iskelettir.
+- R01-F09 Tailwind v4: renkli grilerin sayısal kroması: Tailwind CSS v4'ün renkli gri aileleri griyi renklendirmenin sayısal karşılığını verir: en açık adımlarda (50 ve 100) kroma 0 ile 0.007, orta adımda (500) 0.016 ile 0.046 arasıdır; slate ve gray tonu 247 ile 266 arasıdır. [kısmen: Kanıttaki 15 oklch değeri birebir doğru; slate ve gray tonları tüm adımlarda 247.839 ile 265.755 arası, doğru; 50 ve 100 adımlarında kroma 0 ile 0.007 arası, doğru. Ama 500 adımı aralığı yanlış: stone-500 oklch(55.3% 0.013 58.071), yani renkli gri ailelerinde 500 kroması 0.016 ile değil 0.013 ile 0.046 arası. Ayrıca güncel theme.css'te v4.2.0 (2026-02-18) ile mauve, olive, mist, taupe gri aileleri eklendi (500 kromaları 0.021 ile 0.034, 50 ve 100 kromaları 0 ile 0.005); bunlar diğer aralıkları bozmuyor. Güncel sürüm 4.3.3 (2026-07-16).]
+- R01-F17 Kırık beyazın göze iyi geldiğine dair kanıt yok: Açık zemin üstünde koyu metin okuma başarısında öndedir ve yorgunlukta fark bulunmamıştır; saf beyaz yerine kırık beyazın göz yorgunluğunu azalttığını gösteren bir çalışma bulamadık.
+- R01-F18 Belirgin mavi gri zemin okumayı yavaşlattı: 341 kişilik bir ekran okuma çalışmasında belirgin mavi gri zemin (#DBE1F1) on renk içinde en yavaş okunan zemin çıktı; sıcak zeminler en hızlıydı. Beyaz zemin denenmedi.
+- R01-F20 Night Shift ve True Tone ekranı ısıtır: Gece ayarları ve ortam ışığı uyarlaması ekranın tüm renklerini sarı tarafa kaydırır; nötr bir gri bu durumda bej görünebilir. Apple kayma miktarı için Kelvin ya da sayı vermiyor. [kısmen: Night Shift (102191, yayın 10 Şubat 2026): 'to the warmer end of the color spectrum' ve 'Warmer color temperatures show more yellow and less blue' birebir; Kelvin ya da sayı yok, doğru. True Tone (HT208909, 102147'ye yönleniyor, yayın 10 Mart 2026): 'advanced multichannel sensors to adjust the color and intensity of your display and Touch Bar to match the ambient light, so that images appear more natural' birebir. Ama iddia ortam ışığı uyarlamasının da tüm renkleri sarıya kaydırdığını söylüyor; kaynak yalnızca ortam ışığına uydurduğunu yazıyor, yön vermiyor (serin ortam ışığında sarıya kayma kanıtlanmadı). 'Nötr gri bej görünebilir' de kaynakta yok, çıkarım. İki sayfa da Mac sürümü; araştırma bunu belirtiyor.]
+- R01-F21 WCAG 1.4.11: kontrol sınırı 3:1, pasif bileşen muaf: Bir bileşeni ve durumunu tanımak için gereken görsel bilgi komşu renge karşı en az 3:1 olmalı; pasif (devre dışı) bileşenler bu şarttan muaftır.
+- R01-F22 Gölgesiz yüzey ayrımı 1.05 ile 1.12 arası: Büyük sistemler sayfa ile kart arasını gölgesiz ayırırken 1.05:1 ile 1.12:1 arası bir kontrast farkı kullanıyor; Radix'in 1. ve 2. adımı arası (1.03:1) kart ayırmak için tek başına yetmez.
+- R01-F23 Gece mavisi tonu: H 270 civarı: CSS midnightblue'nun OKLCH tonu 272.8'dir; serin gri aileleri iki kümede toplanır: Apple, Radix slate ve Tailwind zinc yaklaşık 286'da (hafif mor), Primer, Carbon Cool Gray ve Tailwind slate ile gray 244 ile 266 arasında (çelik mavisi). [kısmen: CSS Color 4: midnightblue #191970 (25 25 112) birebir; color.js oklch(0.2881 0.1436 272.8), lab(15.86 31.71 -49.57) aynen tekrar üretildi; kanıttaki tek tek ton ölçümlerinin hepsi doğru. Ama küme genellemesi yalnızca açık adımlarda geçerli: Carbon Cool Gray 70, 80, 90, 100 tonları 243.0, 243.2, 229.3, 240.4 (244 ile 266 dışında); Radix slate koyu adımlarda 286'dan uzaklaşıyor (8: 277.8, 9: 277.7, 10: 272.6, 11: 264.4, 12: 248.2). Tailwind zinc tüm adımlarda 285.8 ile 286.4, Tailwind slate ve gray 247.8 ile 265.8, Primer örnekleri 244.3 ile 255.0, doğru.]
+
+## R02 Alt ton ve vurgu rengi (gece mavisi ve benzerleri), anlamsal renkler ve yoklama durum renkleri
+
+CSS'teki gece mavisi (midnightblue, #191970) çok doygun ve mora kayık (oklch 0.2881 0.1436 272.8); bugün kullanılan Oxford, Prusya, Delft ve Space cadet lacivertleri bunun yaklaşık yarısı kadar kromada (0.076 ile 0.085) ve 246 ile 270 derece tonda duruyor. Bu yüzden önerimiz, gri tonlarla aynı tonu paylaşan, ana dolgusu oklch(0.32 0.10 262) yani #143065 olan sakin bir gece mavisi. İstanbul Üniversitesi'nin kurum kimliği sarı (PANTONE 102 CVC) ve yeşilden oluşuyor, mavi yok; lacivert bu renklerle ton akrabası değil ama çatışmıyor, İÜ yeşilini vurgu yapmak ise 'geldi' ve başarı yeşiliyle karışırdı. Carbon, GitHub, Apple ve Linear'ın ortak yanı tek bir vurgu ailesi kullanıp onu birincil buton, bağlantı, odak ve seçili durumla sınırlamaları; geri kalan yüzey, metin ve kenarlar nötr kalıyor. 12 adımlı ölçekte birincil dolgu 11. adım, hover 10. adım (açılır), basılı 12. adım (koyulaşır), odak halkası ve bağlantı 9. adım, seçili zemin 3. adım; tüm oranlar color.js ile ölçüldü (beyaz metin dolguda 12.80:1, odak halkası zeminde 6.14:1). Bağlantı rengi gövde metninden yalnızca 2.38:1 ayrıldığı için satır içi bağlantılar her zaman altı çizili olmalı. Başarı, uyarı, hata ve bilgi için katı, metin, hafif zemin ve kenar değerleri hesaplandı; altı yoklama durumunun renkleri 9216 aday küme içinden protan, deutan ve tritan simülasyonlarında en iyi ayrılan küme olarak bir betikle seçildi (en küçük OKLab uzaklığı 0.077). Aynı açıklıktaki durum metin renkleri renk körlüğünde birbirine karıştığı için her durum ikon, yazı ve ölçülmüş bir ikon rengiyle birlikte gösterilmeli. Üç alternatif alt ton (Oxford mürekkebi, Prusya laciverti, gece indigosu) aynı kurallarla ölçüldü ve sahibin yan yana görüp seçmesine hazır.
+
+- **R02-K01 Önerilen alt ton: gece mavisi ve 12 adımlı vurgu ölçeği**: Alt ton olarak H 262 derecede, ana dolgusu oklch(0.32 0.10 262) (#143065) olan gece mavisini kullan. Ölçek açıktan koyuya tek yönlü 12 adım; roller: 2 hafif zemin, 3 seçili zemin, 4 seçili hover, 5 seçili basılı, 6 ve 7 süs kenarı, 8 vurgulu kontrol kenarı, 9 odak halkası ve bağlantı ve küçük kontrol dolgusu, 10 birincil buton hover, 11 birincil buton dolgusu, 12 basılı dolgu ve yüksek kontrastlı vurgu metni.
+  - accent-1 = oklch(0.985 0.005 262) #F8FAFE
+  - accent-2 = oklch(0.965 0.012 262) #EFF4FC
+  - accent-3 = oklch(0.94 0.022 262) #E3ECFA
+  - accent-4 = oklch(0.915 0.032 262) #D7E4F9
+  - accent-5 = oklch(0.885 0.042 262) #CADAF6
+  - accent-6 = oklch(0.84 0.055 262) #B7CBEF
+  - accent-7 = oklch(0.75 0.075 262) #94AFDE
+  - accent-8 = oklch(0.62 0.11 262) #6185C8
+  - accent-9 = oklch(0.48 0.15 262) #2B58B1
+  - accent-10 = oklch(0.39 0.12 262) #1F4184
+  - accent-11 = oklch(0.32 0.10 262) #143065
+  - accent-12 = oklch(0.26 0.075 262) #0F2248
+- **R02-K02 Birincil buton durumları**: Birincil buton dolgusu 11. adım, hover 10. adım (açılır), basılı 12. adım (koyulaşır), metin beyaz. Devre dışı buton vurgu rengini taşımaz, nötr gri olur. Her ekranda vurgu dolgulu tek bir birincil buton olur; ikincil butonlar nötr kenarlı ya da nötr dolgulu kalır.
+  - button-primary-bg = #143065
+  - button-primary-bg-hover = #1F4184
+  - button-primary-bg-pressed = #0F2248
+  - button-primary-text = #FFFFFF
+- **R02-K03 Odak halkası**: Klavye odağı 9. adım renginde 2px çizgi ve 2px ara boşlukla gösterilir; halka dolguya değmez, zemin üzerine çizilir. Web panelinde yalnızca :focus-visible ile.
+  - focus-ring-color = #2B58B1
+  - focus-ring-width = 2px
+  - focus-ring-offset = 2px
+- **R02-K04 Bağlantılar**: Satır içi bağlantılar 9. adım renginde ve her zaman altı çizili; hover'da 10. adım. Gezinme menüsü, sekme ve buton gibi bağlamı belli öğelerde alt çizgi gerekmez.
+  - link-text = #2B58B1
+  - link-text-hover = #1F4184
+  - link-decoration = underline
+- **R02-K05 Vurgu renginin rolleri ve nötr kalanlar**: Gece mavisi yalnızca şu rollerde: birincil buton dolgusu, bağlantı, odak halkası, seçili satır ve sekme zemini (3. adım) ile etkin gezinme çizgisi (9. adım, 2px), açık switch, işaretli kutu ve radyo, ilerleme çubuğu, bilgi durumu. Nötr kalanlar: başlıklar ve gövde metni, ikonlar, kart ve panel kenarları, ikincil butonlar, grafiklerin varsayılan serileri, sayfa ve yüzey zeminleri.
+  - accent-roles = button-primary, link, focus, selected-bg (accent-3), nav-indicator (accent-9), control-checked (accent-9), progress (accent-9), info
+  - neutral-roles = text, heading, icon, border, surface, button-secondary, chart-default
+- **R02-K06 Nötr grilere alt ton verilmesi**: Kırık beyaz zemin ve tüm griler vurguyla aynı ton bölgesinde (260 ile 262 derece) ve en fazla 0.012 kromada kalsın; alt ton grilere hissedilir ama görünmez bir serinlik verir, asıl renk yalnızca vurgu rolündeki öğelerde görünür.
+  - bg = oklch(0.97 0.006 260) #F3F5F9
+  - text-primary (örnek) = oklch(0.25 0.012 262) #1E2228
+  - text-secondary (örnek) = oklch(0.45 0.012 262) #52555C
+  - neutral-chroma-max = 0.012
+- **R02-K10 İÜ kurum renklerinin yeri**: İÜ sarısı ve yeşili arayüz jetonlarına girmesin; gece mavisi alt tonu kurum renklerinden bağımsız kalsın. Kurumla görsel bağ istenirse Prusya laciverti alternatifi seçilebilir.
+  - iu-sari (yalnızca bilgi) = PANTONE 102 CVC, R 248 G 213 B 43, CMYK 0 5 100 0 (2012); SVG #FFD528 (2025)
+  - iu-yesil (yalnızca bilgi) = R 23 G 114 B 40, CMYK 80 0 100 20 (2012); SVG #00733D (2025)
+
+Fact-checker issues:
+- R02-K02: Basılı durumun 12. adıma koyulaşması Carbon'a dayandırılıyor ('active iki adım açık ya da koyu olabilir'). Oysa Carbon 100 ile 70 arası değerlerde active durumun iki tam adım açılmasını istiyor; #143065 IBM Blue 80 ile 90 arasında, yani Carbon'a göre basılı durum açılmalı (Material de açıyor). Koyulaşma kaynaksız bir tasarım tercihi olarak sunulmalı ya da basılı değer açılan yöne çevrilmeli. Aynı düzeltme K01'deki '12: basılı dolgu' rolüne de gider.
+- R02-K02: Alternatifteki 'Material 3 durum katmanı (hover 0.08, basılı 0.12)' eski jeton sürümünden (v0_192) geliyor; güncel Material 3 jetonları (v0_210) basılı ve odak katmanı için 0.10 kullanıyor.
+- R02-K03: 'Radix gibi 7. adım' alternatifi (K01'deki 'Radix sırası' da) Radix'in yalnızca özet tablosuna dayanıyor. Aynı sayfanın ayrıntı bölümü odak halkasını 8. adıma veriyor ve bizim ölçekte 8. adım zeminde 3.38:1 ile 3:1'i geçiyor. 9. adım seçimi yine savunulabilir (6.14:1), ama gerekçe 'Radix'e uyulursa 3:1 sağlanmıyor' diye yazılmamalı.
+- R02-K09: status-geldi notundaki 'yazı 0.95 açıklıktaki çipte 7.65:1' değeri bırakılan eski çipe ait. Önerilen #ECF9EE çipinde #095727 yazı 8.05:1 ölçülüyor.
+- R02-K09: Bekliyor yazı rengi #434850 (ölçülen oklch 0.40 0.015 260) K06'nın 'griler en fazla 0.012 kroma' kuralını ve F03'teki aynı sınırı aşıyor.
+
+Load-bearing findings:
+- R02-F01 CSS gece mavisi fazla doygun ve mora kayık: CSS'teki midnightblue (#191970) ve navy (#000080) koyu ama çok doygun renkler: OKLCH kromaları 0.14 ile 0.19 arasında, tonları 264 ile 273 derece.
+- R02-F02 Bugünün koyu lacivertleri daha az doygun: Oxford mavisi, Prusya mavisi, Space cadet ve Delft mavisi CSS gece mavisinin yaklaşık yarısı kadar kromaya sahip (0.076 ile 0.085) ve 246 ile 270 derece arasında duruyor.
+- R02-F04 İÜ kurum kimliği renkleri sarı ve yeşil: İstanbul Üniversitesi Kurum Kimliği Kılavuzu (2012 İmza Yetkileri Yönergesi, Ek 9) logoda yalnızca sarı ve yeşil tanımlıyor; mavi ya da lacivert yok. [kısmen: PDF'in başlığı İMZA YETKİLERİ YÖNERGESİ (47 sayfa, 29 Şubat 2012). Ek 9 A ve B: PANTONE 102 CVC, R 248 G 213 B 43, CMYK 0 5 100 0; yeşil R 23 G 114 B 40, CMYK 80 0 100 20. Ek 9 C: siyah beyaz baskıda amblemin tümü siyah. Metinde mavi ya da lacivert hiç geçmiyor. Bütün değerler ve ana iddia birebir. Tek sapma Ek 9 D özetinde: kılavuz beyaz ve parlak zeminde gölgelendirmeyi şart koşuyor (gölge yerine logonun altına zemin de atılabilir); beyaz kontur ise logoyu renkli bir zeminden ayırmak, sarının zemin rengine karışmasını önlemek için gösteriliyor. Bulgu ikisini birden beyaz ve parlak zemine bağlıyor.]
+- R02-F06 Gece mavisi İÜ renkleriyle ton akrabası değil, çatışmıyor da: Önerilen 262 derecelik ton İÜ yeşilinden 108.3, İÜ sarısından 168.4 derece uzakta. İÜ sarısı açık zeminde kullanılamayacak kadar açık; İÜ yeşili ise başarı ve 'geldi' yeşiliyle aynı ton bölgesinde.
+- R02-F07 IBM Carbon: tek mavi aile birincil eylem rengi: Carbon'da birincil eylem rengi tek bir mavi aile, diğer renkler az ve amaçlı kullanılıyor. Aynı mavi buton dolgusu, bağlantı, odak ve etkileşimli kenar rolünü taşıyor; yüzey ve metin gri.
+- R02-F08 Carbon: hover ve basılı renkler ölçek adımıyla türetiliyor: Carbon hover, active ve selected durumlarını aynı renk ölçeğinde sabit adımlarla türetiyor; koyu değerlerde hover daha açık oluyor. [kısmen: Hover kuralı birebir (Black ile 70 arası yarım adım açık, 60 ile White arası yarım adım koyu). Odağın 2px kenarla gösterilmesi, devre dışı durumun kontrast şartına tabi olmaması, 24px altı 4.5:1, büyük metin ve grafik öğe 3:1 de doğru. Ama active ve selected için kaynak yönü değere bağlıyor: 'For values between 100 and 70, the active state is two full steps lighter. For values between 60 and 10, the active state is two full steps darker.' (selected için aynı kural, bir adım). Bulgudaki 'iki tam adım daha açık ya da daha koyu' özeti eksik, 'iki yönü de serbest bırakıyor' sonucu yanlış: #143065 (wcagY 0.032), IBM Blue 80 #002D9C (0.043) ile Blue 90 #001D6C (0.020) arasında. Yani Carbon kuralına göre basılı durum iki adım açılmalı.]
+- R02-F09 Radix: 12 adımlı ölçekte her adımın rolü belli: Radix Colors her rengi 12 adıma bölüyor ve her adıma tek bir rol veriyor: zeminler, kenarlar, dolgu ve metin. [kısmen: Sayfanın özet tablosu bulgudaki 12 rolü birebir veriyor (7 'UI element border and focus rings', 8 'Hovered UI element border'). 11 ve 12 için aynı ölçeğin 2. adımı üzerinde APCA Lc 60 ve Lc 90 garantisi ve 9. adımın en yüksek kromalı en saf adım olması da doğru. İki sapma var. Kaynak 'Each step was designed for at least one specific use case' diyor, 'tek bir rol' değil. Aynı sayfanın Borders bölümü de 'Step 8 is designed for stronger borders on interactive components and focus rings' diyerek odak halkasını 8. adıma veriyor. Bizim ölçekte 8. adım #6185C8 zeminde 3.38:1, yani Radix'in ayrıntı bölümüne göre kurulan odak 3:1'i geçiyor.]
+- R02-F14 Apple: vurgu rengi tek birincil kontrolde, renk tek başına anlam taşımaz: Apple İnsan Arayüzü Yönergeleri vurgu rengini öne çıkan birincil eylemin zeminine koymayı, birden çok kontrolün zeminini renklendirmemeyi, aynı rengi farklı anlamlarda kullanmamayı ve bilgiyi yalnızca renkle vermemeyi söylüyor.
+- R02-F18 WCAG G183: renkle ayrılan bağlantı çevre metne 3:1 ister: Satır içi bağlantı yalnızca renkle ayrılıyorsa, bağlantı metni ile çevresindeki metin arasında en az 3:1 kontrast gerekiyor; gece mavisi bağlantı koyu gövde metninden bu kadar ayrılamıyor.
+- R02-F19 Önerilen gece mavisi ölçeğinin ölçülen kontrastları: H 262'de kurulan 12 adımlı ölçekte birincil dolgu, hover, basılı, bağlantı ve odak rolleri WCAG şartlarını geniş payla sağlıyor; 7. adım odak için, 9. adım dolguya bitişik odak için yetersiz.
+- R02-F20 Yoklama durum renkleri betikle seçildi, metin renkleri tek başına ayrılmıyor: Altı yoklama durumu için ikon renkleri, protan, deutan ve tritan simülasyonlarında en küçük çift uzaklığını en büyük yapan küme olarak seçildi; aynı açıklıktaki durum metin renkleri ise renk körlüğünde birbirine karışıyor.
+
+## R03 Hareket sistemi temelleri: süre, eğri ve yay
+
+Büyük tasarım sistemlerinin (IBM Carbon, Material 3, Fluent 2, Shopify Polaris, GitHub Primer, Atlassian) yayımladığı süreler 100, 150, 200, 250, 300 ve 400 ms adımlarında büyük ölçüde buluşuyor; ölçeğimizi bu ortak adımlardan, uydurmadan kurabiliriz. Uygulayıcılar ve araştırmalar (Emil Kowalski, NN/g, Apple HIG) arayüz animasyonlarının genelde 300 ms altında kalmasını, 400 ms'nin çok yavaş, 500 ms ve üstünün yük gibi hissettirdiğini, sık tekrarlanan ve klavyeyle başlatılan işlemlerin hiç ya da çok az canlandırılmasını söylüyor. Açılış kapanıştan biraz uzun olmalı: NN/g örneğinde 300 ms açılış, 200 ya da 250 ms kapanış; Primer'de giriş 300 ms, çıkış 200 ms. Sakin ve hassas bir his için yaylar kritik sönüme yakın seçilmeli: Material 3 'standard' şeması 0.9 sönüm oranıyla yalnız yüzde 0.15 aşma üretiyor, 'expressive' şemanın hızlı yayı ise yüzde 9.48 aşmayla oyunbaz bir his veriyor. Yaylar kesildiğinde hızı koruyarak yeni hedefe dönebiliyor (Apple WWDC23), bu yüzden uygulamada (Reanimated 4) konum ve boyut değişimleri yayla yapılmalı; Reanimated 4'ün varsayılan yayı hesabımızla yüzde 1'e 443 ms'de oturduğu için her çağrıda açık ayar verilmeli. Web panelinde CSS geçişleri cubic-bezier ile yapılmalı; hesabımıza göre CSS 'ease' eğrisi Material standard yaylarını 150, 200 ve 300 ms'de yaklaşık yüzde 1.5 sapmayla taklit ediyor, böylece telefon ve panel aynı hareket dilini konuşuyor. linear() Aralık 2023'ten beri tüm ana tarayıcılarda var ve büyük paneller için yay eğrisinin CSS karşılığı olarak isteğe bağlı kullanılabilir. Önerilen set: 7 süre, 7 eğri, 4 yay; hover yalnız 100 ms renk geçişi, basma scale(0.97), kademeli girişte öğe başına 20 ms ve toplam 500 ms sınırı.
+
+- **R03-K01 Süre ölçeği**: Yedi süre tokenı kullanılsın; taban adlar sayıyla, kullanım adları işlevle verilsin (Primer'deki gibi iki katman). Kullanıcının beklediği hiçbir geçiş 300 ms'yi, hiçbir geçiş 400 ms'yi geçmesin.
+  - --motion-duration-instant = 0ms
+  - --motion-duration-micro = 100ms
+  - --motion-duration-fast = 150ms
+  - --motion-duration-base = 200ms
+  - --motion-duration-moderate = 250ms
+  - --motion-duration-slow = 300ms
+  - --motion-duration-max = 400ms
+- **R03-K02 Eğriler**: Yedi eğri tokenı kullanılsın: ekranda kalan öğe için standard, giren katman için enter, çıkan katman için exit, hover ve basma için micro; vurgulu çift yalnız büyük yüzeylerde; linear yalnız sürekli harekette. Giriş ve hover için ease-in hiç kullanılmasın.
+  - --motion-ease-standard = cubic-bezier(0.2, 0, 0, 1)
+  - --motion-ease-enter = cubic-bezier(0, 0, 0, 1)
+  - --motion-ease-exit = cubic-bezier(0.3, 0, 1, 1)
+  - --motion-ease-micro = cubic-bezier(0.25, 0.1, 0.25, 1)
+  - --motion-ease-emphasized-enter = cubic-bezier(0.05, 0.7, 0.1, 1)
+  - --motion-ease-emphasized-exit = cubic-bezier(0.3, 0, 0.8, 0.15)
+  - --motion-ease-linear = linear
+- **R03-K03 Yay presetleri (uygulama, Reanimated 4)**: Uygulamada konum ve boyut değişimleri dört yayla yapılsın; değerler Material 3 standard şemasından, Reanimated fizik moduna kütle 1 ile çevrilerek alınsın. Expressive şema ve sıçramalı yaylar kullanılmasın.
+  - spring-effects = withSpring(v, { mass: 1, stiffness: 1600, damping: 80 })
+  - spring-fast = withSpring(v, { mass: 1, stiffness: 1400, damping: 67.35 })
+  - spring-default = withSpring(v, { mass: 1, stiffness: 700, damping: 47.62 })
+  - spring-slow = withSpring(v, { mass: 1, stiffness: 300, damping: 31.18 })
+  - jest bırakma = velocity: jestin bırakma anındaki hızı
+  - reduceMotion = ReduceMotion.System
+- **R03-K04 Giriş ve çıkış çiftleri**: Her açılan katman için çıkış girişten kısa olsun ve hızlanan eğriyle bitsin; açılış yavaşlayan eğriyle gelsin.
+  - tooltip = giriş 150ms --motion-ease-enter; ardışık tooltip 0ms
+  - menü, açılır liste, popover = giriş 200ms --motion-ease-enter; çıkış 150ms --motion-ease-exit
+  - diyalog, toast = giriş 250ms --motion-ease-enter; çıkış 200ms --motion-ease-exit
+  - yan panel, alt sayfa, ekran = giriş 300ms (uygulamada spring-slow); çıkış 200ms --motion-ease-exit
+  - çıkış / giriş oranı = 0.67 ile 0.80
+- **R03-K05 Sık kullanım kuralı ve kesilebilirlik**: Her etkileşimin bir durum geçişi olsun, ama miktarı sıklığa göre ayarlansın: sık işlemde yalnız kısa renk geçişi, seyrek ve büyük değişimde hareket, klavyede hiç animasyon yok. Hiçbir animasyon girdiyi beklettirmesin.
+  - klavye kısayolu, ok tuşu gezinmesi, odak halkası = 0ms
+  - hover (panel) = 100ms --motion-ease-micro; yalnız color, background-color, border-color
+  - sık listeler (yoklama, onay listesi) satır durumu = 100ms ile 150ms; yalnız renk ve opaklık
+  - girdi engelleme = yok
+- **R03-K06 Basma geri bildirimi ve açılış biçimi**: Butonlar basılınca hafifçe küçülsün; açılan katmanlar hiçlikten değil, tetikleyicisinden ve hafif küçük ölçekten büyüsün; yalnız transform ve opacity canlandırılsın.
+  - buton :active (panel) ve basılı durum (uygulama) = transform: scale(0.97); 100ms --motion-ease-micro
+  - açılan katmanın başlangıcı = opacity: 0; transform: scale(0.93)
+  - transform-origin = var(--radix-dropdown-menu-content-transform-origin) ya da var(--transform-origin)
+  - canlandırılan özellikler = transform, opacity
+- **R03-K07 Kademeli giriş (stagger)**: Liste ve tablolarda kademeli giriş yalnız ekranın ilk açılışında, öğe başına 20 ms ile yapılsın ve toplam 500 ms'yi geçmesin; sınırı aşan öğeler birlikte görünsün.
+  - --motion-stagger-step = 20ms
+  - toplam süre sınırı = 500ms
+  - en çok kademeli öğe = 200ms öğede 16, 250ms öğede 13
+  - kapsam = yalnız ilk açılış
+- **R03-K08 Web panelinde yay karşılığı ve linear()**: Panelde temel yol cubic-bezier ile CSS geçişi olsun; uygulamadaki yayların karşılığı aynı süre tokenlarıyla 'ease' eğrisi olsun. Büyük paneller için isteğe bağlı olarak tek bir linear() yay eğrisi, @supports ile ve cubic-bezier yedeğiyle kullanılabilir.
+  - spring-fast karşılığı = 150ms cubic-bezier(0.25, 0.1, 0.25, 1)
+  - spring-default karşılığı = 200ms cubic-bezier(0.25, 0.1, 0.25, 1)
+  - spring-slow karşılığı = 300ms cubic-bezier(0.25, 0.1, 0.25, 1)
+  - --motion-ease-spring (isteğe bağlı) = linear(0, 0.02, 0.07, 0.138, 0.217, 0.3, 0.383, 0.462, 0.536, 0.604, 0.665, 0.719, 0.767, 0.808, 0.843, 0.873, 0.898, 0.919, 0.936, 0.95, 0.962, 0.971, 0.979, 0.985, 0.989, 0.993, 0.995, 0.997, 0.999, 1, 1.001, 1.001, 1.001, 1.001, 1.002, 1.001, 1.001, 1.001, 1.001, 1.001, 1)
+  - --motion-ease-spring süreleri = fast 230ms, default 320ms, slow 490ms
+  - yedek = @supports (transition-timing-function: linear(0, 1))
+- **R03-K09 Azaltılmış hareket**: Telefonun ve tarayıcının azaltılmış hareket ayarı izlensin: konum ve ölçek hareketleri kapansın, renk ve opaklık geçişleri kısa kalsın; hiçbir bilgi yalnız hareketle verilmesin.
+  - uygulama = reduceMotion: ReduceMotion.System
+  - panel = @media (prefers-reduced-motion: reduce)
+  - bilgi = durum metin, renk ve simgeyle de görünür
+- **R03-K10 Tek token kaynağı ve uygulama kuralları**: Süre, eğri ve yay değerleri tek bir dosyada tutulsun; panel için CSS değişkenleri, uygulama için TypeScript sabitleri bu dosyadan üretilsin. withSpring her zaman açık fizik ayarıyla çağrılsın.
+  - token kaynağı = tek JSON dosyası: panel için CSS custom properties, uygulama için TypeScript sabitleri
+  - Reanimated CSS geçişi = transitionTimingFunction: cubicBezier(0.2, 0, 0, 1)
+  - withSpring çağrısı = her zaman { mass, stiffness, damping } verilir
+  - uygulamada konum ve boyut = yay (spring-fast, spring-default, spring-slow)
+  - uygulamada renk ve opaklık = spring-effects ya da süre tokenı ile CSS geçişi
+- **R03-K11 Doğrulama kapısı**: Token dosyası için hızlı ve deterministik bir kapı testi yazılsın; süre sınırı, giriş-çıkış oranı, yay aşması ve yasak eğriler her committe kontrol edilsin.
+  - en uzun süre tokenı = 400ms
+  - yay oturma süresi (yüzde 1) = 300ms veya altı
+  - yay aşması = yüzde 0.15 veya altı
+  - çıkış / giriş oranı = 0.83 veya altı
+  - giriş ve hover eğrisi = ease-in ve accelerate eğrileri yasak
+
+Fact-checker issues:
+- R03-K08: İsteğe bağlı --motion-ease-spring süreleri (default 320 ms, slow 490 ms) K01'in 'kullanıcının beklediği geçiş 300 ms'yi, hiçbir geçiş 400 ms'yi geçmesin' kuralına ve K11 kapısındaki 'en uzun süre tokenı 400ms' sınırına aykırı; 490 ms, NN/g'nin 500 ms'de başlayan 'real drag' eşiğine de çok yakın (F13). Bu token K01 ve K11'de açık istisna olarak yazılmalı ya da slow karşılığı 400 ms altında tutulmalı.
+- R03-K08: Notlardaki yüzde 1.53 ve 1.54 sapmalar en iyi uyan 143, 203 ve 310 ms süreleri için geçerli; önerilen 150, 200 ve 300 ms tokenlarında bağımsız hesapla en büyük sapma yüzde 3.11, 1.75 ve 2.81. Özetteki '150, 200 ve 300 ms'de yaklaşık yüzde 1.5 sapma' cümlesi 'yüzde 3.1'e kadar' diye düzeltilmeli.
+- R03-K04: Çıkış/giriş oranı 0.67 ile 0.80 veriliyor, ama dayandığı NN/g örneği (300 ms'ye karşı 200 ya da 250 ms) 0.67 ile 0.83 aralığını veriyor ve K11 kapısı 0.83'e kadar izin veriyor; iki öneri aynı üst sınırı kullanmalı.
+- R03-K01: fast (150 ms) tokenı onay kutusu ve anahtarı kapsıyor; doğrulanan kaynaklarda NN/g onay kutusu ve anahtar için yaklaşık 100 ms (F13), Carbon buton ve anahtar için 70 ms (F01) veriyor, yalnız Primer toggle için 200 ms kullanıyor. Onay kutusu ve anahtar micro (100 ms) tokenına alınmalı ya da 150 ms seçimi gerekçelendirilmeli.
+- R03-K06: 'Yalnız transform ve opacity canlandırılsın' kuralı K05'teki hover renk geçişiyle (color, background-color, border-color) ve K03 ile K09'daki renk geçişleriyle çelişiyor; Kowalski (F15) 'try to animate with transform and opacity' diyerek padding ve margin gibi yerleşim özelliklerinden kaçınmayı öneriyor, renk geçişini yasaklamıyor. Kural 'konum ve ölçek transform ile; width, height, padding, margin canlandırılmaz' diye daraltılmalı.
+- R03-K07: Carbon (F25) öğe sayısı arttıkça gecikmenin ayarlanmasını söylüyor; sabit 20 ms adım ve sınırı aşan öğelerin birlikte görünmesi Carbon'da yok, ekibin kendi kararı olarak yazılmalı.
+- R03-K01: Gerekçedeki 'her adım en az üç sistemde' sayımı Polaris'i içeriyor, oysa Shopify/polaris deposu 11 Eylül 2026'da arşivlendi; Polaris çıkınca 250 ms yalnız Material ve Fluent'te birebir kalıyor (Carbon 240). Değer değişmez, gerekçe güncellenmeli.
+
+Load-bearing findings:
+- R03-F02 Material 3 süre ve eğri tokenları: Material 3 süre ölçeği 50 ms'den 1000 ms'ye 16 adımdır; standart eğri cubic-bezier(0.2, 0, 0, 1), giriş eğrisi (standard decelerate) cubic-bezier(0, 0, 0, 1), çıkış eğrisi (standard accelerate) cubic-bezier(0.3, 0, 1, 1).
+- R03-F03 Material 3 yayları: standard ve expressive şema: Material 3 iki hareket şeması tanımlar: standard şemada konum ve boyut (uzamsal) yaylarının sönüm oranı 0.9, expressive şemada 0.6 ile 0.8; renk ve opaklık (efekt) yayları iki şemada da 1.0, yani aşmasızdır.
+- R03-F06 Primer: giriş, çıkış ve hover çiftleri: GitHub Primer (primitives 11.10.0) hareketi taban ve işlevsel olmak üzere iki katmanda tanımlar; giriş 300 ms yavaşlayan eğri, çıkış 200 ms hızlanan eğri, hover 100 ms 'ease' ile yapılır.
+- R03-F08 Sistemler arası ortak adımlar: Altı sistemin yayımladığı süreler 100, 150, 200, 250, 300 ve 400 ms adımlarında örtüşüyor; üç eğri en az iki sistemde birebir aynı değerle geçiyor.
+- R03-F10 Yaylar hızı korur ve kesilebilir: Apple yayları, kesildiklerinde o anki hızı koruyarak yeni hedefe yönelebildikleri için eğrilere tercih eder ve emin olunmadığında sıçramasız (bounce 0) yay önerir.
+- R03-F12 Apple HIG: amaçlı, kısa, kesilebilir hareket: Apple HIG hareketin amaçlı ve isteğe bağlı, geri bildirimin kısa ve kesin olmasını, sık yapılan etkileşimlere hareket eklenmemesini ve kullanıcının hareketi kesebilmesini ister.
+- R03-F13 NN/g: süre aralıkları ve giriş-çıkış farkı: NN/g çoğu animasyon için 100 ile 500 ms aralığını, basit geri bildirim için yaklaşık 100 ms'yi, modal gibi büyük değişimler için 200 ile 300 ms'yi önerir; 400 ms'yi çok yavaş, 500 ms ve üstünü yük gibi görür; açılış kapanıştan biraz uzun olmalıdır.
+- R03-F15 Kowalski: 300 ms altı, ease-out, klavyeye animasyon yok: Emil Kowalski arayüz animasyonlarının genelde 300 ms altında kalmasını, giriş için ease-out kullanılmasını, yalnız transform ve opacity canlandırılmasını ve klavyeyle başlatılan işlemlerin hiç canlandırılmamasını söyler. [kısmen: Kaynakta 'usually be shorter than 300ms', ease-out önerisi, 'never animate keyboard initiated actions ... hundreds of times a day', transform ve opacity'nin yalnız composite adımını tetiklediği, CSS geçişinin kesilebildiği ve prefers-reduced-motion aynen var. Ancak Kowalski 'you should try to animate with transform and opacity' diyor (padding ve margin'e karşı bir performans önerisi); 'yalnız transform ve opacity' kesin kuralı kaynağı aşıyor. Bu makalede ease-out 'giriş için' değil, hızlı tepki için öneriliyor; giriş ve çıkışta ease-out '7 Practical Animation Tips' yazısında geçiyor.]
+- R03-F17 Kowalski: basma ölçeği ve giriş biçimi: Basılan buton scale(0.97)'ye küçülmeli, açılan öğe scale(0)'dan değil 0.9 ve üstünden başlamalı, ardışık tooltip'ler gecikmesiz ve animasyonsuz açılmalı, açılan katman tetikleyicisinden büyümelidir.
+- R03-F20 CSS'te yay: linear() ve sınırları: CSS linear() ile yay eğrisi taklit edilebilir, ama CSS geçişi sabit bir süre ister ve kesildiğinde hızı korumaz; linear() Aralık 2023'ten beri tüm ana tarayıcılarda vardır.
+- R03-F22 Reanimated 4 withSpring varsayılanları: Reanimated 4'te withSpring fizik tabanlı (stiffness, damping, mass) ya da süre tabanlı (duration, dampingRatio) çalışır, ikisi birlikte kullanılamaz; varsayılanlar stiffness 900, damping 120, mass 4 ya da duration 550 ve dampingRatio 1'dir ve duration algısal süredir.
+- R03-F24 Hesap: oturma süreleri, aşma ve CSS karşılığı: Hesabımıza göre Material standard yayları neredeyse hiç aşmaz (yüzde 0.15) ve kısa sürede oturur; expressive şema ve Apple bouncy belirgin biçimde zıplar; CSS 'ease' eğrisi standard uzamsal yayları yaklaşık yüzde 1.5 sapmayla taklit eder.
+
+## R04 Etkileşim durumları ve açılış, kapanış kalıpları
+
+Önde gelen sistemler etkileşim durumlarını iki yolla kuruyor: Material 3 içerik renginin saydam bir katmanını kullanıyor (hover 0.08, basılı 0.1, odak 0.1, sürükleme 0.16), Carbon ise her durum için ayrı renk tokenı tanımlıyor. Telefonda hover yok; iyi React Native uygulamaları basmayı onPressIn anında küçük bir ölçekle karşılıyor (Bluesky: 0.98 ve 100 ms), web panelinde ise gerçek hover yalnız imleçli cihazlarda gösterilmeli ve hiçbir bilginin tek yolu olmamalı. Haptik için Apple, Android ve expo-haptics aynı dili konuşuyor: başarı ve hata için bildirim türü, sıradan dokunuşlar için hiçbir şey; Android'de performAndroidHapticsAsync (Confirm, Reject) öneriliyor ve iOS'ta kamera açıkken titreşim çalışmayabiliyor, bu da QR taramasından sonraki başarı anını doğrudan etkiliyor. NN/g çoğu animasyon için 100-500 ms, basit geri bildirim için yaklaşık 100 ms, modal için 200-300 ms veriyor ve kapanışların açılışlardan 50-100 ms kısa olmasını istiyor; Material 3 süre ve eğri tokenları bu aralıkla örtüşüyor. Açılış kalıpları için ölçülmüş kütüphane değerleri var: shadcn menüsü tetikleyici kökeninden 0.95 ölçek ve opaklıkla 150 ms'de açılıyor, Vaul çekmecesi 0.5 s ve cubic-bezier(0.32, 0.72, 0, 1) kullanıyor, @gorhom/bottom-sheet iOS'ta aşmayan bir yay, Android'de 250 ms zamanlama kullanıyor, Sonner toast'ı 4000 ms kalıyor ve 400 ms geçişle hareket ediyor. Bekleme göstergesi süreye göre seçilmeli: 1 saniyenin altında hiçbir şey, 2-10 saniyede dönen gösterge veya iskelet, 10 saniye üstünde yüzde ilerleme. Çevrimdışı durumda ekran kilitlenmemeli, kaydın telefonda tutulduğu ve bağlantı gelince gönderileceği açıkça yazılmalı. Web tarafında @starting-style (Baseline 2024) ve belge içi View Transitions (Baseline 2025) kullanılabilir; belgeler arası geçiş ve height auto animasyonu ise tüm tarayıcılarda yok, ilerleyen iyileştirme olarak kalmalı. İÜ Yoklama için sonuç: tek süre ve eğri token seti, alt ton renginde durum katmanları, platforma göre ayrılmış hover ve basma davranışı, olay başına tek ve seyrek haptik, her bileşende opaklığa düşen azaltılmış hareket karşılığı.
+
+- **R04-K01 Süre tokenları**: Telefon ve panel aynı yedi süre tokenını kullansın; değerler Material 3 süre tokenlarından seçilsin ve hiçbir etkileşim animasyonu 400 ms'yi aşmasın (alt sayfa kütüphanesi ve toast kendi varsayılanlarını korur).
+  - motion.duration.instant = 0ms
+  - motion.duration.fast = 100ms
+  - motion.duration.short = 150ms
+  - motion.duration.medium = 200ms
+  - motion.duration.medium2 = 250ms
+  - motion.duration.long = 300ms
+  - motion.duration.xlong = 400ms
+- **R04-K02 Eğri tokenları**: Üç ana eğri olsun: yerinde değişim için standart, ekrana giren yüzeyler için yavaşlayan, çıkanlar için hızlanan; sekme göstergesi ve çekmece için iki özel eğri eklensin. Doğrusal eğri yalnız dönen göstergede kullanılsın.
+  - motion.easing.standard = cubic-bezier(0.2, 0, 0, 1)
+  - motion.easing.enter = cubic-bezier(0.05, 0.7, 0.1, 1)
+  - motion.easing.exit = cubic-bezier(0.3, 0, 0.8, 0.15)
+  - motion.easing.indicator = cubic-bezier(.3,0,0,1)
+  - motion.easing.drawer = cubic-bezier(0.32, 0.72, 0, 1)
+  - Reanimated karşılığı = Easing.bezier(0.2, 0, 0, 1)
+- **R04-K03 Durum katmanları: hover, basılı, odak, sürükleme, seçili, devre dışı**: Durumlar ayrı renk tokenlarıyla değil, alt ton renginin (gece mavisi metin rengi) saydam katmanıyla gösterilsin; seçili durum yalnız renkle değil kalıcı bir göstergeyle belli olsun; devre dışı öğe soluk ve etkileşimsiz olsun.
+  - state.hover.layer = 0.08
+  - state.pressed.layer = 0.1
+  - state.focus.layer = 0.1
+  - state.dragged.layer = 0.16
+  - state.selected = kalıcı gösterge (çizgi veya simge) ve 0.2 katman
+  - state.disabled = opacity 0.5, pointer-events none
+  - state.layer.transition = background-color 100ms cubic-bezier(0.2, 0, 0, 1)
+- **R04-K04 Basma geri bildirimi (telefon)**: Telefondaki her dokunulabilir öğe onPressIn anında 0.98 ölçeğe ve basılı katmana geçsin, onPressOut'ta 100 ms'de geri dönsün; liste satırlarında ölçek değil yalnız katman kullanılsın; ripple kullanılmasın; küçük simgeler hitSlop ile 44x44 pt'ye tamamlansın.
+  - press.scale = 0.98
+  - press.in = withTiming(0.98, {duration: 100})
+  - press.out = withTiming(1, {duration: 100})
+  - press.delay = yok (unstable_pressDelay verilmez)
+  - press.layer = 0.1
+  - list.row.press = yalnız katman 0.1, ölçek yok
+  - hit.min = 44x44 pt
+  - pressRetentionOffset = {bottom: 30, left: 20, right: 20, top: 20}
+  - press.reducedMotion = ölçek yok, yalnız katman
+- **R04-K05 Hover (web paneli ve imleçli iPad)**: Hover yalnız gerçek imleçli cihazda çalışsın; düğme ve satırda zemin katmanı 100 ms'de gelsin, hover'da ölçek ve gölge kullanılmasın; basmada yalnız düğmeler 0.97 ölçeğe insin; hover hiçbir bilginin veya eylemin tek yolu olmasın.
+  - hover.media = @media (hover: hover) and (pointer: fine)
+  - hover.layer = 0.08, background-color 100ms cubic-bezier(0.2, 0, 0, 1)
+  - active.scale = scale(0.97)
+  - table.row.hover = yalnız zemin katmanı
+  - hover.reveal = kullanılmaz
+  - iPad = sistem imleç efektleri (highlight, lift)
+- **R04-K06 Klavye odağı (focus-visible)**: Panelde odak yalnız :focus-visible ile, 2px düz alt ton çizgisiyle ve öğeden biraz uzakta gösterilsin; halka animasyonsuz, anında görünsün; koyu zeminlerde açık renkli iç çizgiyle çift halka kullanılsın.
+  - focus.ring = outline: 2px solid <alt ton>
+  - focus.offset = outline-offset: 2px
+  - focus.contrast = en az 3:1
+  - focus.inset = koyu zeminde açık iç çizgi
+  - focus.transition = 0ms
+- **R04-K07 Anahtar, onay kutusu, bölümlü seçici**: Anahtar başparmağı ve onay işareti 100 ms'de standart eğriyle, bölümlü seçicinin göstergesi 250 ms'de gösterge eğrisiyle kaysın; anahtarda Android'de Toggle_On ve Toggle_Off, iOS'ta selectionAsync haptiği verilsin.
+  - toggle.thumb = transform 100ms cubic-bezier(0.2, 0, 0, 1)
+  - checkbox.mark = opacity 100ms cubic-bezier(0.2, 0, 0, 1)
+  - segmented.indicator = transform 250ms cubic-bezier(.3,0,0,1)
+  - haptic.android = performAndroidHapticsAsync(Toggle_On / Toggle_Off)
+  - haptic.ios = selectionAsync()
+  - reducedMotion = kayma yok; renk ve opaklık 100ms
+- **R04-K08 Menü, popover ve ipucu (web paneli)**: Menü ve popover tetikleyici kökeninden opaklık 0 ve ölçek 0.95'ten 150 ms'de açılsın, 100 ms'de aynı yoldan kapansın; ipucu 125 ms ve 0.97 ölçekle gelsin, açık bir ipucundan diğerine geçerken gecikmesiz açılsın.
+  - menu.enter = opacity 0→1, scale 0.95→1, 150ms, cubic-bezier(0.05, 0.7, 0.1, 1)
+  - menu.exit = opacity 1→0, scale 1→0.95, 100ms, cubic-bezier(0.3, 0, 0.8, 0.15)
+  - menu.slide = data-[side=bottom]:slide-in-from-top-2
+  - menu.origin = transform-origin: var(--radix-dropdown-menu-content-transform-origin)
+  - tooltip = transition: transform 0.125s ease-out, opacity 0.125s ease-out; giriş ve çıkışta scale(0.97), opacity 0
+  - tooltip.instant = transition-duration: 0ms
+  - native.popover = @starting-style ve transition: display, overlay allow-discrete
+  - reducedMotion = yalnız opaklık, aynı süreler
+- **R04-K09 Dialog ve modal (web paneli)**: Dialog ekran ortasından opaklık ve 0.95 ölçekle 200 ms'de açılsın, 150 ms'de kapansın; arka plan karartması aynı sürelerle solsun; yerel dialog öğesi için @starting-style ve allow-discrete kullanılsın.
+  - dialog.enter = opacity 0→1, scale 0.95→1, 200ms, cubic-bezier(0.05, 0.7, 0.1, 1)
+  - dialog.exit = opacity 1→0, scale 1→0.95, 150ms, cubic-bezier(0.3, 0, 0.8, 0.15)
+  - dialog.origin = center
+  - backdrop = opacity, açılışta 200ms, kapanışta 150ms
+  - css = transition: opacity, transform, display allow-discrete, overlay allow-discrete
+  - reducedMotion = yalnız opaklık
+- **R04-K10 Alt sayfa (telefon)**: Telefonda alt sayfa için @gorhom/bottom-sheet varsayılan animasyonları korunsun; medium ve large duraklar, tutamaç ve aşağı kaydırarak kapatma olsun; aynı anda tek alt sayfa açılsın; çok adımlı işler tam ekrana taşınsın.
+  - ios.spring = damping 500, stiffness 1000, mass 3, overshootClamping true, restDisplacementThreshold 10, restSpeedThreshold 10
+  - android.timing = duration 250, Easing.out(Easing.exp)
+  - detents = medium (yaklaşık yarı) ve large (tam)
+  - grabber = var; dokununca duraklar arasında geçer
+  - dismiss = aşağı kaydırma; kaydedilmemiş değişiklikte onay
+  - reducedMotion = kayma yerine kısa solma
+- **R04-K11 Yan panel ve çekmece (web paneli)**: Yan panel kenarından translateX ile 400 ms'de girsin, 300 ms'de çıksın ve Vaul eğrisini kullansın; sürükleyerek kapatma varsa Vaul eşikleri korunsun. Bunlar başlangıç değerleri; panel animasyonları sahibin istediği gibi ayrıca konuşulacak.
+  - drawer.enter = transform translateX(100%)→translateX(0), 400ms, cubic-bezier(0.32, 0.72, 0, 1)
+  - drawer.exit = 300ms, cubic-bezier(0.32, 0.72, 0, 1)
+  - drawer.drag = VELOCITY_THRESHOLD 0.4, CLOSE_THRESHOLD 0.25
+  - drawer.radius = 0
+  - backdrop = opacity, açılış ve kapanışla aynı süre
+  - reducedMotion = yalnız opaklık, 150ms
+- **R04-K12 Akordeon ve genişleyen bölümler**: Akordeon yüksekliği interpolate-size ile 250 ms'de standart eğriyle açılsın; desteklemeyen tarayıcıda anında açılıp içerik yalnız solarak gelsin; ok simgesi aynı sürede dönsün; telefonda Reanimated düzen geçişi aynı süreye çekilsin.
+  - css.root = @supports (interpolate-size: allow-keywords) { :root { interpolate-size: allow-keywords; } }
+  - accordion.height = height 0→auto, 250ms, cubic-bezier(0.2, 0, 0, 1)
+  - accordion.content = opacity 0→1, 250ms
+  - chevron = rotate, 250ms, cubic-bezier(0.2, 0, 0, 1)
+  - details = details öğesinde ::details-content
+  - rn = LinearTransition.duration(250)
+  - reducedMotion = yükseklik animasyonu yok, yalnız opaklık
+- **R04-K13 Sekme değişimi**: Sekme göstergesi önceki sekmeden yenisine 250 ms'de cubic-bezier(.3,0,0,1) ile kaysın; içerik yana kaymasın, yalnız solarak değişsin; azaltılmış harekette gösterge kaymadan solarak yer değiştirsin; sekme değişiminde haptik olmasın.
+  - tab.indicator = transform, 250ms, cubic-bezier(.3,0,0,1)
+  - tab.content = opacity 150ms
+  - reducedMotion = opaklık tabanlı gösterge
+  - haptic = yok
+- **R04-K14 Toast ve bildirimler**: Panelde toast için Sonner varsayılanları kullanılsın; telefonda aynı süreler taklit edilsin; kalıcı olması gereken bilgi toast'a bırakılmasın.
+  - TOAST_LIFETIME = 4000
+  - VISIBLE_TOASTS_AMOUNT = 3
+  - toast.transition = transform 400ms, opacity 400ms, height 400ms, box-shadow 200ms
+  - toast.swipeOut = 200ms ease-out
+  - toast.gap = 14
+  - toast.offset = 24px masaüstü, 16px mobil
+  - reducedMotion = transition: none, animation: none
+- **R04-K15 Liste ekleme, çıkarma ve sıralama**: Telefonda liste değişimleri Reanimated düzen geçişiyle 300 ms'de yapılsın; eklenen öğe solarak gelsin, çıkarılan solup yerini kapatsın; panelde sıralama değişimi document.startViewTransition ile yapılsın ve desteklemeyen tarayıcıda anında güncellensin.
+  - rn.layout = LinearTransition (varsayılan 300ms)
+  - rn.reduceMotion = .reduceMotion() sistem ayarını izler
+  - item.enter = opacity 0→1, 150ms, cubic-bezier(0.05, 0.7, 0.1, 1)
+  - item.exit = opacity 1→0, 100ms, ardından düzen kapanır
+  - web.reorder = document.startViewTransition(update); yoksa update()
+- **R04-K16 Sayfa geçişleri (ileri ve geri)**: Telefonda yığın gezinmesinde platformun kendi geçişi korunsun; panelde rota değişimi belge içi View Transition ile kısa bir solmayla yapılsın; belgeler arası geçişe güvenilmesin; projektör sayfasında geçiş olmasın.
+  - web.route = document.startViewTransition()
+  - web.fallback = if (!document.startViewTransition) { update(); return; }
+  - crossDocument = @view-transition { navigation: auto; } yalnız ek olarak
+  - reducedMotion = @media (prefers-reduced-motion: reduce) içinde geçiş kapalı
+  - projector = geçiş yok, QR sabit
+- **R04-K17 Başarı anı: yoklama alındı**: QR okununca kamera kapansın, başarı ekranı açılsın ve onay işaretiyle aynı anda başarı haptiği çalsın; ekranda tek ve açık bir cümle olsun; çevrimdışıysa kaydın telefonda tutulduğu ve sonra gönderileceği yazsın; ekran kendiliğinden kapanmasın.
+  - haptic.ios = notificationAsync(NotificationFeedbackType.Success)
+  - haptic.android = performAndroidHapticsAsync(AndroidHaptics.Confirm)
+  - haptic.timing = kamera kapandıktan sonra
+  - check.enter = opacity ve çizim, 300ms, cubic-bezier(0.05, 0.7, 0.1, 1)
+  - text.online = Yoklamanız alındı
+  - text.offline = Telefonda kaydedildi, internet gelince gönderilecek
+  - hold = kullanıcı kapatana kadar (makbuz)
+  - reducedMotion = çizim yok, işaret 100ms solarak gelir
+- **R04-K18 Hata geri bildirimi**: Hata her zaman metin, simge ve renk birlikte gösterilsin; telefonda hata haptiği verilsin; sarsma (shake) varsayılan olarak kullanılmasın.
+  - haptic.ios = notificationAsync(NotificationFeedbackType.Error)
+  - haptic.android = performAndroidHapticsAsync(AndroidHaptics.Reject)
+  - warning = iOS notificationAsync(Warning); Android haptik yok
+  - field.error = kenar rengi değişimi 100ms cubic-bezier(0.2, 0, 0, 1)
+  - shake = kullanılmaz
+- **R04-K19 Yükleme ve bekleme**: Bekleme göstergesi süreye göre seçilsin: 1 saniye altında yok, 2-10 saniyede düğme veya kart içinde dönen gösterge, tam sayfa yüklemede iskelet, 10 saniye üstünde yüzde ilerleme.
+  - wait.under1s = gösterge yok; basılı durum yeter
+  - wait.1to2s = anında geri bildirim: düğme basılı ve devre dışı
+  - wait.2to10s = düğme içinde dönen gösterge ve 'Gönderiliyor' gibi etiket
+  - wait.page = iskelet (statik veya nabız), çerçeve türü değil
+  - wait.over10s = yüzde ilerleme: AKSIS Excel yükleme, rapor indirme
+  - spinner = 1.2s linear infinite
+  - skeleton.colors = zemin ve öğe için iki gri ton
+  - reducedMotion = iskelet statik; dönen gösterge kalır
+- **R04-K20 Haptik eşleme tablosu**: Haptik yalnız dört olayda verilsin ve tek bir yardımcı fonksiyondan geçsin; sıradan dokunuşlar, gezinme, kaydırma ve QR gösterim ekranı titreşimsiz kalsın; sistemin haptik ayarına uyulsun.
+  - başarı = iOS notificationAsync(Success); Android performAndroidHapticsAsync(Confirm)
+  - hata = iOS notificationAsync(Error); Android performAndroidHapticsAsync(Reject)
+  - uyarı (devamsızlık düzeyi) = iOS notificationAsync(Warning); Android yok
+  - anahtar = iOS selectionAsync(); Android Toggle_On, Toggle_Off
+  - diğer = yok
+- **R04-K21 Azaltılmış hareket kuralı**: Sistem 'hareketi azalt' ayarı açıksa ölçek, kayma, yükseklik ve sayfa geçişi animasyonları kalksın; renk ve opaklık geçişleri aynı tokenlarla kalsın; kural her bileşende tek yerden uygulansın.
+  - web = @media (prefers-reduced-motion: reduce)
+  - rn = useReducedMotion() ve düzen geçişlerinde .reduceMotion()
+  - kalan = opacity, background-color, border-color
+  - kalkan = transform (scale, translate), height, view transition
+  - örnek = sekme göstergesi dönüşüm yerine opaklıkla
+- **R04-K22 Çevrimdışı ve gönderim durumu**: Bağlantı yokken ekranın üstünde metin ve simge taşıyan ince, kalıcı bir bant olsun; bekleyen kayıt sayısı yazsın; bağlantı dönüp kayıtlar gönderilince kısa bir toast çıksın; hiçbir ekran ağ isteği yüzünden kilitlenmesin.
+  - banner = kalıcı; metin ve simge, yalnız renk değil
+  - banner.enter = opacity ve translateY, 200ms, cubic-bezier(0.05, 0.7, 0.1, 1)
+  - banner.text = Çevrimdışısınız. Yoklamalar telefonda saklanıyor, internet gelince gönderilecek.
+  - recovery = toast: 'Bekleyen yoklamalar gönderildi'
+  - blocking = tam ekran yükleme penceresi yok
+
+Fact-checker issues:
+- R04-K02: Gerekçedeki 'NN/g girişte ease-out, çıkışta ease-in öneriyor' kaynakla uyuşmuyor: NN/g ease-in'in çıkışta yalnız 'sometimes used' olduğunu ve başlangıcı yavaş eğrilerin 'can feel unresponsive' olabileceğini yazıyor, genel önerisi ease-out. Seçilen çıkış eğrisi cubic-bezier(0.3, 0, 0.8, 0.15) tam bu yavaş başlangıçlı türden; değer M3 EmphasizedAccelerate ve Carbon çıkış eğrisiyle desteklense de NN/g dayanağı çıkarılmalı ve 100-150 ms'lik kısa kapanışlarda gecikmeli hissedip hissetmediği prototipte bakılmalı.
+- R04-K05: hover.reveal notu ve gerekçe 'Apple: hover tek yol olmamalı' diyor, ama Apple Pointing devices sayfasında böyle bir kural yok (tam metin arandı); sayfa tersine küçülen denetimlerin imleçle gösterilmesine izin veriyor. Karar (satır eylemleri hover'a gizlenmesin) dokunmatik ve klavye kullanımı için yine doğru, ama dayanağı Apple olarak yazılmamalı.
+- R04-K08: menu.exit notu 'NN/g: kapanış 50-100 ms kısa' bir kural gibi yazılmış; NN/g yalnız girişlerin 'subtly longer' olduğunu söyleyip tek örnek veriyor (açılış 300 ms, kapanış 200 veya 250 ms). Aynı atıf K09 dialog.exit, K11 drawer.exit ve K15 item.exit notlarında da var. Değerler (150 ve 100, 200 ve 150, 400 ve 300 ms) örnekle uyumlu; yalnız notlar 'NN/g örneği: 300 ms açılış, 200 veya 250 ms kapanış' diye düzeltilmeli.
+- R04-K20: Android eşlemesi API seviyelerini hesaba katmıyor: Confirm ve Reject (CONFIRM, REJECT) API 30 yani Android 11, Toggle_On ve Toggle_Off API 34 yani Android 14 gerektiriyor (HapticFeedbackConstants başvurusu). Orta ve alt segment Android telefonların bir kısmında bu sabitler yok; aynı boşluk K07, K17 ve K18'de de var. Android'in kendi kuralına göre bu sürümlerde yedek 'hiçbir şey' olmalı; öneri bunu açıkça yazmalı ve performAndroidHapticsAsync'in eski sürümde ne yaptığı gerçek cihazda denenmeli.
+
+Load-bearing findings:
+- R04-F01 Material 3 durum katmanı opaklıkları: Material 3 hover, odak, basılı ve sürükleme durumlarını içerik renginin saydam bir katmanıyla gösterir; güncel değerler hover 0.08, odak 0.1, basılı 0.1, sürükleme 0.16'dır.
+- R04-F03 Apple: her özel düğmede basılı durum, 44x44 pt hedef, düğme içinde etkinlik göstergesi: Apple HIG özel düğmelerde basılı durumun her zaman olmasını, iOS ve iPadOS'ta en az 44x44 pt isabet bölgesini ve hemen bitmeyen işlemlerde düğmenin içinde etkinlik göstergesi gösterilmesini istiyor.
+- R04-F05 React Native Pressable zamanlaması ve dokunma alanı: Pressable'da onPressIn dokunuş başlar başlamaz çağrılır, uzun basma 500 ms sonra tetiklenir; dokunma alanı hitSlop ile büyütülür, parmak pressRetentionOffset kadar dışarı kaysa da basılı durum sürer; dokunma alanı ebeveyn sınırını aşamaz.
+- R04-F06 Bluesky uygulamasında basma ölçeği: 0.98 ve 100 ms: Açık kaynak Bluesky React Native uygulaması basma geri bildiriminde dokunmatik cihazlarda 0.98 ölçek ve 100 ms zamanlama kullanıyor, imleçli web'de ölçeği kapatıyor, azaltılmış harekette animasyonu uygulamıyor.
+- R04-F07 Emil Kowalski: web için pratik animasyon kuralları: Sonner ve Vaul'un yazarı web arayüzlerinde basmada 0.97 ölçeği, açılışta scale(0) yerine 0.93 gibi bir ölçekten başlamayı, tetikleyici kökenli animasyonu, ease-out eğrisini ve 300 ms altında kalmayı öneriyor.
+- R04-F08 Apple HIG: haptik ilkeleri ve iOS geri bildirim türleri: Apple sistem haptiklerinin belgelenmiş anlamlarıyla, tutarlı, görsel ve işitsel geri bildirimle eşleşerek, seyrek ve kısa kullanılmasını, kapatılabilir olmasını ve kamera, jiroskop, mikrofonu bozmamasını istiyor.
+- R04-F09 Android haptik sabitleri ve ilkeleri: Android haptik için performHapticFeedback ile HapticFeedbackConstants kullanılmasını, eski Vibrator yöntemlerinden kaçınılmasını ve uygun efekt yoksa hiç titreşim verilmemesini öneriyor. [kısmen: Sayfa (son güncelleme 2026-09-29 UTC): CONFIRM 'a short and light vibration' (başarı), REJECT 'a stronger feedback to signal failure'; HapticFeedbackConstants ile View kullanımı VIBRATE izni istemiyor ve HAPTIC_FEEDBACK_ENABLED ayarına uyuyor; createOneshot ve createWaveform için 'We strongly discourage... These modes are often too loud for regular haptic feedback; use them only as a fallback if you need to highlight an extremely important action' (tam yasak değil, çok önemli eylemde yedek); 'If an effect isn't available, consider falling back to nothing rather than a discordant alternative'. Yanlış ayrıntı: sayfada yalnız CONFIRM, REJECT, VIRTUAL_KEY ve VIRTUAL_KEY_RELEASE geçiyor; CLOCK_TICK, CONTEXT_CLICK, KEYBOARD_TAP, GESTURE_START, GESTURE_END, TOGGLE_ON, TOGGLE_OFF, SEGMENT_TICK ve DRAG_START bu sayfada yok (ham HTML'de 0 geçiş). Bu sabitler HapticFeedbackConstants başvuru sayfasında var; API seviyeleri: CONFIRM, REJECT, GESTURE_START, GESTURE_END API 30 (Android 11); TOGGLE_ON, TOGGLE_OFF, SEGMENT_TICK, DRAG_START, NO_HAPTICS API 34 (Android 14); CLOCK_TICK 21, CONTEXT_CLICK 23, KEYBOARD_TAP 8, VIRTUAL_KEY 5.]
+- R04-F10 expo-haptics (SDK 57) eşlemesi ve iOS kısıtları: expo-haptics iOS türlerini impactAsync, notificationAsync ve selectionAsync ile, Android sabitlerini performAndroidHapticsAsync ile veriyor; iOS'ta düşük güç modunda, ayarda kapalıyken, kamera veya dikte etkinken Taptic Engine çalışmıyor.
+- R04-F11 NN/g: animasyon süreleri ve eğri yönü: Çoğu arayüz animasyonu 100-500 ms arasında olmalı; basit geri bildirim yaklaşık 100 ms, modal gibi büyük değişimler 200-300 ms sürmeli, kaybolan öğeler görünenlerden 50-100 ms kısa olmalı; girişte ease-out, çıkışta ease-in. [kısmen: Makale (Page Laubheimer, 9 Şubat 2020): çoğu animasyon için 100-500 ms, basit geri bildirim 'roughly 100 ms', modal için 200-300 ms, '400ms being a very slow animation, to be used only for big movements across large screens', sık görülen animasyonun daha kısa ve sade olması ve doğrusal hareketin doğal olmaması doğrulandı. Kaynağı aşan iki ayrıntı: (1) '50-100 ms kısa' bir kural değil; kaynak yalnız girişlerin 'subtly longer' olduğunu söyleyip tek örnek veriyor: açılış 300 ms, kapanış 200 veya 250 ms. (2) Çıkışta ease-in önerilmiyor: 'Ease-in and ease-in-out are sometimes used for elements leaving the screen, but that sort of easing curve can feel unresponsive if the initial motion takes a little while to get going'; genel öneri ease-out ('Most frequently, you'll want to use an ease-out animation').]
+- R04-F13 Material 3 süre ve eğri tokenları (Compose ve web): Material 3, 50 ms'den 1000 ms'ye 16 süre tokenı ve standart, vurgulu ailelerde giriş ve çıkış eğrileri tanımlar; web uygulaması vurgulu eğriyi cubic-bezier(.3,0,0,1) ile yaklaştırır.
+- R04-F20 NN/g: bekleme süresine göre gösterge seçimi: 1 saniyenin altındaki gecikmelerde gösterge gerekmez; 2-10 saniye için döngülü gösterge, 10 saniye ve üstü için yüzde ilerleme göstergesi kullanılmalı.
+- R04-F22 web.dev: çevrimdışı deneyim kuralları: Çevrimdışı durum kullanıcıya açıkça söylenmeli, verinin bağlantı gelince gönderileceği belirtilmeli, ekran tam ekran yükleme pencereleriyle kilitlenmemeli ve durum yalnız renkle gösterilmemeli.
+
+## R05 Köşeli ama zarif: biçim, çizgi, gölge, boşluk, ızgara ve ikonlar
+
+Köşeli ama zarif arayüz örnekleri az ve azalıyor: IBM Carbon düğmelerde bugün 0 köşe kullanıyor, ama 13 Ağustos 2026'da v12 için 0, 2, 4, 8, 16, 24 px ve tam yuvarlak köşe jetonlarını ekledi; Vercel Geist 6, 12 ve 16 px, Linear'ın sitesi 4 ile 32 px arası yarıçap kullanıyor. Köşe keskin olduğunda zarafeti taşıyan öğeler kaynaklarda tutarlı: 1 px'lik ince çerçeve, çok düşük opaklıkta katmanlı gölge (Geist'te yaklaşık yüzde 2 ile 8 siyah), ton farkıyla katmanlama, 4 ve 8 tabanlı boşluk ölçeği ve ızgaraya sıkı hizalama. Algı araştırmaları eğri biçimlerin daha çok beğenildiğini gösteriyor (Bar ve Neta 2006; 2022 meta-analizinde g = 0.39), ama etki uzun bakışta, mekân tasarımında ve uzmanlarda zayıflıyor; bu yüzden köşeli dil renk alt tonu, boşluk ve yumuşak hareketle dengelenmeli ve öğrencilerle kısa bir ilk izlenim testi yapılmalı. Apple iOS 26'da kapsül ve eş merkezli şekilleri öne çıkarıyor ve iç yarıçapı dış yarıçaptan iç boşluğu çıkararak hesaplıyor; dış köşesi 0 olan sistemimizde iç köşeler de 0 kalır, ama ekranın yuvarlak köşelerinden güvenli alan ve 16 dp boşlukla uzak durmak gerekir. Önerim tüm kutu ve kontrollerde 0 köşe, yalnızca radyo düğmesi, durum noktası ve yükleniyor halkasında tam daire; 2 px kullanılmamalı, çünkü aynı değer 1x masaüstünde köşegende 0.83 px, 3x telefonda 2.49 px içeri girer ve iki platformda farklı görünür. Yükseltme için sayfada gölge yok, kartta 1 px çerçeve, menü ve diyalogda Geist'in katmanlı gölgeleri öneriliyor; kontrolü tanıtan çerçeveler WCAG 1.4.11 gereği zemine karşı en az 3:1 olmalı, ayırıcılar 1.2:1 civarında kalabilir. Boşlukta Carbon'un 2 ile 160 px arası ölçeği, telefonda 48x48 dp dokunma alanı, panelde 24 px alt sınır ve 40 px varsayılan tablo satırı öneriliyor. İkon olarak incelenen setler içinde köşeli çizilmiş tek seçenek olan Material Symbols Sharp (Apache 2.0, aynı SVG çizimi hem telefonda hem panelde) seçildi.
+
+- **R05-K01 Şekil (köşe yarıçapı) jetonları**: Telefon ve panelde bütün kutu ve kontroller 0 köşe kullansın; tam daire yalnızca dairesel olması gelenek olan küçük öğelerde kalsın. 2 px ya da 4 px ara değer tanımlanmasın.
+  - radius.none = 0
+  - radius.round = 9999 (RN) / 50% (web)
+  - radius.nested = iç yarıçap = max(0, dış yarıçap - iç boşluk)
+  - borderCurve (iOS) = kullanılmaz
+  - switch = dikdörtgen ray, kare topuz, 0 köşe
+- **R05-K02 Ekran kenarı, yuvarlak ekran köşeleri ve güvenli alan**: Köşeli, çerçeveli kutular ekranın yuvarlak köşelerine hiç dayanmasın: içerik güvenli alanın içinde ve yanlardan 16 dp boşlukla başlasın; yalnızca tam genişlik zeminler (üst çubuk, sekme çubuğu, alt sayfa) kenara kadar uzansın.
+  - screen.margin.x (telefon) = 16 dp
+  - fullbleed = zemin kenara kadar, içerik güvenli alanda
+  - floating.inset = güvenli alan + 16 dp
+  - primary.button.bottom = alt güvenli alan + 16 dp
+- **R05-K03 Kenar çizgisi jetonları (kalınlık ve ton)**: İki kalınlık ve iki ton kullanılsın: süs amaçlı ayırıcılar ince ve açık, kontrolü tanıtan çerçeveler 1 birim ve en az 3:1. Seçili durumda kalınlık değil renk değişsin; 2 birim yalnızca odak halkasına ayrılsın.
+  - border.width.hairline = StyleSheet.hairlineWidth (telefon) / 1px (panel)
+  - border.width.default = 1 dp / 1 px
+  - border.width.focus = 2 dp / 2 px
+  - border.subtle = zemine karşı 1.2:1 ile 1.35:1 arası
+  - border.strong = en koyu komşu zemine karşı en az 3:1
+  - border.selected = border.strong yerine vurgu (gece mavisi) tonu, kalınlık aynı
+- **R05-K04 Yükseklik (elevation) jetonları**: Dört düzey yeterli: sayfa ve kartlar gölgesiz (ton farkı ve 1 px çerçeve), menü ve diyalog gibi yüzen öğeler Geist'in 1 px halka ve çok hafif katmanlı gölgeleriyle. Köşe 0 olduğundan gölge değerleri olduğu gibi kullanılabilir.
+  - elevation.0 (sayfa) = gölge yok, çerçeve yok
+  - elevation.1 (kart, panel bölmesi) = bir adım açık yüzey + 1 px border.subtle, gölge yok
+  - elevation.2 (menü, açılır liste, ipucu) = 0 0 0 1px #00000014, 0px 1px 1px #00000005, 0px 4px 8px -4px #0000000a, 0px 16px 24px -8px #0000000f
+  - elevation.3 (diyalog, alt sayfa, yan panel) = 0 0 0 1px #00000014, 0px 1px 1px #00000005, 0px 8px 16px -4px #0000000a, 0px 24px 32px -8px #0000000f
+  - shadow.color = siyah, yukarıdaki opaklıklarla
+- **R05-K05 Odak halkası**: Odak halkası öğenin dışında, 2 px zemin renginde boşluk bırakıp 2 px odak rengiyle, 0 köşeyle çizilsin ve geçişsiz, anında görünsün.
+  - focus.ring.width = 2 px
+  - focus.ring.offset = 2 px
+  - focus.ring.radius = 0
+  - focus.ring.css = outline: 2px solid var(--focus); outline-offset: 2px;
+  - focus.ring.contrast = odak rengi hem öğeye hem zemine karşı en az 3:1
+  - focus.ring.transition = yok
+- **R05-K06 Boşluk ölçeği**: 4 tabanlı, 8 ritimli Carbon ölçeği telefonda dp, panelde px olarak aynen kullanılsın; bileşen içi, bileşenler arası ve bölümler arası için ayrı aralıklar seçilsin.
+  - space.1 = 2
+  - space.2 = 4
+  - space.3 = 8
+  - space.4 = 12
+  - space.5 = 16
+  - space.6 = 24
+  - space.7 = 32
+  - space.8 = 40
+  - space.9 = 48
+  - space.10 = 64
+  - space.11 = 80
+  - space.12 = 96
+  - space.13 = 160
+  - kullanım = bileşen içi 4 ile 16; bileşenler arası 16 ile 32; bölümler arası 48 ile 64; 2 yalnızca ince ayar
+- **R05-K07 Telefon: dokunma alanı, satır ve düğme boyları**: Telefonda bütün dokunma hedefleri en az 48x48 dp olsun, çerçeveli kontroller arasında en az 12 dp boşluk kalsın; satır ve düğme boyları ölçekten seçilsin.
+  - touch.min (telefon) = 48x48 dp
+  - touch.gap (çerçeveli kontroller) = en az 12 dp
+  - button.height (telefon) = 48 dp
+  - list.row.single = 48 dp
+  - list.row.double = 64 dp
+  - icon.button = 24 dp ikon, 48x48 dp dokunma alanı (hitSlop ile)
+- **R05-K08 Web paneli: tablo yoğunluğu ve tıklama alanları**: Panel tabloları varsayılan 40 px satırla, satırda düğme ya da onay kutusu varsa 48 px ile çalışsın; satırlar zebra yerine ince alt çizgiyle ayrılsın; tıklama alanı hiçbir yerde 24x24 px'in altına inmesin.
+  - table.row.default = 40 px
+  - table.row.interactive = 48 px
+  - table.row.dense = 32 px
+  - table.cell.padding.x = 16 px
+  - table.divider = 1 px border.subtle alt çizgi, zebra yok
+  - click.min (panel) = 24x24 px
+  - panel.page.padding.x = 24 px (geniş ekran), 16 px (dar ekran)
+- **R05-K09 İkon seti**: Telefon ve panelde tek set olarak Material Symbols Sharp kullanılsın; aynı SVG çizimleri @material-symbols/svg-400 paketinden alınsın, ikon rengi metin rengini izlesin.
+  - icon.set = Material Symbols, Sharp stili
+  - icon.source = @material-symbols/svg-400 (sharp klasörü)
+  - icon.fill = 0 varsayılan, 1 yalnızca seçili sekme ve etkin durum
+  - icon.weight = 400
+  - icon.grade = 0
+  - icon.opsz = 48
+  - icon.size.phone = 24 dp
+  - icon.size.panel = 20 px
+  - icon.color = currentColor (metin rengi)
+- **R05-K10 Köşe keskinken zarafeti taşıyan kurallar**: Zarafet süsle değil disiplinle kurulsun: her kenar ölçekten gelsin, metin sola hizalı olsun, en fazla iki yüzey tonu ve bir çerçeve kullanılsın, gölge yalnızca yüzen öğelerde bulunsun, karakter birkaç vurguda kalsın.
+  - hizalama = tüm konum ve boylar boşluk ölçeğinden (4'ün katı, 2 yalnızca ince ayar)
+  - metin hizası = sola hizalı, sağı serbest; ortalanmış metin yalnızca QR ve sonuç ekranlarında
+  - yüzey katmanı = sayfa tonu + bir açık yüzey tonu + 1 px çerçeve
+  - gölge = yalnızca elevation.2 ve elevation.3
+  - çizgi = ayırıcılar hairline, kontroller 1, odak 2
+- **R05-K11 Köşeli dilin algı riskini dengeleme ve test**: Köşeli dilin ilk bakıştaki soğukluk riskini renk alt tonu, geniş boşluk ve yumuşak hareketle dengeleyin ve kararı öğrencilerle kısa bir ilk izlenim testiyle doğrulayın; sivri dekoratif biçimlerden kaçının.
+  - test.kosullar = kısa gösterim ve serbest süre
+  - test.katilimcilar = öğrenciler (tasarım uzmanı olmayan)
+  - test.karsilastirma = 0 köşe ile 2 px köşe, aynı renk ve boşlukla
+  - dekoratif biçim = sivri üçgen ve büyük ok yok; durum noktası ve radyo daire
+
+Fact-checker issues:
+- R05-K04: Gerekçedeki 'Tailwind ve Linear'ın değerleri daha yoğun (yüzde 9 ile 25)' ifadesi F08 ve F07 ile çelişiyor: Tailwind opaklıkları yüzde 5 (2xs, xs), 10 ve 25; Linear'ın açık olduğu düşünülen değerleri yüzde 5.88 ile 9.02, koyu olduğu düşünülenler yüzde 10.2 ile 34.9. Doğru aralık Tailwind için yüzde 5 ile 25, Linear için yüzde 6 ile 35; Tailwind 2xs ve xs, Geist'in yüzde 5.88'lik katmanıyla aynı düzeyde.
+- R05-K04: elevation.2 ve elevation.3 değerleri 'Geist --ds-shadow-menu / --ds-shadow-modal' diye etiketlenmiş ama F05'te doğrulanan tarifin son katmanı `var(--ds-shadow-background-border)` (0 0 0 1px var(--ds-background-200)) eksik. Ayrıca ipucu (tooltip) menü gölgesine konmuş; Geist'te ipucu için ayrı ve daha hafif `--ds-shadow-tooltip` (0px 4px 8px #0000000a, 16 px'lik katman yok) var. Değer tam alınmalı ya da etiket 'Geist'ten uyarlanmış' olarak düzeltilmeli.
+- R05-K01: 2 px'i reddeden sayısal gerekçe yanlış sonuca varıyor: 0.83, 1.66 ve 2.49 cihaz pikseli hesabı doğru (node ile yeniden hesaplandı), ama fiziksel boyutta köşegen girişi 1x masaüstünde (96 dpi) yaklaşık 0.22 mm, 3x telefonda (480 dpi) 0.13 mm; yani telefondaki köşe daha küçük, 'telefonda belirgin yumuşak' sonucu çıkmıyor. Fark boyut değil çizim çözünürlüğü (1x'te eğri piksel altında kalıyor). 0 köşe kararı brif ve tutarlılıkla savunulabilir; bu gerekçe (özetteki aynı cümle dahil) düzeltilmeli.
+- R05-K02: Gerekçe Apple'ın telefonda ekran kenarı için ek boşluk önerdiğini F11 ve F12'ye dayandırıyor; F12'deki Layout sayfasında böyle bir cümle yok, F11'deki cümle ise 'use a capsule with extra margin', yani kapsül düğmeler için. 16 dp değeri F02 ile tutarlı, ama Apple dayanağı köşeli kutular için doğrudan bir kural değil, yorum olarak yazılmalı.
+
+Load-bearing findings:
+- R05-F01 Carbon: bugün 0 köşe, v12 ile yarıçap ölçeği geliyor: IBM Carbon'da düğmenin varsayılan köşe yarıçapı 0'dır; ancak Ağustos 2026'da v12 için bir yarıçap ölçeği eklendi ve v12 bayrağı açıkken düğmeler tam yuvarlak (hap) köşeye geçiyor. [kısmen: Ana iddia ve değerler birebir: main dalındaki _vars.scss'te `$button-border-radius: 0 !default;`, _radius.scss'te `enable-v12-release` açıksa yedek değer `$border-radius-max`. #22814 'chore(v12): setup border-radius tokens' 13 Ağustos 2026'da birleşti (PR sayfası); .patch dosyasında jetonlar birebir: borderRadius00 = '0px', 02/04/08/16/24 = rem(2/4/8/16/24), borderRadiusMax = '999999px'. Sapan ayrıntı: 'fix: move the changes behind v12 release flag' commit'i jetonları değil text-input değişikliklerini bayrağa almıştı ve bu değişiklikler 8. commit'te ('temporarily remove textinput/skeleton changes') PR'dan çıkarıldı. Birleşen jetonlar @carbon/layout'ta bayraksız dışa aktarılıyor; düğmeyi hap yapan bayrak ayrı dosyada (_radius.scss). GitHub API isteği hız sınırına takıldı, PR sayfası ve .patch üzerinden doğrulandı. 6 Ekim 2026 itibarıyla main dalında düğme hâlâ 0 köşe.]
+- R05-F02 Carbon boşluk ölçeği: 2, 4 ve 8'in katları: Carbon'un boşluk ölçeği 13 adımdır, 2'nin, 4'ün ve 8'in katlarına dayanır ve ekran boyutuna göre değişmez.
+- R05-F03 Carbon veri tablosu: beş satır yüksekliği, ince alt çizgi: Carbon veri tablosu beş satır yüksekliği sunar, hücrelerde 16 px yatay iç boşluk kullanır ve satırları alt çizgiyle ayırır; zebra satırlar isteğe bağlıdır.
+- R05-F05 Geist: 1 px halka ve çok hafif katmanlı gölgeler: Vercel Geist yüzeyleri 1 px'lik gölge biçiminde çizilmiş bir çerçeve ve çok düşük opaklıkta, çok katmanlı gölgelerle ayırır; köşe yarıçapları 6, 12 ve 16 px'tir.
+- R05-F06 Geist odak halkası ve düğme geçişi: Geist odak halkasını öğenin biçimini izleyen iki katmanlı bir gölgeyle çizer (2 px zemin renginde boşluk, ardından 2 px odak rengi); düğme renk geçişleri 150 ms ease-in-out, odak görünümü ise geçişsizdir.
+- R05-F09 Bar ve Neta 2006: kısa bakışta eğri biçim daha çok beğeniliyor: Çok kısa gösterimde, yalnızca kontur biçimi farklı olan nesnelerden sivri köşeliler eğri olanlardan daha az beğenilir.
+- R05-F10 2022 meta-analizi: etki orta, uzun bakışta ve tasarımda zayıf: Eğri biçim tercihi güvenilir ama evrensel değil; etki orta büyüklükte ve gösterim süresi, uyaran türü, uzmanlık ve görevle değişiyor.
+- R05-F11 Apple 2025: sabit, kapsül ve eş merkezli şekiller: Apple yeni tasarım sisteminde üç şekil türü tanımlar ve iç içe şekillerde iç yarıçapı dış yarıçaptan iç boşluğu çıkararak hesaplar; telefonda ekran kenarı için ek boşluk önerir.
+- R05-F14 Dokunma alanı: Apple 44 pt, Android 48 dp: Apple iOS için varsayılan 44x44 pt, en az 28x28 pt kontrol boyu önerir; Android en az 48dp x 48dp dokunma alanı ister.
+- R05-F15 WCAG 2.5.8: en az 24x24 CSS piksel: WCAG 2.2 AA düzeyinde işaretçi hedefleri en az 24x24 CSS piksel olmalı; küçük hedefler ancak 24 px çaplı daire kuralını sağlayacak aralıkla kabul edilir.
+- R05-F17 WCAG 1.4.11 ve ince çizgi tonlarının kontrastı: Bir kontrolü tanımak için gereken görsel bilgi komşu renge karşı en az 3:1 kontrast ister; ayırıcı olarak kullanılan açık gri tonlar bu sınırın çok altında kalır.
+- R05-F21 Material Symbols: Sharp stili ve dört değişken eksen: Material Symbols, Outlined, Rounded ve Sharp stillerinde; dolgu, ağırlık, derece (grade) ve optik boy eksenleriyle gelen, Apache 2.0 lisanslı bir ikon setidir.
+
+## R06 Tipografi: yazı ailesi, Türkçe kurallar, tip ölçeği ve Expo SDK 57 uygulaması
+
+Ana aile olarak Inter 4 öneriliyor: ölçülen 14 sans aile içinde en yüksek x yüksekliğine (0.546) sahip, Türkçe harflerin hepsini içeriyor ve varsayılan f bağı olmadığı için 'fi' ile 'fı' her cihaz dilinde doğru çiziliyor. Expo belgelerine göre değişken font desteği SDK 58 ile geliyor; SDK 57'de Inter 400, 500 ve 600 statik dosyaları config plugin ile gömülmeli. React Native fontVariant yalnız rakam biçimlerini açabildiği için Inter'in I/l ve sıfır ayırma seçenekleri uygulamada kullanılamıyor; bu yüzden harf ve rakam karışık yedek kodlar sıfırı varsayılan olarak işaretli Geist Mono ile, öğrenci numarası ve yüzdeler Inter'in eşit genişlikli rakamlarıyla yazılmalı. Türkçe büyük harf dönüşümü React Native'de platforma göre farklı (iOS yerelden bağımsız, Android cihaz diline bağlı); büyük harfli etiket kullanılmamalı, gerekirse metin JS'te toLocaleUpperCase('tr-TR') ile hazırlanmalı, webde lang='tr' şart. Telefon ölçeği HIG ve Material 3 değerlerine, panel ölçeği IBM Carbon productive setine dayanıyor; satır oranı Türkçe aksanlar için 1.152 altına inmiyor. IBM Plex Sans köşeli havasıyla brife uyuyor ama f+i bağı Türkçe dil sistemi olmadan açık geliyor; Geist ve Atkinson Hyperlegible Next güçlü alternatifler. Inter forumlarda sıradan bulunuyor; kimlik renk alt tonu, köşe dili ve hareketten gelmeli.
+
+- **R06-K01 Ana yazı ailesi**: Uygulama ve web panelinde tek ana aile Inter 4 (SIL OFL 1.1). Uygulamada statik 400, 500, 600 kesitleri config plugin ile gömülür; web panelinde dik değişken dosya kendi sunucumuzdan woff2 olarak yüklenir, italik hiç yüklenmez. Sistem fontu yalnız web yedeği olarak kalır.
+  - font.ana = Inter
+  - uygulama.dosyalar = Inter Regular 400, Medium 500, SemiBold 600 (statik TTF)
+  - web.dosya = Inter[opsz,wght] dik, woff2
+  - web.font-family = Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif
+- **R06-K02 Sayı ve kod stratejisi**: Yalnız rakamdan oluşan değerler (öğrenci numarası, yüzde, saat, kalan süre, e-posta kodu) Inter ile eşit genişlikli rakamla yazılır. Harf ve rakam karışık değerler (yedek kodlar) Geist Mono 500 ile yazılır ve kod alfabesinden 0, O, 1, I, l çıkarılır.
+  - sayi.uygulama = fontVariant: ['tabular-nums']
+  - sayi.web = font-variant-numeric: tabular-nums
+  - kod.aile = Geist Mono
+  - kod.agirlik = 500
+  - kod.alfabe.dislanan = 0 O 1 I l
+- **R06-K03 Ağırlıklar**: Üç ağırlık yeter: 400 gövde, 500 etiket ve düğme, 600 başlık ve vurgulu sayı. 100, 200 ve 300 kullanılmaz; 700 ve üstü gerekmez.
+  - agirlik.govde = 400
+  - agirlik.etiket = 500
+  - agirlik.baslik = 600
+  - agirlik.kullanilmaz = 100, 200, 300
+- **R06-K04 Telefon tip ölçeği**: Boyut ve satır değerleri HIG Large (Default) ve Material 3 değerlerinden alınır; harf aralığı Inter 3 formülünden hesaplanır (letterSpacing nokta cinsinden). En düşük satır oranı 1.206, Türkçe aksan sınırı 1.152 üstünde.
+  - telefon.sayi-xl = boyut 34, satır 41, ağırlık 600, letterSpacing -0.74
+  - telefon.baslik-1 = boyut 28, satır 34, ağırlık 600, letterSpacing -0.59
+  - telefon.baslik-2 = boyut 22, satır 28, ağırlık 600, letterSpacing -0.40
+  - telefon.baslik-3 = boyut 17, satır 22, ağırlık 600, letterSpacing -0.22
+  - telefon.govde = boyut 16, satır 24, ağırlık 400, letterSpacing -0.18
+  - telefon.etiket = boyut 15, satır 20, ağırlık 500, letterSpacing -0.13
+  - telefon.govde-kucuk = boyut 14, satır 20, ağırlık 400, letterSpacing -0.09
+  - telefon.mini = boyut 12, satır 16, ağırlık 500, letterSpacing 0.01
+  - telefon.kod = Geist Mono, boyut 18, satır 24, ağırlık 500, letterSpacing 0
+- **R06-K05 Web paneli tip ölçeği**: Panel ölçeği Carbon productive setinin boyut ve satır oranlarını alır, ağırlıklar bizim üç ağırlık kuralımıza çekilir; harf aralığı 0 ve font-optical-sizing auto. Paragraf blokları en fazla 75 karakter.
+  - web.etiket = 12px / 16px (1.33333), ağırlık 500, letter-spacing 0
+  - web.govde-kompakt = 14px / 18px (1.28572), ağırlık 400, letter-spacing 0
+  - web.govde = 14px / 20px (1.42857), ağırlık 400, letter-spacing 0
+  - web.govde-2 = 16px / 24px (1.5), ağırlık 400, letter-spacing 0
+  - web.baslik-kompakt-1 = 14px / 18px (1.28572), ağırlık 600, letter-spacing 0
+  - web.baslik-kompakt-2 = 16px / 22px (1.375), ağırlık 600, letter-spacing 0
+  - web.baslik-3 = 20px / 28px (1.4), ağırlık 600, letter-spacing 0
+  - web.baslik-4 = 28px / 36px (1.28572), ağırlık 600, letter-spacing 0
+  - web.baslik-5 = 32px / 40px (1.25), ağırlık 600, letter-spacing 0
+  - web.kod = Geist Mono 14px / 20px (1.42857), ağırlık 500
+  - web.kod-kucuk = Geist Mono 12px / 16px (1.33333), ağırlık 500
+  - web.font-optical-sizing = auto
+  - web.paragraf.max-width = 75ch
+- **R06-K06 Türkçe kuralları**: Büyük harfli etiket kullanılmaz, her şey cümle düzeninde yazılır. React Native'de textTransform uppercase ve capitalize yasaktır; büyük harf gerekirse metin JS'te toLocaleUpperCase('tr-TR') ile hazırlanır. Webde html lang='tr' zorunludur. Satır oranı Türkçe aksan sınırının altına inmez ve her ekran Türkçe test metniyle denenir.
+  - etiket.yazim = cümle düzeni, büyük harf dönüşümü yok
+  - rn.textTransform = 'uppercase' ve 'capitalize' kullanılmaz
+  - js.buyuk-harf = metin.toLocaleUpperCase('tr-TR')
+  - js.siralama = a.localeCompare(b, 'tr')
+  - web.html = <html lang="tr">
+  - satir-orani.alt-sinir = 1.152
+  - test-metni = İĞDIR ılık İstanbul ışık Fizik fiyat fıstık ŞÇÖÜĞ şçöüğ Âlim
+- **R06-K07 Expo SDK 57 uygulama notları**: Fontlar expo-font config plugin ile gömülür (Expo Go yerine development build). Android'de nesne sözdizimiyle tek 'Inter' ailesi tanımlanır; iOS'ta dosya adı PostScript adıyla aynı tutulur. Tüm metin tek bir Metin bileşeninden geçer ve stil adından aile, boyut, satır, harf aralığı, fontVariant ve dynamicTypeRamp üretir; fontWeight tek başına kullanılmaz. Yazı ölçeği açık kalır.
+  - expo-font android.fonts = [{ fontFamily: 'Inter', fontDefinitions: [{ path: './assets/fonts/Inter-Regular.ttf', weight: 400 }, { path: './assets/fonts/Inter-Medium.ttf', weight: 500 }, { path: './assets/fonts/Inter-SemiBold.ttf', weight: 600 }] }]
+  - allowFontScaling = true (varsayılan)
+  - maxFontSizeMultiplier = verilmez (genel varsayılan 0, sınırsız); zorunlu bir öğede en az 2
+  - dynamicTypeRamp = sayi-xl largeTitle, baslik-1 title1, baslik-2 title2, baslik-3 headline, govde body, etiket subheadline, govde-kucuk footnote, mini caption1, kod body
+  - includeFontPadding = true (varsayılan)
+  - test = Android 14 yüzde 200 yazı boyutu ve iOS AX5
+- **R06-K08 Web paneli uygulama notları**: Inter dik değişken dosyası Vite ile paketlenip kendi alan adımızdan woff2 olarak sunulur. ğ, Ğ, ı, İ, ş, Ş harfleri Latin Extended-A bloğunda (U+011E, U+011F, U+0130, U+0131, U+015E, U+015F) olduğundan alt küme latin ile latin-ext'i birlikte içerir. Tablolarda tabular-nums açılır. Panel 1080p Windows ekranda denenir; bulanıklık çıkarsa yalnız panel için IBM Plex Sans yedek olarak değerlendirilir.
+  - web.alt-kume = latin + latin-ext
+  - web.tablo-sayilari = font-variant-numeric: tabular-nums
+  - web.font-optical-sizing = auto
+  - web.letter-spacing = 0
+
+Fact-checker issues:
+- R06-K02: Gerekçedeki 'React Native'de Inter'in zero ve ayırma seçenekleri açılamıyor' cümlesi ve 'Inter zero ve ss02' alternatifinin reddi doğrulanan kaynakla çelişiyor: RN 0.86 fontVariant 'stylistic-two' değerini Android'de 'ss02', iOS'ta kStylisticAltTwoOnSelector olarak uyguluyor ve Inter ss02 I, l ve 0'ı ayırıyor (I.1, l.ss02, zero.slash); açılamayan yalnız tek başına zero. Geist Mono seçimi başka bir gerekçeyle (eşit genişlik, kod görünümü) savunulmalı ya da Inter ss02 statik dosyalarla cihazda denenip yeniden değerlendirilmeli.
+- R06-K06: 'satir-orani.alt-sinir' değeri 1.152 düşük: Türkçe harfler içinde en derin nokta ğ kuyruğu (-442), değmeme sınırı Inter 400'de 1.158, 500'de 1.160, 600'de 1.162 (opsz 14). Önerilen en düşük oran 1.206 yine üstte kaldığı için ölçek değişmez; sınır değeri 1.162 olarak düzeltilmeli.
+- R06-K04: Öneri metnindeki 'Türkçe aksan sınırı 1.152' aynı hatayı taşıyor; doğru sınır 1.158 (400) ile 1.162 (600). 1.206 sınırın üstünde kaldığı için ölçek değerleri değişmez, yalnız sayı düzeltilmeli.
+
+Load-bearing findings:
+- R06-F01 Expo SDK 57 uygulamasında değişken font yok: Expo belgelerine göre Android ve iOS için değişken font desteği SDK 58 ile geliyor; SDK 57 kullanan İÜ Yoklama uygulamasında her ağırlık ayrı statik dosya olmalı. [kısmen: Ana iddia birebir doğru: rehber 'Android and iOS support variable fonts in SDK 58 and later. On earlier versions, use static font files.' diyor, fontVariationSettings için 'React Native 0.88 (Expo SDK 58) and later' şartını koyuyor; RN 0.87 Text Style Props sayfasında fontVariationSettings yok. Kanıttaki 'SDK 58'de bile Android yalnız wght eksenini okuyor' ayrıntısı eksik: wght okuma fontWeight ile kesit seçimi için geçerli ve Android 10 şartlı; aynı sayfa fontStyle italic için ital ekseninin Android 15 ve üstünde uygulandığını, SDK 58'de fontVariationSettings ile her eksenin iki platformda da (Android 8 ve üstü) ayarlanabildiğini yazıyor.]
+- R06-F02 Fontu derlemeye gömmek önerilen yol: expo-font config plugin ile gömülen fontlar uygulama açılırken hazırdır; Android'de aile adı dosya adından, iOS'ta dosyanın içindeki addan gelir; SDK 57 belgesi Android için fontFamily ve fontDefinitions nesne sözdizimini içeriyor.
+- R06-F03 React Native fontVariant yalnız rakam ve küçük büyük harf seçenekleri sunuyor: React Native 0.87 belgesindeki fontVariant değerleri small-caps, oldstyle-nums, lining-nums, tabular-nums ve proportional-nums; ss02, cv05 ya da zero gibi OpenType özellikleri listede yok. [kısmen: Belge kısmı doğru: RN 0.87 Text Style Props fontVariant için yalnız small-caps, oldstyle-nums, lining-nums, tabular-nums, proportional-nums listeliyor; Inter sitesi ss02 'Disambiguation (with zero)', ss04 'Disambiguation (no zero)', cv05 'Lower-case L with tail', cv08 'Upper-case i with serif', zero ve tnum adlarını veriyor. Başlıktaki ve çıkarımdaki genelleme ise kaynak kodla çelişiyor: React Native 0.86-stable fontVariant için 'stylistic-one' ile 'stylistic-twenty' arasını kabul ediyor (Fabric conversions.h satır 405-443, primitives.h StylisticOne..StylisticTwenty, StyleSheetTypes.d.ts satır 538-561); Android bunları 'ss01'..'ss20' olarak uyguluyor (ReactTypefaceUtils.kt satır 73-92, 'stylistic-two' -> 'ss02'), iOS kStylisticAltTwoOnSelector ile (RCTFontUtils.mm satır 93-95). Inter dosyasında ss02 I -> I.1, l -> l.ss02, 0 -> zero.slash yapıyor; ss04 yalnız I ve l. Yani Inter'in ayırma seçenekleri uygulamada fontVariant: ['stylistic-two'] ile açılabilir; açılamayanlar yalnız tek başına zero, cv05 ve cv08.]
+- R06-F04 Inter 4 ölçümleri: Google Fonts deposundaki Inter dosyası 'Version 4.001;git-66647c0bb'; eksenler opsz 14..32 ve wght 100..900; x yüksekliği em'in 0.546 katı ve ölçülen 14 sans aile arasında en yükseği; Türkçe harflerin hepsi var; varsayılan açık liga özelliği hiç yok.
+- R06-F05 Türkçe harf kapsamı ve aksan sınırları: Ölçülen 18 dosyanın hepsinde İ ı Ğ ğ Ş ş Ç ç Ö ö Ü ü Â â Î î Û û karakterleri var; hiçbirinde İ, Ğ, Ü, Â üst noktası hhea ascender değerini aşmıyor; yalnız Plus Jakarta Sans'ta çengel hhea descender altına iniyor. [kısmen: Doğru kısımlar: 18 dosyanın hepsinde 18 Türkçe karakter var; hiçbir dosyada büyük harf aksanı hhea ascender değerini aşmıyor; cedilla hhea descender altına yalnız Plus Jakarta Sans'ta iniyor (-230 ile -222); Inter'de en yüksek aksan 1930 ve en derin cedilla -429. Yanlış ayrıntı: 1930 İ noktasının değil Ğ'nin breve işaretinin tepesi (İ daha alçak) ve Türkçe harfler içinde en derin nokta cedilla değil ğ'nin kuyruğu (-442). Değmeme sınırı varsayılan kesitte (1930 + 442) / 2048 = 1.158, wght 500'de 1.160, wght 600'de 1.162 (opsz 14); 1.152 yalnız Ğ ile Ç çiftini hesaba katıyor. Önerilen en düşük oran 1.206 her iki değerin de üstünde.]
+- R06-F06 Varsayılan f+i bağı ve Türkçe dil sistemi: IBM Plex Sans ve Google Sans Flex'in varsayılan açık liga özelliğinde f+i bağı var ve Türkçe (TRK) dil sistemi yok; Inter, Figtree, Onest ve Atkinson Hyperlegible Next'te varsayılan f bağı hiç yok.
+- R06-F07 I ve l ayrımı (sınır kutusu ölçümü): Inter, DM Sans, Google Sans Flex, Instrument Sans, Onest, Plus Jakarta Sans, Figtree, Manrope ve Roboto'da büyük I ile küçük l varsayılan halde neredeyse aynı genişlikte düz çubuk; IBM Plex Sans, Atkinson Hyperlegible Next, Geist, Hanken Grotesk ve Public Sans'ta biri ek biçim taşıyor.
+- R06-F08 Sıfır ve O ayrımı: Varsayılan halde iç işaretli sıfır yalnız mono ailelerde (IBM Plex Mono, JetBrains Mono, Geist Mono, Atkinson Hyperlegible Mono) ve Atkinson Hyperlegible Next'te var; Inter dahil diğer sans ailelerde sıfır, O gibi iki konturlu.
+- R06-F09 Eşit genişlikli rakamlar: IBM Plex Sans, Hanken Grotesk, Roboto ve tüm mono ailelerde rakamlar varsayılan olarak eşit genişlikte; Inter, Geist, Manrope, Plus Jakarta Sans, Instrument Sans, Figtree, Onest, Public Sans, Atkinson Hyperlegible Next ve Google Sans Flex'te tnum ile açılıyor; DM Sans'ta ne varsayılan eşit genişlik ne tnum var.
+- R06-F10 x yüksekliği karşılaştırması: Sans adaylarda x yüksekliği/em: Inter 0.546, Manrope 0.54, Plus Jakarta Sans 0.536, Geist 0.53, Roboto 0.528, Onest 0.527, DM Sans 0.526, Public Sans 0.517, IBM Plex Sans 0.516, Instrument Sans 0.51, Google Sans Flex 0.51, Figtree 0.5, Atkinson Hyperlegible Next 0.496, Hanken Grotesk 0.493.
+- R06-F16 React Native textTransform Türkçe büyük harfte güvenilmez: iOS'ta textTransform 'uppercase' yerelden bağımsız uppercaseString kullanıyor; Android'de cihazın varsayılan diline göre çeviriyor; Android 'capitalize' ilk harfi değişmez (invariant) yerel kurallarıyla büyütüyor.
+- R06-F18 CSS text-transform Türkçe kuralı lang özniteliğine bağlı: CSS text-transform Türkçe i/İ ve ı/I eşleşmelerini uygular, ama dili lang özniteliğinden okur; MDN uzun büyük harfli metnin disleksisi olanlar için zor okunabileceğini yazıyor.
+
+## R07 Çok satan ve beğenilen modern uygulamaların arayüzleri (2024 ile 2026 arası)
+
+2025'te dünyada en çok indirilen uygulama ChatGPT oldu (845.3M indirme); Türkiye'de Apple'ın 2025 ücretsiz listesinin başında da ChatGPT var ve ilk 10'da e-Devlet bulunuyor, yani öğrencinin her gün açtığı ekranlar sohbet, sosyal ağ ve kamu hizmeti uygulamaları. Ödül listeleri (Apple Design Awards 2025 ve 2026, App Store Awards 2025, Google Play Best of 2025) tek bir işi iyi yapan sakin araçları öne çıkarıyor: yılın iPhone uygulaması görsel planlayıcı Tiimo, Google Play'in en iyi uygulaması odak aracı Focus Friend, 2026 Interaction ödülü ay evresi takipçisi Moonlitt. Tasarım vakalarında üç ders tekrar ediyor: Linear temasını LCH uzayında üç girdiden (taban, vurgu, kontrast) üretiyor ve mavi kromu sınırlayarak nötr bir görünüm elde ediyor; Things 3'te animasyonlar kullanıcının yerini koruyan açılma hareketleri olarak övülüyor; Flighty 'sıkıcı derecede açık' olmayı ve bağlantı kopunca da çalışmayı hedefliyor. Karşı yönde Airbnb 2025'te kavisli kenarlara ve 3B ikonlara geçti, Apple da iOS 26'da saydam Liquid Glass dilini getirdi; NN/g bu dilin okunabilirliği düşürdüğünü ve amaçsız hareketin dikkat dağıttığını belgeledi. Google'ın 46 çalışma ve 18,000+ katılımcılı araştırması, birincil öğeyi boyut ve renkle vurgulamanın onu bulmayı 4 kata kadar hızlandırdığını, ama metin etiketlerini kaldırmanın kullanılabilirliği düşürdüğünü gösteriyor. Türkiye'de 75.220 bankacılık uygulaması yorumunun analizinde olumsuz yorumların %69,07'si doğrudan kullanıcı deneyimiyle ilgili ve en olumsuz konu ilk kurulum çıkıyor. İÜ Yoklama için anlamı: opak kırık beyaz yüzeyler, üç girdiden üretilen gece mavisi alt tonlu bir tema, durum anlatan ama boşta oynamayan hareket, etiketli tek birincil eylem ve çevrimdışı kaydın hata değil olağan bir durum olarak tasarlanması. Revolut, Wise, Monzo ve Türk uygulamaları (Getir, Papara, Enpara) için birincil tasarım kaynağı bu turda açılamadı; bunlar açık sorularda.
+
+- **R07-K01 Tema üretimi**: Temayı Linear gibi üç girdiden üretin: kırık beyaz taban, gece mavisi vurgu, kontrast. Hesabı OKLCH'de yapın; tüm gri ve mavi basamaklar bu üç girdiden türetilsin, tek tek elle seçilmiş renk olmasın.
+  - taban (zemin) örneği = #EEF0F4 = oklch(0.9548 0.0058 264.5)
+  - yükseltilmiş yüzey örneği = #F4F7FB = oklch(0.975 0.0062 255.5)
+  - vurgu (gece mavisi) örneği = #1A2B56 = oklch(0.3001 0.0809 265.6)
+  - ana metin örneği = #1B1F27 = oklch(0.24 0.015 260)
+  - Linear girdi sayısı = 3 (base color, accent color, contrast); önceden tema başına 98 değişken
+- **R07-K02 Alt ton dozu ve gri metin**: Nötr yüzeylerde gece mavisinin kromasını çok düşük tutun ve ikincil metin için orta griyi değil daha koyu griyi kullanın; hiçbir metin rengi color.js ile 4,5:1 eşiği kontrol edilmeden tokena girmesin.
+  - nötr basamak kroması örneği = oklch C = 0.006, H = 260
+  - ikincil metin (geçer) = #535559, #EEF0F4 üstünde 6.55:1
+  - orta gri (kalır) = #6F7275, #EEF0F4 üstünde 4.24:1
+  - sınırda = #6F7275, #F4F7FB üstünde 4.50:1
+- **R07-K03 Açılış ve kapanış hareketi**: Her panel, menü ve sayfa kendisini açan öğeden açılsın ve aynı yere kapansın; hareket kullanıcının yerini korusun. Süre ve eğri değerleri hareket araştırmasından alınsın; bu açının kaynaklarında sayısal değer bulunamadı.
+  - açılış kaynağı = tetikleyen öğe
+  - süre ve eğri = bu kaynaklarda yok
+- **R07-K04 Boşta hareket yok, yüzeyler opak**: Hareket yalnız bir durum değiştiğinde oynasın: boşta duran düğme nabız atmasın, parlamasın, kıpırdamasın; öğeler bağlama göre yer değiştirmesin. Cam, buzlu cam ve saydam katman kullanmayın; metin hiçbir zaman görsel ya da saydam zemin üstüne konmasın.
+  - boşta animasyon = yok
+  - yüzey saydamlığı = opak
+  - metin zemini = düz renk yüzey
+- **R07-K05 Tek birincil eylem, etiketli**: Her ekranda tek bir birincil eylem olsun ve boyut, gece mavisi dolgu ve konumla öne çıksın (öğrenci: QR okut; öğretim üyesi: yoklamayı başlat). İkincil eylemler sade kalsın; hiçbir eylem yalnız ikonla bırakılmasın.
+  - vurgulu öğeyi bulma = up to 4 times faster
+  - araştırma kapsamı = 46 separate research studies, 18,000+ participants
+  - ikon etiketi = her zaman metinle
+- **R07-K06 Çevrimdışı durum**: Çevrimdışı yoklama kaydını hata değil olağan bir durum olarak tasarlayın: kayıt anında sakin bir onay ve 'internet gelince gönderilecek' bilgisi, gönderilince ikinci bir onay. Kırmızı hata rengi yalnız gerçek hata için kullanılsın.
+  - çevrimdışı kayıt rengi = nötr ya da vurgu, kırmızı değil
+- **R07-K07 İlk açılış ve giriş**: İlk açılışı en kısa yol olarak tasarlayın: tanıtım slaytları yerine doğrudan e-posta kodu ile giriş (yapıştırma ve otomatik doldurma açık), ardından kamera izni için tek ekranlık açıklama ve ilk görev. Hata mesajları Türkçe, kısa ve ne yapılacağını söyleyen tek cümle olsun.
+  - onboarding duygu skoru = -55,38
+  - UX kaynaklı olumsuz yorum oranı = %69,07
+  - kullanım kolaylığı etkisi = +6,39
+- **R07-K08 Ders listesi düzeni**: Ders ve yoklama listelerini havaalanı panosu gibi kurun: her derse ya da oturuma tek satır, aynı sırada sabit alanlar (saat, ders, derslik, durum), durum tek kelime ve tek renkle.
+  - satır kuralı = her oturuma bir satır
+- **R07-K09 Rol odaklı ilk ekran ve görünür zaman**: Öğrenci modu şimdiki ve sıradaki ders, yoklamanın açık olup olmadığı ve kalan süre ile açılsın; öğretim üyesi modu bugünkü dersler ve bekleyen onaylar ile. Süreli durumlar geri sayım ya da ilerleme çubuğuyla gösterilsin.
+  - öğrenci ilk ekranı = şimdi ve sıradaki ders, yoklama durumu
+  - öğretim üyesi ilk ekranı = bugünkü dersler, bekleyen onaylar
+- **R07-K10 Köşeli ama zarif**: Büyük uygulamalar (Airbnb 2025) yumuşak ve kavisli yöne giderken köşeli tercihi bilinçli tutun; zarafeti tüm bileşenlerde aynı küçük köşe değeri, sıkı hizalama, düzenli boşluk ve iki ağırlıklı tipografi ile sağlayın. Yazı boyutu sistem ayarıyla büyüdüğünde düzen bozulmasın.
+  - köşe yarıçapı = tüm bileşenlerde tek değer; sayısal değer bu kaynaklarda yok
+  - başlık ve gövde yazı ailesi örneği = Inter Display ve Inter
+
+Fact-checker issues:
+- R07-K04: 'Hareket yalnız bir durum değiştiğinde oynasın' kuralı NN/g eleştirisini karşılamıyor: kaynaktaki örnekler boşta değil etkileşim sırasında ('Buttons pulsate when selected', 'Tab bars bubble and wiggle when switching views'), yani durum değişikliğinde oynayan süs hareketi de eleştiriliyor; 'parlamasın' maddesi düğmeden değil şarkı adının parıltısından geliyor. Kural, durum geçişlerinde de nabız, kıpırtı ve zıplama gibi süs hareketini dışlayacak biçimde yazılmalı; alternatifteki 'dikkat çekmek için titreyen birincil düğme' NN/g'de bu biçimde geçmiyor.
+- R07-K07: Gerekçedeki 'Türk kullanıcı yorumlarında en olumsuz konu ilk kurulum' kaynağı aşıyor: Para Dergi onboarding'i 'en önemli kırılma noktalarından biri' diye anıyor ve sorunun uygulamadan hesap açmaya başlayan kullanıcının şubeye yönlendirilmesi olduğunu yazıyor; bu, 'tanıtım slaytları yerine doğrudan giriş' kararını desteklemiyor. Karar başka dayanakla (ör. Moonlitt'in 'easy onboarding' övgüsü) savunulmalı; kaynak ayrıca ücret yüzünden ayrılanların arayüz yüzünden ayrılanların üç katı olduğunu söylüyor.
+- R07-K10: Gerekçedeki 'Airbnb yumuşaklığa ve 3B'ye geçti' ve alternatifteki '3B dil' dayandığı It's Nice That yazısında yok (yazı yalnız 'new icons' diyor); olgu web aramasına göre Airbnb'nin kendi duyurusunda ('new 3D iconography') geçiyor, bu kaynak eklenmeli. Kavisli kenar ve yumuşak görünüm kısmı doğrulandı.
+
+Load-bearing findings:
+- R07-F02 Türkiye 2025 App Store listesi: Apple'ın Türkiye 2025 listesinde en çok indirilen ücretsiz iPhone uygulaması ChatGPT; ilk 10'da e-Devlet de var. Ücretli listenin başında Deprem Ağı var.
+- R07-F04 Apple Design Awards 2026 kazananları: 2026 ödüllerinde uygulama dalındaki kazananların çoğu tek işi olan araçlar: Interaction'da Moonlitt, Visuals and Graphics'te Tide Guide, Inclusivity'de Guitar Wiz, Delight and Fun'da grug.
+- R07-F06 App Store Awards 2025: yılın iPhone uygulaması bir planlayıcı: 2025'in iPhone App of the Year ödülü görsel planlayıcı Tiimo'ya gitti; Apple Watch ödülü Strava'ya 'sleek design' vurgusuyla verildi.
+- R07-F08 Linear: tema üç girdiden, LCH uzayında: Linear 2024 yeniden tasarımında renk sistemini HSL'den LCH'ye taşıdı ve her temayı üç girdiden üretmeye başladı.
+- R07-F09 Flighty: sıkıcı derecede açık, bağlantı kopunca da çalışan: 2023 Apple Design Award sahibi Flighty, havaalanı panolarının her uçuşa bir satır ayıran düzenini örnek alıyor ve uçuştaki bağlantı kaybını hesaba katıyor.
+- R07-F10 Things 3: yer tutan, amaçlı animasyon: Things 3'ün tasarımı, animasyonların kullanıcının yerini koruması ve her animasyonun bir amacı olması nedeniyle övülüyor. [kısmen: WIRED (David Pierce) 'Lovely, unfolding animations keep your place', Craig Mod 'Each animation is purposeful.', Wirecutter 'Best combination of design and functionality of any app we tested' ve Apple Design Award sayfada aynen var. Ancak 'clean, crisp piece of paper' ürünün kendini anlatışı değil, WIRED'dan David Pierce'ın alıntısı: 'It's more like a clean, crisp piece of paper, ready whenever you need it.' Kaynak gösterimi düzeltilmeli.]
+- R07-F11 NN/g: Liquid Glass okunabilirliği düşürüyor, amaçsız hareket yoruyor: NN/g, iOS 26'daki saydam Liquid Glass arayüzün kontrastı düşürdüğünü, amaçsız animasyonların dikkat dağıttığını ve dokunma alanlarının küçüldüğünü belgeledi. [kısmen: Başlık, yazar (Raluca Budiu), tarih (10 Ekim 2025), 'the contrast between the text and the background is often too low', 'Motion for motion's sake is not usability. It's distraction with a side of nausea.' ve 'Apple is prioritizing spectacle over usability' aynen var; ana iddia doğru. Ayrıntılar kaymış: kaynakta 'Buttons pulsate when selected' ve 'buttons briefly pulsate before being replaced'; kıpırdayan şey düğme değil 'Tab bars bubble and wiggle when switching views'; parıldayan şey düğme değil şarkı adı ('shimmering with watery highlights'). Yani eleştirilen hareketler boşta değil, etkileşim sırasında. Dokunma hedefi için kaynak 'The long-standing guideline of at least 0.4cm between targets (and 1cm × 1cm tap areas)' ve 'crowd and shrink touch targets' diyor; erişilebilirlik standardı adı geçmiyor. Güncel durum: iOS 27 (14 Eylül 2026) Liquid Glass'ı okunabilirlik için yeniden ayarladı: arkadaki içeriği daha çok dağıtıyor, kenarı koyulaştırıyor, 'ultra clear'dan 'fully tinted'a saydamlık kaydırıcısı ekledi, Reduce Transparency ve Increase Contrast ayarlarına uyuyor (MacRumors, 10 Haziran 2026). NN/g eleştirisi iOS 26 için geçerli.]
+- R07-F12 Material 3 Expressive araştırması: vurgulu birincil öğe daha hızlı bulunuyor: Google'ın Material 3 Expressive için yaptığı araştırmada renk, şekil, boyut, hareket ve kapsayıcıyla vurgulanan tasarımlarda kullanıcılar kilit öğeleri 4 kata kadar hızlı buldu.
+- R07-F15 Türk bankacılık uygulamaları: olumsuz yorumların %69,07'si deneyimle ilgili: Türkiye'de 2024 ve 2025'te mağazalara yazılan 75.220 mobil bankacılık yorumunun analizinde olumsuz yorumların %69,07'si doğrudan kullanıcı deneyimi kaynaklı çıktı; en olumsuz konu ilk kurulum (onboarding) oldu. [kısmen: Para Dergi (yayın 28.03.2026, güncelleme 31.03.2026), Artiwise raporu: 2024 ve 2025'i kapsayan, Google Play ve App Store'dan 75.220 yorum; negatif geri bildirimlerin %69,07'si doğrudan UX ile ilgili, bu kategori -20,95 duygu skorlu ve 'uygulamaya girilememesi, sürekli hata mesajları ve güncellemeler sonrası yaşanan erişim problemleri' gibi teknik aksaklıkları kapsıyor; yeni müşteri olma işlemleri -55,38; işlem ücretleri -31,02; kullanım kolaylığı +6,39. Sayılar birebir. Ancak kaynak onboarding'i 'en olumsuz konu' diye değil 'en önemli kırılma noktalarından biri' diye tanımlıyor; işlem ücretleri için 'kullanıcıların en sert eleştirdiği alanlar' diyor ve ücret yüzünden hesap kapatanların arayüzü beğenmeyip ayrılanların üç katı olduğunu yazıyor. Onboarding sorunu tanıtım ekranı değil, uygulamadan hesap açmaya başlayan kullanıcının sonunda şubeye yönlendirilmesi.]
+- R07-F20 Etiket kaldırmak kullanılabilirliği düşürüyor: Google'ın aynı araştırması ifade gücünün her yerde işe yaramadığını, e-posta eylemlerinden metin etiketlerini kaldırmanın kullanılabilirliği düşürdüğünü bildiriyor.
+- R07-F21 Linear: mavi kromu sınırlamak, gürültüyü azaltmak: Linear yeni temada arayüz kromundaki maviyi sınırlayarak daha nötr ve zamansız bir görünüm hedefledi, metin ve ikon kontrastını artırdı, hizayı düzeltti.
+
+Benchmarks:
+- Linear: LCH'de taban, vurgu ve kontrast girdilerinden üretilen tema (98 değişkenden 3 girdiye); mavi krom sınırlı, 'more neutral and timeless appearance'. | radius Kaynakta değer yok. | Kaynakta yok. | lesson: Az girdili tema, görsel gürültüyü azaltma, dikey ve yatay hizada titizlik.
+- Things 3: Kaynakta değer yok; ürün kendini 'like a clean, crisp piece of paper' diye anlatıyor. | radius Kaynakta yok. | 'Lovely, unfolding animations keep your place' (WIRED); 'Each animation is purposeful.' (Craig Mod). | lesson: Panel tetikleyen öğeden açılsın ve oraya kapansın; her animasyonun bir görevi olsun.
+- Flighty: Kaynakta yok. | radius Kaynakta yok. | Live Activities'te uçuş süresini izleyen basit dairesel grafik; kalkıştan önce ilerleme çubukları ve sayaçlar. | lesson: 'boringly obvious' hedefi; çevrimdışı durumu tasarımın parçası yapmak; her konsept için 20 fikir üretip seçmek.
+- Airbnb: Kaynakta yok. | radius Kavisli kenarlar, daha yumuşak genel görünüm (sayısal değer yok). | İnce yoğunluk farklarıyla akıcı animasyonlu arayüz; ayrıntılı 3B ikonlar. | lesson: Ana işi hızlandır, araya girme (Teo Connor). Köşeli yolda zarafet hizalama ve tipografiyle kurulmalı.
+- Duolingo: Kaynakta yok. | radius Kaynakta yok. | Rive State Machine; 10 World Characters, karakter başına 20+ ağız şekli, 40+ dil, 100+ kurs; dosya boyutu 'compact'. | lesson: Hareketi uygulama mantığının kontrol ettiği durumlar olarak tanımla; maskot bizim tonumuza uymaz.
+- Tiimo: Kullanıcı renk ve ikon seçebiliyor; sabit değer kaynakta yok. | radius Kaynakta yok. | Geri sayımla zamanın akışını gösteren odak zamanlayıcısı. | lesson: Süreli durumları (yoklama penceresi) görsel ve tek bakışta okunur yap.
+- Strava: Kaynakta yok. | radius Kaynakta yok. | Kaynakta yok. | lesson: Apple 'a sleek design and real-time segment tracking' diye övüyor: canlı durum bilgisi sade bir yüzeyde.
+- Focus Friend: Kaynakta yok. | radius Kaynakta yok. | Kaynakta yok; Apple odak oturumlarını ödüllerle oyunlaştırdığını söylüyor. | lesson: 'a simple yet effective tool' tanımı: tek iş, az ekran.
+- Taobao: Kaynakta yok. | radius Kaynakta yok. | Kaynakta yok. | lesson: Ölçek büyük olsa da etkileşim kalitesi ayrı bir ödül ölçütü.
+- iA Writer: Kaynakta yok. | radius Kaynakta yok. | Kaynakta yok. | lesson: Sadelik etkileşim ödülüne engel değil.
+- Mela - Recipe Manager: Kaynakta yok. | radius Kaynakta yok. | Kaynakta yok. | lesson: Küçük ekip, tek iş, iyi etkileşim ödül listesine girebiliyor.
+- Opal: Kaynakta yok. | radius Kaynakta yok. | Kaynakta yok. | lesson: Ödül editörlerinin sakin araçları seçme eğilimine bir örnek daha.
+- Moonlitt: Moon Phase Tracker: Kaynakta yok. | radius Kaynakta yok. | Liquid Glass entegrasyonu övülüyor ('best-in-class Liquid Glass integration'). | lesson: Kolay ilk kullanım ödül ölçütü; saydam cam bizim için taklit edilecek bir şey değil (NN/g).
+- Tide Guide: Charts & Tables: Kaynakta yok. | radius Kaynakta yok. | 'full-screen charts are filled with custom animations'. | lesson: Hareket veriye bağlı ve anlamlı olduğunda ödül alıyor; web panelindeki rapor grafiklerinin geçişleri için örnek.
+- Guitar Wiz: Kaynakta yok. | radius Kaynakta yok. | Kaynakta yok. | lesson: Telefonun yazı boyutunu izleme kararımızın ödüllü bir örneği.
+- ChatGPT: Açılan kaynaklarda tasarım bilgisi yok. | radius Açılan kaynaklarda yok. | Açılan kaynaklarda yok. | lesson: Kullanıcı alışkanlığını belirleyen uygulama; tasarım ayrıntısı bu turda doğrulanmadı.
+- e-Devlet: Açılan kaynakta tasarım bilgisi yok. | radius Açılan kaynakta yok. | Açılan kaynakta yok. | lesson: Kurum aracı olarak öğrencinin karşılaştırma noktası; tasarımı ayrıca incelenmeli.
+- Deprem Ağı: Açılan kaynakta tasarım bilgisi yok. | radius Açılan kaynakta yok. | Açılan kaynakta yok. | lesson: Türk kullanıcı tek işi güvenilir yapan araca para ödüyor; tasarımı ayrıca incelenmeli.
+- Google Classroom: Kaynakta yok. | radius Kaynakta yok. | Kaynakta yok. | lesson: Rol odaklı ilk ekran, yaklaşan işleri öne alma.
+- Goodnotes: Kaynakta yok. | radius Kaynakta yok. | Kaynakta yok. | lesson: Büyük ekran uyumu ayrı bir ödül ölçütü; web paneli ve tablet düzeni için hatırlatma.
+- Luminar: Photo Editor: Kaynakta yok. | radius Kaynakta yok. | Google 'fluid, powerful, and designed to let your creativity flow' diye tanımlıyor; değer yok. | lesson: Akıcılık ödül metinlerinde açık bir ölçüt.
+- iOS 26 sistem uygulamaları (Liquid Glass): Saydam, arkasını gösteren yüzeyler; görsel üstündeki metinde kontrast çoğu zaman çok düşük. | radius Kaynakta değer yok; kontroller yüzen ve ayrık. | Düğmeler nabız atıyor, parlıyor, kıpırdıyor; 'Motion for motion's sake is not usability'. | lesson: Saydamlık ve boşta hareketten kaçın; etiketi koru; öğeleri yerinde tut.
+- Material 3 Expressive (Google): Renk bir ifade öğesi; değer yok. | radius Şekil bir ifade öğesi; değer yok. | Hareket bir ifade öğesi; değer yok. | lesson: Birincil öğeyi vurgula ('up to 4 times faster' bulma), etiketleri koru, bağlamı gözet ('Context still matters').
+- Türk mobil bankacılık uygulamaları (Artiwise analizi): Kaynakta tasarım değeri yok. | radius Kaynakta yok. | Kaynakta yok. | lesson: Kullanım kolaylığı (+6,39) en güçlü olumlu etken; görünümden önce sorunsuz giriş ve anlaşılır hata.
+- Feather: Draw in 3D: Kaynakta yok. | radius Kaynakta yok. | Kaynakta yok. | lesson: Doğrudan örnek değil; görsel ödülün içerik üreten araçlara gittiğini gösteriyor, bizim gibi bir araçta görsellik işin önüne geçmemeli.
+- Speechify: Kaynakta yok. | radius Kaynakta yok. | Kaynakta yok. | lesson: Erişilebilirlik ayrı bir ödül dalı; WCAG 2.2 AA kararımız aynı yönde.
+
+## R08 Uluslararası tasarım ve geliştirici forumlarında arayüz yorumları (2024-2026)
+
+Hacker News (Algolia API ile 15 başlığın yorum ağacı ve 21 yorum araması, sıralama için HN Firebase API), Reddit, NN/g ve Smashing taranarak 2024-2026 arasından 97 sinyal toplandı; Reddit'in .json uçları 403 verdi, WebSearch reddit.com alan adını kabul etmedi, tarayıcı kimliğiyle .rss akışları çalıştı (hız sınırı yüzünden birkaç tekrar gerekti), Lobsters aramasından ayrıştırılabilir sonuç çıkmadı ve Designer News HTTP 402 döndü. En güçlü ve tekrar eden şikayet, kullanıcıyı bekleten ya da girdiyi yutan animasyonlar: forumlarda 300 ms bile uzun bulunuyor, 50-100 ms çoğu hareket için yeterli görülüyor; NN/g de basit geri bildirim için yaklaşık 100 ms, büyük ekran değişimi için 200 ile 300 ms veriyor ve 500 ms'de animasyonun sürüklendiğini söylüyor. İkinci büyük tema okunurluk: Liquid Glass gibi cam efektleri ve gri üstüne gri metin en çok tepki çeken şeyler; Apple iOS 26.1'de daha opak Tinted seçeneğini ekledi, iOS 27 yorumlarında en sarsıcı kısımların geri alındığı söyleniyor. Android tarafında kullanıcılar animasyon ölçeğini 0.5x ya da 0x'e çekiyor ve uygulamaların bu ayara uymamasından şikayet ediyor; ucuz ekranda ve eski cihazda takılma sık anılıyor, bu da Türkiye'deki orta ve alt segment Android çoğunluğu için doğrudan risk. Kırık beyaz konusunda çoğunluk hafif kırık beyazı saf beyaza tercih ediyor ve anılan değerler (#FAFAFA, #F9F9F9, #FCFCFC, #F2F2F2) color.js ile tamamen nötr çıktı; Tufte CSS'in #FFFFF8'i ve HN'in #F6F6EF'i ise sarıya kayıyor, yani sahibin kreme kaymama şartı forum deneyimiyle örtüşüyor. Aşırı yuvarlak köşe ve hap biçimli düğmelere tepki 2026'da belirgin şekilde arttı (VS Code, macOS Tahoe), köşeli tasarımı sevenler IBM Carbon'u örnek gösteriyor; ama düz ve köşeli yapıda tıklanabilirlik ipucu zayıflıyor (NN/g: zayıf ipucunda yüzde 22 daha uzun süre). Forumlarda verilen kontrast sayılarının bir kısmı color.js ölçümüyle tutmadı, bu yüzden her renk çifti ölçülmeli. İÜ Yoklama için anlamı: kısa, kesilebilir, girdiyi bekletmeyen animasyonlar; sistem hareket ayarlarına uyum; opak yüzeyler; ölçülmüş kontrastlı griler; nötr kırık beyaz zemin üstünde tek gece mavisi aksan; tek ve küçük köşe ölçeği ile dolgu ve kenarlıkla belirgin düğmeler.
+
+- **R08-K01 Animasyon süre bütçesi**: Tüm etkileşim animasyonları kısa bir bütçeye bağlansın: basit geri bildirim yaklaşık 100 ms, panel ve modal açılışı 200-300 ms, hiçbir etkileşim 300 ms'yi geçmesin; girişte ease-out, çıkışta ease-in kullanılsın.
+  - geri bildirim (hover, basma, anahtar) = 100 ms
+  - panel ve modal açılışı = 200-300 ms
+  - üst sınır = 300 ms
+  - çok yavaş eşiği = 400 ms
+  - giriş eğrisi = ease-out
+  - çıkış eğrisi = ease-in
+- **R08-K02 Kesilebilir, girdiyi bekletmeyen animasyon**: Hiçbir animasyon dokunma, tıklama ya da tuş girdisini kilitlemesin; yeni girdi geldiğinde süren animasyon hemen hedef duruma geçsin ve girdi kaybolmasın.
+  - animasyon sırasında girdi = her zaman kabul edilir
+  - yeni girdi gelince = süren animasyon kesilir, son duruma geçilir
+- **R08-K03 Sık eylemlerde anında tepki**: Panelde klavye kısayolları, filtreleme, satır düzeltme ve liste içi gezinme animasyonsuz olsun; telefonda QR okutma sonrası onay en kısa geçişle gelsin; animasyon ilk açılış ve seyrek geçişlerde kullanılsın.
+  - klavyeyle tetiklenen eylem = animasyon yok
+  - sık tekrarlanan geçiş = yaklaşık 100 ms ya da hiç
+- **R08-K04 Sistem hareket ve saydamlık ayarlarına uyum**: Telefon uygulaması iOS Hareketi Azalt ve Android animasyon ölçeği ayarlarını, web panel prefers-reduced-motion ayarını izlesin; bu ayarlar açıkken kayma ve ölçek hareketleri yerine anında geçiş ya da çok kısa çapraz geçiş kullanılsın ve hiçbir bilgi yalnız animasyonla verilmesin.
+  - web = prefers-reduced-motion: reduce
+  - Android = Animation scale 0.5x ve 0x
+  - iOS = Reduce Motion, Reduce Transparency, Increase Contrast
+- **R08-K05 Opak yüzeyler, cam efekti yok**: Bulanık arka plan, cam ve içerik üstünde yüzen yarı saydam kontroller kullanılmasın; paneller, sayfalar ve alt çubuk opak olsun, katmanlar ince kenarlık ve çok hafif ton farkıyla ayrılsın.
+  - bulanıklık ve cam efekti = kullanılmaz
+  - yarı saydam kontrol = kullanılmaz
+  - katman ayrımı = opak yüzey, ince kenarlık, hafif ton farkı
+- **R08-K06 Gri metinlerin kontrastı**: Tüm metin renkleri seçilen kırık beyaz zemin üzerinde color.js ile ölçülsün ve 4.5:1 altına inmesin; ikincil metin daha açık gri yerine boyut ve ağırlıkla ayrılsın; gri üstüne gri metin hiçbir yerde kullanılmasın; sınırda kalan çiftler (4.50:1 gibi) seçilmesin.
+  - metin kontrastı alt sınırı = 4.5:1
+  - #828282 / #F6F6EF = 3.54:1
+  - #6D6D6D / #EFEFEF = 4.50:1
+- **R08-K07 Zemin: nötr kırık beyaz, kreme kaymadan**: Zemin forumlarda anılan nötr kırık beyaz aralığından seçilsin ve OKLCH tonu sarıya kaymasın; gece mavisi alt tonu verilecekse kroma çok düşük tutulsun ve son değer color.js ile hem ton hem kontrast için ölçülsün.
+  - forumda anılan nötr kırık beyazlar = #FAFAFA, #F9F9F9, #FCFCFC, #F2F2F2
+  - kaçınılacak sarımsı örnekler = #FFFFF8, #F6F6EF
+- **R08-K08 Tek aksan ve alt ton dozu**: Gece mavisi tek aksan olarak yalnız birincil eylem, odak halkası, seçili durum ve bağlantıda kullanılsın; nötr griler aynı tona çok düşük kromayla bağlansın; dekoratif şerit, degrade, parıltı ve pastel paletler kullanılmasın.
+  - aksan kullanım alanları = birincil düğme, odak, seçili öğe, bağlantı
+  - kullanılmayacak süsler = renkli kart şeridi, degrade, neon parıltı, pastel palet
+- **R08-K09 Köşe dili**: Tek ve az değerli bir köşe ölçeği kullanılsın: yüzeylerin çoğu keskin köşeli, gerekiyorsa tek bir küçük yarıçap; kap içindeki öğeye göre yarıçap değiştirmesin; hap biçimli düğme ve yuvarlak uçlu ikon seti kullanılmasın.
+  - köşe yarıçapı = 0 ya da tek küçük değer
+  - hap düğme = kullanılmaz
+- **R08-K10 Köşeli yapıda tıklanabilirlik**: Düğmeler giriş kutusu ve karttan şekille değil dolgu, kenarlık, yazı ağırlığı ve durum değişimiyle ayrılsın; ikonlar metin etiketiyle birlikte kullanılsın; dokunma ve tıklama alanı görünen sınırdan küçük olmasın.
+  - zayıf ipucunun maliyeti = %22 daha uzun süre, %25 daha fazla bakış
+  - telefonda dokunma alanı = 1cm × 1cm
+  - panelde tıklama alanı = en az 24 px
+- **R08-K11 Alt segment Android önceliği**: Animasyonlarda pahalı efekt olmasın (bulanıklık, büyük gölge animasyonu, tam ekran renk geçişi) ve hiçbir animasyon gerçek bir orta ya da alt segment Android telefonda denenmeden kabul edilmesin; takılan animasyon kaldırılsın.
+- **R08-K12 Yükleme ve çevrimdışı durumlar**: Çevrimdışı kayıt kuyruğu, gönderiliyor ve gönderildi durumları açık metinle gösterilsin; bekleme göstergesi sade gösterge ya da iskelet olsun, bulanıklık olmasın; hareket azaltılmışsa gösterge durağan kalsın.
+  - bekleme göstergesi = iskelet ya da sade gösterge
+  - bulanıklık = kullanılmaz
+- **R08-K13 Karanlık tema**: Ana tema açık (kırık beyaz) olsun; karanlık varyant yapılırsa uygulama içi düğmeyle değil telefonun ve tarayıcının tercihiyle açılsın.
+- **R08-K14 Yay hissi ve zıplama**: Fiziksel his isteniyorsa yay benzeri hareket kısa ve neredeyse zıplamasız olsun; zıplama sürerken dokunuşlar kaybolmasın. Yay parametreleri bu açıda bulunamadı, motion açısından alınmalı.
+- **R08-K15 Haptik**: Haptik yalnız QR okutmanın başarılı olduğu an gibi tek onay anlarında ve hafif kullanılsın; her dokunuşa titreşim eklenmesin.
+
+Fact-checker issues:
+- R08-K06: Değerler satırındaki '#6D6D6D / #EFEFEF 4.50:1, sınırda' yanlış: yuvarlanmamış oran 4.49995:1, yani çift 4.5:1 alt sınırından kalıyor (HN yorumcusunun 4.49:1 ve 'failing' demesi doğru). color.js oranı iki basamağa yuvarladığı için kalan bir çifti 4.50:1 diye gösterebiliyor; tasarım dosyasındaki renk denetimi yuvarlanmamış oranla karşılaştırma yapmalı ya da daha çok basamak basmalı.
+- R08-K07: Gerekçe 'forumda anılan nötr kırık beyazlar' üzerine kurulu, ama aynı r/web_design başlığında Ivory #FFFFF0, Ghost White #F8F8FF, Off White #FAF9F6 ve Snow #FFFAFA da öneriliyor; kaynaklarda anılan 10 kırık beyazın 6'sı renkli. Nötr zemin kararı forum çoğunluğuna değil sahibin 'kreme kaymasın' şartına dayanmalı; Ghost White (oklch 0.9811 0.0093 286.2) gece mavisi alt ton için forumdaki tek mavi örnek olarak ayrıca değerlendirilmeli.
+
+Load-bearing findings:
+- R08-F01 Bekleten animasyon en çok şikayet edilen şey: Forumlarda en sık tekrar eden animasyon şikayeti, kullanıcının animasyonun bitmesini beklemek zorunda kalması ya da animasyon sırasında dokunma ve tuş vuruşlarının kaybolmasıdır.
+- R08-F02 Süre: forum ve NN/g aynı aralığı gösteriyor: Forum kullanıcıları 300 ms'yi bile uzun buluyor ve 50-100 ms'yi çoğu hareket için yeterli görüyor; NN/g ve Emil Kowalski'nin değerleri de 100 ile 300 ms arasını işaret ediyor. [kısmen: Kanıttaki değerler kaynakta birebir: NN/g genel aralık '100-500 ms', checkbox ve toggle için 'roughly 100 ms (0.10 seconds)', modal için '200-300 ms', 'In most cases, a range of 100-400 ms is appropriate, with 400ms being a very slow animation, to be used only for big movements across large screens'; Emil 'UI animations should generally stay under 300ms' ve 180 ms ile 400 ms örneği; iki sayfada da cubic-bezier değeri yok (NN/g yalnız biçim adını anıyor). Ama iddiadaki 'NN/g ... 100 ile 300 ms arasını işaret ediyor' dar kalıyor: NN/g'nin çoğu durum aralığı 100-400 ms. 'Forum kullanıcıları 300 ms'yi bile uzun buluyor' ve '50-100 ms yeterli' birer yoruma (45140569, 48520600) dayanıyor. NN/g çıkışta ease-in için 'sometimes used' diyor ve yavaş başlarsa 'unresponsive' hissettirebileceğini ekliyor.]
+- R08-F03 Sık kullanılan eylemde animasyon yük olur: Günde defalarca yapılan ve klavyeyle tetiklenen eylemlerde animasyon, forumlarda ve tasarımcı yazılarında açıkça istenmiyor.
+- R08-F04 Kullanıcı animasyonu sistemden kısıyor, uygulama uymazsa tepki geliyor: Android kullanıcılarının bir kısmı geliştirici ayarlarından animasyon ölçeğini 0.5x ya da 0x'e çekiyor, iOS kullanıcıları Hareketi Azalt'ı açıyor; uygulamaların bu ayara uymaması ayrı bir şikayet konusu.
+- R08-F05 Ucuz ekranda ve eski cihazda takılma: Pahalı cihazda akıcı görünen animasyon ve efektler ucuz ekranda, eski telefonda ya da grafik hızlandırması zayıf sistemde takılıyor; forumlar bunu sık anıyor.
+- R08-F06 Cam ve saydamlık okunurluğu düşürüyor: Liquid Glass tartışmalarında eleştirinin büyük kısmı görünüşten değil okunurluk ve kontrast kaybından geliyor; Apple iOS 26.1'de daha opak bir seçenek ekledi.
+- R08-F08 Gri üstüne gri metin en kalıcı öfke konusu: Düşük kontrastlı gri metin 2024-2026 boyunca HN'de ayrı başlıklar açtıracak kadar tekrar eden bir şikayet; gri ağırlıklı bir temanın en büyük riski bu. [kısmen: Başlık, tarih ve alıntılar doğru (44419099, 30 Haziran 2025; 44423336; 44421910; 42762586; 49701200; 49279162; karşı görüş 47272018). Oranlar: #828282 / #F6F6EF yuvarlanmamış 3.5405:1 (yorumcunun 2.23:1'i yanlış), #0000ff / #ffffff 8.5925:1 doğru. Ama #6D6D6D / #EFEFEF yuvarlanmamış 4.49995:1, yani 4.5:1'in altında ve WCAG AA'dan kalıyor; color.js iki basamağa yuvarlayıp 4.50:1 yazıyor. HN yorumcusunun (47365193) 'WCAG failing ... 4.49:1' demesi doğru; çift 'sınırda' değil, geçmiyor.]
+- R08-F09 Kırık beyaz tercih ediliyor, ama nötr olanı: Forumlarda çoğunluk saf beyaz yerine hafif kırık beyazı tercih ediyor; anılan değerlerin çoğu tamamen nötr gri, sarıya kayan örnekler ise krem etkisi veriyor. [kısmen: r/web_design 1mudj32 (19 Ağustos 2025) alıntıları ve #f9f9f9, #fafafa, #fcfcfc, #f2f2f2 değerleri doğru; kırık beyazı seçen yorumlar (5) saf beyazı seçenlerden (2) fazla. HN 'around fafafa', Tufte #fffff8 ve #111111, 1urse2z (9 Temmuz 2026, 'warm off-white', yorumlarda yapay zeka suçlaması) ve color.js OKLCH değerleri doğru. Ama 'anılan değerlerin çoğu tamamen nötr' tutmuyor: aynı başlıkta nabnwgw yorumu Ivory #FFFFF0, Ghost White #F8F8FF, Off White #FAF9F6 ve Snow #FFFAFA öneriyor; color.js: oklch(0.996 0.0196 106.8), oklch(0.9811 0.0093 286.2) (mor yanına kayan mavi), oklch(0.982 0.0041 91.4), oklch(0.9889 0.0053 17.2). Kaynaklarda anılan 10 kırık beyazın 4'ü nötr, 6'sı renkli. Forum nötrü renkliye tercih etmiyor; Ghost White gece mavisi alt tona yakın bir forum örneği ve araştırmada geçmiyor.]
+- R08-F10 Yalnız beyaz ve gri ruhsuz bulunuyor, renk dozlu isteniyor: Kullanıcılar her uygulamanın beyaz tonlarına boyanmasından sıkılmış; renk ve ifade gücü iyi uygulandığında seviliyor, pastel yığını ve içerik kaybı ise eleştiriliyor. [kısmen: Google Design (13 Mayıs 2025): '46 separate research studies', 'more than 18,000 participants', 18-24 yaşta 'up to 87%', 'spot key UI elements up to four times faster', e-posta eylemlerinden metin etiketini kaldırmanın kullanılabilirliği düşürmesi ve 'Don't compromise your product's core functionality for visual flourishes' birebir. Reddit ve HN alıntıları (mqr8h6x, mqqsbxk, mqs636j, 1ws92id, pd2rpxw, pdbq48p, 1uq4o8u, 44003351, 49667036) doğru. Ama iddianın ilk yarısı ('kullanıcılar her uygulamanın beyaz tonlarına boyanmasından sıkılmış') tek bir Reddit yorumunun Google yazısını tek cümleyle özetlemesine dayanıyor; kullanıcı bıkkınlığını anlatan bir kaynak yok.]
+- R08-F11 Ölçülülük kazanıyor: tek aksan, süs yok: Forumlar dekoratif aksan şeritlerini, degradeleri ve neon efektleri jenerik ya da yapay zeka üretimi görünümün işareti sayıyor; efekt dönemlerinin sonunda ölçülülüğe dönüş bekleniyor. [kısmen: 49870455 ('Tells of a Slop UI' başlığında 'AI just loves colored accent stripes on cards'), 49876067 (yapay zeka istemine yazılan yasak listesi: purple-blue-pink gradients, neon glow, over-rounded corners, pill-shaped buttons), 49894479 (Firefox degradesini ve 'Nova purple accent color'ı silme tarifi), pd2rpxw ve pdbq48p doğru. 'Efekt dönemlerinin sonunda ölçülülüğe dönüş bekleniyor' kısmı tek yoruma (45588511) dayanıyor; yorum 2000'lerdeki efekt çılgınlığından sonra tasarımcıların ölçülü davrandığını anlatıp Apple'ın bugününü ona benzetiyor, bir beklenti söylemiyor.]
+- R08-F12 Aşırı yuvarlaklığa tepki artıyor, köşeli tasarım az ama sevilen bir yol: 2025-2026'da yuvarlak köşe ve hap biçimli düğmelerin her yere yayılmasına karşı belirgin bir tepki var; köşeli tasarımı sevenler örnek bulmakta zorlanıyor ve IBM Carbon'u gösteriyor.
+- R08-F13 Düz ve köşeli yapıda tıklanabilirlik ipucu zayıflar: Düz tasarımda zayıf tıklanabilirlik ipuçları kullanıcıyı yavaşlatıyor; forumlarda da düğmenin metinden ve giriş kutusundan açıkça ayrışması isteniyor.
+
+## R09 Türk kullanıcıların ve yoklama alanının arayüz yorumları
+
+Bu açıda App Store'un herkese açık RSS yorum akışından 23 uygulamanın 3242 yorumu (TR mağazası 2548, ABD mağazası 694), 8 Google Play sayfasından 143 yorum parçası, 27 Ekşi Sözlük başlığından 687 entry ve 2 DonanımHaber konusu tarandı; Reddit ve Technopat konu sayfaları erişimi engellediği için okunamadı. Türk üniversite, devlet ve yoklama uygulamalarının yorumları ağırlıkla olumsuz (TR örneğinde ortalama 2.05 yıldız) ve şikayetlerin çoğu giriş, oturum düşmesi, yavaşlık ve boş ekran gibi etkileşim sorunları. Görünüşe dair en net istekler koyu tema (akşam beyaz ekran göz yoruyor), okunur yazı boyutu ve renkle verilen durumların okunabilmesi; koyu temada saf siyah zemin ve saf beyaz yazı forumlarda açıkça eleştiriliyor, antrasit gri ya da koyu mavi zemin isteniyor ve bir öğrenci doğrudan lacivert koyu tema öneriyor. Yoklama uygulamalarında arayüzdeki her belirsizlik 'gelmeme rağmen yok yazılıyorum' kaygısına dönüşüyor; bu yüzden onay ve durum ekranı ürünün en önemli görsel yüzeyi. Animasyonda kullanıcılar akıcılığı övüyor ama fazla, zıplayan ve kapatılamayan hareketi (iOS 26 tartışmaları, AUZEF'in geç açılması) yavaşlık olarak algılıyor; yorumlarda anılan orta ve alt sınıf Android cihazlar bu riski büyütüyor. 'Devlet uygulaması' izlenimini süs eksikliğinden çok tutarsız tasarım dili, çok adımlı akışlar ve web sayfalarına yönlendirme yaratıyor; övgü alan uygulamalar sade, hızlı ve aydınlık bulunuyor. İÜ Yoklama için çıkarım: sahibinin kırık beyaz, gri ve gece mavisi yönü bu beklentilerle uyumlu; gece mavisi en çok koyu temanın zemin alt tonu olarak işe yarar, açık temada ölçülü vurgu olarak kalmalı. Animasyonlar her etkileşimde olmalı ama kısa, amaçlı ve 'hareketi azalt' ayarına uyumlu tutulmalı; QR tarama ekranı en hızlı açılan ekran, makbuz ekranı en sakin ve okunaklı ekran olmalı.
+
+- **R09-K01 Koyu tema zemini ve metni**: Telefonun koyu tema ayarını izleyen tam bir koyu tema yapılsın; zemin saf siyah değil gece mavisi alt tonlu koyu gri, ana metin saf beyaz değil hafif kırık bir açık ton olsun; tüm renkler anlam değişkenlerinden (token) gelsin ve her ekran iki temada denetlensin.
+  - koyu tema tetikleyicisi = telefonun görünüm ayarı
+  - koyu zemin = #000000 kullanılmaz
+  - #FFFFFF metin / #000000 zemin = 21.00:1
+  - metin kontrastı alt sınırı = 4.5:1
+- **R09-K02 Durum gösterimi: renk, ikon ve metin birlikte**: Yoklama, devamsızlık ve uyarı durumları hiçbir yerde yalnız renkle verilmesin; her durum renk, ikon ve kısa metinle gösterilsin. Sarı ve turuncu metin veya beyaz metinli sarı zemin kullanılmasın; renk ile sayı aynı veriden üretilsin.
+  - durum gösterimi = renk + ikon + metin
+  - beyaz metin / #FFFF00 zemin = 1.07:1
+  - beyaz metin / #FFA500 zemin = 1.97:1
+  - uyarı tonu metin olarak = en az 4.5:1
+- **R09-K03 Yoklama onay (makbuz) ekranı**: Taramadan sonra tek, büyük ve kalıcı bir onay ekranı gelsin: büyük ikon, tek satır kalın durum metni, ders adı ve saat. Aynı durum ders listesinde ve geçmişte aynı simge ve kelimeyle görünsün; çevrimdışı kayıt nötr bir durum olarak yazılsın.
+  - onay ekranı türü = kalıcı ekran, kendiliğinden kaybolan bildirim değil
+  - onay hareketi = tek sefer, döngü yok
+  - çevrimdışı durum rengi = nötr ton, hata kırmızısı değil
+- **R09-K04 Animasyon dozu**: Etkileşimli her öğede hareket olsun ama kısa ve amaçlı: dokunuşta anında karşılık, panel açılış/kapanışında kayma ve opaklık, sık eylemlerde zıplama ve aşma yok, açılışta gösteri animasyonu yok, içerik animasyonu beklemesin; 'hareketi azalt' açıkken yalnız opaklık geçişi kalsın.
+  - canlandırılan özellikler = transform ve opacity
+  - hareketi azalt açıkken = kayma ve ölçek kapalı, yalnız opaklık
+  - sık eylemlerde aşma/zıplama = yok
+  - süre değerleri = bu açının kaynaklarında yok
+- **R09-K05 Yükleme, ilerleme ve dokunuş geri bildirimi**: Her dokunulabilir öğenin basılı durumu olsun; uzun işlemler ne yapıldığını yazan bir metin ve ilerleme göstersin; içerik yüklenirken yerleşim kaymasın; boş beyaz veya siyah ekran hiçbir durumda gösterilmesin.
+  - boş beyaz/siyah ekran = hiçbir durumda gösterilmez
+  - uzun işlem göstergesi = işlemi anlatan metin + ilerleme
+  - basılı durum = her dokunulabilir öğede
+- **R09-K06 QR tarama ekranı**: Uygulama açılınca öğrenci tarama ekranına doğrudan veya tek dokunuşla ulaşsın; ekranda görünür bir yakınlaştırma denetimi ve hedef çerçevesi olsun; başarıda kısa onay hareketi ve titreşim olsun.
+  - tarama ekranına erişim = açılışta doğrudan veya tek dokunuş
+  - kamera açılış görüş açısı = 0.5x ile açılmaz
+  - yakınlaştırma denetimi = ekranda görünür
+  - başarı geri bildirimi = görsel onay + titreşim
+- **R09-K07 Giriş ekranı**: Giriş ekranı tek birincil düğmeli, sakin bir ekran olsun; hata metni ilgili alanın hemen altında düz cümleyle yazılsın; yoklama anında giriş ekranı çıkmayacak şekilde akış kurulsun.
+  - birincil düğme = tek
+  - e-posta kod alanı = yapıştırma ve otomatik doldurma açık
+  - hata metni yeri = ilgili alanın hemen altı
+- **R09-K08 Yazı ölçeği ve taşma**: Telefonun yazı ölçeği en küçükten en büyüğe kadar izlensin; en büyük ölçekte metin kesilmesin ve üst üste binmesin, kart ve düğmeler yükseklik olarak büyüsün; görsel yenilemeler gövde metnini küçültmesin.
+  - uygulama içi yazı ayarı = yok
+  - deneme ölçekleri = telefonun en küçük, varsayılan ve en büyük yazı ayarı
+- **R09-K09 Tutarlılık ve sabit yerleşim**: Öğrenci ve öğretim üyesi modu tek bir bileşen ailesini paylaşsın; ana gezinme ve ana eylemlerin yeri ilk sürümden sabitlensin; ana akışlarda dış web sayfasına yönlendirme olmasın.
+  - bileşen ailesi = tek
+  - ana gezinme ve ana eylem yeri = ilk sürümden sabit
+  - ana akışlarda web yönlendirmesi = yok
+- **R09-K10 Cam ve bulanıklık efektleri**: Yüzeyler opak ve ince kenarlı olsun; cam veya bulanıklık efekti Android'de kullanılmasın, iOS'ta kullanılacaksa yalnız gezinme çubuğunda ve sistemin 'saydamlığı azalt' ayarında opak yedekle.
+  - Android yüzeyleri = opak
+  - iOS cam efekti = en fazla gezinme çubuğu; 'saydamlığı azalt' açıkken opak
+- **R09-K11 Güvenli alan, tablet ve yatay**: Tüm üst ve alt çubuklar güvenli alan boşluklarını kullansın; öğretim üyesinin QR gösterme ekranı tablette ve yatayda tam ekran çalışsın; öğrenci ekranları tablette kesilmeden büyüsün.
+  - güvenli alan boşlukları = tüm üst ve alt çubuklarda uygulanır
+  - QR gösterme ekranı = yatay ve tablette tam ekran
+- **R09-K12 Bildirim şeritleri ve hata dili**: Uygulama içi bildirimler kısa, kapatılabilir ve içeriği örtmeyen bir katmanda olsun; hata mesajları ne olduğunu, kaydın güvende olup olmadığını ve sonraki adımı söylesin; dikkat çekmek için zıplama veya titreme hareketi kullanılmasın.
+  - uygulama içi bildirim = kapatılabilir, içeriği örtmez
+  - hata mesajı yapısı = ne oldu + kayıt güvende mi + ne yapılmalı
+
+Fact-checker issues:
+- R09-K07: Gerekçedeki 'tekrar giriş ve oturum düşmesi hem Türk hem uluslararası örnekte en sık etkileşim şikayeti' ifadesi doğrulanmadı: dosyanın kendi sayımı TR'de en az 39 tekrar giriş karşısında en az 100 yavaşlık/donma veriyor; yeniden sayımda (4822 üniversite ve yoklama yorumu) tekrar giriş 119, yavaşlık/donma 229, çökme/açılmama 659. Değerler (tek birincil düğme, hata metni alanın altında) çelişmiyor; gerekçe 'en sık şikayetlerden biri' olarak düzeltilmeli.
+- R09-K03: Gerekçedeki 'kullanıcılar bunu belirsiz ve çelişen durum göstergelerine bağlıyor' genellemesi tutmuyor: yoklama uygulamalarındaki 38 'yok yazıldım' yorumunun en fazla 8'i durum gösterimini, 10'u giriş/şifre, 8'i Bluetooth/bağlantı hatasını suçluyor. Kalıcı onay ekranı yine yerinde, ama ana nedenler giriş ve bağlantı; gerekçe buna göre yazılmalı.
+- R09-K04: Gerekçedeki 'orta ve alt sınıf Android cihazlar ağır hareketi kasma olarak yaşatıyor' R09 kaynaklarında yok: anılan Android cihazlar (Galaxy A12, Infinix HOT 11 Play, Redmi Note 10, Oppo Reno 2Z) giriş, Bluetooth ve bağlantı hatası bildiriyor; efekt kaynaklı kasma kanıtı yalnız eski iPhone'larda iOS 26 için. Değerler (transform/opacity, hareketi azalt) çelişmiyor; dayanak performans araştırmasına ya da cihazda ölçüme bağlanmalı.
+- R09-K10: Android'de cam/bulanıklık yasağının gerekçesi ('düşük cihaz performansı şikayeti yaygın', 'Android'de pahalı ve tutarsız') R09 kaynaklarıyla desteklenmiyor: düşük cihaz yorgunluğu yalnız iki Ekşi entry'sinde ve iOS 26 için söyleniyor. Değer çelişkisi yok, dayanak eksik.
+- R09-K06: Gerekçedeki UBYS MOBİL (İKÇÜ) örneği eskidi: 29 Eylül 2026 tarihli 'QR Kod Kamera Geliştirmesi' sürümü kameranın geniş açıda takılmasını giderdi ve yakınlaştırma ekledi. Değerler (0.5x ile açılmama, görünür yakınlaştırma) geçerli ve bu düzeltmeyle güçleniyor; belge UBYS'yi güncel sorun gibi anmamalı.
+
+Load-bearing findings:
+- R09-F01 Giriş ve oturum sürtünmesi en sık şikayet: Türk üniversite uygulamalarında ve uluslararası yoklama uygulamalarında en sık tekrar eden etkileşim şikayeti, her açılışta yeniden giriş istenmesi, 'beni hatırla'nın çalışmaması ve oturumun ders sırasında düşmesidir. [kısmen: 8 kaynağın alıntıları ve tarihleri birebir (UBYS iOS 2026-09-26, UBYS Play 2026-09-30, Proliz 2021-01-01 ve 2026-03-13, Ekşi AKSIS 2015-08-09 ve 2020-01-15, iClicker 2024-09-17, Qwickly 2026-09-23). ABD örneği 694 = iClicker 379 + Qwickly 115 + Top Hat ilk 4 sayfa 200 olarak yeniden üretildi; ABD'deki '40' anahtar kelimeye bağlı (dar sayım 27, geniş sayım 79). Ama 'en sık' iddiası tutmuyor: dosyanın kendi F08 sayımı TR'de en az 100 yavaşlık/donma, bu bulgu en az 39 tekrar giriş veriyor; aynı yorumlarda yeniden sayımda (üniversite ve yoklama uygulamaları, 4822 yorum) tekrar giriş 119, yavaşlık/donma 229, çökme/açılmama 659. Doğru ifade: 'en sık şikayetlerden biri'. AKSIS örnekleri 2015 ve 2020 tarihli, AKSIS arayüzü Ocak 2026'da değişti.]
+- R09-F02 Koyu tema isteği yıllardır tekrar ediyor: Kullanıcılar akşam ve karanlık ortamda beyaz ekranın gözü yorduğunu söyleyip koyu tema istiyor; Türk üniversite uygulamalarında bu istek 2020 yılından bu yana tekrar ediyor.
+- R09-F03 Saf siyah zemin ve saf beyaz yazı istenmiyor: Koyu temada saf siyah zemin ve saf beyaz yazı Türk forumlarında açıkça eleştiriliyor; kullanıcılar antrasit gri ya da koyu mavi zemin ve yumuşak kontrast istiyor.
+- R09-F04 Yarım uygulanan koyu tema yoklama durumunu gizliyor: Koyu tema tüm ekranlara tutarlı uygulanmadığında içerik görünmez oluyor; bir yoklama uygulamasında bu doğrudan yoklama durumunu gizledi.
+- R09-F05 Durumu yalnız renk anlatınca okunmuyor: Durum bilgisi yalnız renkle verildiğinde, özellikle sarı ve kırmızı/yeşil kullanımında, kullanıcılar ya okuyamıyor ya da renge güvenip yanılıyor; renkli gösterge doğru çalıştığında ise seviliyor. [kısmen: Alıntılar birebir: E-Yoklama App Store 2024-11-14 ('sarı renk ... okunmuyor'), Play 2024-11-19 ('arka planı sarı, üzerindeki yazı ise beyaz'), Play 2024-11-15 ('Uygulama kendi içinde çelişiyor.'), Proliz 2026-05-23 ve 2024-07-04 kırmızı/yeşil övgüsü. color.js değerleri birebir (1.07, 1.40, 1.97; cvd 0.381/0.070/0.134/0.359). Ama iddia kaynakların ötesine gidiyor: sarı şikayeti düşük kontrast, yeşil ile sayı çelişkisi veri tutarsızlığı; ikisi de 'yalnız renkle verilen durum' sorunu değil. Kırmızı/yeşili okuyamayan kullanıcı yorumu yok, tersine övülüyor; renk körlüğü riski yalnız color.js hesabı.]
+- R09-F06 Yazı boyutu: küçülme de kontrolsüz büyüme de şikayet: Yeniden tasarımlardan sonra yazıların küçülmesi en net okunurluk şikayeti; tersine, yazı ölçeği yanlış ele alınınca yazıların ve görsellerin kontrolsüz büyümesi de şikayet konusu.
+- R09-F07 Akıcılık övülüyor, gösterişli hareket yoruyor: Kullanıcılar akıcı geçişleri övüyor, ama fazla, zıplayan ve kapatılamayan animasyonlar yavaşlık ve rahatsızlık olarak algılanıyor.
+- R09-F08 Belirsiz yükleme ve tepkisiz düğme güveni kırıyor: Ne olduğunu göstermeyen yükleme ekranları, boş beyaz/siyah ekranlar ve dokunuşa tepki vermeyen öğeler kullanıcının sisteme güvenini kırıyor. [kısmen: Alıntılar birebir: Ekşi AKSIS 2015-09-19 ('dönen mavi kareler') ve 2016-03-04 ('güven vermeyen'), Anadolu 2025-05-15 ('indirme yüzdesi') ve 2025-12-03 ('kasmaları ve takılmaları'), Top Hat 2026-09-16 ('Loading takes over a minute') ve 2025-01-26 (kayan öğeler). Sayımlar alt sınır olarak tutarlı (2083 TR yorumda boş ekran 14, yavaşlık/donma 288). Ama 'dokunuşa tepki vermeyen öğeler' için kaynak yok; 2016 'güven vermeyen' entry'si Erasmus sınav listesinde adın çıkmamasından yakınıyor, yükleme göstergesinden değil.]
+- R09-F09 Yoklamada arayüz hatası 'yok yazıldım' korkusuna dönüşüyor: Yoklama uygulamalarında en ağır duygu derse gelindiği halde yok yazılma korkusu; kullanıcılar bunu çoğu zaman arayüzün belirsiz veya tutarsız durum göstermesine bağlıyor. [kısmen: Alıntılar birebir: E-Yoklama 2023-11-10 ('arayüz bugları ... yok yazıldım'), 2022-12-08 ('Hoca yoklamayı kapatınca yok olarak düşüyor'), Play 2024-11-15, iClicker 2026-03-23, Proliz 2025-10-29. Korkunun kendisi doğrulandı. Ama 'çoğu zaman arayüze bağlıyor' tutmuyor: yoklama uygulamalarındaki 38 'yok yazıldım' yorumunun en fazla 8'i durum gösterimini, 10'u giriş/şifre, 8'i Bluetooth/bağlantı, 3'ü ders listesi sorununu suçluyor, 12'si neden belirtmiyor.]
+- R09-F10 QR tarama ekranı açılmıyor veya uzağı okumuyor: QR yoklamada kamera ekranının açılmaması veya uzaktaki QR kodunu okuyamaması doğrudan şikayete dönüşüyor.
+- R09-F12 'Devlet uygulaması' izlenimini tutarsızlık ve çok adım yaratıyor: Kullanıcıların 'eski', 'hangi devirden kalma' dediği şey süs eksikliğinden çok tutarsız tasarım dili, çok adımlı akışlar, web sayfalarına yönlendirme ve bulmaca gibi menüler. [kısmen: 11 kaynağın alıntıları ve tarihleri birebir (AUZEF 2023-04-14 ve 2024-04-16, Anadolu 2026-09-14, Anadolu Mobil Play 2026-08-06, İÜC 2020-02-05, Ekşi e-devlet 2026-07-07, proliz 2018-05-02, İÜ aksis 2016-06-06, auzef vs aöf 2024-06-02, İÜ 2026-08-18, Qwickly 2026-09-17). Ama 'süs eksikliğinden çok' karşılaştırması kanıtlanmıyor: AUZEF 2023 'görüntüsü çok eski' ve Proliz 2018 'internet ilk çıktığında daha güzel tasarımlar vardı' doğrudan görünüşü eleştiriyor; İÜ 2026 yorumu e-Devlet giriş hatası, 'auzef vs aöf' entry'si basılı kitaplar hakkında. Tutarsız dil, çok adım ve web yönlendirmesi şikayetleri gerçek; görünüşten daha belirleyici oldukları gösterilmiyor.]
+- R09-F18 Orta ve alt sınıf cihazlarda ağır efekt kasma olarak dönüyor: Yorumlarda anılan cihazlar çeşitli ve çoğu orta/alt sınıf; ağır görsel efektler ve yeni tasarım dilleri eski cihazlarda kasma olarak geri dönüyor. [kısmen: Alıntılar birebir: Proliz Play 2026-04-21 Galaxy A12 ve 2026-04-11 Infinix HOT 11 Play (Redmi Note 10 ve Oppo Reno 2Z yorumları da var), e-Devlet Play 2026-09-07 Android 9, Ekşi 2026-02-18 ('yağ gibi ... sürünüyor') ve 2026-03-14 ('düşük model cihazları biraz yoruyor'), Anadolu 2025-12-03. Ama bağ kurulamıyor: Android cihaz yorumlarının hepsi giriş, Bluetooth ve bağlantı hatası; görsel efekt kaynaklı kasma kanıtı yalnız iOS 26 ve eski iPhone'lar için. 'Çoğu orta/alt sınıf' yalnız Play yorumları için doğru; App Store yorumlarında 36 yorum iPhone 11 ile 17 arası modelleri anıyor.]
+
+## R10 Platform kuralları ve sistem arayüzleri (iOS, Android, web), Ekim 2026 itibarıyla
+
+Ekim 2026 itibarıyla güncel sürümler iOS 27 (14 Eylül 2026), Android 17 (API 37, 16 Haziran 2026), Chrome 154, Edge 154, Firefox 157 ve Safari 27. iOS'ta Liquid Glass'tan çıkış anahtarı (UIDesignRequiresCompatibility) iOS 27 SDK ile derlenince yok sayılıyor; çubuklar, sheet'ler, popover'lar, menüler, uyarılar ve kontroller camı kendiliğinden alıyor ve camın tonunu kullanıcının yeni kaydırıcısı belirliyor. Apple içerik katmanında cam kullanılmamasını ve kapsayıcıyla eş merkezli yuvarlak köşeleri öneriyor; köşeli kırık beyaz tasarımımız bu yüzden bilinçli bir sapma ve ancak sistem katmanı ile kendi içerik katmanımız net ayrılırsa tutarlı görünür. Expo SDK 57 tarafında yerel yığın UINavigationController ve Fragment kullanıyor, yerel başlıkta yalnız arka plan rengi ayarlanabiliyor; yerel sekmeler iOS'ta yuvarlak cam, Android'de Material görünümünde. Bu yüzden başlığı ve alt sekme çubuğunu JS ile köşeli ve opak çizip yerel yığının geçişlerini korumayı öneriyoruz (mimari karar, sahibin onayı gerekir). Android 16 hedefleyen uygulamalarda kenardan kenara düzen zorunlu ve Expo'da kapatılamıyor; predictive back Expo'da varsayılan kapalı ve react-native-screens uygulama içi önizleme vermiyor. Açılış ekranı iki platformda da düz zemin ve ortada işaretten ibaret; varsayılan #ffffff zemin kırık beyazla flaş yapacağı için açılış ekranı, kök arka plan ve ilk ekran aynı renk olmalı. Simgelerin dış şeklini sistem yuvarlatıyor; köşeli kimlik işaretin içinde taşınmalı ve tek renkli katman verilmeli. Web panelinde aynı belge View Transitions, @starting-style, transition-behavior, popover, dialog ve linear() dört tarayıcıda kullanılabilir; interpolate-size yalnız Chromium'da, belgeler arası geçiş Firefox'ta, dialog closedby Safari'de yok.
+
+- **R10-K01 iOS: sistem katmanı ile içerik katmanını ayırma**: Liquid Glass'tan çıkmaya çalışmayalım ve kendi parçalarımıza cam eklemeyelim. Sistemin çizdiği her şeyi (uyarılar, sheet, popover, menüler, izin pencereleri, paylaşım sayfası, klavye, tarih seçici) olduğu gibi kabul edelim; kendi içerik katmanımızı (ekran zemini, kartlar, listeler, butonlar, kendi diyaloglarımız) opak kırık beyaz ve köşeli çizelim. Ekranları Liquid Glass kaydırıcısının iki ucunda test edelim.
+  - UIDesignRequiresCompatibility = eklenmez
+  - glassEffect / UIGlassEffect / expo-glass-effect = içerik katmanında kullanılmaz
+  - Görsel test = Liquid Glass kaydırıcısının en saydam ve en renkli ucu
+- **R10-K02 Gezinme yığını ve başlık**: Ekran geçişleri ve iOS'taki kenardan kaydırarak geri dönme için yerel yığını (native stack) tutalım, ama yerel başlığı gizleyip başlığı JS ile köşeli ve opak çizelim. Geçiş türü için platform varsayılanını kullanalım; kendi animasyonlarımızı ekranın içindeki öğelere ayıralım.
+  - headerShown = false
+  - animation = default
+  - animationDuration = 350
+- **R10-K03 Alt sekme çubuğu**: Öğrenci ve öğretmen modlarının alt sekmelerini JS ile çizilen köşeli, opak bir sekme çubuğuyla yapalım; yerel sekmeleri (NativeTabs) kullanmayalım. Bu bir mimari seçim, sahibin onayı gerekir.
+  - NativeTabs içe aktarma yolu (SDK 57) = expo-router/unstable-native-tabs
+  - Android yerel sekme üst sınırı = 5
+- **R10-K04 Sistem pencereleri ve seçiciler**: İzin pencereleri, paylaşım sayfası, klavye ve tarih/saat seçici sistemden kabul edilsin. Yoklama akışının içindeki onaylar (yoklamayı bitir, kaydı sil gibi) sistem Alert'i yerine kendi köşeli diyalog ya da alt sayfamızla çizilsin; sistem Alert'i beklenmeyen hata gibi seyrek durumlarda kalsın.
+  - Tarih ve saat seçici = Expo UI DatePicker (iOS) ve DateTimePicker (Android)
+- **R10-K05 Vurgu rengi (gece mavisi) varyantları ve dinamik renk**: Gece mavisi alt tonu tek hex yerine açık, koyu ve her biri için artırılmış kontrast varyantı olan bir renk olarak tanımlayalım. Android'de dinamik rengi (Material You) marka renklerine uygulamayalım.
+  - Vurgu rengi varyant sayısı = 4
+  - Dinamik renk = kullanılmaz
+- **R10-K06 Köşe dili ve sistem kapsayıcılarıyla dikiş**: Kendi içerik katmanımızda tek bir köşe kuralını her yerde uygulayalım ve eş merkezli köşe API'lerini kullanmayalım. Köşeli içeriğimizi sistemin yuvarlak kapsayıcılarının (sistem sheet, Alert, menü) içine koymayalım; köşeli içerik gerekiyorsa kapsayıcıyı da biz çizelim. Yüzey sınırını gölge yerine ince kenarlık ve ton farkıyla verelim.
+  - ConcentricRectangle / UICornerConfiguration = kullanılmaz
+- **R10-K07 Animasyonların platform ilkelerine oturtulması**: Etkileşilen her öğe animasyonlu olsun, ama sık etkileşimlerde (liste satırı, sekme, buton basma) kısa ve sade geri bildirim, panel ve sayfa geçişlerinde daha belirgin hareket olsun. Her animasyon yarıda kesilebilsin; iOS Hareketi Azalt, Android'de animasyonları kaldırma ayarı ve web prefers-reduced-motion açıkken hareket sadeleşsin. Ekran geçişini sistem yapsın, biz ekranın içini canlandıralım.
+  - iOS yerel yığın geçişi = 350 ms
+  - Expo splash kapanış solması = 400 ms
+  - Android splash animasyonu önerilen üst sınır = 1,000 ms
+  - Android splash gecikmeli başlangıç üst sınırı = 166 ms
+- **R10-K08 Android geri hareketi (predictive back)**: Expo SDK 57'de android.predictiveBackGestureEnabled'ı şimdilik varsayılan false değerinde bırakalım; geri işlemlerini BackHandler ve gezgin üzerinden yapalım, onBackPressed'e dayanan yerel kod yazmayalım. react-native-screens uygulama içi desteği geldiğinde ayarı ayrı bir derlemede açıp test edelim. Uygulama içi geri geçişimizi Android'in varsayılan geçişiyle uyumlu ve kısa tutalım.
+  - android.predictiveBackGestureEnabled = false
+- **R10-K09 Android sistem çubukları ve boşluklar**: Durum çubuğu ve gezinme çubuğu saydam kalsın, simgeler koyu olsun; üst ve alt boşlukları react-native-safe-area-context ile verelim. 3 tuşlu gezinmede perde oluşmaması için enforceContrast'ı kapatıp alt kenarı kendi opak kırık beyaz yüzeyimizle dolduralım.
+  - expo-status-bar style = dark
+  - androidNavigationBar.enforceContrast = false
+  - react-native SafeAreaView = kullanılmaz
+- **R10-K10 Açık tema kilidi ve kök arka plan**: Karanlık tema planlanmıyorsa userInterfaceStyle 'light' kalsın ve expo-system-ui kurulsun; kök arka plan rengi (backgroundColor) kırık beyaz zemin belirteciyle aynı hex olsun. Android 17'nin uygulamaya karanlık modu zorlama özelliğiyle uygulamanın görünümü cihazda denensin.
+  - userInterfaceStyle = light
+  - backgroundColor (kök görünüm) = kırık beyaz zemin belirteciyle aynı hex
+- **R10-K11 Açılış ekranı (splash)**: Açılış ekranı kırık beyaz düz zemin ve ortada köşeli işaretten oluşsun; markalı alt görsel ve tam ekran görsel kullanılmasın. Zemin rengi kök arka plan ve ilk ekranla aynı olsun; kapanış kısa bir solma ile ilk ekrana bağlansın.
+  - Android simge (arka plansız) = 288×288 dp, 192 dp çaplı daire içinde
+  - Android simge (arka planlı) = 240×240 dp, 160 dp çaplı daire içinde
+  - expo-splash-screen backgroundColor = kırık beyaz zemin belirteci
+  - expo-splash-screen imageWidth = 100
+  - SplashScreen.setOptions duration = 400
+- **R10-K12 Uygulama simgesi**: Simgeyi düz renk opak arka plan ve köşeli, geometrik tek bir işaret olarak tasarlayalım. iOS için Icon Composer ile katmanlı .icon dosyası, Android için kendi tek renkli (monochrome) katmanımızı verelim; işaret tinted, clear ve temalı görünümlerde tek renge inince de okunmalı.
+  - iOS düzen boyutu = 1024x1024 px
+  - iOS görünümleri = default, dark, clear light, clear dark, tinted light, tinted dark
+  - Android uyarlanabilir katman = 108x108 dp
+  - Android güvenli alan = 66x66 dp
+  - android.adaptiveIcon.backgroundColor = marka arka plan rengi
+- **R10-K13 Web paneli animasyon tabanı**: Sayfa ve panel geçişlerinde aynı belge View Transitions'ı ilerleyici iyileştirme olarak kullanalım; diyalog, popover ve menülerin aç kapa animasyonlarını @starting-style ve transition-behavior: allow-discrete ile CSS'te yapalım; yay benzeri eğrileri linear() ile yazalım. interpolate-size'ı yalnız ek iyileştirme olarak kullanalım, closedby'a güvenmeyelim; prefers-reduced-motion, prefers-contrast ve forced-colors için ayrı kurallar yazalım.
+  - View Transitions (aynı belge) = Chrome/Edge 111, Firefox 144, Safari 18
+  - @starting-style = Chrome 117, Firefox 129, Safari 17.5
+  - transition-behavior = Chrome 117, Firefox 129, Safari 17.4
+  - linear() = Chrome 113, Firefox 112, Safari 17.2
+  - interpolate-size = yalnız Chrome/Edge 129
+  - dialog closedby = Chrome 134, Firefox 141, Safari yok
+- **R10-K14 Android cihaz çeşitliliği ve test matrisi**: Material 3 Expressive'i ya da One UI'ı taklit etmeyelim; kendi köşeli dilimizi koruyalım ve sistem parçalarıyla yan yana duruşu gerçek cihazlarda görelim. Test matrisi: Pixel (Android 16 ya da 17, M3 Expressive), Samsung (One UI 8.5 ya da 9), bir orta ve bir alt seviye cihaz; hareketle ve 3 tuşlu gezinme; açık ve koyu sistem teması; Android 17'de zorla karanlık mod; temalı simge açık.
+  - Test eksenleri = cihaz (Pixel, Samsung, alt seviye), gezinme (hareket, 3 tuş), sistem teması (açık, koyu), zorla karanlık, temalı simge
+- **R10-K15 Akışkan düzen (iOS 27 yeniden boyutlanma ve büyük ekranlar)**: Ekranları sabit genişlik varsayımıyla çizmeyelim; içerik için en büyük genişlik ve esnek satırlar kullanalım; QR ekranını ve listeleri dar, geniş ve yatay boyutlarda test edelim.
+  - Yön kilidinin yok sayıldığı ekran = en küçük genişlik 600dp ve üstü
+
+Fact-checker issues:
+- R10-K07: 'iOS yerel yığın geçişi: 350 ms (animationDuration varsayılanı)' satırı F12 kaynağıyla çelişiyor: React Navigation belgesine göre 350 ms varsayılanı yalnız slide_from_bottom, fade_from_bottom, fade ve simple_push geçişlerine uygulanıyor; K02'nin seçtiği 'default' (ve flip) geçişte 'the duration isn't customizable' ve sistemin kendi itme süresi kullanılıyor. Değer 'sistem varsayılanı, ayarlanamaz' olmalı; K02'deki animationDuration 350 satırı da default geçişte etkisiz.
+- R10-K09: 'androidNavigationBar.enforceContrast' anahtarı güncel (SDK 57) app config belgesinde yok; enforceContrast expo-navigation-bar config eklentisinin seçeneği (plugins: [['expo-navigation-bar', { enforceContrast: false }]]), varsayılanı true ve Android 9 ve altında etkisiz. setStyle de yalnız cihaz tuşlu gezinme kullanıyorsa ve bu seçenek false ise etkili.
+- R10-K13: Dialog, popover ve menülerin kapanış animasyonunu yalnız @starting-style ve transition-behavior ile dört tarayıcıda yapma önerisi eksik: öğenin çıkış geçişi bitene kadar üst katmanda kalmasını sağlayan overlay özelliği BCD 8.1.4'te yalnız chrome ve edge 117'de, firefox, safari ve safari_ios false. Firefox ve Safari'de öğe kapanırken üst katmandan hemen çıkar (arka perde anında kaybolur, katman sırası bozulabilir); değer listesine overlay satırı ve bu tarayıcılar için önce animasyon sonra close() çağıran küçük bir JS yedeği eklenmeli.
+
+Load-bearing findings:
+- R10-F01 Güncel iOS sürümü iOS 27, Liquid Glass okunabilirlik için revize edildi: iOS 27, 8 Haziran 2026'da WWDC'de duyuruldu ve 14 Eylül 2026'da yayımlandı; son ara sürüm 27.0.1 (28 Eylül 2026). iOS 26 ile gelen Liquid Glass okunabilirlik için revize edildi, kullanıcıya saydamlık ayarı eklendi ve uygulama simgeleri katmanlı cam görünümüne geçti.
+- R10-F03 Liquid Glass'tan çıkış anahtarı iOS 27 SDK ile yok sayılıyor: UIDesignRequiresCompatibility anahtarı iOS 26.0 ile geldi ve geçici kullanım için tasarlandı; uygulama iOS 27 veya sonrası için derlendiğinde sistem bu anahtarı yok sayıyor. Expo SDK 57 değişiklik notu, Xcode 27 ve iOS 27 SDK ile derlemeyi SDK 58'in konusu olarak anıyor. [kısmen: Apple kısmı birebir doğru: 'Temporarily use this key while reviewing and refining your app's UI...' ve 'The system ignores this key when you build for iOS 27 or later, iPadOS 27 or later, Mac Catalyst 27 or later, macOS 27 or later, or tvOS 27 or later.'; platform verisi introducedAt 26.0. Expo SDK 57 notu RN 0.85'ten 0.86'ya geçişi ve React 19.2'yi doğruluyor. Ancak not Xcode 27 ile derlemeyi SDK 58'e bırakılan bir konu olarak anmıyor: 'Apps built with the iOS 27 SDK must use the UIKit scene-based life cycle'; SDK 58 bunu varsayılan kullanıyor, SDK 57'de expo@57.0.23 ile expo-build-properties ios.enableSceneSupport açılarak Xcode 27 ile derlenebiliyor. Ayrıca Apple metnine göre anahtar yalnız iOS 27 SDK ile derlemede yok sayılıyor; iOS 26 SDK ile derlenen sürümde geçerli kalır, yani çıkarımdaki 'kaçış yolu yok' ifadesi Xcode 27 ile derlemeye geçildiği andan itibaren doğru.]
+- R10-F04 Liquid Glass'ı kendiliğinden alan sistem bileşenleri: Güncel SDK ile derlenen uygulamalarda standart çubuklar (sekme, gezinme, araç çubuğu), sayfalar (sheet), açılır pencereler (popover), menüler ve kontroller Liquid Glass görünümünü kendiliğinden alıyor; kaydırıcı ve anahtar gibi kontrollerin topuzu etkileşim sırasında cama dönüşüyor; uyarılar düzenli (regular) cam varyantını kullanıyor.
+- R10-F06 Apple'ın eş merkezli yuvarlak köşe kuralı köşeli tasarımla çelişiyor: Apple, iç içe arayüz öğelerinin köşe eğrisinin donanımın eğrisini izlemesini ve kapsayıcısıyla eş merkezli yuvarlak şekiller kullanılmasını öneriyor; bunun için ConcentricRectangle ve UICornerConfiguration gibi API'ler sunuyor.
+- R10-F08 İçerik katmanında Liquid Glass kullanılmamalı: HIG'e göre Liquid Glass içeriğin üstünde yüzen kontrol ve gezinme katmanı içindir; uygulama arka planı gibi içerik katmanı öğelerinde standart malzemeler kullanılmalı, cam efektleri özel kontrollerde idareli kullanılmalı.
+- R10-F09 Apple hareket ilkeleri: amaçlı, kısa, iptal edilebilir ve isteğe bağlı: HIG Motion, hareketin amaçlı eklenmesini, isteğe bağlı olmasını (bilgiyi yalnız hareketle vermemeyi), geri bildirim animasyonlarının kısa ve kesin olmasını, sık yapılan etkileşimlerde gereksiz hareketten kaçınılmasını ve kullanıcının hareketi iptal edebilmesini istiyor.
+- R10-F12 Yerel yığın başlığı UINavigationController ve Fragment kullanıyor, stil seçenekleri dar: React Navigation native stack iOS'ta UINavigationController, Android'de Fragment kullanıyor; başlık stilinde yalnız backgroundColor ayarlanabiliyor, iOS 26 ve sonrasında başlık butonları ortak cam arka plan paylaşabiliyor; geçiş süresi yalnız iOS'ta ve yalnız bazı geçişlerde değiştirilebiliyor.
+- R10-F13 Expo Router yerel sekmeleri: iOS'ta cam sekme çubuğu, Android'de Material alt gezinme: NativeTabs iOS'ta UITabBarController ile çiziliyor ve iOS 26'da sekme çubuğu Liquid Glass ile, arka planını arkasındaki içerikten alarak çiziliyor; Android'de Material alt gezinme kullanılıyor ve en fazla 5 sekme var. SDK 54 ile 57 arasında içe aktarma yolu expo-router/unstable-native-tabs.
+- R10-F17 Android 16 hedefleyen uygulamalarda kenardan kenara zorunlu, predictive back varsayılan açık: targetSdk 36 (Android 16) olan uygulamalar kenardan kenara (edge-to-edge) düzenden çıkamıyor; Android 16 cihazlarda predictive back sistem animasyonları (eve dönüş, görevler arası, etkinlikler arası) varsayılan açık, onBackPressed çağrılmıyor ve KEYCODE_BACK iletilmiyor. Geçici çıkış için android:enableOnBackInvokedCallback false yapılabiliyor.
+- R10-F18 Expo'da kenardan kenara her zaman açık, predictive back varsayılan kapalı: Expo SDK 54'ten beri tüm Android uygulamalarında kenardan kenara düzen açık ve kapatılamıyor; predictive back ise varsayılan kapalı ve app.json'da android.predictiveBackGestureEnabled ile açılıyor. Güncel (SDK 57) belgelerde bu ayarın varsayılanı hâlâ false.
+- R10-F27 Web: aynı belge View Transitions dört tarayıcıda, belgeler arası Firefox'ta yok: Ekim 2026 itibarıyla aynı belge View Transitions (document.startViewTransition) Chrome ve Edge 111, Firefox 144, Safari 18 ile Baseline 'yeni kullanılabilir' (14 Ekim 2025'ten beri); belgeler arası (@view-transition) Chrome ve Edge 126 ile Safari 18.2'de var, Firefox'ta yok, Baseline değil. Güncel sürümler: Chrome 154, Edge 154, Firefox 157, Safari 27.
+- R10-F28 Web: @starting-style, transition-behavior, popover ve dialog ile CSS'te aç kapa animasyonu: @starting-style ve transition-behavior (allow-discrete) 6 Ağustos 2024'ten, popover 27 Ocak 2025'ten beri Baseline; dialog geniş kullanılabilir. dialog closedby Safari'de yok (yalnız önizleme), requestClose Safari 18.4'ten beri var.
+
+## R11 Erişilebilirlik ve kapsayıcı tasarım (tasarım düzeyi)
+
+Bağlayıcı ölçüt hâlâ WCAG 2.2 (12 Aralık 2024 sürümü). WCAG 3, 10 Eylül 2026'da da taslak ve kontrast yöntemi henüz belirlenmemiş, bu yüzden APCA yalnız yardımcı denetim olarak kullanılabilir. Kırık beyaz zemin (örnek #F0F2F4) beyaza göre 1.12:1 kontrast kaybettiriyor: 4.5:1 için ikincil gri en açık oklch L 0.54 olabilir, denetim kenarlıkları için 3:1 sınırı L 0.63; şık görünsün diye kullanılan açık gri çizgiler (#B9BEC6, 1.66:1) yalnız süs çizgisi olabilir. Gece mavisi alt ton kontrast için rahat: koyu tonları zeminde 11:1'in, beyaz yazıyla dolguda 12:1'in üstünde ve odak halkasına uygun. Durum renkleri renk körlüğünde birbirine yaklaşıyor (yeşil ile kırmızı arasındaki uzaklık döteranopide 0.265'ten 0.045'e düşüyor), bu yüzden her durum simge, metin ve renkle birlikte verilmeli. Sahibin istediği yumuşak animasyonlar, iPhone'un Hareketi Azalt ve Android'in Animasyonları kaldır ayarları açıkken konum ve ölçek yerine opaklığa ya da anında değişime dönmeli; Reanimated bu durumda animasyonu kendiliğinden atladığından yerine geçecek davranış ayrıca tasarlanmalı. Yazı iOS'ta gövde metni için 17 pt'den 53 pt'ye (3.118 kat), Android'de %200'e kadar büyüyebiliyor; ad, ders adı, durum ve hata metinleri hiçbir boyutta kesilmemeli. Panel ve pencereler açılınca odak içeri girmeli, kapanınca açan öğeye dönmeli; başarılı yoklama ekran okuyucuya sonuç başlığına odak taşınarak ve kibar canlı bölgeyle bildirilmeli, Android'de kullanımdan kalkan duyuru yöntemine dayanılmamalı. QR siyah beyaz, ters çevrilmemiş, her kenarda 4 modül boşluklu ve okuma uzaklığının onda biri boyutunda olmalı; 5 saniyede bir değişim animasyonsuz yapılmalı.
+
+- **R11-K01 Metin kontrastı tokenları**: Bütün metinler, boyuttan bağımsız olarak, bulunduğu yüzeye karşı en az 4.5:1 olsun; büyük metin istisnası kullanılmasın ve oran yuvarlanmadan tam hex değerle ölçülsün. Paragraf metni birincil metin rengiyle, ikincil gri yalnız kısa yardımcı bilgiyle yazılsın.
+  - text.contrast.min = 4.5:1
+  - contrast.rounding = yok (4.499:1 geçmez)
+  - text.primary (örnek, #F0F2F4 üstünde) = oklch(0.45 0.012 255) = #51565C, 6.60:1, APCA Lc 77.9
+  - text.secondary (önerilen) = oklch(0.50 0.012 255) = #5F646A, 5.32:1
+  - text.secondary (en açık sınır) = oklch(0.54 0.012 255) = #6A6F76, 4.51:1
+  - surface.base (örnek) = oklch(0.96 0.004 255) = #F0F2F4
+- **R11-K02 Denetim kenarlıkları ve durum göstergeleri**: Bir denetimi tanıtan her çizgi, işaret ve seçili durum göstergesi bitişik renge karşı en az 3:1 olsun; çok açık griler yalnız süs ayırıcısında kalsın.
+  - border.control.contrast.min = 3:1
+  - border.control (örnek, #F0F2F4 üstünde) = oklch(0.63 0.012 255) = #848A90, 3.11:1
+  - divider.decorative (örnek) = oklch(0.80 0.012 255) = #B9BEC6, 1.66:1
+- **R11-K03 Odak halkası**: Her etkileşimli öğede 2 px kalınlıkta, 2 px aralıklı, köşeli ve gece mavisi bir odak halkası olsun; odak hiçbir yapışkan çubuk ya da açılan katman altında kalmasın.
+  - focus.ring.width = 2px
+  - focus.ring.offset = 2px
+  - focus.ring.color (örnek) = #4A6297 (oklch 0.50 0.09 265), #F0F2F4 üstünde 5.37:1
+  - focus.ring.change.min = 3:1
+  - focus.ring.shape = köşeli, bileşenin dış çizgisini izler
+- **R11-K04 Dokunma ve tıklama hedefleri**: Telefonda her etkileşimli öğenin dokunma alanı en az 48 x 48 olsun; panelde plan kararı olan 24 px alt sınır korunsun ve birincil düğmeler 44 px yüksekliğe çıksın.
+  - target.phone.min = 48 x 48 (dp / pt)
+  - target.phone.spacing = çerçeveli öğe çevresinde yaklaşık 12 pt, çerçevesiz öğenin görünen kenarı çevresinde yaklaşık 24 pt
+  - target.panel.min = 24 x 24 CSS px
+  - target.panel.undersized = 24 CSS px çaplı daire başka hedefe ya da daireye değmez
+  - target.panel.primary.height = 44 px
+- **R11-K05 Yazı ölçekleme ve kesilmeme**: Telefon ekranları iOS'ta AX5 (gövde 53 pt) ve Android'de %200 yazı ölçeğinde bozulmadan çalışsın; büyük yazıda yan yana öğeler alt alta geçsin ve kritik metinler hiç kesilmesin.
+  - test.ios.sizes = Large (gövde 17 pt), xxxLarge (23 pt), AX1 (28 pt), AX5 (53 pt)
+  - test.android.fontScale = %200
+  - allowFontScaling = true
+  - maxFontSizeMultiplier = 2
+  - numberOfLines = kullanılmaz
+  - text.size.min = 11 pt
+  - spacing.unit.android = boşluk dp, yazı ve satır yüksekliği sp
+- **R11-K06 Yazı ağırlıkları ve Kalın Metin**: Yalnız Regular, Medium, Semibold ve Bold kullanılsın; Kalın Metin açıkken her ağırlık bir basamak kalınlaşsın ve düzen daha geniş harflere dayansın.
+  - font.weights.allowed = Regular, Medium, Semibold, Bold
+  - font.weights.forbidden = Ultralight, Thin, Light
+  - boldText.mapping = Regular -> Semibold, Medium -> Bold, Semibold -> Bold, Bold -> Bold
+  - boldText.signal.ios = AccessibilityInfo.isBoldTextEnabled() + boldTextChanged
+- **R11-K07 Durumlar: renk, simge ve metin birlikte**: Her yoklama ve uyarı durumu farklı biçimli bir simge, Türkçe bir metin etiketi ve renkle birlikte gösterilsin; renk tek başına hiçbir durumu ayırmasın.
+  - status.success (örnek) = #137738 (oklch 0.50 0.13 150): zeminde 5.03:1, dolguda beyaz 5.64:1
+  - status.error (örnek) = #B6322D (oklch 0.52 0.17 27): zeminde 5.37:1, dolguda beyaz 6.03:1
+  - status.warning (örnek) = #996000 (oklch 0.54 0.12 70): zeminde 4.65:1
+  - status.info (örnek) = #2266A4 (oklch 0.50 0.12 250): zeminde 5.34:1, dolguda beyaz 5.99:1
+  - status.encoding = simge biçimi + metin etiketi + renk
+- **R11-K08 Artırılmış kontrast renk seti**: Uygulama içinde ayar olmadan, işletim sistemi yüksek kontrast istediğinde devreye giren ikinci bir renk seti tanımlansın: metin en az 7:1, kenarlıklar daha koyu, saydamlık ve bulanıklık yok.
+  - hc.trigger.ios = AccessibilityInfo.isDarkerSystemColorsEnabled() (Increase Contrast)
+  - hc.trigger.android = UiModeManager.getContrast() > 0 (API 34) ya da AccessibilityInfo.isHighTextContrastEnabled()
+  - hc.trigger.web = @media (prefers-contrast: more)
+  - hc.text.contrast.min = 7:1
+  - hc.text (örnek, #F0F2F4 üstünde) = oklch(0.43 0.012 255) = #4B5056, 7.25:1
+  - hc.border.contrast.min = 4.5:1
+  - in-app contrast setting = yok
+- **R11-K09 Azaltılmış hareket eşlemesi**: Her hareket tokenının bir azaltılmış karşılığı olsun: konum, ölçek, döndürme, bulanıklık ve derinlik yerine iOS'ta opaklık geçişi, Android'de animasyonlar kaldırıldıysa anında değişim, panelde prefers-reduced-motion ile opaklık ya da anında değişim.
+  - reduced.ios = isReduceMotionEnabled() true: yalnız opaklık geçişi, yay sekmesiz
+  - reduced.ios.crossfade = prefersCrossFadeTransitions() true: ekran ve panel geçişleri çapraz geçiş
+  - reduced.android = isReduceMotionEnabled() true: anında durum değişimi
+  - reduced.web = @media (prefers-reduced-motion: reduce): yalnız opaklık ya da anında
+  - reduced.ios.opacity.config = opaklık animasyonu ReduceMotion.Never ile ayrıca tanımlanır
+  - reduced.live = reduceMotionChanged olayı dinlenir
+- **R11-K10 Yasak hareketler ve QR değişimi**: Paralaks, kaydırmaya bağlı süs hareketi, tam ekran yakınlaşma geçişi, süs amaçlı dönme, z ekseninde derinlik ve bulanıklığa girip çıkma hiç kullanılmasın; 5 saniyede bir değişen QR geçiş animasyonu olmadan anında değişsin.
+  - motion.forbidden = paralaks, kaydırmaya bağlı süs hareketi, tam ekran yakınlaşma, süs dönmesi, z derinliği, bulanıklık geçişi
+  - autoplay.rule = otomatik başlayıp 5 saniyeden uzun süren, içerikle yan yana hareket durdurulamıyorsa yok
+  - flash.max = 1 saniyede en çok 3
+  - qr.swap = anında, animasyonsuz; saniyede 0.2 değişim
+- **R11-K11 Panel ve pencere odak düzeni**: Panel ya da pencere açılınca odak hemen içeri girsin, Tab içeride dönsün, Esc kapatsın, kapanınca odak açan öğeye dönsün; telefonda alt panel ve onay pencereleri arka planı ekran okuyucudan gizlesin.
+  - dialog.open.focus = ilk odaklanabilir öğe; içerik uzunsa başlık
+  - dialog.tab = odak pencere içinde döner
+  - dialog.escape = kapatır
+  - dialog.close.focus = açan öğeye; o öğe yoksa mantıklı sonraki öğeye
+  - phone.modal.ios = accessibilityViewIsModal={true}
+  - phone.modal.android = arka planda importantForAccessibility="no-hide-descendants"
+  - phone.focus.move = AccessibilityInfo.sendAccessibilityEvent(ref, 'focus')
+- **R11-K12 Yoklama sonucunun bildirilmesi**: Yoklama sonucu görsel olarak simge ve büyük metinle, dokunsal olarak titreşimle, ekran okuyucuya ise sonuç başlığına odak taşınarak bildirilsin; sonuç ekranı kendiliğinden kapanmasın.
+  - result.a11y.focus = sonuç başlığına sendAccessibilityEvent 'focus'
+  - result.liveRegion.android = accessibilityLiveRegion="polite"
+  - result.announce.ios = announceForAccessibilityWithOptions(metin, { queue: true })
+  - assertive = yalnız işlemi durduran hata
+  - android.announceForAccessibility = dayanılmaz
+  - web.status = role="status"; role="alert" yalnız önemli ve zamana bağlı hata
+  - toast.duration.android = en az getRecommendedTimeoutMillis()
+  - result.autoDismiss = yok
+- **R11-K13 QR gösterim kuralları**: QR her zaman saf siyah modül ve saf beyaz zeminle, her kenarda en az 4 modül beyaz boşlukla, okuma uzaklığının onda biri kenar uzunluğunda ve tema rengi almadan gösterilsin.
+  - qr.colors = #000000 modül, #FFFFFF zemin (21:1)
+  - qr.inverted = yok
+  - qr.themed = yok (gece mavisi modül, kırık beyaz zemin yok)
+  - qr.quietZone = her kenarda en az 4 modül
+  - qr.size.rule = kenar >= okuma uzaklığı / 10
+  - qr.size.examples = 6 m -> 60 cm; 10 m -> 100 cm; 15 m -> 150 cm
+  - qr.label = kısa ders etiketi QR'ın dışında
+  - receipt.qr = beyaz yüzeyde, sessiz bölge dahil
+- **R11-K14 Sınıf akışında tek birincil eylem**: Öğrencinin yoklama akışında her ekranda tek birincil eylem olsun ve akışta seçim ya da isteğe bağlı adım bulunmasın.
+  - flow.home = tek birincil düğme: QR okut
+  - flow.scan = kamera ve tek Vazgeç
+  - flow.result = durum, ders, saat ve tek Tamam
+  - primary.actions.per.screen = 1
+- **R11-K15 Web paneli: yeniden akış, metin aralığı, üzerine gelme**: Panel 320 CSS px genişlikte tek sütuna insin (tablolar kendi kabında kaysın), %200 büyütmede ve metin aralığı değişince bozulmasın; üzerine gelince çıkan içerik Esc ile kapansın, üzerine gelinebilsin, kendiliğinden kaybolmasın.
+  - reflow.width = 320 CSS px
+  - reflow.height = 256 CSS px
+  - text.resize = %200, kayıp yok
+  - text.spacing.test = satır 1.5, paragraf sonrası 2, harf 0.12, sözcük 0.16 (yazı boyutunun katı)
+  - hover.content = Esc kapatır, üzerine gelinebilir, tetik kalkana dek kalır
+  - hover.focus.parity = her üzerine gelme etkisinin :focus-visible karşılığı var
+- **R11-K16 WCAG 3 ve APCA'ya karşı tutum**: Geçme koşulu WCAG 2.2 AA olarak kalsın; APCA yalnız gövde metni seçiminde yardımcı denetim olarak kullanılsın.
+  - conformance.target = WCAG 2.2 AA
+  - apca.body.advisory = Lc 75 en az, Lc 90 tercih
+  - apca.other.advisory = Lc 60 en az
+  - apca.check (örnek) = #6A6F76 Lc 67.1; #51565C Lc 77.9 (#F0F2F4 üstünde)
+
+Fact-checker issues:
+- R11-K16: apca.body.advisory 'Lc 75 en az' değeri APCA'nın kendi şartını atlıyor: Lc 75 gövde metni için ancak en az 18px/400, 16px/500 ya da 14px/700 yazıyla geçerli; iOS Body 17 pt ya da 16 px Regular gövde metninde APCA Lc 90 istiyor, değer yazı boyutu ve ağırlığına bağlanmalı.
+- R11-K01: text.primary #51565C (Lc 77.9) paragraf rengi olarak öneriliyor, ama APCA ölçüsüyle bu yalnız 18px Regular ya da 16px Medium ve üstü gövde metninde yeter; 17 pt Regular gövde için APCA Lc 90 ister (#F0F2F4 üstünde gri için yaklaşık oklch L 0.32, #2F3339, 11.32:1, Lc 90.9). WCAG 2.2 AA açısından sorun yok, yalnız 'APCA yardımcı denetimini geçer' denemez.
+
+Load-bearing findings:
+- R11-F01 Metin kontrastı eşikleri (WCAG 2.2, 1.4.3): WCAG 2.2 AA metin için en az 4.5:1, büyük metin için en az 3:1 kontrast ister; hesaplanan oran yuvarlanmaz.
+- R11-F02 Denetim ve grafik kontrastı (1.4.11): Bir denetimi ve durumunu tanımaya yarayan görsel bilgi (kenarlık, onay işareti, seçili durum, simge) bitişik renge karşı en az 3:1 olmalı; kırık beyaz zeminde bu, açık gri çizgileri denetim sınırı olarak kullanmayı engeller.
+- R11-F04 Odak görünürlüğü ve görünümü (2.4.7, 2.4.11, 2.4.13): Klavye odağı her zaman görünmeli, yazarın koyduğu içerik onu tamamen örtmemeli; AAA düzeyindeki 2.4.13 odak göstergesi için ölçülebilir bir alan ve kontrast tanımlar.
+- R11-F05 Hedef boyutları: WCAG 24 px, Apple 44 pt, Android 48 dp: WCAG 2.2 AA en az 24 x 24 CSS px hedef ister; telefon platformları çok daha büyük hedef önerir.
+- R11-F07 iOS Dynamic Type: gövde metni 17 pt'den 53 pt'ye: iOS'ta gövde metni varsayılan 17 pt'den en büyük erişilebilirlik boyutunda 53 pt'ye çıkar (3.118 kat) ve Apple kesmeyi en aza indirip düzeni yığmayı önerir.
+- R11-F08 Android 14 ve sonrası: %200'e kadar doğrusal olmayan yazı ölçekleme: Android 14'ten beri yazı boyutu %200'e kadar büyür; büyük yazı küçük yazıdan daha az büyür ve sp ile çizilen boşluklar orantılı kalmaz.
+- R11-F10 Renk tek başına bilgi taşımaz (1.4.1) ve renk körlüğü: Bilgi, eylem ya da durum yalnız renkle gösterilemez; erkeklerin yaklaşık 12'de biri renk görme bozukluğu yaşar, en yaygını kırmızı ile yeşili ayırt edememektir.
+- R11-F12 iOS Hareketi Azalt: hareketin yerine ne konur: Apple, Hareketi Azalt açıkken yakınlaşma, ölçeklenme ve çevresel hareketin azaltılmasını, eksen boyunca kaymaların solmaya çevrilmesini ister.
+- R11-F19 Artırılmış kontrast: iOS, Android ve web sinyalleri: Apple her özel renk için artırılmış kontrast karşılığı ister; Android ve tarayıcılar da kullanıcının yüksek kontrast isteğini bildirir.
+- R11-F21 Panel ve pencere açılıp kapanırken odak sırası: Kalıcı pencere açılınca odak içine girer, Tab içeride döner, Esc kapatır ve kapanınca odak açan öğeye döner; telefonda ekran okuyucunun arka planı görmemesi ayrıca söylenmelidir.
+- R11-F22 Durum mesajları ve başarılı yoklamanın duyurulması: Durum mesajları odak almadan ekran okuyucuya ulaşmalı; Android'de doğrudan duyuru yöntemi kullanımdan kalktı ve yok sayılabilir.
+- R11-F24 QR gösterimi: sessiz bölge, boyut, renk: QR'ın her kenarında 4 modül boşluk olmalı, boyutu okuma uzaklığıyla büyümeli ve koyu modül açık zemin üstünde, ters çevrilmeden gösterilmeli.
+
+## R12 Tasarımın koda dökülme yolu: kütüphaneler ve token hattı
+
+Telefon tarafında Expo SDK 57 (30 Haziran 2026, React Native 0.86, React 19.2) yerel paket sürümlerini kendisi sabitliyor: expo@57.0.26 için Reanimated 4.5.1, worklets 0.10.1, Gesture Handler ~2.32.0, react-native-screens ~4.26.0, @expo/ui ~57.0.21. Bu sürümler npx expo install ile alınmalı ve expo en az 57.0.17 olmalı, çünkü Reanimated kullanan uygulamalarda belleği artıran geriletme ile açılış süresi geriletmesi bu ara sürümlerde kapatıldı. Telefonda hareketin tek motoru Reanimated 4 olmalı: CSS tarzı geçişleri cubicBezier eğrisini doğrudan alıyor, withSpring süre tabanlı yay veriyor ve telefonun hareketi azalt ayarı varsayılan olarak uygulanıyor; Moti Mart 2025 ten beri commit almadığı için elendi. Stil için StyleSheet ile DTCG kaynağından üretilen tipli token modülü en az bağımlılıklı yol; koyu tema gelirse Unistyles 3 ikinci seçenek, NativeWind v5 henüz rc, Restyle in son sürümü Mart 2025. Sheet ve menüler için expo-router formSheet ve @expo/ui yerel çözümler sunuyor; @gorhom/bottom-sheet Mayıs 2026 dan beri commit almadı, zeego nun son sürümü Mart 2025. Token kaynağı için DTCG Format 2025.10 (28 Ekim 2025) kararlı: oklch renk, duration, cubicBezier ve transition tipleri var, yay tipi yok; Style Dictionary 2025.10 u henüz tam desteklemediğini kendisi söylediği için üretici olarak Terrazzo öne çıkıyor. Panelde düz CSS değişkenleri, Vite nin yerleşik CSS Modules desteği ve React 19.3 te kararlı olan <ViewTransition> yeterli; Motion yalnız jest tabanlı bir ihtiyaçta LazyMotion ile eklenmeli. Panelin başsız bileşenleri için Base UI (1.0 kararlı 11 Aralık 2025, şu an 1.8.0) birinci, React Aria Components ikinci seçenek; fontlar telefonda expo-font config plugin ile gömülmeli, panelde yalnız WOFF2 ve font-display ile kendi sunucumuzdan verilmeli.
+
+- **R12-K01 Telefon: sürüm hattı**: expo en az 57.0.17 olmalı (şu an 57.0.26); bütün yerel paketler npx expo install ile, SDK 57 nin sabitlediği sürümlerde kurulmalı.
+  - expo = >=57.0.17, şu an 57.0.26 (2026-09-29)
+  - react-native = 0.86.3
+  - react = 19.2.3
+  - react-native-reanimated = 4.5.1
+  - react-native-worklets = 0.10.1
+  - react-native-gesture-handler = ~2.32.0
+  - react-native-screens = ~4.26.0
+  - expo-router = ~57.0.24
+  - @expo/ui = ~57.0.21
+  - expo-haptics = ~57.0.3
+  - expo-font = ~57.0.4
+  - react-native-svg = 15.15.4
+  - kurulum = npx expo install react-native-reanimated react-native-worklets
+- **R12-K02 Telefon: hareket motoru**: Telefondaki bütün etkileşim hareketleri tek motorla, Reanimated 4 ile yazılmalı: basılma, renk ve görünürlük gibi durum değişimleri için CSS tarzı geçişler ve tokendan gelen cubicBezier eğrileri; parmağı izleyen hareketler için withTiming ve withSpring; liste ve panel giriş çıkışları için layout animasyonları. reduceMotion hiçbir yerde ReduceMotion.Never yapılmamalı.
+  - transitionTimingFunction = cubicBezier(x1, y1, x2, y2)
+  - reduceMotion = ReduceMotion.System
+  - useReducedMotion = uygulama açılışındaki durumu verir
+- **R12-K03 Token: yay (spring) değerleri**: DTCG de yay tipi olmadığı için yaylar $extensions altında tek bir üretici anahtarıyla ve yalnızca süre tabanlı aileyle (duration, dampingRatio) tutulmalı; stiffness ve damping ile karıştırılmamalı. Yay tokenlarını yalnız telefon üreticisi okumalı.
+  - $extensions anahtarı = ters alan adı biçiminde tek anahtar
+  - yay alanları = duration (ms) ve dampingRatio
+  - Reanimated varsayılanları = duration 550, dampingRatio 1, mass 4
+- **R12-K04 Telefon: stil katmanı**: React Native StyleSheet ile DTCG kaynağından üretilen tipli bir tokens.ts modülü kullanılmalı; tokens.ts elle düzenlenmemeli. Koyu tema gündeme gelirse Unistyles 3 değerlendirilmeli.
+  - stil API si = React Native StyleSheet
+  - token modülü = tokens.ts (üretilmiş, as const)
+  - tema = şimdilik tek açık tema
+- **R12-K05 Telefon: sheet ve menüler**: Panel benzeri alt sayfalar expo-router formSheet ile yerel sheet olarak açılmalı; köşe yarıçapı tokena bağlanmalı. Menüler ve ekran içi sheet ler için @expo/ui kullanılmalı.
+  - presentation = 'formSheet'
+  - sheetAllowedDetents = en fazla 3 durak (Android sınırı)
+  - sheetCornerRadius = köşe yarıçapı tokenı (piksel)
+  - menü = @expo/ui Menu ve ContextMenu (SwiftUI), DropdownMenu (Jetpack Compose)
+  - ekran içi sheet = @expo/ui Universal BottomSheet
+- **R12-K06 Telefon: yoklama başarı hareketi ve dokunsal onay**: Yoklama alındı ekranındaki tik işareti react-native-svg ve Reanimated ile çizilmeli; dokunsal onay Android de performAndroidHapticsAsync, iOS ta notificationAsync ile verilmeli ve onay her zaman ekranda da görünmeli.
+  - çizim = react-native-svg 15.15.4 ve Reanimated
+  - Android dokunsal = Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Confirm)
+  - iOS dokunsal = Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+- **R12-K07 Token hattı (iki platform için tek kaynak)**: Tokenlar depoda DTCG Format 2025.10 biçiminde tek kaynakta tutulmalı; @terrazzo/cli 2.7.1 ile panel için tokens.css (CSS değişkenleri), telefon için tokens.ts üretilmeli; check komutu commit öncesi kapıya konmalı. Renkler OKLCH bileşenleri ve color.js ile hesaplanmış hex yedeğiyle yazılmalı.
+  - kaynak = tokens/*.tokens.json
+  - renk = {"$type": "color", "$value": {"colorSpace": "oklch", "components": [L, C, H], "alpha": 1, "hex": "#rrggbb"}}
+  - süre = {"$type": "duration", "$value": {"value": <sayı>, "unit": "ms"}}
+  - eğri = {"$type": "cubicBezier", "$value": [P1x, P1y, P2x, P2y]}
+  - geçiş = {"$type": "transition", "$value": {"duration": "{...}", "delay": "{...}", "timingFunction": "{...}"}}
+  - boyut = {"$type": "dimension", "$value": {"value": <sayı>, "unit": "px"}}
+  - yay = $extensions altında (R12-K03)
+  - çıktılar = panel: tokens.css, telefon: tokens.ts
+- **R12-K08 Panel: stil yazımı**: Panelde düz CSS, CSS Modules (Vite yerleşik) ve üretilmiş tokens.css içindeki CSS değişkenleri kullanılmalı.
+  - bileşen stilleri = *.module.css
+  - tokenlar = :root altında üretilmiş CSS değişkenleri (tokens.css)
+- **R12-K09 Panel: hareket**: Panelde hover, basma ve aç kapa hareketleri token değişkenlerini kullanan CSS transition ve @keyframes ile; sayfa ve panel giriş çıkışları React 19.3 <ViewTransition> ile yazılmalı. prefers-reduced-motion kuralı kendi CSS imizde tanımlanmalı.
+  - react = 19.3.0
+  - tetikleme = startTransition, Suspense, useDeferredValue
+  - Motion (gerekirse) = motion 14.0.0, m ve LazyMotion (~4.6kb) + domAnimation (+15kb)
+- **R12-K10 Panel: erişilebilir başsız bileşenler**: Panelin menü, diyalog, açılır liste, sekme ve benzeri bileşenleri @base-ui/react 1.8.0 üzerine kurulmalı; görünümün tamamı (köşeler dahil) bizim CSS imizle çizilmeli.
+  - @base-ui/react = 1.8.0
+  - eski paket = @base-ui-components/react kullanılmaz
+- **R12-K11 Fontlar**: Telefonda fontlar expo-font config plugin ile derleme anında gömülmeli; panelde yalnızca WOFF2 dosyaları kendi sunucumuzdan font-display: swap ile verilmeli ve Türkçe harfleri içeren alt küme yüklenmeli.
+  - telefon = expo-font config plugin (app.json plugins)
+  - panel biçimi = yalnızca WOFF2
+  - font-display = swap
+  - kaynak = Fontsource paketleri veya depoya konmuş WOFF2 dosyaları
+
+Fact-checker issues:
+- R12-K06: Expo haptics belgesine göre iOS ta Taptic Engine "iOS Camera is active" iken hiçbir şey yapmıyor. Öğrenci QR ı expo-camera ile okuduğu anda kamera hâlâ açıksa notificationAsync ile verilen onay iOS ta hissedilmez. Öneri, dokunsal onayın kamera kapandıktan sonra (başarı ekranına geçişte) verileceğini ya da iOS ta yalnız ekrandaki onaya güvenileceğini açıkça yazmalı.
+- R12-K03: Yay alanı "duration (ms)" olarak yazılmış, ama Reanimated withSpring duration değeri algısal süre: "Actual duration is 1.5 times the value of perceptual duration" (550 yazılınca yaklaşık 825 ms). Yay süresi panelde gerçek süre olarak okunan DTCG duration tokenlarıyla paylaşılırsa telefondaki hareket 1.5 kat uzun sürer; yay tokenının adı ve açıklaması bunu belirtmeli, duration tokenlarına takma ad yapılmamalı.
+- R12-K03: "spesifikasyon örneği org.example.toolname" notu yanlış: DTCG 2025.10 örneğindeki anahtarlar "org.example.tool-a" ve "org.example.tool-b"; ters alan adı önerisi doğru.
+- R12-K04: Unistyles için "react-native-nitro-modules ve react-native-edge-to-edge bağımlılığı getiriyor" gerekçesi yarı yanlış: 3.5.0 da react-native-edge-to-edge ve react-native-reanimated optional peer, zorunlu ek yerel paket yalnız react-native-nitro-modules (bir de JS paketi @react-native/normalize-colors). Sıralama değişmeyebilir ama gerekçe düzeltilmeli.
+- R12-K10: "eski paket npm de kaldırılmış" notu yanlış: @base-ui-components/react npm de duruyor, "Package was renamed to @base-ui/react" uyarısıyla kullanımdan kaldırılmış (deprecated); not buna göre düzeltilmeli.
+- R12-K07: Terrazzo için araştırmanın ölçemediği yanıt hızı ölçüldü: 2026-09-06 sonrası 15 issue açılmış, yalnız 1 kapanmış (açık 44 issue, 24 PR). K07 nin gerekçesi bu bakım riskini yazmalı; Style Dictionary yedeği korunmalı ve telefon çıktısı ilk denemede doğrulanmalı.
+
+Load-bearing findings:
+- R12-F01 Expo SDK 57 yerel kütüphane sürümlerini sabitliyor: Expo SDK 57, React Native 0.86 ve React 19.2 ile geliyor; Reanimated, worklets, Gesture Handler, Skia, Lottie, react-native-screens ve @expo/ui gibi yerel paketlerin uyumlu sürümleri expo paketindeki bundledNativeModules.json dosyasında sabit.
+- R12-F02 SDK 57 ara sürümlerinde bellek ve açılış geriletmeleri kapatıldı: SDK 57 nin ilk ara sürümlerinde react-native-worklets veya react-native-reanimated içe aktaran uygulamalarda bellek kullanımını çok artırabilen bir Hermes V1 geriletmesi vardı; expo@57.0.9 bunu kapattı, expo@57.0.17 ise React Native i 0.86.3 e yükseltti.
+- R12-F03 Reanimated 4 yalnızca Yeni Mimari ile çalışıyor, sürüm eşleşmesi sıkı: Reanimated 4 sadece React Native New Architecture ile çalışıyor ve her Reanimated sürümü belirli bir worklets ve React Native aralığına bağlı.
+- R12-F04 Reanimated CSS geçişleri cubic-bezier eğrisini doğrudan alıyor: Reanimated 4 ün CSS tarzı geçiş API si web CSS teki zamanlama fonksiyonlarının karşılığını (hazır adlar, cubicBezier, linear, steps) Android, iOS ve web de destekliyor.
+- R12-F05 Reanimated telefondaki hareketi azalt ayarını varsayılan olarak uyguluyor: Reanimated in bütün animasyonları varsayılan olarak cihazdaki hareketi azalt ayarına uyuyor; ayar açıkken animasyonlar bitiş değerine anında gidiyor, çıkış animasyonları hiç oynamıyor.
+- R12-F10 expo-router formSheet ile yerel alt sheet açılıyor, köşe yarıçapı ayarlanabiliyor: Expo Router bir ekranı presentation: formSheet ile yerel sheet olarak açabiliyor; duraklar, başlangıç durağı, tutamak ve köşe yarıçapı seçenekle ayarlanıyor.
+- R12-F16 DTCG Format Modülü 2025.10 kararlı; süre, eğri ve geçiş tipleri var, yay tipi yok: Design Tokens Format Module 2025.10, 28 Ekim 2025 te Final Community Group Report olarak yayımlandı ve kararlı kabul ediliyor; duration, cubicBezier, transition ve dimension tiplerini tanımlıyor ama yay (spring) tipi yok. [kısmen: Belge: Final Community Group Report, 28 October 2025, "This specification is considered stable"; uzantılar .tokens ve .tokens.json, MIME application/design-tokens+json; duration value ve unit ("ms" veya "s"), örnek {"value": 100, "unit": "ms"}; cubicBezier dört sayı [P1x, P1y, P2x, P2y], x [0, 1], y herhangi bir gerçek sayı; transition duration, delay, timingFunction; dimension "px" veya "rem"; fontWeight [1, 1000] veya hazır ad; belgede spring hiç geçmiyor; $extensions için "The reverse domain name notation is recommended"; takma ad için Curly Brace Syntax bölümü var. Hatalı ayrıntı: spesifikasyondaki örnek anahtar "org.example.toolname" değil, "org.example.tool-a" ve "org.example.tool-b"; toolname belgede hiç geçmiyor. Asıl iddia (kararlı, tipler var, yay yok) birebir doğru. GitHub deposunun son commit i 2026-09-08 doğru.]
+- R12-F17 DTCG renk modülü oklch yi destekliyor ve hex yedeği tanımlıyor: Design Tokens Color Module 2025.10 renkleri renk uzayı, bileşenler, alfa ve isteğe bağlı hex yedeğiyle tanımlıyor; desteklenen 14 renk uzayından biri oklch.
+- R12-F18 Style Dictionary 2025.10 biçimini henüz tam desteklemiyor: Style Dictionary v4 ten beri DTCG biçimini destekliyor ama kendi belgesine göre 2025.10 sürümü için tam destek v5 içinde hâlâ yapım aşamasında.
+- R12-F19 Terrazzo DTCG odaklı, CSS ve JS/TS çıktısı ile doğrulama komutu veriyor: Terrazzo DTCG token JSON undan CSS, Sass, JS/TS, Swift, Tailwind ve başka çıktılar üreten bir araç; token denetimi (lint) ve DTCG ye uygunluk kontrolü yapan bir check komutu var.
+- R12-F21 React 19.3 ile <ViewTransition> kararlı oldu: React 19.3 (9 Eylül 2026) View Transitions ve Fragment Refs i kararlı yaptı; <ViewTransition> öğelerin girişini, çıkışını, yer değiştirmesini ve boyut değişimini tarayıcının View Transition API si ile canlandırıyor.
+- R12-F24 Base UI 1.0 Aralık 2025 te kararlı oldu, shadcn/ui Temmuz 2026 da varsayılanı Base UI yaptı: Base UI biçimsiz (unstyled) erişilebilir React bileşenleri sunuyor; 11 Aralık 2025 te 1.0 kararlı sürüme ulaştı, o tarihten beri düzenli sürüm çıkarıyor ve shadcn/ui yeni projelerde varsayılan olarak onu kullanıyor.
+
+## R13 Modern arayüz dinamikleri ve eğilimleri (2025 ile 2026)
+
+2025 ile 2026 arasında arayüz dünyasının iki büyük hamlesi Apple'ın saydam Liquid Glass dili ile Google'ın yaylı ve şekilli Material 3 Expressive sistemi oldu. Liquid Glass, NN/g ve forum kullanıcılarından okunurluk, küçülen hedefler ve gereksiz animasyon yüzünden sert eleştiri aldı; Apple Haziran 2026'da iOS 27 ile malzemeyi okunurluk yönünde değiştirip bir saydamlık kaydırıcısı ekledi. Google'ın kendi araştırması birincil öğeyi boyut ve renkle öne çıkarmanın öğeleri daha hızlı buldurduğunu ve yaşlı kullanıcılara yaradığını gösteriyor, ama aynı yazı bu dilin bankacılık gibi güven isteyen arayüzlere uymayabileceğini de söylüyor. Linear'ın 2026 yenilemesi ve IBM Carbon'un üretken hareket seti, sakin ama özenli bir aracın nasıl kurulacağına dair en somut örnekler: gezinme geri çekilir, içerik öne çıkar, hareket kısa ve göze batmaz. Haptik, iskelet ekran, iyimser arayüz, alt sayfa ve bağlam menüsü için kaynaklar net kurallar veriyor: az haptik, 1 saniyenin altında gösterge yok, her jestin görünür bir düğme karşılığı var. Android 16 ile geniş ekranlarda dikey kilit yok sayılıyor, bu yüzden tablet ve katlanabilir düzen artık seçenek değil. Koyu tema bir beklenti haline geldi, ancak araştırma normal görüşte açık temanın daha iyi olduğunu gösteriyor; bu da kırık beyaz varsayılan ve sistem ayarına bağlı koyu tema kararını destekliyor. Tek tipleşme eleştirisi farkın moda trendlerinden değil ürüne özgü kararlardan geldiğini söylüyor. İÜ Yoklama için sonuç: saydamlık, sekmeli yaylar ve gösterişli trendlerden kaçınmak; sakin hiyerarşi, kısa üretken hareket ve tek bir imza anı (yoklamanın kabul edildiği an) ile modern görünmek.
+
+- **R13-K01 Kaçın: saydam cam yüzeyler (Liquid Glass, glassmorphism)**: Telefon uygulamasında ve web panelinde içerik üstünde saydam veya bulanık cam katman kullanma. Çubuklar, paneller ve alt sayfalar opak olsun; katmanlar saydamlıkla değil ince bir kenar çizgisi ve yüzey tonu farkıyla ayrılsın. Varsayılan görünüm, telefonun 'Saydamlığı Azalt' veya 'Kontrastı Artır' ayarına ihtiyaç bırakmasın.
+  - Yüzey saydamlığı = yok (opak)
+  - Katman ayrımı = ince kenar çizgisi ve yüzey tonu farkı
+- **R13-K02 Benimse: üretken hareket varsayılan (web paneli)**: Her etkileşime hareket ver ama Carbon'un üretken eğrilerini ve kısa sürelerini varsayılan yap. İfadeci eğriyi yalnız imza anında kullan. Animasyon kullanıcıyı bekletmesin: yeni etkileşim süren animasyonu keser. Tarayıcının veya telefonun hareket azaltma ayarı açıksa yer değiştirme yerine kısa opaklık geçişi kullan.
+  - ease-standard (productive) = cubic-bezier(0.2, 0, 0.38, 0.9)
+  - ease-entrance (productive) = cubic-bezier(0, 0, 0.38, 0.9)
+  - ease-exit (productive) = cubic-bezier(0.2, 0, 1, 0.9)
+  - ease-standard (expressive) = cubic-bezier(0.4, 0.14, 0.3, 1)
+  - duration-fast-01 = 70ms
+  - duration-fast-02 = 110ms
+  - duration-moderate-01 = 150ms
+  - duration-moderate-02 = 240ms
+  - duration-slow-01 = 400ms
+- **R13-K03 Uyarla: telefon uygulamasında yaylar, standart şema**: Telefon uygulamasında jestle sürüklenen veya yer değiştiren hareketler (alt sayfa, kart, sayfa geçişi) için Material 3 standart yay değerlerini, renk ve opaklık için damping 1.0 olan efekt yaylarını kullan. İfadeci şemanın 0.6 sönümlü hızlı yayını kullanma. Compose değerleri sönümleme oranı (ζ) olduğundan React Native animasyon kütüphanesine aktarım kodla yapılsın ve testle doğrulansın.
+  - spring.fast.spatial = damping 0.9, stiffness 1400
+  - spring.default.spatial = damping 0.9, stiffness 700
+  - spring.slow.spatial = damping 0.9, stiffness 300
+  - spring.fast.effects = damping 1.0, stiffness 3800
+  - spring.default.effects = damping 1.0, stiffness 1600
+  - spring.slow.effects = damping 1.0, stiffness 800
+  - Aşım, damping 0.9 = yüzde 0.15
+  - Aşım, damping 0.6 (ifadeci hızlı) = yüzde 9.48
+  - Sönüm katsayısı c, default spatial = 47.62
+- **R13-K04 Benimse (az): haptik yalnız kabul ve red anında**: Haptiği yalnız iki anda kullan: yoklama kabul edildiğinde CONFIRM, reddedildiğinde (örneğin süresi geçmiş QR) REJECT. Kaydırma, sekme değişimi ve düğme basma gibi sık olaylarda haptik verme. Özel titreşim deseni ve eski tek atımlık titreşim API'lerini kullanma. Haptik, ekrandaki ve metindeki geri bildirimin yerine geçmez, onunla eşzamanlı çalışır.
+  - Kabul = HapticFeedbackConstants.CONFIRM
+  - Red = HapticFeedbackConstants.REJECT
+  - Kullanılmayacak = VibrationEffect.createOneShot(), Vibrator.vibrate(long), Vibrator.vibrate(long[], int)
+  - İdeal tuş tıklaması (kaynak değeri) = 10-20 ms
+- **R13-K05 Benimse: yükleme durumları (iskelet ve ilerleme)**: 1 saniyenin altındaki beklemelerde hiçbir gösterge gösterme. Liste ve tablo yüklemelerinde gerçek satır ve sütun düzenini taklit eden iskelet kullan. 10 saniyeyi aşabilecek işlerde (Excel rapor indirme, AKSIS listesi yükleme) ilerleme çubuğu göster. İskelet yalnız çerçeve değil, gelecek içeriğin düzenini göstersin.
+  - Gösterge yok = 1 saniyenin altı
+  - İskelet ekran = 10 saniyenin altındaki sayfa yüklemeleri
+  - İlerleme çubuğu = 10 saniyenin üstü
+- **R13-K06 Uyarla: iyimser arayüz, dürüst durum adımları**: Öğrenci taradığında sonuç anında görünsün ama adımlar ayrı yazılsın: 'Telefona kaydedildi' (çevrimdışı dahil, anında), 'Gönderildi', 'Onaylandı'. Sunucu onayı gelmeden kesin başarı ifadesi kullanma. Web panelinde düzeltme ve onay gibi işlemlerde useOptimistic ile anında güncelle; hata olursa önceki değere dön ve satırın yanında hata mesajı göster.
+  - React API = useOptimistic(value, reducer?)
+  - Durum adımları = Telefona kaydedildi, Gönderildi, Onaylandı
+- **R13-K07 Benimse: varsayılan açık tema, koyu tema sistem ayarına bağlı**: Varsayılan tema kırık beyaz zeminli açık tema olsun. Koyu tema uygulama içi bir düğmeyle değil, telefonun ve tarayıcının görünüm ayarıyla açılsın. Koyu tema ayrı bir palet olarak tasarlansın ve aynı kontrast kararlarını taşısın.
+  - Varsayılan = açık tema (kırık beyaz zemin)
+  - Koyu tema = telefon ve tarayıcı görünüm ayarını izler
+- **R13-K08 Uyarla: alt sekme çubuğu sabit ve opak, 'Tara' bir eylem**: Telefon uygulamasında az sayıda, tek kelimelik etiketli sekme; sabit, opak ve köşeli bir alt çubukta, kaydırınca küçülmeden ve kaybolmadan. QR tarama ve QR gösterme sekme değil, ilgili ekranın en belirgin birincil düğmesi olsun. Kök ekranlarda iOS'un büyük başlık davranışını kullan.
+  - Sekme çubuğu yüzeyi = opak, köşeli, her zaman görünür
+  - Sekme etiketi = tek kelime
+  - iOS büyük başlık = prefersLargeTitles (kök ekranlar)
+- **R13-K09 Benimse: alt sayfa ve panel yapı kuralları**: Alt sayfa ve panelleri yalnız kısa, bağlamsal işler için kullan. Her birinde görünür bir Kapat düğmesi olsun; geri jesti ve web panelinde Esc tuşu kapatsın; üst üste ikinci sayfa açılmasın. Aşağı kaydırarak kapatma ve satır kaydırma eylemleri yalnız kısayol olsun, aynı işin görünür bir düğmesi veya menüsü bulunsun. Açılış ve kapanış animasyonlarının ayrıntısı panel çalışmasında konuşulacak.
+  - Kapatma yolları = Kapat düğmesi, geri jesti, Esc, isteğe bağlı aşağı kaydırma
+  - Yığma = aynı anda en fazla bir alt sayfa
+- **R13-K10 Uyarla: bağlam menüsü web panelinde kısayol**: Web panelindeki tablolarda bağlam menüsü (sağ tık veya satır sonu menü düğmesi) yalnız sık kullanılan, satıra özgü komutları içersin; her komut sayfanın ana arayüzünde de bulunsun ve menü klavyeyle açılıp gezilebilsin.
+  - Grup sayısı = ayırıcılarla en fazla yaklaşık üç grup
+  - Alt menü = tek seviye
+  - Yıkıcı öğe = listenin sonunda, hata rengiyle
+- **R13-K11 Benimse: geniş ekran (600dp) düzeni baştan tasarlansın**: Telefon uygulaması tablet ve katlanabilir telefonlarda dikey kilide güvenmesin. Tasarım dosyası 600dp kırılımını tanımlasın; QR gösterme, tarama ve makbuz ekranları yatay ve geniş düzende de çalışsın.
+  - Geniş ekran eşiği = sw600dp
+  - Etkilenen hedef = API 36 (Android 16); API 37 hedeflenince geçici çıkış kalkar
+  - Geçici çıkış özelliği = android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY
+- **R13-K12 Uyarla (sınırlı): bento yalnız web paneli genel bakışında**: Bento ızgarayı yalnız web panelinin genel bakış ekranında, karo boyutunun önceliği gösterdiği yerde kullan (bugünkü dersler, bekleyen onaylar, devamsızlık uyarıları). Karolar keskin köşeli, aynı aralıklı ve katı bir ızgarada olsun. Telefon uygulamasında bento kullanma.
+  - Kullanım yeri = web paneli genel bakış ekranı
+  - Köşe = keskin
+- **R13-K13 Kaçın: gösterişli trendler**: Maksimalizm, neo-brütalizm, neumorfizm, 3B öğeler, oyunlaştırma, etkileşimle ağırlığı değişen tipografi ve duvar kağıdından dinamik renk kullanma. Değişken font kullanılacaksa yalnız sabit ağırlık kademeleriyle hiyerarşi kur.
+  - Değişken font = yalnız sabit ağırlık kademeleri, etkileşimle değişen ağırlık yok
+  - Dinamik renk (Material You) = kapalı
+- **R13-K14 Benimse: sakin hiyerarşi (Linear ilkeleri)**: Gezinme (kenar çubuğu, sekmeler, başlıklar) içerikten bir ton geri dursun; ikonları azalt, renkli ikon zeminleri kullanma; ayırıcılar ince ve düşük kontrastlı olsun ama metin kontrastı her zaman en az 4.5:1 kalsın. Gece mavisi alt ton nötrlerde çok düşük yoğunlukta dursun; doygun lacivert yalnız birincil eylemde, seçili durumda ve odak göstergesinde görünsün.
+  - İlke 1 = Don't compete for attention you haven't earned
+  - İlke 2 = Structure should be felt not seen
+  - Metin kontrastı = en az 4.5:1
+- **R13-K15 İmza: modayı kovalamadan modern hissettiren beş nitelik**: İÜ Yoklama'nın kimliği şu beş nitelikle kurulsun: (1) Sessiz yüzey, (2) Keskin geometri, (3) Tek imza anı, (4) Dürüst durum, (5) Kısa ve kesilebilir hareket. Her yeni ekran bu beş niteliğe göre gözden geçirilsin; bunlara katkısı olmayan süs eklenmesin.
+  - Nitelik 1: Sessiz yüzey = kırık beyaz ve gri; gece mavisi alt ton nötrlerin içinde; doygun renk yalnız birincil eylemde
+  - Nitelik 2: Keskin geometri = köşesiz yüzeyler, ince çizgiler, katı ızgara; zarafet köşeden değil hizadan ve boşluktan
+  - Nitelik 3: Tek imza anı = yoklamanın kabul edildiği an: net makbuz, CONFIRM haptiği ve uygulamadaki tek ifadeci hareket
+  - Nitelik 4: Dürüst durum = Telefona kaydedildi, Gönderildi, Onaylandı adımları; 1 saniyenin altında gösterge yok, 10 saniyeye kadar iskelet, üstünde ilerleme çubuğu
+  - Nitelik 5: Kısa ve kesilebilir hareket = her etkileşimde 70ms ile 400ms arası üretken hareket; telefonda damping 0.9 yaylar; hareket azaltma ayarına uyum
+
+Fact-checker issues:
+- R13-K02: Öneri 'her etkileşime hareket ver' diyor; doğrulanan R13-F05'teki HIG cümlesi 'In apps, generally avoid adding motion to UI interactions that occur frequently.' bununla çelişiyor. Sık etkileşimlerde (hover, basma, sekme değişimi) yer değiştirme yerine yalnız kısa renk ve opaklık geçişi (duration-fast-01, 70ms) kullanılacağı açıkça yazılmalı; araştırmanın 4. açık sorusu bu sınırı zaten işaret ediyor.
+- R13-K15: Nitelik 5 'her etkileşimde 70ms ile 400ms arası üretken hareket' diyor ve R13-F05'teki 'sık etkileşimlere hareket ekleme' kuralıyla aynı biçimde çelişiyor. Ayrıca Nitelik 3 telefonda imza anı için 'tek ifadeci hareket' istiyor, ama R13-K03 ifadeci yayları dışlıyor ve telefondaki imza hareketi için hiçbir değer verilmiyor; hangi yay veya eğrinin kullanılacağı tanımlanmalı.
+- R13-K04: Değer olarak verilen CONFIRM ve REJECT sabitleri, dayanak gösterilen R13-F15 kaynağında (haptics-principles) geçmiyor; 'Add haptic feedback to events' sayfasında ve HapticFeedbackConstants başvurusunda geçiyor. Kaynak gösterimi bu sayfalara düzeltilmeli; bu sabitlerin desteklendiği en düşük Android sürümü bu denetimde doğrulanmadı ve alt segment telefonlar için ayrıca kontrol edilmeli.
+
+Load-bearing findings:
+- R13-F02 NN/g: Liquid Glass okunurluğu ve öngörülebilirliği düşürdü: Nielsen Norman Group, iOS 26'nın saydam katmanlarının okunurluğu düşürdüğünü, kontrolleri küçülttüğünü, kontrollerin bağlama göre belirip kaybolmasıyla öngörülebilirliği azalttığını ve gereksiz animasyon eklediğini yazdı.
+- R13-F04 iOS 27: Apple saydamlığı okunurluk yönünde geri çekti: WWDC 2026'da Apple, iOS 27 için Liquid Glass'ı okunurluk yönünde değiştirdi: arkadaki içeriği daha çok dağıtan malzeme, koyulaştırılmış kenarlar, daha parlak vurgular ve sistem genelinde bir saydamlık kaydırıcısı.
+- R13-F05 Apple HIG: hareket amaçlı, kısa, kesilebilir ve isteğe bağlı: Apple'ın hareket yönergesi hareketin amaçlı ve kısa olmasını, sık kullanılan etkileşimlerde gereksiz hareketten kaçınılmasını, kullanıcının animasyonu beklemek zorunda kalmamasını ve hareketin tek bilgi kanalı olmamasını istiyor.
+- R13-F06 Material 3 Expressive araştırması: öne çıkan öğe daha hızlı bulunuyor: Google, Material 3 Expressive'i 46 çalışma ve 18,000'den (18 bin) fazla katılımcıyla test ettiğini, ifade gücü yüksek tasarımlarda kilit öğelerin 4 kata kadar hızlı bulunduğunu ve 45 yaş üstü kullanıcıların gençlerle aynı düzeyde başarı gösterdiğini söylüyor; ama bu dilin her ürüne uymadığını da yazıyor.
+- R13-F08 Yaylar: Material 3 standart ve ifadeci değerleri: Material 3'ün hareket sistemi süre ve eğri yerine yay parametreleriyle (sönümleme oranı ve sertlik) tanımlanıyor; standart ve ifadeci iki şema var ve fark yer değiştiren hareketlerin sönümlemesinde.
+- R13-F09 IBM Carbon: üretken ve ifadeci hareket ayrımı: IBM Carbon hareketi iki türe ayırıyor: üretken (productive) hareket verimli ve göze batmayan, ifadeci (expressive) hareket ise yalnız önemli anlar için; her ikisi için kesin eğri ve süre değerleri veriyor.
+- R13-F10 Linear: sakin arayüz, gezinme geri çekilir: Linear, Mart 2026 yenilemesinde yoğun bilgili arayüzünü sakinleştirdi: gezinme geri çekildi, içerik öne çıktı, ikonlar ve çizgiler azaltıldı.
+- R13-F14 Koyu tema: beklenti var, ama varsayılan açık olmalı: Araştırmalar normal görüşte açık modun (koyu metin, açık zemin) daha iyi performans verdiğini, koyu modun ise katarakt gibi durumlarda okumayı hızlandırdığını gösteriyor; NN/g varsayılanı koyu yapmamayı ve geçişe izin vermeyi öneriyor.
+- R13-F15 Haptik: az, net, sistem sabitleriyle: Android'in haptik ilkeleri 'az daha iyidir' diyor: sistem sabitlerini kullan, sık olaylarda çok hafif, önemli olaylarda daha güçlü titreşim ver, cızırtılı (buzzy) titreşimden kaçın. [kısmen: Sayfa 'Last updated 2026-09-29 UTC'. 'less is more', HapticFeedbackConstants kullanma, sık olaylarda çok hafif ve önemli olaylarda daha güçlü haptik, buzzy yerine hiç haptik, createOneShot ve iki vibrate API'sinden kaçınma, 10-20 ms tuş tıklaması ve 20-50 ms ek çınlama, düşük segment aktüatörlerin buzzy titreşimi ve görsel, ses, haptiğin birlikte tasarlanması birebir. Hata: kanıttaki dokuz sabitin hiçbiri (CONFIRM, REJECT, CLOCK_TICK, CONTEXT_CLICK, GESTURE_START, GESTURE_END, KEYBOARD_TAP, LONG_PRESS, SEGMENT_TICK) bu sayfanın ham HTML'inde geçmiyor (curl ve grep ile 0). CONFIRM ve REJECT 'Add haptic feedback to events' sayfasında (developer.android.com/develop/ui/views/haptics/haptic-feedback) ve HapticFeedbackConstants başvurusunda geçiyor.]
+- R13-F18 Alt sayfa (bottom sheet): kısa iş, görünür Kapat, yığma yok: NN/g'ye göre alt sayfalar kısa ve bağlamsal işler için uygun; görünür bir Kapat düğmesi ve geri hareketi desteklenmeli, sayfalar üst üste yığılmamalı, sayfa akışının yerine kullanılmamalı.
+- R13-F20 İskelet ekran: 1 ile 10 saniye arası için: NN/g, 1 saniyenin altındaki yüklemelerde hiç gösterge göstermemeyi, 10 saniyenin altındaki sayfa yüklemelerinde iskelet ekranı, 10 saniyeyi aşan işlerde ilerleme çubuğunu öneriyor.
+- R13-F22 Uyarlanabilir düzen: Android 16 geniş ekranda kilidi kaldırdı: Android 16 (API 36) hedefleyen uygulamalarda en küçük genişliği 600dp ve üzeri olan ekranlarda yön, yeniden boyutlandırma ve en-boy oranı kısıtları uygulanmıyor; geçici çıkış seçeneği API 37 hedeflenince kalkıyor.
+
+## R14 Veri gösterimi, durum göstergeleri, boş ve hata durumları, formlar ve Türkçe arayüz dili
+
+Bu açı panelin tablolarını, durum rozetlerini, devamsızlık göstergesini, boş, hata ve çevrimdışı durumlarını, formları ve Türkçe arayüz dilini inceledi. Tablolar için en somut değerler Carbon'dan geliyor: varsayılan satır 40 px, sıkı görünüm 32 px; NN/g büyük tablolarda başlık satırı ile ilk sütunun sabitlenmesini, Enders'in 2276 oturumluk deneyi de geniş tablolarda tek renkli zebra şeridini destekliyor; sayılar sağa hizalanmalı ve tablo rakamıyla yazılmalı. Carbon ve GOV.UK durum bildiriminde rengi tek başına yeterli saymıyor; color.js hesabı da Carbon'un hazır durum renklerinin kırık beyaz zeminde metin için yetmediğini ve döteranopide uyarı turuncusu ile tehlike kırmızısının neredeyse aynı göründüğünü gösterdi, bu yüzden her durumun kendi simge şekli ve yazısı olmalı. Devamsızlık için halka yerine Stephen Few'un bullet graph tanımına uyan bir gösterim öneriliyor: önce sayı, altında ince doğrusal çubuk ve sınırı gösteren dik çizgi. Boş durumlarda tek çizgi simge, olumlu kısa başlık ve tek eylem; hatalarda GOV.UK'nin gönderimde doğrulama ve hata özeti kalıbı ile NN/g'nin suçlamayan dil kuralları; çevrimdışı kayıtta sakin, renge dayanmayan ve verinin nerede beklediğini söyleyen bir durum satırı uygun. Formlarda kapalı kenarlı, içi beyaz, köşeli alanlar; sayı alanları ve 6 haneli kod için type=text, inputmode=numeric ve autocomplete=one-time-code ile tek alan öneriliyor. e-Devlet gibi kamu hizmetleri kullanıcıya tutarlı biçimde 'siz' diye hitap ediyor; öğrencilerin tercihi için yayımlanmış bir kaynak bulunamadı ve açık soru olarak bırakıldı. Tarih, saat ve sayılar Intl tr-TR ile Europe/Istanbul saat diliminde biçimlenmeli, öğrenci adları Intl.Collator('tr-TR') ile sıralanmalı.
+
+- **R14-K01 Tablo yoğunluğu ve satır yüksekliği**: Panel tablolarında varsayılan satır 40 px olsun. Öğrenci x oturum yoklama matrisinde kullanıcı 32 px sıkı görünüme geçebilsin; 24 px satır hiç kullanılmasın. Satır yüksekliği sabit, hücre metni tek satır olsun; uzun adlar üç noktayla kısaltılsın, tam ad satır açılınca ya da odakta görünsün.
+  - table-row-height = 40px
+  - table-row-height-compact = 32px
+  - table-row-height-relaxed = 48px
+  - min-click-target = 24px
+- **R14-K02 Satır ayırma: çizgi ve zebra**: Az sütunlu listelerde (ders listesi, onay listesi, AKSIS özeti) satırlar arasında 1 px yatay çizgi olsun, dikey çizgi olmasın. Çok sütunlu yoklama matrisinde tek renkli zebra şerit kullanılsın (her satır dönüşümlü); aynı tabloda çizgi ve zebra üst üste binmesin. Satır hover vurgusu her tabloda açık olsun ve zebra tonundan ayırt edilsin.
+  - table-divider = 1px solid, açık nötr gri
+  - table-surface = #FFFFFF
+  - table-zebra-fill = #F3F5F8
+  - table-row-hover = #E7EFFC
+- **R14-K03 Sayılar, hizalama ve birimler**: Sayısal sütunlar (öğrenci no, katılım sayısı, oran, saat) sağa, metin sütunları sola hizalansın; başlık kendi verisiyle aynı hizada olsun. Orta hizalama yalnız tek simgeli, sabit genişlikli matris hücrelerinde kullanılsın. Tüm sayılarda tablo rakamı açık olsun. Bir sütunda ondalık basamak sayısı sabit kalsın; katılım oranı tam sayı yüzdeyle verilsin. Birim başlıkta yazılsın: 'Katılım (%)'.
+  - css-numeric = font-variant-numeric: tabular-nums
+  - rn-numeric = fontVariant: ['tabular-nums']
+  - numeric-align = text-align: right
+  - percent-format = Intl.NumberFormat('tr-TR', { style: 'percent', maximumFractionDigits: 0 })
+- **R14-K04 Yapışkan başlık, sıralama, filtre ve seçim**: Tablo ekrandan büyükse başlık satırı dikey kaydırmada, ilk sütun (Ad Soyad ve öğrenci no) yatay kaydırmada sabit kalsın. Sıralanabilir başlık bir buton olsun; ok yalnız sıralı sütunda görünsün, diğerlerinde hover ve klavye odağında belirsin; sıralama durumu aria-sort ile duyurulsun. Toplu seçim başlıkta üç durumlu onay kutusuyla yapılsın, seçim olunca tablonun üstünde toplu işlem çubuğu çıksın. Araç çubuğunda en çok beş eylem olsun. Filtreler tablonun üstünde görünür dursun ve etkin filtre sayısı yazılsın.
+  - sticky-header = position: sticky; top: 0
+  - sticky-first-column = position: sticky; left: 0
+  - sort-icons = arrows (yalnız hover ve odakta), arrow--up, arrow--down
+  - header-checkbox-states = checked, unchecked, indeterminate
+  - toolbar-max-actions = 5
+- **R14-K05 Durum rozetleri**: Yoklama ve uyarı durumları köşeli, tıklanamayan bir rozetle gösterilsin: 16 px simge ile 14 boyunda yazı, açık tonlu zemin, koyu tonlu yazı ve simge. Her durumun kendi şekli olsun, renk yalnız destek. Yazı cümle düzeninde ve normal kalınlıkta, büyük harf yok. Rozet eylem çağrısı değil sonuç bildirir ('Onayla' değil 'Onaylandı'). Toplam durum sayısı altıyı geçmesin.
+  - status-icon = 16px simge, 14 boy yazı
+  - status-icon-large = 20px simge, 16 boy yazı
+  - status-info = #2C4678 yazı / #E7EFFC zemin
+  - status-success = #21763C yazı / #E1F5E4 zemin
+  - status-warning = #955E00 yazı / #FDECD1 zemin
+  - status-danger = #BE2323 yazı / #FFE9E6 zemin
+  - status-neutral = #5F636A yazı / #ECEFF2 zemin
+  - status-shapes = onay işareti, çarpı, saat, bilgi i, kalem, üçgen, sekizgen
+  - status-max-count = 6
+- **R14-K06 Katılım ve devamsızlık gösterimi**: Öğrencinin durumu önce sayı olarak yazılsın (ör. 'Devamsızlık: 3 ders, sınır 4'), altında ince doğrusal bir çubuk dursun; halka ve kadran kullanılmasın. Sınır, çubuğa dik kısa bir çizgiyle gösterilsin. Arka planda en çok üç aralık olsun (güvenli, sınıra yakın, sınır aşıldı) ve aralıklar tek tonun yoğunluklarıyla boyansın; devamsızlıkta az olan iyi olduğu için koyu aralık sınır tarafında dursun. Çubuk köşeli ve kenarlıksız olsun. Bilgi aralık renginde değil sayı, durum rozeti ve sınır çizgisinde taşınsın.
+  - bullet-bar-thickness = kabın yaklaşık 1/3'ü
+  - bullet-range-count = 3
+  - bullet-range-fills = #9A9FA6, #BDC1C8, #E2E5EA
+  - bullet-bar-fill = #1B315B
+  - bullet-threshold-marker = çubuğa dik kısa çizgi, yazı renginde
+  - bullet-bar-radius = 0
+- **R14-K07 Panel grafikleri ve renk sırası**: Panelde grafik az ve sade olsun: tek seri çubuklar lacivert, ızgara çizgileri açık gri, değer çubuğun ucunda doğrudan yazılsın. Çok seri gerekirse en çok üç renk, her zaman aynı sırayla kullanılsın. Yoğunluk gösterimi (ör. oturumlara göre katılım ısı haritası) lacivertin açıktan koyuya basamaklarıyla yapılsın, koyu yüksek değer demek. Gradyan dolgu yok, çubuk uçları köşeli. Grafikte durum rengi gerekirse rozetlerin koyu tonları kullanılsın.
+  - chart-series-1 = #2C4678
+  - chart-sequential = lacivert basamaklar, koyu = büyük değer
+  - chart-gradient = kullanılmaz
+  - chart-mark-contrast = zemine karşı en az 3:1
+  - chart-bar-radius = 0
+- **R14-K08 Boş durumlar**: Hiçbir alan tamamen boş kalmasın. Boş durum: tek çizgi simge (illüstrasyon yok), olumlu kısa başlık, bir cümle açıklama, tek ana eylem. Tablo boşsa boş durum tabloyu ve başlıklarını tümüyle değiştirsin. Filtre sonucu boşsa bunu söyleyip filtreyi temizleme yolu verilsin. Yükleme sürerken 'kayıt yok' denmesin. Dar alanlarda yalnız metin.
+  - empty-courses = Başlık: 'Dersleriniz burada görünecek'; gövde: 'Ders ekledikten sonra yoklama başlatabilirsiniz.'; eylem: 'Ders ekle'
+  - empty-roster = Başlık: 'Öğrenci listesi burada görünecek'; gövde: 'AKSIS'ten aldığınız Excel dosyasını yükleyin.'; eylem: 'Listeyi yükle'
+  - empty-filtered = 'Bu filtrelere uyan kayıt yok.'; eylem: 'Filtreleri temizle'
+  - empty-image = yok ya da dekoratif tek çizgi simge, alt=''
+- **R14-K09 Doğrulama ve hata mesajları**: Panel formlarında doğrulama gönderimde yapılsın, alandan çıkınca değil. Hata varsa sayfanın üstünde hata özeti çıksın, odak ona taşınsın, her madde ilgili alana bağlansın; aynı mesaj alanın altında da yazsın; girilen değer silinmesin; sayfa başlığının başına 'Hata: ' eklensin. Mesaj kırmızı yazı ve hata simgesiyle, ne olduğunu ve ne yapılacağını söylesin; suçlayan sözcük ve teknik kod kullanılmasın. Yazarken doğrulama yalnız hata olasılığı yüksek yerlerde: 6 haneli kod tamamlandığında ve dosya yüklendiğinde.
+  - title-prefix = Hata: 
+  - örnek-kod-eksik = Kod 6 rakamdan oluşmalı. E-postanıza gelen kodu girin.
+  - örnek-kod-süresi = Bu kodun süresi doldu. Yeni kod isteyin.
+  - örnek-dosya = Bu dosya okunamadı. AKSIS'ten indirdiğiniz Excel dosyasını (.xlsx) seçin.
+  - kaçınılacak-sözcükler = geçersiz, hatalı, yanlış, 'Bir hata oluştu' (açıklamasız)
+- **R14-K10 Çevrimdışı ve gönderim durumu**: Bağlantı kesilince ekranın üstünde sakin, kapatılamayan bir bilgi bandı çıksın ve verinin nerede beklediğini söylesin. Her yoklama makbuzunda simge ve yazıyla gönderim durumu görünsün: 'Gönderilmeyi bekliyor' (saat simgesi, nötr) ve sonra 'Gönderildi' ile saat (onay simgesi, başarı). Bağlantı dönünce kısa bir başarı bildirimi gösterilsin. Çevrimdışı durum kırmızı ile gösterilmesin; hata ve çevrimdışı bildirimleri kendiliğinden kapanmasın, başarı bildirimleri 5 saniyede kapanabilir.
+  - offline-banner = İnternet bağlantısı yok. Yoklamanız telefonda kayıtlı, bağlantı gelince gönderilecek.
+  - receipt-pending = Gönderilmeyi bekliyor
+  - receipt-sent = Gönderildi, 14:05
+  - reconnect-toast = Bağlantı geri geldi. Bekleyen yoklamalar gönderildi.
+  - toast-auto-dismiss = 5 s, yalnız başarı
+  - inline-notification-max-lines = 2
+- **R14-K11 Form alanları**: Alanlar dış çizgili olsun: dört kenarı kapalı, içi beyaz, köşeli. Etiket alanın üstünde ve hep görünür; yer tutucu metin etiketin yerine kullanılmasın; yardım metni etiketin altında, hata metni alanın altında. Kenar çizgisi zemine karşı en az 3:1, odakta belirgin lacivert halka. Alt çizgili ve gri dolgulu alan kullanılmasın. Sayı alanları type=text ve inputmode=numeric olsun. Gönder butonu devre dışı bırakılmasın; çift gönderim arayüzde ve sunucuda engellensin.
+  - field-style = outlined, içi #FFFFFF, köşe yarıçapı tasarım sisteminin köşeli değeri
+  - field-border-contrast = en az 3:1
+  - label-position = alanın üstünde, kalıcı
+  - number-input = <input type="text" inputmode="numeric" pattern="[0-9]*">
+  - double-submit-guard = istemcide ilk tıklamadan sonra kilit, sunucuda tekrar koruması
+- **R14-K12 6 haneli e-posta kodu alanı**: Kod tek bir alanda alınsın. Panelde type=text, inputmode=numeric, autocomplete=one-time-code, pattern ile 6 rakam; telefonda autoComplete='one-time-code', textContentType='oneTimeCode', inputMode='numeric' ve maxLength=6. Bağlam menüsü gizlenmesin, yapıştırma çalışsın; yapıştırılan metinden boşluklar atılıp rakamlar alınsın. Alan büyük tablo rakamlarıyla ve geniş harf aralığıyla yazılsın; altı kutu görünümü istenirse tek alanın arka planına çizilsin. 6 rakam tamamlanınca kod denetlensin, buton da görünür kalsın.
+  - web-otp-input = <input type="text" inputmode="numeric" autocomplete="one-time-code" pattern="\d{6}" required>
+  - rn-autoComplete = one-time-code
+  - rn-textContentType = oneTimeCode
+  - rn-inputMode = numeric
+  - rn-maxLength = 6
+  - rn-contextMenuHidden = false
+- **R14-K13 Hitap ve buton dili**: Metinlerde 'siz' kullanılsın, yönlendirmeler kısa '-in' biçiminde olsun: 'Yoklamanız alındı', 'Kodu e-postanıza gönderdik', 'Kodu girin'. Butonlar yaptığı işi söyleyen fiil ve nesneyle, cümle düzeninde yazılsın: 'Yoklamayı başlat', 'Kodu gönder', 'Listeyi yükle', 'Raporu indir'. Onay pencerelerinde tek başına 'Tamam', 'Evet', 'Hayır' yerine eylem adı kullanılsın ('Kaydı sil' ve 'Vazgeç'). Büyük harf dönüşümü kullanılmasın; zorunluysa lang='tr' ve toLocaleUpperCase('tr-TR').
+  - hitap = siz
+  - button-case = cümle düzeni (yalnız ilk harf büyük)
+  - button-form = fiil kökü ve nesne, ör. 'Kodu gönder'
+  - notification-action-length = 1 ya da 2 sözcük
+  - text-transform = none
+- **R14-K14 Sayı, tarih, saat ve sıralama biçimleri**: Tüm tarih, saat ve sayılar Intl tr-TR ile ve timeZone 'Europe/Istanbul' verilerek üretilsin; elle biçim kurulmasın. Tablolarda sabit genişlik için '06.10.2026' biçimi, metinde '6 Ekim 2026', gün adı gerekiyorsa '6 Ekim 2026 Salı' kullanılsın. Saatler '14:05'. Yakın zamanlar göreli yazılsın ('5 dakika önce', 'dün'). Öğrenci adları Intl.Collator('tr-TR') ile sıralansın. Sayıdan sonra ad tekil kalsın ('3 öğrenci').
+  - date-table = { day: '2-digit', month: '2-digit', year: 'numeric' } → 06.10.2026
+  - date-text = dateStyle 'long' → 6 Ekim 2026
+  - date-full = dateStyle 'full' → 6 Ekim 2026 Salı
+  - time = timeStyle 'short' → 14:05
+  - number = 1.234 ve 1.234.567,891
+  - percent = %85, ondalıklı %85,7
+  - relative-time = RelativeTimeFormat numeric 'auto' → dün, 5 dakika önce
+  - list = ListFormat conjunction → A, B ve C
+  - name-sort = Intl.Collator('tr-TR')
+  - timeZone = Europe/Istanbul
+
+Fact-checker issues:
+- R14-K03: Öneri birimi başlığa koyuyor ('Katılım (%)') ve gerekçede Ström'e dayanıyor; Ström ise birimi başlığa değil her sütundaki ilk veriye yazmayı söylüyor ('only include it with the first data point in each column'). Ayrıca aynı önerideki percent-format değeri (Intl percent stili) her hücreye '%85' gibi işaret koyar, bu da 'birim bir kez' kuralıyla çelişir. Başlıkta birim seçilirse hücrelerde yüzde stili değil yalın sayı kullanılmalı ve bu seçim Ström'e değil ekibe ait olarak yazılmalı.
+- R14-K05: 'Carbon renklerini olduğu gibi almak' seçeneğinin gerekçesindeki 'yeşil 4.40:1 civarında' değeri veri görselleştirme paletindeki Green 60'a ait; Carbon durum göstergesinin başarı jetonu Green 50 (#24a148) ve #EEF0F4 üzerinde 2.94:1, yani 3:1'in de altında. Blue 70 (#0043ce) ise 6.83:1 ile geçiyor; gerekçe 'yedi durum jetonundan altısı 4.5:1'in altında, sarı, turuncu ve başarı yeşili 3:1'in de altında' diye düzeltilmeli.
+- R14-K12: 'Altı ayrı kutu' seçeneğinin gerekçesi 'web.dev tek input önerir' diyor; web.dev yazısı rakam başına kutuları hiç tartışmıyor, yalnız bir <input> öğesi kullanmayı öneriyor (örnek tek alan). Ayrı kutuların yapıştırma, otomatik doldurma ve ekran okuyucu sorunları bu dosyada hiçbir kaynağa bağlı değil; kaynak bulunmalı ya da ekibin kendi gerekçesi olarak yazılmalı.
+
+Load-bearing findings:
+- R14-F01 Carbon tablo satır boyları: Carbon veri tablosu beş satır boyu tanımlar; varsayılan ve en sık kullanılan boy 40 px'tir.
+- R14-F04 Zebra şerit deneyi: Geniş örneklemli bir çevrimiçi deneyde tek renkli zebra şeridi, düz ve çizgili tablolara göre doğruluğu ya artırdı ya da eşit tuttu.
+- R14-F05 Tablo tipografisi: hizalama ve tablo rakamı: Tablo tasarımı üzerine yaygın bir rehber sayıları sağa, metni sola, başlığı verisiyle aynı hizaya almayı ve eş genişlikli tablo rakamı (tabular figures) kullanmayı önerir; zebra şeride karşıdır.
+- R14-F06 Carbon durum göstergesi kuralları: Carbon durum göstergesinde rengi tek başına yeterli saymaz; simge, şekil, renk ve yazıdan en az üçünü ister ve 3:1 kontrast koyar.
+- R14-F08 Hazır durum renkleri kırık beyazda yetmiyor: Carbon'un durum renkleri aday kırık beyaz zeminde metin için 4.5:1'in altında kalıyor; sarı ve turuncu 3:1'e de ulaşmıyor; koyulaştırılmış tonlarla tüm durumlar 4.5:1'i geçiyor. [kısmen: Dört hex değer Carbon veri görselleştirme uyarı paletinde aynen var (Red 60 #da1e28, Orange 40 #ff832b, Yellow 30 #f1c21b, Green 60 #198038) ve color.js ile 14 kontrastın tümü aynı çıktı (4.39, 4.40, 1.48, 2.16; 8.16, 4.95, 4.74, 5.33, 5.29; 8.05, 4.94, 4.66, 5.23, 5.23). Ancak 'Carbon'un durum renkleri' genellemesi fazla: durum göstergesi sayfası başarı için Green 60 değil Green 50 jetonunu verir ve Blue 70, Gray 60, Purple 60'ı da listeler. @carbon/colors değerleriyle #EEF0F4 üzerinde: Green 50 #24a148 2.94:1 (yalnız sarı ve turuncu değil, başarı yeşili de 3:1'in altında), Gray 60 #6f6f6f 4.40:1, Purple 60 #8a3ffc 4.39:1, Blue 70 #0043ce 6.83:1 (4.5:1'i geçiyor). Doğru değer: yedi jetondan altısı 4.5:1'in, üçü 3:1'in altında. 'Koyulaştırılmış ton gerekir' sonucu değişmiyor, güçleniyor.]
+- R14-F09 Renk körlüğünde uyarı ile tehlike karışıyor: Döteranopi benzetiminde uyarı turuncusu ile tehlike kırmızısı neredeyse aynı görünüyor; başarı yeşili ile tehlike kırmızısı da yakınlaşıyor.
+- R14-F10 Bullet graph: tek değeri eşikle gösteren çubuk: Stephen Few'un bullet graph tanımı tek bir değeri hedef ve nitel aralıklarla birlikte doğrusal bir çubukta gösterir ve doğrusal okumayı yuvarlak göstergelerden verimli sayar.
+- R14-F15 GOV.UK: gönderimde doğrulama ve hata özeti: GOV.UK alandan çıkınca değil, gönderimde doğrulamayı; sayfanın üstünde odaklanan bir hata özetini ve alanın yanında hata mesajını öngörür.
+- R14-F16 Çevrimdışı arayüz: veri nerede bekliyor: web.dev çevrimdışı rehberi bağlantı durumunun hemen ve sakin bir dille bildirilmesini, verinin eşitlenip eşitlenmediğinin gösterilmesini ve durumun yalnız renkle anlatılmamasını önerir. [kısmen: Kurtuldu ve Steiner, 10 Kasım 2016. Kaynakta var: örnek metin aynen; sorunun sizde mi ('The network is down') kullanıcıda mı ('You are disconnected') olduğunu söyleme; 'Clearly inform the user when a change in state occurs as soon as possible.'; 'Tell the user what state their data is in. For example, you can show whether the app has synced.'; yalnız renk cümlesi; simgelerin yanında anlamlı yazı; ekranın altında kısa bildirim; bağlantı düzelince arka plan güncellemesini toast ile bildirme. Kanıttaki 'kullanıcı bağlantı gerektiren bir işe girişmeden bildirilmeli' ayrıntısı kaynakta bulunamadı; kaynak yalnız 'as soon as possible' diyor. 'Sakin dil' açık bir kural değil, 'Not to worry!' örneğinden çıkarım.]
+- R14-F19 Tek kullanımlık kod için tek alan: web.dev tek kullanımlık kod için birden çok kutu yerine tek bir input alanı ve one-time-code otomatik doldurmasını önerir; type=number kullanılmamalıdır. [kısmen: Eiji Kitamura, son güncelleme 2020-12-09. 'Using a form with an <input> element is the most important best practice you can follow because it works in all browsers.' cümlesi, type='text', inputmode='numeric', autocomplete='one-time-code', 6 haneli pattern, required ve type=number uyarısı ('may remove preceding zeros') aynen var; e-posta kodundan söz edilmiyor. Ancak 'birden çok kutu yerine tek alan' karşılaştırması kaynakta yok: yazı rakam başına kutuları hiç tartışmıyor; örnek tek input kullanıyor ve her tarayıcıda çalıştığı için bir <input> öğesi kullanmayı öneriyor.]
+- R14-F21 Kamu hizmetinde 'siz' hitabı: e-Devlet Kapısı kullanıcıya tutarlı biçimde 'siz' diye hitap ediyor ve cümle içi yönlendirmelerde kısa '-in' emir biçimini kullanıyor.
+- R14-F23 Intl tr-TR çıktıları ve Türkçe sıralama: Tarayıcı ve Node'daki Intl API, tr-TR yerel ayarıyla tarih, saat, sayı ve yüzdeyi Türkçe biçimde verir; Intl.Collator('tr-TR') Türkçe harf sırasını doğru uygular, yerelsiz toUpperCase ise 'i' harfini yanlış büyütür.

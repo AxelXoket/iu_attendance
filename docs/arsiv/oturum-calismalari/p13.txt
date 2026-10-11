@@ -1,0 +1,535 @@
+===== D11-P20
+{
+"id": "D11-P20",
+"title": "Eklenti ve modül dış yüzü",
+"files": [
+"apps/server/src/modules/projeksiyon/eklenti.ts",
+"apps/server/src/modules/projeksiyon/index.ts",
+"apps/server/test/features/projeksiyon/eklenti.feature"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [],
+"exports": [
+"projeksiyonEklentisi"
+],
+"needs": [
+"D04.oturumKapandiDinleyicisiKaydet",
+"D06.ogeTuruKaydet",
+"D12.saklamaIsleyicisiKaydet",
+"D13.rotalariKaydet"
+],
+"tests": [
+"Aşama 2 bayrağı kapalıyken uçlar kapalı",
+"Eklenti kaydı veritabanına dokunmaz, zamanlayıcı yalnız API sürecinde"
+],
+"depends_on": [
+"D11-P08",
+"D11-P10",
+"D11-P11",
+"D11-P12",
+"D11-P13",
+"D11-P14",
+"D11-P15",
+"D11-P16",
+"D11-P17",
+"D11-P18",
+"D11-P19"
+],
+"size": "M",
+"notes": "Eklenti yedi rotayı, gosterim_kaydi öğesini, oturum kapanış dinleyicisini ve saklama işleyicisini veritabanına dokunmadan kaydedip adres sınırı ve eşli kullanım temizlik zamanlayıcısını yalnız api sürecinde kurar, index.ts modülün dış yüzünü (işlerin çağıracağı iç işlevler dahil) toplar. Yalnız kod paketlerine bağlıdır; uçlar arası senaryolar bu paketi beklemeden ayrı paketlerde koşar. Aşama 2 bayrağı ve boş sorgu günlüğüyle kayıt testleriyle denetlenir."
+}
+===== D15-P10
+{
+"id": "D15-P10",
+"title": "Compose, Caddy ve xprem yapılandırması",
+"files": [
+"compose.yaml",
+"compose.gelistirme.yaml",
+"docker/caddy/Caddyfile",
+"docker/xprem/surum.env",
+"docker/xprem/xprem.env.ornek",
+"docker/xprem/cosign.pub",
+"apps/server/src/infra/izleme/compose-denetimi.test.ts"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [],
+"exports": [],
+"needs": [],
+"tests": [
+"Compose dosyası kuralları",
+"Caddy yolları ve başlıkları"
+],
+"depends_on": [
+"D15-P01",
+"D15-P03"
+],
+"size": "L",
+"notes": "Üretim ve geliştirme Compose servisleri sır matrisi, ağ adresleri ve kaynak sınırlarıyla, Caddyfile yol, başlık, gövde sınırı ve güncelleme eşleyicisiyle, xprem sürüm ve imza dosyalarıyla yazılır; compose-denetimi.test.ts docker compose config çıktısını SIR_MATRISI ve servis kurallarıyla karşılaştırır ve sahte API ile sahte xprem arkasında Caddy yollarını ve başlıklarını sınar."
+}
+===== D15-P15
+{
+"id": "D15-P15",
+"title": "Kalp atışı ve dış erişim denetimi",
+"files": [
+"apps/server/src/infra/izleme/kalp-atisi.ts",
+"apps/server/src/jobs/isletim/isletim-kalp-atisi.ts",
+"apps/server/src/infra/izleme/kalp-atisi.test.ts"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [
+"isletim_kalp_atisi",
+"dis_erisim_denetimi"
+],
+"exports": [],
+"needs": [
+"D12.Islem",
+"D12.veritabaniKur",
+"D12.testVeritabaniHazirla",
+"D14.IsSagligi",
+"D04.simdi"
+],
+"tests": [
+"Kalp atışı adres seçimi"
+],
+"depends_on": [
+"D15-P03",
+"D15-P04",
+"D15-P06"
+],
+"size": "M",
+"notes": "kalp-atisi.ts açık KRITIK uyarıya ve isSagligi'ndaki son başarılı isletim_denetimi anına göre normal ya da sorun adresine tek gövdesiz GET atar, isletim_uyarilari okunamazsa sorun adresini seçer; iş dosyası bag'den isSagligi, saat ve ayarları alır. Dış erişim denetiminin hizmet ayarı burada belgelenir. Spec dosya listesine eklenen kalp-atisi.test.ts D12 test veritabanı, sahte HTTP sunucusu ve sahte isSagligi ile adres seçiminin bütün yollarını ve uretim ortamında kalp_atisi sırrı yokken işçinin ayarlariYukle'sinin ISLETIM_AYAR_GECERSIZ verdiğini denetler; uygulamayı beklemez."
+}
+===== D15-P16
+{
+"id": "D15-P16",
+"title": "Sertifika bitiş denetimi",
+"files": [
+"apps/server/src/infra/izleme/sertifika.ts",
+"apps/server/src/infra/izleme/le-deneme-kokleri.pem",
+"apps/server/src/jobs/isletim/sertifika-bitis-denetimi.ts",
+"apps/server/src/infra/izleme/sertifika.test.ts"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [
+"sertifika_bitis_denetimi"
+],
+"exports": [],
+"needs": [
+"D12.Islem",
+"D12.veritabaniKur",
+"D12.testVeritabaniHazirla",
+"D04.simdi"
+],
+"tests": [
+"Sertifika bitiş eşikleri"
+],
+"depends_on": [
+"D15-P03",
+"D15-P04",
+"D15-P06"
+],
+"size": "M",
+"notes": "sertifika.ts Caddy'nin sunduğu TLS zincirini acme ve elle türü eşikleriyle ve isteğe bağlı kök dosyasıyla sınar, iş uyariAc ile isletim.sertifika_bitiyor ya da sertifika_gecersiz açar ve yenilenmiş sertifikada kapatır, Caddy düşükken denetim girdisi uyarısı açar. Spec dosya listesine eklenen sertifika.test.ts testte üretilen kök ve sertifikalı yerel TLS sunucusuyla 15, 13, 6 ve 29 gün sınırlarını, adı tutmayan sertifikayı, kök dosyası verilmeyince sistem kökleriyle sonucu ve uretim ortamında ayarın reddini D12 test veritabanında denetler."
+}
+===== D02-P20
+{
+"id": "D02-P20",
+"title": "Senaryo adımları",
+"files": [
+"apps/server/test/steps/dersler/ders-adimlari.ts",
+"apps/server/test/steps/dersler/oturum-adimlari.ts",
+"apps/server/test/steps/dersler/yonetim-adimlari.ts",
+"apps/server/test/steps/dersler/sozlesme-adimlari.ts"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [],
+"exports": [],
+"needs": [
+"D15.TestDunyasi",
+"D13.TUM_ROTALAR",
+"D09.denetimeYaz",
+"D14.isiCalistirVeBekle"
+],
+"tests": [
+"Senaryo adımları tsc ile derlenir; Cucumber kuru koşusu (dry-run) adımlarda belirsiz eşleşme bulmaz"
+],
+"depends_on": [
+"D02-P01",
+"D02-P19",
+"D02-P05",
+"D02-P08",
+"D02-P15"
+],
+"size": "L",
+"notes": "Ders, şube, program, önizleme, telafi, iptal, yapıldı ve kafa sayısı adımları; birim, dönem, takvim, bağ, sahte üretim dinleyicisi ve sahte kilit adımı kaydı, denemeDersiniKur çağrısı, hesap silme ve iş çalıştırma adımları; rota tablosu, hata kataloğu ve denetim olayı örneklerini D13.TUM_ROTALAR ve D09.denetimeYaz doğrulayıcısıyla karşılaştıran sözleşme adımları yazılır. Uçları test dünyasının istekGonder'i ile sözleşmedeki rota tanımlarından çağırır; bütün senaryo paketleri bu adımları paylaştığı için bileşim kökünden önce tek yerde durur ve senaryo paketleri birbirini beklemez."
+}
+===== D03-P13
+{
+"id": "D03-P13",
+"title": "Liste kurucusu, ortak adımlar ve yükleme senaryoları",
+"files": [
+"apps/server/test/support/kurucular/listeler.ts",
+"apps/server/test/steps/listeler/liste-adimlari.ts",
+"apps/server/test/features/listeler/liste-yukleme.feature"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [],
+"exports": [],
+"needs": [
+"D15.TestDunyasi",
+"D15.kurucuTanimla"
+],
+"tests": [
+"İlk yükleme önizlenir ve uygulanır",
+"Aynı dosya ikinci kez uygulanırsa yazma olmaz",
+"Önizlemeden sonra fark değişirse uygula reddedilir",
+"Dosyada olmayan öğrenci pasif olur, silinmez",
+"Boş şubeye başka şubenin dosyası onaysız uygulanmaz",
+"Hatalı satırlı dosya uygulanamaz",
+"Sayı olarak saklanmış numara işaretlenir",
+"Aynı numara iki kez",
+"Şube sütunlu dosyada yalnız seçilen şubenin satırları girer",
+"Öğrenci aynı dersin başka şubesine geçer",
+"Yeni yükleme muafı ve geç kayıt seçimini korur",
+"Ad farkı eşleştirme kuralına göre ayrılır",
+"Hata önceliği",
+"Numara ve ad loga, adres satırına ve denetime düşmez"
+],
+"depends_on": [
+"D03-P10",
+"D03-P12"
+],
+"size": "L",
+"notes": "Liste kurucusu (listeleri servisle kurar, kurucuTanimla ile kaydolur; D07, D08 ve D09 senaryoları da kullanır), uç, işlev ve satır durumu adımları ve bütün D03 senaryolarına bağlanan numara ve ad sızıntısı kancası yazılır. Yükleme senaryoları modül dünyasında (listeler eklentisi ve D12 test veritabanı, bileşim kökü yok) koşar; ESLESTIRME dinleyicisi adımın kaydettiği kaydedici dinleyicidir. Önizleme, eş güçlü uygulama, onaylar, şube değişimi, ad farkı ve hata önceliği yeşil olur."
+}
+===== D07-P17
+{
+"id": "D07-P17",
+"title": "Android iptal listesi işi",
+"files": [
+"apps/server/src/modules/dogrulama/kuyruklar.ts",
+"apps/server/src/modules/dogrulama/iptal-listesi.ts",
+"apps/server/src/jobs/dogrulama/android-iptal-listesi-cek.ts",
+"apps/server/test/features/dogrulama/iptal-listesi.feature"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [
+"android_iptal_listesi_cek"
+],
+"exports": [],
+"needs": [
+"D14.KuyrukTanimi",
+"D14.isiCalistirVeBekle",
+"D15.ayarlar",
+"D15.uyariAc",
+"D01.cihazDogrulamaSonucunuYaz",
+"D09.denetimeYaz",
+"D04.simdi",
+"D15.TestDunyasi"
+],
+"tests": [
+"İptal listesi ileriye etkilidir",
+"İptal listesi çekilemezse",
+"İptal listesi işi iki kez"
+],
+"depends_on": [
+"D07-P02",
+"D07-P03",
+"D07-P06",
+"D07-P07",
+"D07-P10",
+"D07-P11"
+],
+"size": "M",
+"notes": "Üç işin KuyrukTanimi'lerini kuyruklar.ts'te, iptal listesi çekimini, seri numarası normalleştirmesiyle kanıt yeniden denetimini ve D01'e sonucu kopyalamayı iptal-listesi.ts'te, işin işleyicisini android-iptal-listesi-cek.ts'te yazar. iptal-listesi.feature ileriye etkili iptali (önce gelen kaydın etiketi aynı kalır, sonra gelen Cihaz doğrulanmadı olur), 7 günlük eski liste uyarısını, 20 MiB sınırını ve işin D14'ün aynı veriyle iki kez adımıyla değişmediğini sınar. Eklenti ve başka modül bu paketi beklemez."
+}
+===== D14-P12
+{
+"id": "D14-P12",
+"title": "Ortak iş adımları, iş gönderme ve çalıştırma senaryoları",
+"files": [
+"apps/server/test/steps/is-kuyrugu/is-adimlari.ts",
+"apps/server/test/features/is-kuyrugu/is-gonderme.feature",
+"apps/server/test/features/is-kuyrugu/is-calistirma.feature"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [],
+"exports": [],
+"needs": [
+"D15.TestDunyasi",
+"D13.TUM_HATALAR",
+"D13.TUM_ROTALAR",
+"D13.apiKur",
+"D13.DenemeSecenekleri",
+"D12.islem",
+"D04.simdi"
+],
+"tests": [
+"İşlem geri alınınca kuyrukta iş kalmaz",
+"Tekillik anahtarı ikinci işi açmaz",
+"İş verisi kuyruk şemasıyla doğrulanır",
+"Gönderilen işin oluşturma anı TestClock saatidir",
+"Hata kataloğu D13 biçimine uyar",
+"Hata veren iş yeniden denenir, denemeler bitince ölü kuyruğa düşer",
+"Süresi aşan iş bakımda yeniden denemeye geçer",
+"Tamamlanan işin çıktısı isSagligi'nda görünür"
+],
+"depends_on": [
+"D14-P01",
+"D14-P06",
+"D14-P07",
+"D14-P09"
+],
+"size": "L",
+"notes": "is-adimlari.ts öbür modüllerin de kullandığı ortak iş adımlarını ('aynı veriyle iki kez çalışırsa', 'kuyrukta N iş bekler', 'ölü kuyruğa düşer') ve ortak test işçisini isKuyruguKur ile kurup her senaryodan önce isKuyrugunuBosalt çağıran kancayı taşır. is-gonderme.feature işlem bağını, tekilliği, veri doğrulamasını, TestClock oluşturma anını ve D13 senaryo düzeneğinin deneme rotasıyla hata kataloğunu; is-calistirma.feature yeniden denemeyi ve ölü kuyruğu, bakımda süre aşımını ve çıktının isSagligi'nda görünmesini zemin denetimiyle sınar. Koruyucu bozmalar burada denenir: havuz kullanımı 'İşlem geri alınınca', IS_KUYRUGU_KURULMADI http null 'Hata kataloğu'. Uygulamanın tamamını beklemez."
+}
+===== D15-P12
+{
+"id": "D15-P12",
+"title": "Yayın bilgisi üretimi",
+"files": [
+"apps/server/src/infra/ayarlar/yayin-bilgisi.kaynak.json",
+"apps/server/src/infra/ayarlar/yayin-bilgisi-uret.ts",
+"apps/server/src/infra/ayarlar/yayin-bilgisi-uret.test.ts"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [],
+"exports": [],
+"needs": [
+"D13.yayinBilgisiSemasi"
+],
+"tests": [
+"Yayın bilgisi üretimi"
+],
+"depends_on": [
+"D15-P01"
+],
+"size": "M",
+"notes": "yayin-bilgisi-uret kaynağa bicim 1, kaynağa dokunan commit sayısından sira ve son commit anından olusturmaAni ekler, en düşük ve en son sürüm sırasını ve önceki sunucu/v* etiketine göre hatalı sürüm başlangıcını denetler; yalnız D13 yayinBilgisiSemasi'na dayandığından sunucu imajından ayrıldı ve uygulamaKur'u beklemez. yayin-bilgisi-uret.test.ts çıktının yayinBilgisiSemasi'na uyduğunu, aynı commit'te aynı baytları verdiğini ve kırmızı ile yeşil sınırlarını denetler."
+}
+===== D08-P11
+{
+"id": "D08-P11",
+"title": "Saklanan durumun yazımı ve seviye geçmişi",
+"files": [
+"apps/server/src/modules/devam/yazim.ts",
+"apps/server/test/features/devam/seviye.feature",
+"apps/server/test/steps/devam/sinir.steps.ts"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [],
+"exports": [],
+"needs": [
+"D06.ogrenciDurumuDegisti",
+"D15.TestDunyasi"
+],
+"tests": [
+"Görevli ve Belgeli saatleri T'yi değiştirmez",
+"Beklemede kayıt",
+"İncelemede onayı seviyeyi düşürür",
+"Telafi eklenince seviye düşmez",
+"Sonraki oturum değişince 2. seviye yenilenir",
+"Kendi beyanı reddi",
+"Kilitten sonra gelen kayıt sayılmaz",
+"Kural için SQL now() yok"
+],
+"depends_on": [
+"D08-P05",
+"D08-P06",
+"D08-P09"
+],
+"size": "M",
+"notes": "Hesap sonucunu saklananla karşılaştırıp değişen satırları kanonik öğrenci sırasıyla yazan, gösterilen seviyeyi geri gitmez kuralıyla tutan, geçmişe etken ve neden ekleyen, durum sürümünü D06'dan alan yazım kurulur; yazım hesap sonucunu çekirdek tipleriyle alır, ogrenciDevamDurumu okuması D08-P08'dedir. seviye.feature sinir.steps.ts adımlarıyla (hesap ve yazım doğrudan çağrılır, iş kuyruğu gerekmez) Beklemede, İncelemede, telafi, sonraki oturum, kendi beyanı reddi, kilitten sonraki kayıt ve sahte saat davranışlarını denetler."
+}
+===== D09-P13
+{
+"id": "D09-P13",
+"title": "Gece inceleme sıralaması",
+"files": [
+"apps/server/src/modules/duzeltmeler/kuyruklar.ts",
+"apps/server/src/jobs/duzeltmeler/index.ts",
+"apps/server/src/jobs/duzeltmeler/gece-inceleme-siralamasi.ts",
+"apps/server/test/steps/duzeltmeler/gece-isi-adimlari.ts",
+"apps/server/test/features/duzeltmeler/gece-inceleme-siralamasi.feature"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [
+"gece_inceleme_siralamasi"
+],
+"exports": [],
+"needs": [
+"D02.dersGetir",
+"D04.istanbulTarihi",
+"D05.sayilanKayitlar",
+"D07.oturumIsaretleri",
+"D08.sonucuDegistirebilirMi",
+"D12.islem",
+"D14.isTanimla",
+"D14.KuyrukTanimi",
+"D14.isiCalistirVeBekle",
+"D15.TestDunyasi"
+],
+"tests": [
+"Gece sıralaması kritikleri önce, sonra en eskileri koyar",
+"Gece işi aynı veriyle iki kez çalışınca partiyi değiştirmez",
+"Gece işinin günü tetikleme anından gelir",
+"Bugün görünümü işten önce dünkü partiyi gösterir",
+"Gece işi hiçbir kararı, bildirimi ve düzeltmeyi değiştirmez",
+"Gece işi süre bütçesi",
+"Kafa sayısı gelmemiş oturumun kayıtları görünmez"
+],
+"depends_on": [
+"D09-P01",
+"D09-P03",
+"D09-P04",
+"D09-P07",
+"D09-P08",
+"D09-P10",
+"D09-P12"
+],
+"size": "L",
+"notes": "gece_inceleme_siralamasi 05:50 İstanbul tetiklemesinin gününde her hocaya sira 0 başlık satırlı, kritikleri önde parti yazar, 30 günden eski partiyi siler ve hiçbir kararı değiştirmez; parti boyunu modül index.ts'inden okur. Hiçbir paket bunu beklemez. Bugün görünümü ve kafa sayısı senaryoları için onay listelerini, bildirim listesini ve karar ucunu bekler."
+}
+===== D11-P21
+{
+"id": "D11-P21",
+"title": "Kürsü kurucusu ve dönen kod senaryoları",
+"files": [
+"apps/server/test/support/kurucular/projeksiyon.ts",
+"apps/server/test/features/projeksiyon/projeksiyon-kodlari.feature"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [],
+"exports": [
+"kursuEslestir"
+],
+"needs": [
+"D15.kurucuTanimla"
+],
+"tests": [
+"Onaylanan tarayıcı dönen kodları alır, öbürü alamaz",
+"Aynı tarayıcının eşli kullanımı uyarı açar",
+"Sunucu 30 saniyeden ileri ve pencere dışında kod vermez",
+"Saat eşitlemesi bozukken projeksiyona kod verilmez",
+"Kürsü kurucusu uçla aynı bağlantıyı kurar"
+],
+"depends_on": [
+"D11-P15",
+"D11-P16",
+"D11-P17"
+],
+"size": "M",
+"notes": "kursuEslestir kurucusu tarayıcıyı, eşleştirme kodunu ve onayı kurusu.ts ve onay.ts işlevleriyle tek işlemde kurar. Onaylanmış kürsünün GET kodlar davranışı (öbür tarayıcının kod alamaması, eşli kullanım uyarısı, 30 saniye ve pencere sınırı, saat eşitlemesi bozukken boş liste) ve kurucunun uçla aynı satırları kurması senaryolaştırılır; her senaryonun kontrol adımı ve kurucusuz tarayıcının ESLESME_BEKLIYOR görmesiyle denetlenir."
+}
+===== D12-P11
+{
+"id": "D12-P11",
+"title": "Göç denetimi CI adımı",
+"files": [
+"apps/server/src/infra/veritabani/goc/denetim.ts",
+"apps/server/src/infra/veritabani/goc/tablo-haritasi.ts",
+"apps/server/src/infra/veritabani/goc/squawk.toml",
+"apps/server/src/infra/veritabani/goc/denetim.test.ts"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [],
+"exports": [],
+"needs": [
+"D13.UygulamaHatasi"
+],
+"tests": [
+"Göç denetimi: klasör adı ve belirteç",
+"Göç denetimi: zaman sırası"
+],
+"depends_on": [
+"D12-P01",
+"D12-P04",
+"D12-P09"
+],
+"size": "M",
+"notes": "CI göç denetimi (klasör adı ve belirteç, zaman sırası, göç çalıştırıcısıyla kurulan katalog farkıyla modül sınırı, satır yazan göç, zaman aşımı satırları, drizzle.config.ts ile drizzle-kit generate ve check), canonical_tables'tan üretilen tablo haritası ve Squawk ayarı yazılır; ad ve sıra kuralları denetim.test.ts ile, katalog kuralları P15'in senaryolarıyla denetlenir."
+}
+===== D12-P13
+{
+"id": "D12-P13",
+"title": "Yedek ortak katmanı, pgBackRest ve gecelik döküm",
+"files": [
+"docker/postgres/pgbackrest.conf",
+"docker/postgres/yedek/ortak.sh",
+"docker/postgres/yedek/pgbackrest.sh",
+"docker/postgres/yedek/gecelik-dokum.sh",
+"docker/postgres/yedek/saklama-secimi.sh",
+"docker/postgres/yedek/yedek.env.ornek",
+"apps/server/test/features/veritabani/yedek-betikleri.feature",
+"apps/server/test/steps/veritabani/yedek.adimlari.ts"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [
+"gecelik_pg_dump",
+"xprem_birimi_yedegi",
+"pgbackrest_tam_yedek",
+"pgbackrest_fark_yedek",
+"pgbackrest_dogrulama"
+],
+"exports": [],
+"needs": [
+"D15.TestDunyasi"
+],
+"tests": [
+"Yedek durum dosyası",
+"Yedek saklama sınırı",
+"Geri yükleme sırasında makine işi atlanır"
+],
+"depends_on": [
+"D12-P03",
+"D12-P04"
+],
+"size": "L",
+"notes": "Ortak kilit, geri yükleme işareti ve yarım kalmayan durum dosyası, pgBackRest tam, fark ve doğrulama komutları, gecelik pg_dump ile xprem birimi yedeği ve 34 günlük saklama seçimi yazılır; durum dosyası şeması (sözleşmedeki YedekIsDurumu), saklama sınırı ve geri yükleme sırasında atlama (kilit ve işaret ortak.sh ile tutulur) yedek-betikleri.feature ile denetlenir. Zamanlayıcılar P22'de, geri yükleme betiği P21'dedir."
+}
+===== D15-P08
+{
+"id": "D15-P08",
+"title": "Yayın, log arşivi ve anahtar döndürme betikleri",
+"files": [
+"docker/isletim/yayinla.sh",
+"docker/isletim/log-arsivi.sh",
+"docker/isletim/log-bul.sh",
+"docker/isletim/iu-yoklama-log-arsivi.service",
+"docker/isletim/iu-yoklama-log-arsivi.timer",
+"docker/isletim/cosign-sunucu.pub",
+"docker/isletim/anahtar.sh",
+"apps/server/src/infra/izleme/makine-betikleri.test.ts"
+],
+"tables": [],
+"endpoints": [],
+"jobs": [
+"gunluk_log_arsivi"
+],
+"exports": [],
+"needs": [],
+"tests": [
+"Yayın betiği imza tutmazsa hiçbir şey değiştirmez",
+"Yayın betiği her adımda güvenle durur ya da geri döner",
+"Ana makine zamanlayıcıları İstanbul saatiyle tetiklenir"
+],
+"depends_on": [
+"D15-P07"
+],
+"size": "L",
+"notes": "yayinla.sh imza, sürüm etiketi, İstanbul saati penceresi, yedek, göç ve servis sırasıyla geri dönüşlü yayını, log-arsivi.sh İstanbul gününe göre günlük arşivi, log-bul.sh arşiv aramasını, anahtar.sh iki adımlı döndürmeyi (süreçleri sırayla yeniden başlatıp kumeOzeti karşılaştırarak) ortak.sh üstünden yapar. makine-betikleri.test.ts sahte docker ve cosign ile imza tutmazsa hiçbir şeyin değişmediğini, her adım bozulunca geri dönüşü, bakim.json silinmesini, systemd-analyze ile zamanlayıcıların İstanbul saatini ve 'Anahtar döndürme iki adımda' testinin anahtar.sh çağrı sırası yarısını (hazirla, yeniden başlatma, özet denetimi, etkinleştir; özet tutmazsa yeni kid silinir) denetler. anahtar.sh bu test dosyasında sınandığından anahtar senaryolarından buraya alındı; Compose dosyasını beklemez, docker sahtedir."
+}

@@ -1,0 +1,352 @@
+{
+  "id": "D03",
+  "title": "Öğrenci listesi",
+  "decided": [
+    { "id": "D03-K01", "fact": "AKSİS ile otomatik bağlantı yok: sunucu AKSİS'ten liste çekmez, AKSİS'e de yazmaz; hoca AKSİS özetindeki değerleri AKSİS'e elle girer.", "anchor": "plan.html#tek-bakista", "quote": "Otomatik bağlantı yok; hoca \"AKSİS özeti\" ekranına bakıp değerleri AKSİS'e elle girer." },
+    { "id": "D03-K02", "fact": "Öğrenci listesini hoca yoklamadan önce, internet varken yükler; bu, yoklama gününün ilk adımıdır ve öğrencinin kaydından (ikinci adım) önce gelir.", "anchor": "plan.html#gun", "quote": "Hoca öğrenci listesini yükler; ders programını (her saatin teori/uygulama türüyle) ve yoklama süresini ayarlar." },
+    { "id": "D03-K03", "fact": "Öğrenci listesi yükleme, listeye ekleme ve listeden çıkarma web panelinin hoca işleri arasındadır; panel internet gerektirir.", "anchor": "plan.html#hoca", "quote": "Öğrenci listesi yükleme, listeye ekleme, listeden çıkarma." },
+    { "id": "D03-K04", "fact": "Öğrenci numarası metin olarak tutulur; 9 ya da 10 hanedir ve başı 0 olabilir.", "anchor": "plan.html#hoca-liste-yukleme", "quote": "Öğrenci numarası metin olarak tutulur (9 ya da 10 hane, başı 0 olabilir)." },
+    { "id": "D03-K05", "fact": "Dosya türü ilk baytlardan tanınır; Excel dosyaları (.xlsx ve .xls) doğrudan okunur.", "anchor": "plan.html#hoca-liste-yukleme", "quote": "Dosya türü ilk baytlardan tanınır; Excel (.xlsx, .xls) doğrudan okunur." },
+    { "id": "D03-K06", "fact": "Metin dosyasının (CSV) karakter kodlaması kendiliğinden tanınır.", "anchor": "plan.html#hoca-liste-yukleme", "quote": "Metin dosyasının karakter kodlaması kendiliğinden tanınır" },
+    { "id": "D03-K07", "fact": "Metin dosyasında ayırıcı virgül de noktalı virgül de olabilir.", "anchor": "plan.html#hoca-liste-yukleme", "quote": "ayırıcı virgül de noktalı virgül de olabilir." },
+    { "id": "D03-K08", "fact": "Kodlama tanıma sırası: önce BOM'a bakılır, BOM yoksa katı UTF-8 denenir, o da olmazsa windows-1254.", "anchor": "teknik.html#panel-excel", "quote": "Liste yüklemede metin dosyasının kodlaması: önce BOM'a bakılır, yoksa katı UTF-8, olmazsa windows-1254 denenir." },
+    { "id": "D03-K09", "fact": "Hücre değerleri metin olarak okunur; Excel'de sayı olarak saklanmış numara (baştaki 0 düşmüş olabilir) önizlemede işaretlenir.", "anchor": "plan.html#hoca-liste-yukleme", "quote": "Değerler metin olarak okunur; Excel'de sayı olarak saklanmış numara (başındaki 0 düşmüş olabilir) önizlemede işaretlenir." },
+    { "id": "D03-K10", "fact": "Başlık eşleştirmede dosyadaki başlık da aranan başlık adı da önce NFC'ye çevrilir, Türkçe kuralla küçültülür, sonra Türkçe harfler sadeleştirilir; böylece \"ÖĞRENCİ NO\" da \"OGRENCI NO\" da bulunur.", "anchor": "plan.html#hoca-liste-yukleme", "quote": "Başlık eşleştirmede iki taraf da önce NFC'ye çevrilir, Türkçe kuralla küçültülür, sonra Türkçe harfler sadeleştirilir (\"ÖĞRENCİ NO\" da \"OGRENCI NO\" da bulunur);" },
+    { "id": "D03-K11", "fact": "Türkçe harf sadeleştirmesi yalnız başlık satırına uygulanır; numara ve isim değerleri sadeleştirilmez.", "anchor": "plan.html#hoca-liste-yukleme", "quote": "sadeleştirme yalnız başlık satırında." },
+    { "id": "D03-K12", "fact": "Dosyadaki satır sırası saklanır.", "anchor": "plan.html#hoca-liste-yukleme", "quote": "Dosyadaki satır sırası saklanır." },
+    { "id": "D03-K13", "fact": "Değişiklikler uygulanmadan önce hocaya gösterilir (önizleme); listeden çıkarılan öğrenci silinmez, pasif olur; amaç yanlış dosyanın kayıt kaybettirmemesi.", "anchor": "plan.html#hoca-liste-yukleme", "quote": "Değişiklikler uygulanmadan önce gösterilir; çıkarılan öğrenci silinmez, pasif olur (yanlış dosya kayıt kaybettirmez)." },
+    { "id": "D03-K14", "fact": "CSV yalnız liste yüklemede kabul edilir; dışarı indirme yalnız Excel'dir.", "anchor": "plan.html#hoca-liste-yukleme", "quote": "CSV yalnız yüklemede, indirme yalnız Excel" },
+    { "id": "D03-K15", "fact": "Liste dosyası panelde SheetJS ile okunur; SheetJS yalnız liste yükleme ve rapor indirme sayfalarında yüklenir, liste önizlemesini React çizer, SheetJS'in HTML çıktısı kullanılmaz.", "anchor": "teknik.html#panel-excel", "quote": "SheetJS yalnız liste yükleme ve rapor indirme sayfalarında yüklenir; liste önizlemesini React çizer, SheetJS'in HTML çıktısı kullanılmaz." },
+    { "id": "D03-K16", "fact": "Liste okuma kodu saf fonksiyondur ve örnek dosyalarla Vitest'te test edilir.", "anchor": "teknik.html#panel-excel", "quote": "Liste okuma kodu saf fonksiyondur; örnek dosyalarla Vitest'te test edilir" },
+    { "id": "D03-K17", "fact": "SheetJS npm'deki eski xlsx paketinden değil kendi sitesindeki paket dosyasından kurulur; pnpm dosyanın özetini kilit dosyasına yazar, sürüm sabittir, güvenlik duyuruları elle izlenir.", "anchor": "teknik.html#panel-excel", "quote": "SheetJS npm'deki eski xlsx paketinden değil, kendi sitesindeki paket dosyasından kurulur" },
+    { "id": "D03-K18", "fact": "SheetJS'in son sürümü 0.20.3'tür (18 Temmuz 2024); yedeği read-excel-file ve write-excel-file, ikisi de MIT ve aynı tek geliştiricinin bakımında.", "anchor": "teknik.html#temel-yedek-paketler", "quote": "yedek read-excel-file ve write-excel-file: ikisi de MIT, tarayıcıda çalışır, 2026'da sürüm çıkardı, ama ikisi de aynı tek geliştiricinin bakımında" },
+    { "id": "D03-K19", "fact": "Panel kodunda harf çevirme, sıralama, tarih ve sayı biçimleri açıkça \"tr\" ile yapılır; ortak kurallar paketi Intl kullanmaz.", "anchor": "teknik.html#panel-cati", "quote": "panel kodunda harf çevirme, sıralama, tarih ve sayı biçimleri açıkça \"tr\" ile yapılır (ortak kurallar paketi Intl kullanmaz)" },
+    { "id": "D03-K20", "fact": "Öğrencinin kayıtta verdiği numara ve okuldaki kayıtlı isim, hocaların yüklediği listelerle eşleşir (Kararlar, Öğrenci kaydı satırı).", "anchor": "plan.html#kararlar-e-posta-gonderimi", "quote": "Öğrenci numarası ve okuldaki kayıtlı isim, hocaların yüklediği listelerle eşleşir." },
+    { "id": "D03-K21", "fact": "Eşleştirme sunucuda tek fonksiyondur; Türkçe harf işleri eski Android'deki Intl farkı yüzünden telefonda değil sunucuda yapılır.", "anchor": "plan.html#kararlar-e-posta-gonderimi", "quote": "Eşleştirme sunucuda tek fonksiyon (eski Android'de Intl farklı davrandığından Türkçe harf işleri sunucuda)" },
+    { "id": "D03-K22", "fact": "İsim eşleştirme kuralı: Unicode NFC, baş ve sondaki boşluk silinir, çoklu boşluk teke iner, büyük küçük harf farkı Türkçe kuralla yok sayılır.", "anchor": "plan.html#kararlar-e-posta-gonderimi", "quote": "Unicode NFC, baş ve sondaki boşluk silinir, çoklu boşluk teke iner, büyük küçük harf farkı Türkçe kuralla yok sayılır." },
+    { "id": "D03-K23", "fact": "IŞIK ile ışık eşleşir; Sahin ile Şahin eşleşmez (isimde harf sadeleştirmesi yok), eşleşmeyen kayıt hoca onayına düşer.", "anchor": "plan.html#kararlar-e-posta-gonderimi", "quote": "IŞIK ile ışık eşleşir; Sahin ile Şahin eşleşmez, hoca onayına düşer." },
+    { "id": "D03-K24", "fact": "Öğrenci için e-posta, şifre ve TC kimlik numarası tutulmaz.", "anchor": "plan.html#kararlar-e-posta-gonderimi", "quote": "E-posta, şifre, TC kimlik numarası yok." },
+    { "id": "D03-K25", "fact": "Hiçbir listede olmayan öğrencinin kaydı bekler; liste yüklenince kendiliğinden eşleşir.", "anchor": "plan.html#kararlar-e-posta-gonderimi", "quote": "Hiçbir listede olmayanın kaydı bekler, liste yüklenince kendiliğinden eşleşir." },
+    { "id": "D03-K26", "fact": "İlk kayıt teyidini öğrencinin herhangi bir dersinin hocası bir kez ve toplu verir; hangi hocaların teyit edebileceği öğrencinin bulunduğu listelerden çıkar (Kararlar, İlk kayıt teyidi satırı).", "anchor": "plan.html#kararlar-e-posta-gonderimi", "quote": "Öğrencinin herhangi bir dersinin hocası bir kez, toplu teyit eder" },
+    { "id": "D03-K27", "fact": "Öğrenci hesabı silinince liste satırı kalır: silinen öğrenci listede kalır ama yeni kayıt gönderemez; yeniden kaydolursa ilk kayıt teyidinden geçer.", "anchor": "plan.html#kararlar-hesap-silme", "quote": "Silinen öğrenci listede kalır, yeni kayıt gönderemez; yeniden kaydolursa ilk kayıt teyidinden geçer." },
+    { "id": "D03-K28", "fact": "Sınıf listesi yalnız o dersin hocasının telefonuna iner; amacı internetsiz elle ekleme ve telafi işaretlemesi.", "anchor": "plan.html#kararlar-indirme", "quote": "sınıf listesi yalnız o dersin hocasının telefonuna iner (internetsiz elle ekleme ve telafi işaretlemesi için)" },
+    { "id": "D03-K29", "fact": "Öğrenci telefonuna yalnız kendi liste satırı iner; başka öğrencinin adı ya da numarası hiç inmez.", "anchor": "plan.html#kararlar-indirme", "quote": "kendi liste satırı iner, başka öğrencinin adı ya da numarası hiç inmez" },
+    { "id": "D03-K30", "fact": "Sunucu indirmeyi role göre süzer: listenin tamamı yalnız dersin hocasına, öğrenciye yalnız kendi liste satırı.", "anchor": "teknik.html#kod-veri-modeli", "quote": "Sunucu indirmeyi role göre süzer: listelerin tamamı yalnız dersin hocasına, öğrenciye yalnız kendi liste satırı" },
+    { "id": "D03-K31", "fact": "Listeler telefona inen tablolardandır: her satırda değişiklik sürümü ve silindi işareti var, sürüm tek sayaç satırından alınır.", "anchor": "teknik.html#kod-veri-modeli", "quote": "Telefona inen tablolar (dersler, ders saatleri, oturumlar, listeler, tatiller): her satırda değişiklik sürümü ve silindi işareti; sürüm tek sayaç satırından" },
+    { "id": "D03-K32", "fact": "Ders listesi satırı (veri modeli ilk taslağı): öğrenci ve şubesi, dosyadaki satır sırası, eklenme ve pasif olma tarihi, değiştiren, muaf mı.", "anchor": "teknik.html#kod-veri-modeli", "quote": "Ders listeleri: öğrenci ve şubesi; dosyadaki satır sırası, eklenme ve pasif olma tarihi, değiştiren, muaf mı." },
+    { "id": "D03-K33", "fact": "Ders listesi şubeye bağlıdır; bir oturum birlikte işlenen birden çok şubeyi kapsayabilir.", "anchor": "teknik.html#kod-veri-modeli", "quote": "Ders listesi şubeye bağlı; oturum, birlikte işlenen birden çok şubeyi kapsayabilir." },
+    { "id": "D03-K34", "fact": "Kişi tablosunda öğrenci numarası metindir ve yalnız teyitli kayıtlarda tekildir.", "anchor": "teknik.html#kod-veri-modeli", "quote": "Öğrenci numarası metin, yalnız teyitli kayıtlarda tekil" },
+    { "id": "D03-K35", "fact": "Birlikte işlenen şubelerde tek yoklama ve tek kafa sayısı vardır (böyle şube varsa).", "anchor": "plan.html#kararlar-kafa-sayisi", "quote": "Tek yoklama, tek kafa sayısı (böyle şube varsa)." },
+    { "id": "D03-K36", "fact": "Çift anadal ve yandal dersleri her programın kendi ders listesinde ayrı tutulur; aynı saatte tek derse yoklama kuralı bu listeler arasında da denetlenir.", "anchor": "plan.html#kararlar-kafa-sayisi", "quote": "çift anadal ve yandal dersleri her programın kendi ders listesinde ayrı tutulur, çakışma bu listeler arasında da denetlenir." },
+    { "id": "D03-K37", "fact": "Sunucu tek uygulamadır ve listeler ayrı bir modüldür (kimlik, dersler, listeler, oturumlar, yoklama, düzeltmeler, raporlar, yönetim).", "anchor": "teknik.html#sunucu-mimari", "quote": "Tek uygulama, modüller: kimlik, dersler, listeler, oturumlar, yoklama, düzeltmeler, raporlar, yönetim." },
+    { "id": "D03-K38", "fact": "Modüller birbirinin servis ve veri erişimine dokunmaz, yalnız index.ts dış yüzünü çağırır.", "anchor": "teknik.html#sunucu-mimari", "quote": "Modüller birbirinin servis ve veri erişimine dokunmaz, yalnız index.ts dış yüzünü çağırır" },
+    { "id": "D03-K39", "fact": "Dış yüz çağıranın veritabanı işlemini (tx) parametreyle alır, havuzdan bağlantı istemez.", "anchor": "teknik.html#sunucu-mimari", "quote": "Dış yüz çağıranın veritabanı işlemini (tx) parametreyle alır, havuzdan bağlantı istemez" },
+    { "id": "D03-K40", "fact": "Raporlar modülü rapor ve AKSİS özeti için tabloları (liste tabloları dahil) yalnız okur; bu, modül sınırının açık istisnasıdır.", "anchor": "teknik.html#sunucu-mimari", "quote": "raporlar modülü rapor ve AKSİS özeti için tabloları yalnız okur" },
+    { "id": "D03-K41", "fact": "Sonradan eklenen öğrenci: ekle-bırak süresinde eklenenin önceki oturumları sayılmaz; yönetim kurulu kararıyla geç ders kaydında (Md.9/4) kayıttan önceki oturumlar Yok sayılır.", "anchor": "plan.html#devam", "quote": "Ekle-bırak süresinde eklenen öğrencinin önceki oturumları sayılmaz; yönetim kurulu kararıyla geç ders kaydında (Md.9/4) kayıttan önceki oturumlar \"Yok\" sayılır." },
+    { "id": "D03-K42", "fact": "Hoca bu seçimi yalnız ilk yapılan dersten sonra eklenen öğrencide görür; varsayılan ilk seçenektir (önceki oturumlar sayılmaz).", "anchor": "plan.html#devam", "quote": "Hoca bu seçimi yalnız ilk yapılan dersten sonra eklenen öğrencide görür; varsayılan ilki." },
+    { "id": "D03-K43", "fact": "Hak formülündeki T, öğrencinin derse eklendiği tarihten sonra yapılan saatlerdir; Md.9/4 geç kayıtta dersin bütün yapılan saatleridir.", "anchor": "plan.html#devam-uyari-seviyeleri", "quote": "T: öğrencinin derse eklendiği tarihten sonra yapılan saatler (Md.9/4 geç kayıtta dersin bütün yapılan saatleri)." },
+    { "id": "D03-K44", "fact": "Devamdan muaf işaretini hoca koyar (ör. FF, DC ya da DD yüzünden tekrarlanan ders); işaret ders düzeyindedir ve liste satırının \"muaf mı\" alanında durur.", "anchor": "plan.html#devam", "quote": "Devam şartı FF, DC ya da DD yüzünden tekrarlanan derste yok (hoca işaretler)" },
+    { "id": "D03-K45", "fact": "AKSİS özetinde öğrenciler yüklenen listenin satır sırasıyla dizilir; listeye elle eklenen sona eklenir, yeni liste yüklenince sıra yenilenir.", "anchor": "plan.html#devam-donem-sonu", "quote": "Öğrenciler yüklenen listenin satır sırasıyla; elle eklenen sona eklenir, yeni liste yüklenince sıra yenilenir." },
+    { "id": "D03-K46", "fact": "Listesinde olmadığı derse yoklama vermek engellenir: sunucu reddeder.", "anchor": "plan.html#hile", "quote": "Listesinde olmadığı derse yoklama vermek (sunucu reddeder)" },
+    { "id": "D03-K47", "fact": "Telefonu olmayan ya da şarjı bitmiş öğrenciyi hoca yoklamaya elle ekler.", "anchor": "plan.html#gun-kenar-durumlar", "quote": "Telefonu yok ya da şarjı bitik: Hoca öğrenciyi elle ekler." },
+    { "id": "D03-K48", "fact": "Davranış senaryoları koddan önce Türkçe yazılır; liste yükleme ile öğrenci kaydı ve teyit bu senaryoların arasındadır.", "anchor": "plan.html#baslangic", "quote": "hoca kaydı ve yönetici onayı, ders ve program, liste yükleme, öğrenci kaydı ve teyit" },
+    { "id": "D03-K49", "fact": "Yetki ve hile senaryolarında listesinde olmadığı derse yoklama ret beklentisiyle, önce kırmızı yazılır.", "anchor": "plan.html#baslangic", "quote": "listesinde olmadığı derse yoklama. Her biri ret beklentisiyle önce kırmızı yazılır." },
+    { "id": "D03-K50", "fact": "Başka hocanın dersini görme ya da onaylama, ret beklenen yetki senaryosudur.", "anchor": "plan.html#baslangic", "quote": "başka hocanın dersini görme ya da onaylama" },
+    { "id": "D03-K51", "fact": "Kod, jeton, eşleştirme kodu ve öğrenci numarası hiçbir zaman adres satırına (URL) konmaz (Sunucu, Loglar ve izleme satırı).", "anchor": "teknik.html#sunucu-ayarlar", "quote": "Kod, jeton, eşleştirme kodu, öğrenci numarası hiçbir zaman adres satırına konmaz" },
+    { "id": "D03-K52", "fact": "Öğrenci numarası ve isim loglara hiç yazılmaz, yalnız iç kimlik (UUID); pino'nun gizleme ayarı ikinci güvencedir.", "anchor": "teknik.html#sunucu-ayarlar", "quote": "Öğrenci numarası ve isim loglara hiç yazılmaz, yalnız iç kimlik (UUID); pino'nun gizleme ayarı ikinci güvence." },
+    { "id": "D03-K53", "fact": "İş kuyruğundaki işler kod, isim ve öğrenci numarası taşımaz (Kararlar, Hoca girişi satırı).", "anchor": "plan.html#kararlar-roller", "quote": "iş kuyruğundaki işler kod, isim, öğrenci numarası taşımaz" },
+    { "id": "D03-K54", "fact": "Türkçe sıralama kuralı yalnız isim sıralamasında, sorguda COLLATE \"tr-TR-x-icu\" ile kullanılır; bu kuralla dizin açılmaz (Veritabanı, Zaman ve sıralama satırı).", "anchor": "teknik.html#veritabani-donem-alani", "quote": "Türkçe kural yalnız isim sıralamasında: ORDER BY ad COLLATE \"tr-TR-x-icu\"" },
+    { "id": "D03-K55", "fact": "Veritabanı builtin C.UTF-8 yereliyle açılır, tr-TR varsayılan yapılmaz; bu yüzden SQL'deki büyük küçük harf dönüşümü Türkçe kurala uymaz.", "anchor": "teknik.html#veritabani-donem-alani", "quote": "tr-TR veritabanı varsayılanı yapılmaz (büyük küçük harf dönüşümü de ona uyar)" }
+  ],
+  "gaps": [
+    {
+      "id": "D03-B01",
+      "question": "AKSİS'in ders listesi dışa aktarımı gerçekte hangi biçimde (gerçek .xlsx, eski ikili .xls, HTML ya da XML tabanlı \".xls\", CSV), hangi sütunlarla (numara; ad ve soyad ayrı mı birleşik mi; şube; program; e-posta; TC; tekrar ya da muaf bilgisi) ve başlık satırından önce kaç başlık satırıyla geliyor?",
+      "why": "Başlık sözlüğü, başlık satırını arama penceresi, ad birleştirme, şube sütunu ve atılacak kişisel sütunlar bu örneğe göre yazılır; plan bunu açık nokta bırakmış (plan.html#acik, \"Gerçek bir AKSİS liste örneği\"). Birçok bilgi sistemi \"Excel\" diye HTML tablosu indirir; ilk baytlardan tanıma bunu metin sayıp CSV gibi okursa çöp satırlar çıkar.",
+      "options": ["Maskeli örnek gelene kadar genel başlık sözlüğüyle başlanır, örnek gelince sözlük ve örnek dosya testleri güncellenir", "Örnek gelmeden liste okuma yazılmaz"],
+      "recommendation": "İlki. İlk bayt kuralı dört dal olur: 50 4B 03 04 (xlsx), D0 CF 11 E0 A1 B1 1A E1 (xls; parolalı xlsx de bu kaba girer, okunamazsa \"dosya parolalı\" hatası), BOM ve boşluk atlandıktan sonraki ilk karakter \"<\" (HTML ya da XML tablo, SheetJS okur), kalanı metin. Maskeli gerçek örnek Vitest örnek dosyalarına girer (teknik.html#panel-excel). Sahibinin işi: maskeli bir örnek ve farklı dışa aktarım kullanan birim olup olmadığı bilgisi.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-B02",
+      "question": "Dosya panelde mi okunur, ham dosya sunucuya mı gider; sunucu hangi alanları alır ve saklar?",
+      "why": "Önizleme, doğrulama ve veri saklama bunun üstüne kurulur. SheetJS yalnız panel sayfalarında yükleniyor, sunucu tarafında dosya okuyucu adı geçmiyor; öğrenci için e-posta ve TC tutulmuyor ama AKSİS dosyasında e-posta sütunu olabilir (plan.html#acik).",
+      "options": ["Panel okur; sunucuya yalnız eşlenmiş satırlar (dosyadaki satır no, öğrenci no, ad soyad, varsa şube, hücre sayı mıydı) JSON olarak gider", "Ham dosya sunucuya yüklenir, sunucu SheetJS ile okur ve saklar"],
+      "recommendation": "İlki. Satır şeması (numara için 9 ya da 10 ASCII rakam; isim için uzunluk ve karakter kuralı) packages/contracts içinde tek Zod şeması; panel ve sunucu aynı şemayla denetler, sunucu bilinmeyen alanı reddeder (strict). Dosya ve fazladan sütunlar sunucuya hiç ulaşmaz, saklanmaz; sunucuda ayrıştırıcı açığı ve zip bombası yüzeyi oluşmaz. Dosya türü, kodlama ve ayırıcı yalnız yükleme özetine (liste_yuklemesi) yazılır.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B03",
+      "question": "Fark nerede hesaplanır, uygulama hangi liste durumuna karşı yapılır, aynı anda iki değişiklik ya da çift tıklama ne olur?",
+      "why": "Değişiklikler uygulanmadan önce gösteriliyor (plan.html#hoca-liste-yukleme); önizleme ile uygulama arasında liste başka yoldan (elle ekleme, ikinci sekme) değişirse hoca görmediği bir farkı onaylamış olur.",
+      "options": ["Sunucu farkı hesaplar ve şube liste sürümünü döner; uygulama aynı satırları ve beklenen sürümü yollar, sürüm değiştiyse 409", "Panel farkı kendisi hesaplar, sunucuya ekle ve çıkar komutları gider", "Önizleme sunucuda saklanır, uygulama önizleme kimliğiyle yapılır"],
+      "recommendation": "İlki: durumsuz iki uç ve şube başına artan liste sürümü, saklanan önizleme yok. Uygulama farkı aynı işlemde yeniden hesaplar; sürüm tutmazsa 409 (yeniden önizle). Aynı dosya ikinci kez gelirse fark boştur ve \"zaten uygulanmış\" başarısı döner, çift tıklama zararsız kalır. Ekleme, pasif yapma, canlandırma, sürüm sayacı, bekleyen kayıtların eşleşmesi ve etkilenen kayıt kararları tek veritabanı işleminde; dış yüzler tx'i parametreyle alır (teknik.html#sunucu-mimari).",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B04",
+      "question": "Önizleme hangi değişiklik türlerini ayırır, hoca tek tek seçim yapabilir mi, yanlış dosya nasıl yakalanır?",
+      "why": "Kural yalnız \"gösterilir\" diyor; uygulama isteğinin şekli ve hocanın göreceği uyarılar buna bağlı. Yanlış dosya en çok \"pasif olacak\" satırlarda iş bozar.",
+      "options": ["Hepsi ya da hiçbiri; yalnız geç eklenenlerde Md.9/4 seçimi satır başına", "Her değişiklik satır başına seçilir"],
+      "recommendation": "İlki. Türler: eklenecek, pasif olacak, yeniden etkin olacak, isim değişecek, şube değişecek, hatalı satır, işaretli satır (sayı olarak saklanmış numara); sıra değişikliği yalnız sayı olarak gösterilir. Etkin öğrencilerin yarısından fazlası pasif olacaksa \"Bu dosya bu şubenin listesine benzemiyor\" uyarısı ve ikinci onay istenir. Önizleme hiçbir şey yazmaz.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B05",
+      "question": "Geçersiz numara, boş isim, aynı numaranın iki kez geçmesi ya da sayı olarak saklanmış numara varken uygulama yapılabilir mi; sayı hücresinden hangi metin alınır?",
+      "why": "Hatalı satır atlanırsa o öğrenci \"dosyada yok\" sayılıp pasif olur; baştaki 0'ı düşmüş numara uygulanırsa öğrenci kendi numarasıyla eşleşemez ve kaydı bekler (plan.html#kararlar, Öğrenci kaydı).",
+      "options": ["Hatalı satır varsa uygulama kapalı, işaretli satır uyarıdır", "Hatalı satırlar atlanır, kalanlar uygulanır"],
+      "recommendation": "İlki; hatalar satır numarasıyla listelenir, hoca dosyayı düzeltir. Excel sayı hücresinde önce hücrenin biçimli metni kullanılır (\"0000000000\" biçimi baştaki 0'ı geri getirir), yoksa ham değer. Sayı hücresi 10 rakamsa 0 kaybetmiş olamaz (bilgi), 9 rakamsa belirsizdir (uyarı, hoca onaylayarak geçer), 9'dan kısaysa hatadır. CSV'de tür bilgisi yok: aynı dosyada 9 ve 10 haneli numaralar karışıksa azınlıktaki uzunluk uyarı alır. Aynı numara iki kez: isimler eşleştirme fonksiyonuna göre aynıysa tek satır sayılır ve uyarılır, farklıysa hata. Tamamen boş satır atlanır; numarası da ismi de boş ama başka hücresi dolu satır (dipnot) bilgi notuyla atlanır; ismi dolu numarası boş satır hatadır. İsim boş olamaz, en çok 200 karakter, denetim karakteri içeremez.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B06",
+      "question": "Hangi başlıklar numara, isim ve şube sayılır; başlık satırı nasıl bulunur; birden çok sayfa varsa hangisi okunur?",
+      "why": "Plan yalnız dönüşümü yazıyor (NFC, Türkçe küçültme, harf sadeleştirme); eş anlamlı başlıklar, noktalama, başlıktan önceki ders adı ya da tarih satırları ve ad ile soyadın ayrı sütunda gelmesi yazılı değil.",
+      "options": ["Sabit sözlük ve otomatik başlık bulma", "Hoca sütunları her yüklemede elle eşler", "Sabit sözlük; bulunamazsa hoca elle eşler"],
+      "recommendation": "Üçüncüsü, elle eşleme yalnız sözlük bulamazsa açılır. Sözlük packages/contracts içinde tek listede. Numara: \"öğrenci no\", \"öğrenci numarası\", \"öğr no\", \"numara\", \"no\"; isim: \"ad soyad\", \"adı soyadı\", \"ad soyadı\" ya da ayrı \"ad\"/\"adı\" ve \"soyad\"/\"soyadı\" (birleştirme: ad, bir boşluk, soyad); şube: \"şube\". Plandaki dönüşüme ek olarak baş ve son boşluk silinir, çoklu boşluk teke iner, nokta ve iki nokta atılır. İlk 20 satır taranır, numara ve isim başlıklarının ikisini de taşıyan ilk satır başlıktır; ilk sayfada yoksa sonraki sayfalara bakılır. Kesin liste AKSİS örneğiyle (D03-B01) yazılır.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B07",
+      "question": "CSV'de ayırıcı nasıl seçilir; tırnaklı alan, sekme, UTF-16 ve =\"...\" biçimli numara nasıl ele alınır?",
+      "why": "Plan \"virgül de noktalı virgül de olabilir\" diyor ama seçim kuralı yok. Türkçe Excel CSV'yi noktalı virgülle kaydeder, \"Unicode metin\" çıktısı UTF-16 ve sekmelidir; bazı sistemler baştaki 0 kalsın diye numarayı =\"0123456789\" biçiminde yazar.",
+      "options": ["Başlık satırından otomatik seçim", "Hocaya ayırıcı sorulur"],
+      "recommendation": "İlki. Kodlama teknik.html sırasıyla: BOM (UTF-8, UTF-16 LE, UTF-16 BE), yoksa katı UTF-8 (TextDecoder fatal), olmazsa windows-1254. Ayırıcı başlık satırından seçilir: noktalı virgül, virgül ve sekme denenir, numara ve isim başlıklarını ayrı hücrelere ayıran seçilir; birden fazlası ayırıyorsa hata. RFC 4180 tırnak kuralları geçerli. Numara sütununda =\"...\" sarmalı soyulur.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B08",
+      "question": "Liste satırı öğrenciyi neyle tutar: kişi tablosuna yabancı anahtarla mı, öğrenci numarası ve dosyadaki ad metniyle mi?",
+      "why": "Liste öğrenci kaydından önce yüklenir (plan.html#gun), telefonsuz öğrenci hiç kaydolmayabilir (plan.html#gun-kenar-durumlar), silinen öğrenci listede kalır ve yeniden kaydolunca yeni hesap açılır (plan.html#kararlar-hesap-silme); teknik.html'deki \"öğrenci ve şubesi\" ifadesi kişi satırına bağ gibi okunabiliyor.",
+      "options": ["Satır öğrenci no ve dosyadaki adı metin olarak tutar; hesapla bağ numara üzerinden sorgu anında kurulur", "Satır kişi tablosuna boş geçilebilen yabancı anahtarla bağlanır, eşleşince doldurulur", "Numara başına tek satırlı ayrı bir öğrenci kimliği tablosu; liste de hesap da ona bağlanır"],
+      "recommendation": "İlki: (şube, öğrenci no) tekil; bir numaraya zamanla birden çok hesap düşebilir (silme ve yeniden kayıt), devam ve rapor hesabı numara üzerinden toplar. \"Yalnız teyitli kayıtlarda tekil\" numara (teknik.html#kod-veri-modeli) ve silinen hesabın kişi satırının numarayla kalması bununla uyumlu. D01 ile birlikte kesinleşir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B09",
+      "question": "Çift anadal ya da yandal öğrencisi AKSİS'te ikinci programda ayrı numara alıyor mu; alıyorsa tek telefon ve tek hesap iki numaraya nasıl bağlanır?",
+      "why": "Hesap tek numaraya ve tek telefona bağlı, aynı uygulama kopyasından birden çok hesaba yoklama engelli (plan.html#hile); iki numara iki hesap isterse öğrenci ikinci programın derslerine yoklama veremez. Çakışma da iki programın listeleri arasında denetlenecek (plan.html#kararlar-kafa-sayisi).",
+      "options": ["Hesap birden çok numaraya bağlanabilir, her bağ ayrı teyit edilir", "Tek numara varsayılır, ikinci numaralı derslerde hoca elle ekler", "AKSİS örneği ve öğrenci işleri cevabına kadar beklenir"],
+      "recommendation": "Önce öğrenci işlerinden ve AKSİS örneğinden teyit (plan.html#acik zaten çift anadalı soruyor). Ayrı numara çıkarsa en küçük değişiklik ilk seçenek: hesap ile numara arasında çok satırlı bağ tablosu; liste tarafı numarayla çalıştığından değişmez.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-B10",
+      "question": "Listede olmama reddi için üyelik hangi ana göre denetlenir: oturumun penceresi, kaydın saati, ulaşma anı?",
+      "why": "Kural \"Listesinde olmadığı derse yoklama vermek (sunucu reddeder)\"; kayıtlar 7 güne kadar geç gelebilir (plan.html#kararlar-gonderme-suresi), bu arada öğrenci pasif olabilir ya da derse sonradan eklenmiş olabilir.",
+      "options": ["Oturumun penceresi satırın [eklenme anı, pasif anı) aralığıyla kesişiyorsa listede", "Kaydın hesaplanan saati aralıktaysa listede", "Ulaşma anında etkin satır varsa listede"],
+      "recommendation": "İlki: pasif olmadan önceki oturumun geç gelen kaydı reddedilmez, ders sırasında eklenip yoklama veren öğrenci de reddedilmez; ulaşma anı hiç kullanılmaz. Listeler modülü bunu dış yüzünde tek fonksiyonla cevaplar (öğrenci no, oturum, tx); kararı D07 verir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B11",
+      "question": "Eklenme ve pasif olma gün (date) olarak mı, an (timestamptz) olarak mı tutulur; öğrencinin eklendiği gün, eklenmeden önce başlamış oturum T'ye girer mi?",
+      "why": "Veri modeli \"eklenme ve pasif olma tarihi\", hak formülü \"derse eklendiği tarihten sonra yapılan saatler\" diyor; teknik.html anlık zamanları timestamptz, ders gününü date tutuyor. Öğleden sonra eklenen öğrencinin aynı sabahki oturumu Yok mu sayılacak belirsiz.",
+      "options": ["An tutulur; açılışı eklenme anından sonra olan oturumlar T'ye girer, eklenmeden önce açılmış oturuma geçerli kaydı varsa o oturum da girer", "Gün tutulur; eklendiği günün bütün oturumları T'ye girer", "Gün tutulur; eklendiği gün T'ye girmez"],
+      "recommendation": "İlki: uygulama anı sunucu saatiyle timestamptz tutulur, iki kural da öğrenci lehine. Md.9/4 seçiminde kayıttan önceki oturumlar zaten Yok sayıldığından fark yalnız varsayılan seçimde doğar. Hesabı D08 yapar, eklenme anının anlamı burada kesinleşir.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-B12",
+      "question": "Ekle-bırak ile Md.9/4 seçimi hangi alanda tutulur, kim ne zaman değiştirebilir, \"ilk yapılan ders\" nasıl belirlenir, yöneticinin girdiği ekle-bırak bitişi bu seçimde kullanılır mı?",
+      "why": "Veri modelinde bu seçim için alan yok (teknik.html#kod-veri-modeli); yönetim kurulu kararı haftalar sonra gelebilir; \"yapılan\" ders hocanın onayına bağlı ve onaysız ders olabilir (plan.html#kararlar, Onaysız ders); ekle-bırak bitişinin hiçbir kuralda kullanımı yazılı değil.",
+      "options": ["Satırda ayrı alan, önizlemede ve sonra panelde değişir", "Seçim yalnız eklerken verilir, sonra değişmez"],
+      "recommendation": "İlki. Liste satırında gec_kayit_secimi metin alanı (\"onceki_sayilmaz\" varsayılan, \"onceki_yok\"), enum değil CHECK kısıtıyla (teknik.html, Sunucu, Veritabanı erişimi satırı). Seçim önizlemede toplu verilir, satır başına değişir, sonra panelde değiştirilebilir; her değişiklik denetim kaydına yazılır, hak hesabı yenilenir (D08). \"İlk yapılan ders\": açılışı geçmiş ve \"yapılmadı\" denmemiş ilk oturum (onaysız ders sayılır, seçim gösterilir). Ekle-bırak bitişinden sonra eklenen satırda önizleme yalnız ipucu gösterir, varsayılan planın dediği gibi ilki kalır: ilk listesini geç yükleyen hocanın bütün öğrencileri yanlışlıkla Yok almasın.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B13",
+      "question": "Pasif olan satır telefona silindi işaretiyle mi, pasif alanıyla mı iner; öğrencinin telefonunda ders ne olur; hoca telefonunda elle ekleme seçiminde görünür mü?",
+      "why": "Telefona inen tablolarda silindi işareti var (teknik.html#kod-veri-modeli), ama liste satırı hiç silinmiyor, pasif oluyor (plan.html#hoca-liste-yukleme).",
+      "options": ["Pasif satır pasif anıyla güncelleme olarak iner", "Pasif satır silindi işaretiyle iner"],
+      "recommendation": "İlki; silindi işareti yalnız satırın o telefonun görme kapsamından çıkması için kullanılır (ör. ders başka hocaya geçti). Öğrencinin telefonu pasif anından sonra açılan oturumlarda pencere açmaz, gönderilmemiş kayıtları yine gider ve sunucu D03-B10'daki kuralla karar verir. Hocanın telefonunda pasif öğrenci elle ekleme seçiminde çıkmaz; makbuz okutmada adı çözülebilsin diye satır kalır. D06 ile kesinleşir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B14",
+      "question": "Pasif öğrenci yeni dosyada çıkarsa ya da elle eklenirse aynı satır mı canlanır, yeni satır mı açılır; pasif kaldığı aralıkta gelen kayıtların kararı ne olur?",
+      "why": "\"yanlış dosya kayıt kaybettirmez\" sözü, doğru dosya yüklendiğinde aradaki kayıtların ret almış kalmamasını ister; kararlar yalnız teyit, ayar değişikliği, kafa sayısı gibi olaylarda yeniden veriliyor (plan.html#kararlar-supheli-kayit), liste değişikliği bu sayımda yok.",
+      "options": ["Aynı satır canlanır, eklenme anı korunur, pasif aralığı geçmişte kalır; o aralıktaki oturumların kayıtları aynı işlemde yeniden karara bağlanır", "Yeni satır açılır, eski satır pasif kalır; aradaki kayıtlar ret kalır"],
+      "recommendation": "İlki: liste değişikliği de kararların yeniden verildiği olaylara eklenir, etkilenen öğrencilerin kayıtları yoklama modülünün dış yüzüyle aynı işlemde yeniden değerlendirilir; ret alıp sonradan Var olan kayıt \"sonradan değişenler\" listesine düşer (D09). Gerçek bırakıp yeniden alma ile yanlış dosya ayırt edilemediğinden ikisi aynı işlenir, hoca gerekirse geç kayıt seçimini değiştirir.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-B15",
+      "question": "Bir yükleme tek şubeye mi yapılır; dosyada şube sütunu varsa ne olur; aynı öğrenci aynı dersin iki şubesinde etkin olabilir mi?",
+      "why": "Liste şubeye bağlı ve oturum birden çok şubeyi kapsayabiliyor (teknik.html#kod-veri-modeli); iki şubede etkin satır iki pencere ve çift sayım demek.",
+      "options": ["Yükleme tek şubeye; aynı derste öğrenci başına tek etkin satır", "Yükleme derse; şube dosyadaki sütundan okunur"],
+      "recommendation": "İlki: yükleme hocanın seçtiği tek şubeye yapılır, dosyada şube sütunu varsa seçilen şubeyle uyuşmayan satır hata sayılır. (ders, öğrenci no) üzerinde pasif olmayanlar için kısmi tekil dizin; ders kimliği satıra şubeden kopyalanır (kısmi dizin yalnız kendi tablosunu görür; teknik.html'deki inceleme cihazı kopyası gibi). Başka şubeye eklenen öğrenci önizlemede \"şube değişecek\" görünür, eski satır aynı işlemde pasif olur. AKSİS dışa aktarımı ders bazındaysa (D03-B01) ikinci seçenek yeniden düşünülür.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B16",
+      "question": "Bir şubenin listesini kim yükler ve değiştirir: yalnız dersin hocası mı, yönetici de mi; birden çok hocalı derste ne olur?",
+      "why": "Panelde liste işleri hocanın işleri arasında, yönetici ekranlarında yok (plan.html#hoca); başka hocanın dersini görme ret beklenen senaryo; asistan ve ortak hoca rolleri sonra (plan.html#kararlar-roller).",
+      "options": ["Yalnız dersin hocası", "Hoca ve yönetici, yöneticinin değişikliği denetim kaydına", "Hoca yazar, yönetici yalnız okur"],
+      "recommendation": "Yalnız dersin hocası yazar ve okur; kendi dersi olan yönetici o derste hoca gibi davranır (D02). Yöneticiye destek için okuma izni gerekirse sonra eklenir, şimdiden açılmaz.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-B17",
+      "question": "Dönem kilidinden ya da ders arşivlendikten sonra liste değişebilir mi?",
+      "why": "AKSİS özeti ve T liste satırlarına dayanıyor; kilitten sonra değişen liste kesinleşmiş sonucu sessizce değiştirir. Kilit birimin son gününe bağlı, ders silinmez, arşivlenir (plan.html#devam-donem-sonu).",
+      "options": ["Kilitten sonra ve arşivde salt okunur", "Kilitten sonra yalnız denetim kaydı bırakan değişiklik"],
+      "recommendation": "İlki: yazma uçları LISTE_KILITLI ile 409 döner. Kilit denetimi uygulama işleminin içinde, dersin biriminin kilit tarihine göre (D02).",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B18",
+      "question": "İsim eşleştirmede boşluk ne sayılır, Türkçe küçültme nasıl yapılır, birleşik nokta ve görünmez karakterler ne olur, pasif satırlar eşleşmeye girer mi, aynı numara farklı listelerde farklı isimle geçerse ne olur?",
+      "why": "Veritabanı C.UTF-8 ve tr-TR varsayılan değil (teknik.html#veritabani-donem-alani), SQL'deki lower() Türkçe kuralı uygulamaz. Tanım eksik kalırsa \"IŞIK ile ışık\" testi geçer ama Excel'den gelen bölünmez boşluk (U+00A0) ya da \"i\" ile U+0307 birleşik noktası yüzünden doğru öğrenci hoca onayına düşer.",
+      "options": ["Sunucuda açık eşlemeli saf fonksiyon", "Node'un toLocaleLowerCase('tr') işlevi", "SQL'de karşılaştırma"],
+      "recommendation": "İlki: fonksiyon sunucuda saf TypeScript, tek yerde (listeler modülünün dış yüzü), Intl'e ve SQL'e dayanmaz. NFC; Unicode boşluk karakterleri (U+00A0 dahil) boşluk sayılır; sıfır genişlikli karakterler (U+200B, U+200C, U+200D, U+FEFF) silinir; baş ve son boşluk silinir, çoklu boşluk teke iner; küçültme açık eşlemeyle (I ı olur, İ i olur, sonra yerel ayarsız küçültme), \"i\" ardından gelen U+0307 silinir. Harf sadeleştirme ve noktalama silme yok. Yalnız etkin satırlarla eşleşir; aynı numara etkin satırlarda farklı isimlerle varsa kayıt hoca onayına düşer. Tablo testleri (IŞIK ile ışık, Sahin ile Şahin, çift boşluk, U+00A0) ve fast-check özellik testi (eşleşme simetrik, dönüşüm iki kez uygulanınca değişmez).",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B19",
+      "question": "Liste yüklenince bekleyen kayıtların eşleşmesi aynı işlemde mi, iş kuyruğunda mı yapılır; öğrenci tam o sırada kaydolursa ne olur?",
+      "why": "Kayıt işlemi listede numarayı bulamayıp \"bekliyor\" yazarken liste işlemi henüz görünmeyen bekleyen kaydı arar; ikisi de başarıyla biter, öğrenci listede olduğu halde bekler.",
+      "options": ["Aynı işlemde; tek danışma kilidi anahtarı: kayıt akışı paylaşımlı (pg_advisory_xact_lock_shared), liste yazan işlem dışlayıcı (pg_advisory_xact_lock) alır", "Aynı işlemde; her öğrenci numarası için ayrı danışma kilidi", "Birkaç dakikada bir uzlaştırma işi", "SERIALIZABLE yalıtım ve yeniden deneme"],
+      "recommendation": "İlki: kayıtlar birbirini beklemez, liste yazımı süren kayıtların bitmesini bekler ve kısa süre yenilerini bekletir; liste yazımı saniyenin altında ve seyrek. Numara başına kilit 2.000 satırlık ilk yüklemede 2.000 kilit alır, eşzamanlı yüklemelerde PostgreSQL'in kilit tablosunu (max_locks_per_transaction) zorlar ve kilitlenme sırası ister; bu yüzden seçilmez. İş kuyruğu gerekmez; ileride kuyruğa iş giderse yalnız iç kimlik taşır (plan.html#kararlar-roller, Hoca girişi satırı: iş kuyruğundaki işler isim ve öğrenci numarası taşımaz).",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B20",
+      "question": "Kim, ne zaman, hangi yüklemeyle kimi ekledi, pasif yaptı, canlandırdı ya da seçimini değiştirdi nerede tutulur?",
+      "why": "Satırda yalnız son \"değiştiren\" var (teknik.html#kod-veri-modeli); denetim kaydında yalnız düzeltmeler ve onaylar sayılmış (teknik.html, Veritabanı, Denetim kaydı satırı); geç kayıt seçimi ve pasiflik devamsızlık sonucunu değiştirdiğinden itirazda kanıt gerekir.",
+      "options": ["Yükleme özeti tablosu ve denetim kaydına satır olayları", "Yalnız satırdaki son değiştiren"],
+      "recommendation": "İlki: her uygulama için bir liste_yuklemesi satırı (kim, ne zaman, dosya türü, kodlama, ayırıcı, satır sayısı; eklenen, pasif olan, canlanan ve isim değişen sayıları; dosya ve isimler yok) ve her satır değişikliği için denetim kaydına bir olay (satır kimliği, tür, önceki ve yeni değer, yükleme kimliği). Denetim tablosu D09'un; olay türlerini listeler modülü tanımlar.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B21",
+      "question": "Bir yüklemede en çok kaç satır, istek gövdesi en çok ne kadar, panelde dosya boyutu sınırı ne; uygulama eşzamanlı mı, iş kuyruğunda mı?",
+      "why": "teknik.html \"Gövde sınırı açıkça yazılır\" diyor (Sunucu, Çatı satırı), liste ucu için değer yok. Tasarım liste yüklemeyi 10 saniyeyi aşabilen iş olarak ilerleme çubuğuyla çiziyor (\"Öğrenci listesi yükleniyor · %64\", tasarim.html#anat-progress yanındaki İlerleme örneği).",
+      "options": ["Eşzamanlı, tek işlem, sabit sınırlar", "İş kuyruğunda, sunucu ilerleme bildirir"],
+      "recommendation": "İlki: şube başına 2.000 satır ve 1 MB gövde (başlangıç değerleri, ölçümle değişir), panelde 10 MB üstü dosya okunmaz. Önizleme ve uygulama eşzamanlı ve tek işlemde; sunucu ilerleme bildirmez, ilerleme çubuğu panelin dosya okumasını gösterir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B22",
+      "question": "Liste uçlarının yolları, kaynak kimlikleri ve listeye özgü hata kodları ne?",
+      "why": "Öğrenci numarası adres satırına konmaz (teknik.html, Sunucu, Loglar ve izleme satırı): satır numarayla değil iç kimlikle adreslenmeli; hata zarfı D13'te, listeye özgü kodlar burada.",
+      "options": ["/v1/listeler altında şube ve satır kimliğiyle", "/v1/dersler altında alt kaynak olarak"],
+      "recommendation": "İlki, modül başına /v1/<modül> kuralına uyar (teknik.html#sunucu). Şube ve satır UUIDv7 kimliğiyle adreslenir (endpoints). Kodlar: LISTE_SURUMU_DEGISTI (409), LISTE_HATALI_SATIR (400, satır numaralarıyla), LISTE_KILITLI (409), LISTE_YETKI_YOK (403), LISTE_COK_BUYUK (413). Doğrulama hatası loglanırken yalnız alan yolu yazılır, değer yazılmaz; pino gizleme yolları ogrenciNo ve adSoyad alanlarını kapsar.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B23",
+      "question": "Liste ekranı (GET) hangi alanları döner; hoca öğrencinin uygulamaya kaydolup kaydolmadığını görür mü?",
+      "why": "Tasarımda liste ekranı çizilmemiş; ekran envanteri yalnız yükleme, ekleme, çıkarma, sonradan eklenende seçim ve muaf anahtarını sayıyor; kaydolmayan öğrenciyi bilmeyen hoca onu uyaramaz.",
+      "options": ["Yalnız liste alanları", "Liste alanları ve uygulama durumu (kaydolmadı, teyit bekliyor, teyitli, hesap silindi)"],
+      "recommendation": "İkincisi: etkin satırlar sırasıyla, pasifler ayrı bölümde; satır başına öğrenci no, ad soyad, eklenme ve pasif anı, kaynak (dosya ya da elle), geç kayıt seçimi, muaf ve uygulama durumu (cihaz ayrıntısı yok). Uygulama durumu kimlik modülünün dış yüzünden gelir.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-B24",
+      "question": "Panelde tek öğrenci eklenirken hangi alanlar girilir, hangi denetimden geçer, sırası ne olur?",
+      "why": "Yalnız \"elle eklenen sona eklenir\" yazılı (plan.html#devam-donem-sonu).",
+      "options": ["Dosya satırıyla aynı şema ve kurallar", "Ayrı, gevşek form"],
+      "recommendation": "İlki: numara ve AKSİS'teki ad soyad zorunlu; sıra en büyük sıra artı 1; kaynak elle; ilk yapılan dersten sonraysa geç kayıt seçimi aynı ekranda. Pasif satırın numarası girilirse yeni satır açılmaz, satır canlanır (D03-B14). Sonraki dosyada olmayan elle eklenmiş öğrenci önizlemede \"elle eklenmişti\" notuyla pasif olacaklar arasında görünür.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B25",
+      "question": "Yeni dosya yüklenince muaf işareti, geç kayıt seçimi ve isim nasıl davranır?",
+      "why": "Muafı hoca işaretler (plan.html#devam), dosya bunu taşımaz; yükleme işareti sıfırlarsa muaf öğrenciye hak uyarısı gider.",
+      "options": ["Yükleme yalnız üyelik, sıra ve ismi değiştirir", "Yükleme satırı baştan yazar"],
+      "recommendation": "İlki: muaf ve geç kayıt seçimi korunur, canlanan satırda eski değerler döner. İsim değişikliği önizlemede ayrı türdür; teyitli hesabı etkilemez, eşleştirme yalnız kayıtta yapılır. Fark eşleştirme fonksiyonuna göre yoksa (yalnız büyük küçük harf ya da boşluk) değişiklik sayılmaz, görünen ad dosyadakiyle yenilenir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B26",
+      "question": "Apple ve Google inceleme hesaplarının her an açık deneme dersinin listesi nasıl kurulur?",
+      "why": "İnceleme hesapları yalnız deneme dersini görür, silinirse sunucu yeniden kurar (plan.html#kararlar-inceleme-hesaplari); deneme öğrencisinin o dersin listesinde olması gerekir.",
+      "options": ["Sunucu komutu kurar", "Hoca panelden yükler"],
+      "recommendation": "İlki: deneme dersinin listesi inceleme hesaplarını kuran sunucu komutuyla tek satır olarak kurulur (kaynak sistem); liste uçları bu dersi değiştirmez.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B27",
+      "question": "Öğrencinin ve hocanın telefonuna inen liste satırında hangi alanlar var?",
+      "why": "Hak uyarısı telefonda yerel hesaplanıyor (plan.html#kararlar, Bildirim) ve T eklenme anına, Md.9/4 seçimine, muafa bağlı; muaf öğrenciye hak uyarısı gitmez (plan.html#devam).",
+      "options": ["Satırın hesapta gereken alanları", "Yalnız numara ve ad"],
+      "recommendation": "İlki. Öğrencinin kendi satırı: satır kimliği, şube, öğrenci no, ad soyad, eklenme anı, pasif anı, geç kayıt seçimi, muaf, değişiklik sürümü, silindi. Hocanın telefonundaki satırlarda aynı alanlar; değiştiren ve kaynak inmez.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-B28",
+      "question": "Saklanan \"satır sırası\" dosyadaki satır numarası mı (başlık, başlık üstü ve boş satırlar dahil), yoksa 1'den başlayan sıra mı; pasif satırın ve şube değiştiren öğrencinin sırası ne olur?",
+      "why": "Plan yalnız \"Dosyadaki satır sırası saklanır\" ve \"yeni liste yüklenince sıra yenilenir\" diyor; AKSİS özeti bu sırayı kullanıyor (plan.html#devam-donem-sonu), hatalı satırların raporlanması ise dosyadaki satır numarasını istiyor.",
+      "options": ["İki ayrı değer: satırda 1'den başlayan sıra, yükleme cevabında dosya satır numarası", "Satırda yalnız dosya satır numarası"],
+      "recommendation": "İlki: sıra her yüklemede dosyadaki geçerli satırların sırasıyla 1, 2, 3 diye yeniden yazılır; elle eklenen en büyük sıra artı 1 alır; pasif satır son sırasını korur ama sıralı listelerde gösterilmez; şube değiştiren öğrenci yeni şubede o şubenin sırasını alır. Dosya satır numarası (hata ve uyarıların yeri) yalnız önizleme ve uygulama cevabında döner, saklanmaz.",
+      "needs_owner": false
+    }
+  ],
+  "contradictions": [
+    {
+      "id": "D03-C01",
+      "a": "plan.html#hoca-liste-yukleme: \"Excel (.xlsx, .xls) doğrudan okunur\"",
+      "b": "teknik.html#temel-yedek-paketler: \"yedek read-excel-file ve write-excel-file\"",
+      "note": "read-excel-file yalnız .xlsx okur, eski ikili .xls biçimini okumaz; SheetJS bırakılırsa .xls kuralı yedekle tutulamaz. Yedek satırına ya \".xls için hocadan dosyayı .xlsx olarak kaydetmesi istenir\" yazılmalı ya da .xls okuyan başka bir yedek seçilmeli."
+    },
+    {
+      "id": "D03-C02",
+      "a": "plan.html#hoca-liste-yukleme: \"Excel (.xlsx, .xls) doğrudan okunur\" ve \"CSV yalnız yüklemede\"",
+      "b": "tasarim.html#anat-toast (Hata bildirimi örneğinin betikteki metni): \"Bu dosya okunamadı. AKSİS'ten indirdiğin Excel dosyasını (.xlsx) seç.\"",
+      "note": "Tasarımdaki örnek hata metni yalnız .xlsx'i sayıyor; plan .xls ve CSV'yi de kabul ediyor. Metin kabul edilen türleri (\"Excel (.xlsx, .xls) ya da CSV\") saymalı; panelin okuma hataları (parolalı dosya, başlık bulunamadı, ayırıcı seçilemedi) ayrı metinler ister."
+    },
+    {
+      "id": "D03-C03",
+      "a": "plan.html#devam-donem-sonu: \"elle eklenen sona eklenir\" (listeye elle eklenen öğrenci)",
+      "b": "plan.html#gun-son-durumlar: \"Elle eklendi\" (yoklamaya elle eklenen öğrencinin son durumu)",
+      "note": "Aynı söz iki ayrı şeyi anlatıyor. AKSİS özetinin sırası liste satırının kaynağına (dosya ya da elle) bakmalı, yoklamadaki son duruma değil; kodda ve ekranda iki ayrı ad (ör. \"listeye elle eklendi\" ve \"Elle eklendi\") kullanılmalı."
+    }
+  ],
+  "entities": [
+    {
+      "name": "liste_satiri",
+      "purpose": "Bir şubenin ders listesindeki öğrenci satırı; hiç silinmez, pasif olur. Öğrenciyi hesapla değil öğrenci numarası (metin, 9 ya da 10 rakam) ve dosyadaki adla tutar (D03-B08). Zamanlar timestamptz. Telefona inen tablodur; (şube, öğrenci no) tekil, (ders, öğrenci no) pasif olmayanlarda kısmi tekil.",
+      "key_fields": ["id", "sube_id", "ders_id", "ogrenci_no", "ad_soyad", "sira", "eklenme_ani", "pasif_ani", "gec_kayit_secimi", "muaf", "kaynak", "son_yukleme_id", "degistiren_id", "degisiklik_surumu", "silindi"],
+      "proposed_owner": "D03"
+    },
+    {
+      "name": "sube_listesi",
+      "purpose": "Şube başına liste durumu: önizleme ile uygulama arasındaki eşzamanlılık için artan liste sürümü ve son yükleme.",
+      "key_fields": ["sube_id", "liste_surumu", "son_yukleme_id", "guncelleyen_id", "guncelleme_ani"],
+      "proposed_owner": "D03"
+    },
+    {
+      "name": "liste_yuklemesi",
+      "purpose": "Uygulanan her dosya yüklemesinin özeti; dosyanın kendisi, numaralar ve isimler saklanmaz.",
+      "key_fields": ["id", "sube_id", "yukleyen_id", "uygulama_ani", "dosya_turu", "kodlama", "ayirici", "satir_sayisi", "eklenen", "pasif_olan", "canlanan", "isim_degisen", "onceki_liste_surumu"],
+      "proposed_owner": "D03"
+    }
+  ],
+  "endpoints": [
+    { "method": "GET", "path": "/v1/listeler/subeler/{subeId}", "client": "panel", "purpose": "Şubenin listesi: etkin satırlar sırasıyla, pasifler ayrı; liste sürümü ve satır başına alanlar (D03-B23).", "proposed_owner": "D03" },
+    { "method": "POST", "path": "/v1/listeler/subeler/{subeId}/onizleme", "client": "panel", "purpose": "Panelin okuduğu eşlenmiş satırlarla farkı hesaplar; değişiklik türlerini, hatalı ve işaretli satırları, geç eklenenleri ve liste sürümünü döner; hiçbir şey yazmaz.", "proposed_owner": "D03" },
+    { "method": "POST", "path": "/v1/listeler/subeler/{subeId}/uygula", "client": "panel", "purpose": "Aynı satırlar, beklenen liste sürümü ve geç kayıt seçimleriyle farkı tek işlemde uygular: ekleme, pasif yapma, canlandırma, sürüm sayacı, bekleyen kayıtların eşleşmesi, etkilenen kayıt kararları.", "proposed_owner": "D03" },
+    { "method": "POST", "path": "/v1/listeler/subeler/{subeId}/satirlar", "client": "panel", "purpose": "Tek öğrenciyi listeye elle ekler ya da pasif satırını canlandırır; sıra en sona.", "proposed_owner": "D03" },
+    { "method": "PATCH", "path": "/v1/listeler/satirlar/{satirId}", "client": "panel", "purpose": "Satırı pasif yapar ya da canlandırır, geç kayıt seçimini ya da muaf işaretini değiştirir (muafın anlamı D08'de); beklenen liste sürümüyle.", "proposed_owner": "D03" },
+    { "method": "GET", "path": "/v1/listeler/subeler/{subeId}/yuklemeler", "client": "panel", "purpose": "Şubenin yükleme geçmişi: kim, ne zaman, dosya türü ve değişiklik sayıları.", "proposed_owner": "D03" }
+  ],
+  "jobs": [],
+  "depends_on": ["D01", "D02", "D06", "D07", "D09", "D12", "D13"],
+  "touches_other_domains": [
+    { "domain": "D01", "what": "Kayıtta eşleştirme listeler modülünün tek fonksiyonunu çağırır (numaraya göre etkin satırlar ve isim karşılaştırması); liste uygulanınca bekleyen kayıtlar aynı işlemde, numara kilidiyle eşleşir (D03-B19); hesap silinince liste satırı kalır; teyitli numara tekilliği hesap tablosunda; çift anadalda birden çok numara (D03-B09); liste uçlarının yetkisi rollere dayanır (D03-B16); ilk kayıt teyidini verebilecek hocalar öğrencinin bulunduğu listelerden çıkar; öğrenci no şeması (9 ya da 10 ASCII rakam) packages/contracts içinde tek, kayıt formu da aynı şemayı kullanır." },
+    { "domain": "D04", "what": "Çakışan derslerde aynı saatte tek yoklama kuralı öğrencinin etkin liste satırlarını (çift anadal ve yandal listeleri dahil) listeler modülünün dış yüzünden alır; öğrencinin telefonu pasif anından sonra açılan oturumda pencere açmaz (D03-B13)." },
+    { "domain": "D02", "what": "Liste şubeye bağlı; ders ve şube D02'de açılır, liste yüklemesi ders açmaz; birlikte işlenen şubeler; dönem kilidi ve arşiv liste yazmayı kapatır (D03-B17); ekle-bırak bitişi önizlemede ipucu (D03-B12); ilk yapılan ders oturumlardan ve ders yapıldı bilgisinden gelir; inceleme deneme dersinin listesi (D03-B26)." },
+    { "domain": "D05", "what": "Yoklamaya elle ekleme ve telafi işaretlemesi hoca telefonundaki sınıf listesini kullanır; pasif öğrenci elle eklenemez; hocaya gösterilen isim liste satırındaki addır." },
+    { "domain": "D06", "what": "Liste satırları telefona inen tablodur: değişiklik sürümü tek sayaç satırından ve liste işlemiyle aynı işlemde alınır; hocaya şubenin bütün satırları, öğrenciye yalnız kendi satırı; pasifin telefona inişi (D03-B13); satır alanları (D03-B27); hoca çıkışında listeler telefondan silinir." },
+    { "domain": "D07", "what": "Listesinde olmadığı derse yoklama reddi listeler modülünün üyelik fonksiyonunu kullanır (D03-B10); liste değişikliği etkilenen kayıtların kararını yeniden verdirir (D03-B14); rastgele isimde okunan ad liste satırından gelir." },
+    { "domain": "D08", "what": "T eklenme anına ve geç kayıt seçimine bağlı (D03-B11, D03-B12); muaf alanı liste satırında, anlamı ve uyarılara etkisi D08'de; pasif öğrencinin hak hesabı D08'in kararı." },
+    { "domain": "D09", "what": "Liste değişiklik olayları denetim kaydına yazılır (D03-B20); liste değişikliğiyle değişen sonuç \"sonradan değişenler\" listesine düşer." },
+    { "domain": "D10", "what": "AKSİS özeti sırayı liste satırından alır (listeye elle eklenen sona, yeni yüklemede sıra yenilenir); raporlar modülü liste tablolarını yalnız okur; numara ve isim Excel'de metin hücresi; pasif öğrencinin raporda görünmesi D10'un kararı." },
+    { "domain": "D12", "what": "Veritabanı C.UTF-8: Türkçe büyük küçük harf işi SQL'de yapılmaz; isim sıralaması COLLATE \"tr-TR-x-icu\" ile ve dizinsiz; durum listeleri (gec_kayit_secimi, kaynak) metin ve CHECK; (ders, öğrenci no) etkin satır için kısmi tekil dizin; UUIDv7 kimlikler." },
+    { "domain": "D13", "what": "Liste uçları /v1/listeler altında; gövde sınırı açıkça yazılır; listeye özgü hata kodları ortak zarfla döner; öğrenci numarası adres satırına konmaz, satırlar UUID ile adreslenir; uygulama ucunun tekrarı içerik eşitliğiyle zararsız (D03-B03)." },
+    { "domain": "D14", "what": "Liste işleri iş kuyruğu kullanmaz; ileride kullanırsa iş yalnız iç kimlik taşır." },
+    { "domain": "D15", "what": "Numara ve isim loglanmaz, pino gizleme yolları liste alanlarını kapsar; liste okuma saf fonksiyonu maskeli örnek dosyalarla Vitest'te, önizleme ve uygulama Türkçe davranış senaryolarıyla denenir; eşleştirme fonksiyonuna tablo ve özellik testleri." }
+  ]
+}

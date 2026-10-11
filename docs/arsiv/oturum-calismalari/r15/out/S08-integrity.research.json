@@ -1,0 +1,422 @@
+{
+ "checked_ok": [
+  {
+   "plan_line": 78,
+   "claim": "Google servisi olmayan telefonda (ör. Huawei) Play Integrity çalışmaz: Play Store yoksa API PLAY_STORE_NOT_FOUND hatası döner. Hoca teyidi ve etiket yaklaşımı yerinde.",
+   "source_url": "https://developer.android.com/google/play/integrity/error-codes"
+  },
+  {
+   "plan_line": 78,
+   "claim": "Android Keystore anahtarının gizli kısmı uygulama sürecine hiç girmez ve TEE ya da SE donanımına bağlanabilir; 'dışarı çıkmaz' doğru.",
+   "source_url": "https://developer.android.com/privacy-and-security/keystore"
+  },
+  {
+   "plan_line": 78,
+   "claim": "App Attest donanım tabanlı anahtar üretir ve Apple sunucusu anahtarın uygulamanın geçerli bir kopyasına ait olduğunu onaylar.",
+   "source_url": "https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity"
+  },
+  {
+   "plan_line": 78,
+   "claim": "Doğrulanamayan telefonu reddetmeyip işaretlemek, Google'ın 'tek başına engel değil, diğer sinyallerle ve kademeli kullan' önerisine uygun.",
+   "source_url": "https://developer.android.com/google/play/integrity/overview"
+  },
+  {
+   "plan_line": 78,
+   "claim": "App Attest kayıt yükü 50.000 öğrencide sorun değil: Apple saniyede 100 isteğin altını ve günde en çok 10 milyon kullanıcılık açılışı öneriyor.",
+   "source_url": "https://developer.apple.com/documentation/devicecheck/preparing-to-use-the-app-attest-service"
+  },
+  {
+   "plan_line": 84,
+   "claim": "App Attest anahtarı yeniden kurulumda, cihaz taşımada ve yedekten dönüşte geçersiz olur; 'silip yeniden kurmak cihaz değişimi sayılır' kuralı App Attest yolunda doğru.",
+   "source_url": "https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity"
+  },
+  {
+   "plan_line": 295,
+   "claim": "Emülatör ve kökü açılmış telefon Play Integrity'de boş cihaz kararı alır (MEETS_VIRTUAL_INTEGRITY yalnız Play Games PC içindir); 'zorlaşır' ifadesi dürüst.",
+   "source_url": "https://developer.android.com/google/play/integrity/verdicts"
+  },
+  {
+   "plan_line": 589,
+   "claim": "Node crypto ECDSA imzasını dsaEncoding 'der' (varsayılan) ya da 'ieee-p1363' (ham r||s) ile doğrular; v12.16 ve v13.2'den beri var, Node 24'te geçerli.",
+   "source_url": "https://nodejs.org/docs/latest-v24.x/api/crypto.html"
+  },
+  {
+   "plan_line": 589,
+   "claim": "@peculiar/asn1-android güncel ve bakımlı: 2.10.0 (27 Eylül 2026), PeculiarVentures kuruluşu, KeyMint v400 alanlarını tanıyor. Yalnız ayrıştırır; zincir ve iptal kontrolü yapmaz.",
+   "source_url": "https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/android"
+  },
+  {
+   "plan_line": 683,
+   "claim": "@expo/app-integrity gerçekten alfa ('will frequently experience breaking changes'); SDK 54 ile geldi, SDK 57 sürümü 57.0.2. Android'de Play Integrity standart istek ve donanım kanıtlı Keystore anahtarı, iPhone'da App Attest sağlar; Android için imzalama fonksiyonu yok, imzayı kendi modülüm atmalı.",
+   "source_url": "https://docs.expo.dev/versions/latest/sdk/app-integrity/"
+  },
+  {
+   "plan_line": 683,
+   "claim": "@noble/curves güncel: 2.4.0 (27 Ağustos 2026); 2.3.0 sürümü Ağustos 2026'da Trail of Bits tarafından denetlendi.",
+   "source_url": "https://github.com/paulmillr/noble-curves"
+  },
+  {
+   "plan_line": 683,
+   "claim": "Keystore P-256 anahtarı ve Google köklü donanım anahtar kanıtı Android 7.0 (API 24) ve üstünde var; Play Integrity standart istek API 23 ister. Planın Android 7 alt sınırı uygun.",
+   "source_url": "https://developer.android.com/privacy-and-security/security-key-attestation"
+  }
+ ],
+ "findings": [
+  {
+   "id": "S08-01",
+   "plan_line": 78,
+   "plan_quote": "Kayıtta telefonun gerçek ve uygulamanın değiştirilmemiş olduğu Google (Play Integrity)",
+   "kind": "RISK",
+   "lenses": [
+    "correct",
+    "useful"
+   ],
+   "severity": "medium",
+   "finding": "For the GitHub APK, the plan's main Android channel, Play Integrity cannot return PLAY_RECOGNIZED (apps not published on Play are not eligible) or LICENSED (sideloads are UNLICENSED). On Android 13+ every optional signal except deviceAttributes (device recall, recent activity, app access risk, Play Protect) requires a Play install, and an unlinked Cloud project gets no optional configuration. What remains: the default MEETS_DEVICE_INTEGRITY label, plus packageName and certificateSha256Digest, which are still filled for UNRECOGNIZED_VERSION. So 'app unmodified' can only be shown by comparing the certificate digest with our signing key. The plan does not say which fields it checks or how the verdict is tied to the device key; a textbook check that demands PLAY_RECOGNIZED would label every Android student 'Cihaz doğrulanmadı'.",
+   "evidence": [
+    {
+     "url": "https://firebase.google.com/docs/app-check/android/play-integrity-provider",
+     "quote": "By default, App Check requires the PLAY_RECOGNIZED app recognition label. Apps not published on Google Play are not eligible to receive this label.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/verdicts",
+     "quote": "The certificate or package name does not match Google Play records.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/verdicts",
+     "quote": "The sha256 digest of app certificates (base64-encoded URL-safe). This field is populated iff appRecognitionVerdict != UNEVALUATED.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/improvements",
+     "quote": "All optional signals available to developers using Google Play Console or the Play SDK Console (except device attributes) now require the requesting app to be installed, or updated, by Google Play on Android 13 or later.",
+     "date": "2026-02-26"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/setup",
+     "quote": "Projects that are enabled in the Google Cloud Console but not linked in the Play Console or Play SDK Console are not eligible for additional configuration options or quota increases.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/standard",
+     "quote": "When you're checking a user action in your app with the Play Integrity API, you can leverage the requestHash field to mitigate against tampering attacks.",
+     "date": "2026-06-01"
+    }
+   ],
+   "recommendation_tr": "GitHub'dan kurulan uygulamada Play her zaman 'tanınmayan sürüm' (UNRECOGNIZED_VERSION) ve 'lisanssız' der; bunları ret ya da işaret sebebi saymam. Uygulamanın bizim olduğunu paket adı ile imza sertifikası özetinin (certificateSha256Digest) bizim imza anahtarımıza eşit olmasından, telefonun gerçek olduğunu MEETS_DEVICE_INTEGRITY etiketinden anlarım. İsteğin özet alanına (requestHash) telefonun açık anahtarının özetini koyarım, sunucu bunu karşılaştırır; böylece karar o anahtara bağlanır. Cihaz hatırlama, son etkinlik ve Play Protect gibi ek sinyaller Play dışı kurulumda gelmediği için plana girmez.",
+   "confidence": "high"
+  },
+  {
+   "id": "S08-02",
+   "plan_line": 78,
+   "plan_quote": "Google (Play Integrity) ya da Apple (App Attest) üzerinden doğrulanır",
+   "kind": "RISK",
+   "lenses": [
+    "scalable",
+    "correct"
+   ],
+   "severity": "medium",
+   "finding": "Play Integrity allows 10,000 token requests and 10,000 decryptions per day per Cloud project by default, and standard-request warm-ups count as token requests. An increase requires the app to be on Google Play with the Cloud project linked in Play Console; requests from unlinked projects are rejected. At 50,000 students a semester-start registration wave, or a warm-up at every app launch (Google lists app launch as a warm-up point), can exhaust the day's quota; the API then returns TOO_MANY_REQUESTS. The plan has no rule for this case.",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/google/play/integrity/setup",
+     "quote": "Your app or SDK has a default daily limit of 10,000 total requests, tied to the associated Cloud Project Number.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/setup",
+     "quote": "Shared between classic requests and standard token preparations",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/setup",
+     "quote": "To be eligible for a quota increase, your app must be available on Google Play in addition to any other distribution channels. You must link your Google Cloud project to your app in the Play Console. Quota requests from unlinked projects will be rejected.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/error-codes",
+     "quote": "The calling app is making too many requests to the API and has been throttled, or your app has exceeded its daily request quota.",
+     "date": "2026-02-26"
+    }
+   ],
+   "recommendation_tr": "Play Integrity'yi yalnız kayıt ve cihaz değişimi ekranında hazırlar ve çağırırım, her açılışta değil; günlük 10.000 sınırına hazırlık çağrıları da sayılıyor. Sınır aşılır ya da Google'a ulaşılamazsa kayıt durmaz: telefon 'Cihaz doğrulanmadı' etiketiyle bağlanır, doğrulama sonraki açılışta kendiliğinden yeniden denenir. Uygulama Google Play'de de yayımlanırsa kota artışı istenir; Play'de değilken artış yolu yok.",
+   "confidence": "high"
+  },
+  {
+   "id": "S08-03",
+   "plan_line": 589,
+   "plan_quote": "Android anahtar kanıtı @peculiar/asn1-android",
+   "kind": "SIMPLIFY",
+   "lenses": [
+    "compact",
+    "sustainable",
+    "current"
+   ],
+   "severity": "medium",
+   "finding": "On Android the plan runs two registration checks that rest on the same hardware signal: Play Integrity (line 78) and its own key-attestation verifier (lines 589, 683). Since May 2025 Play Integrity's device verdict on Android 13+ is itself built on hardware key attestation, and Google calls Play Integrity the recommended way to use it. The own verifier is the heavier half: @peculiar/asn1-android only provides ASN.1 schemas, so chain validation against Google's roots, the revocation list, RKP certificate expiry and the challenge, app id and root-of-trust checks are all custom security code, which Google says custom verifiers often get wrong (it points to its Kotlin library, unusable on a Node server without adding a JVM). It also carries upkeep: a new ECDSA P-384 root started signing chains on 1 February 2026 and the official roots URL (android.googleapis.com/attestation/root) now serves two roots. Trade-off: Play Integrity needs a Google Cloud project and a service account on the server and has the quota limit in S08-02; key attestation alone avoids both but keeps the custom verifier.",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/blog/posts/stronger-threat-detection-simpler-integration-protect-your-growth-with-the-play-integrity-api",
+     "quote": "Play Integrity API is the recommended way to benefit from hardware-backed Android platform key attestation.",
+     "date": "2025-11-19"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/improvements",
+     "quote": "Play Integrity API already uses key attestation to obtain hardware-backed security signals on some devices and will now integrate them more deeply on all devices running Android 13 or later.",
+     "date": "2026-02-26"
+    },
+    {
+     "url": "https://developer.android.com/privacy-and-security/security-key-attestation",
+     "quote": "Use the attestation verification Kotlin library to verify Key Attestation certificate chains. If you are using a different verifier, we recommend moving to the Kotlin library instead. It's well-tested, and covers edge cases that are often missed by custom verifiers.",
+     "date": "2026-07-09"
+    },
+    {
+     "url": "https://developer.android.com/privacy-and-security/security-key-attestation",
+     "quote": "Important: The following root certificate will begin signing attestation certificate chains on February 1, 2026.",
+     "date": "2026-07-09"
+    }
+   ],
+   "recommendation_tr": "Android'de kayıtta tek kontrol yaparım: Play Integrity. Anahtar yine Keystore'da üretilir ve dışarı çıkmaz; ama sunucuda kendi anahtar kanıtı doğrulayıcımı yazmam, @peculiar/asn1-android ile kök sertifika ve iptal listesi takibi plandan çıkar. Sunucuya Google bulut proje numarası ve bir hizmet hesabı anahtarı eklenir. Uygulama Play'e hiç girmeyecekse ve kayıtlar tek seferde açılacaksa tersini seçerim: yalnız anahtar kanıtı. O zaman iki Google kökünü (eski RSA ve 1 Şubat 2026'dan beri yeni P-384) resmî adresten alır, iptal listesini düzenli çeker, RKP sertifikalarının süresini kontrol ederim.",
+   "confidence": "medium"
+  },
+  {
+   "id": "S08-04",
+   "plan_line": 683,
+   "plan_quote": "iPhone'da App Attest (her kayıt için artan sayaçlı onay)",
+   "kind": "RISK",
+   "lenses": [
+    "correct",
+    "useful"
+   ],
+   "severity": "medium",
+   "finding": "Apple's rule is that each assertion counter must exceed the last one stored for that key, and node-app-attest enforces it strictly. In this offline-first design an earlier-signed record (lower counter) can reach the server after a later assertion: (a) any online request the app signs with the same App Attest key (a download or time-certificate refresh on app open) before the queue is flushed; (b) a batch where an earlier record gets 'tekrar dene' while a later one is accepted (line 127). That earlier record is then rejected on every retry: a silent loss against the plan's zero-loss target. Apple's step that the client data carries the server's earlier challenge also has no offline equivalent in the plan.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server",
+     "quote": "Verify that the authenticator data's counter value is greater than the value from the previous assertion, or greater than 0 on the first assertion.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/videos/play/wwdc2026/201/",
+     "quote": "Your server should validate the counter property embedded within the assertion and ensure it is strictly increasing.",
+     "date": "2026-06"
+    },
+    {
+     "url": "https://github.com/uebelack/node-app-attest/blob/main/src/verifyAssertion.js",
+     "quote": "if (nextSignCount <= signCount) { throw new Error(\"invalid signCount\"); }",
+     "date": "2026-02-20 (1.0.1)"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server",
+     "quote": "Verify that the embedded challenge in the client data matches the earlier challenge to the client.",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Sunucu her iPhone için iki sayaç tutar: internetsiz imzalanan kayıtlar için bir, anlık istekler için bir; böylece internet gelince yapılan bir istek bekleyen kaydı geçersiz kılmaz. Kayıtlar tek sıralı kuyruktan gider ve sunucu bir cihazın kayıtlarını sıra numarasıyla işler. Aynı kayıt yeniden gelirse sayaca bakmadan 'zaten var' döner; bir kayıt 'tekrar dene' alırsa paketteki sonraki kayıtlar da 'tekrar dene' alır. Apple'ın istediği sunucu sorusu (challenge) yerine kaydın taşıdığı saat belgesi kullanılır.",
+   "confidence": "high"
+  },
+  {
+   "id": "S08-05",
+   "plan_line": 786,
+   "plan_quote": "Cihazlar: kişiye bağlı telefonlar, açık anahtarları, anahtar türü (donanım ya da yazılım) ve doğrulama sonucu.",
+   "kind": "MISSING",
+   "lenses": [
+    "correct",
+    "useful"
+   ],
+   "severity": "medium",
+   "finding": "The device row lacks what App Attest verification needs: the last counter per key (checked on every assertion), the environment (sandbox and production keys and receipts do not work in each other's environment; TestFlight and App Store builds always use production), and the attestation receipt, which Apple says to verify and store at once because it is needed later for the risk metric. For Play Integrity, the verdict date, device label and certificate digest are what 'doğrulama sonucu' should hold.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server",
+     "quote": "Be prepared to store multiple (key, receipt) pairs for each user. Store one pair for each device the user uses to access your services. Also, keep development pairs separate from production pairs because you can't use one set in the other's environment.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server",
+     "quote": "When attestation succeeds, independently verify and store the receipt immediately.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.devicecheck.appattest-environment",
+     "quote": "After distributing your app through TestFlight, the App Store, or the Apple Developer Enterprise Program, your app ignores the entitlement you set and uses the production environment.",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Cihazlar tablosuna iPhone için son kayıt sayacı, son istek sayacı, ortam (geliştirme ya da yayın) ve Apple makbuzu (receipt); Android için Play Integrity kararının tarihi, cihaz etiketi ve sertifika özeti eklenir. Geliştirme derlemesinin anahtarı yayın sunucusunda kabul edilmez; TestFlight derlemesi yayın ortamını kullanır.",
+   "confidence": "high"
+  },
+  {
+   "id": "S08-06",
+   "plan_line": 683,
+   "plan_quote": "expo-secure-store \"yalnız bu cihaz\"",
+   "kind": "RISK",
+   "lenses": [
+    "correct",
+    "useful"
+   ],
+   "severity": "medium",
+   "finding": "The exact setting is keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY (or AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY if signing must run while the phone is locked); it is iOS-only and only stops migration to another device. On iOS, SecureStore data survives uninstall, so after a reinstall the old software key (and any stored key id) is still there while the SQLite queue and sequence counter are gone. That breaks line 84 ('uygulamayı silip yeniden kurmak cihaz değişimi sayılır') and can reuse old (device, sequence) pairs, which line 612 makes unique: such records would be rejected or treated as duplicates. On Android the reverse can happen: Auto Backup and device setup restore the database, while Keystore keys stay bound to the old phone's hardware.",
+   "evidence": [
+    {
+     "url": "https://docs.expo.dev/versions/latest/sdk/securestore/",
+     "quote": "Data saved using expo-secure-store will persist across app uninstallations if the app is reinstalled with the same bundle ID.",
+     "date": "SDK 57, accessed 2026-10-05"
+    },
+    {
+     "url": "https://docs.expo.dev/versions/latest/sdk/securestore/",
+     "quote": "Supported platforms: iOS. Specifies when the stored entry is accessible, using iOS's kSecAttrAccessible property.",
+     "date": "SDK 57, accessed 2026-10-05"
+    },
+    {
+     "url": "https://docs.expo.dev/versions/latest/sdk/securestore/",
+     "quote": "Similar to WHEN_UNLOCKED, except the entry is not migrated to a new device when restoring from a backup.",
+     "date": "SDK 57, accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.android.com/identity/data/autobackup",
+     "quote": "Data is restored whenever the app is installed, whether from the Play Store, during device setup (when the system installs previously installed apps), or by running adb install.",
+     "date": "2026-02-26"
+    }
+   ],
+   "recommendation_tr": "Yazılım anahtarı kalırsa ayarın tam adı keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY olur (arka planda imza gerekecekse AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY); yalnız iPhone'da geçerlidir. iPhone'da bu kayıt uygulama silinince de kalır; bu yüzden uygulama ilk açılışta yerel veritabanı yoksa anahtarlıktaki eski anahtarı ve kimlikleri siler, cihaz değişimi akışına geçer. Veritabanı olup anahtar yoksa (telefon taşıma) da aynı akış çalışır; daha önce imzalanmış bekleyen kayıtlar yine gönderilir.",
+   "confidence": "high"
+  },
+  {
+   "id": "S08-07",
+   "plan_line": 589,
+   "plan_quote": "Kayıt tam baytlarıyla imzalanır (JWS ES256 biçimi)",
+   "kind": "WRONG",
+   "lenses": [
+    "correct"
+   ],
+   "severity": "low",
+   "finding": "JWS ES256 requires a 64-byte R||S signature value, so a DER signature is not a valid JWS ES256 value: 'JWS ES256 biçimi' and 'donanım imzalarını (DER)' in the same paragraph contradict each other, and a JWS library would reject the Android signatures. On iPhone the per-record signature is an App Attest assertion, a CBOR object whose DER signature covers SHA256(authenticatorData || SHA256(clientData)), not a JWS at all. Signing the exact bytes is right; only the format label is wrong.",
+   "evidence": [
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc7518#section-3.4",
+     "quote": "The JWS Signature value MUST be a 64-octet sequence. If it is not a 64-octet sequence, the validation has failed.",
+     "date": "2015-05"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server",
+     "quote": "Concatenate authenticatorData and clientDataHash, and apply a SHA256 hash over the result to form nonce.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://nodejs.org/docs/latest-v24.x/api/crypto.html",
+     "quote": "'der' (default): DER-encoded ASN.1 signature structure encoding (r, s).",
+     "date": "Node 24 docs, accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "'JWS ES256 biçimi' ifadesini kaldırırım. Kayıt zarfı üç alandır: değişmeyen kayıt baytları, imza türü ve imza. Android donanım imzası DER, iPhone imzası App Attest onayıdır (CBOR); sunucu türe bakıp Node'un crypto.verify'ını dsaEncoding 'der' ile ya da App Attest doğrulamasını çalıştırır.",
+   "confidence": "high"
+  },
+  {
+   "id": "S08-08",
+   "plan_line": 683,
+   "plan_quote": "App Attest'in internetsiz imzalaması belgelenmemiş; uçak modunda denenecek.",
+   "kind": "WRONG",
+   "lenses": [
+    "correct",
+    "current"
+   ],
+   "severity": "low",
+   "finding": "Apple stated at WWDC21 and again at WWDC26 that assertions are produced on the device without contacting Apple servers; only attestKey, once per key at registration, needs the network and can be throttled.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/videos/play/wwdc2021/10244/",
+     "quote": "The assertion flow is simpler than attestation, as the Apple servers are no longer involved. All assertions using the key are generated on-device and validated on your server.",
+     "date": "2021-06"
+    },
+    {
+     "url": "https://developer.apple.com/videos/play/wwdc2026/201/",
+     "quote": "Assertions are generated locally on the device and do not round-trip Apple servers.",
+     "date": "2026-06"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity",
+     "quote": "If the method, which accesses a remote Apple server, returns the serverUnavailable error, try attestation again later with the same key.",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "'Belgelenmemiş' ifadesini çıkarırım: Apple onayın telefonda üretildiğini, Apple sunucusuna gitmediğini açıkça söylüyor. Uçak modu denemesi kabul testi olarak kalır. İnternet yalnız kayıttaki tek seferlik anahtar onayı (attestKey) için gerekir; 'sunucuya ulaşılamadı' hatasında aynı anahtarla artan aralıklarla yeniden denenir.",
+   "confidence": "high"
+  },
+  {
+   "id": "S08-09",
+   "plan_line": 589,
+   "plan_quote": "iPhone App Attest node-app-attest ile doğrulanır",
+   "kind": "RISK",
+   "lenses": [
+    "current",
+    "sustainable"
+   ],
+   "severity": "low",
+   "finding": "node-app-attest has one maintainer (1.0.1 published 2026-02-20; earlier releases 2024-02 and 2025-08). Apple's current validation steps add checks introduced with iOS 27 at WWDC26: apple_validation_category_01 and apple_bundle_version_01 in attestations, validationCategory and bundleVersion in assertions. The library predates them and reads authenticator data at fixed offsets, so it neither checks nor returns them. The only other npm option, appattest-checker-node, was last published 2024-10 by one maintainer, so switching does not help. The library is small and uses Node's built-in X509Certificate, so taking it in-house later is cheap.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server",
+     "quote": "Verify the apple_validation_category_01 value within the extensions CBOR dictionary in the authenticator data.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/videos/play/wwdc2026/201/",
+     "quote": "New in iOS 27, it highlights the launch validation category of your app on the user's device.",
+     "date": "2026-06"
+    },
+    {
+     "url": "https://registry.npmjs.org/node-app-attest",
+     "quote": "\"1.0.1\": \"2026-02-20T12:55:36.843Z\"",
+     "date": "2026-02-20"
+    },
+    {
+     "url": "https://registry.npmjs.org/appattest-checker-node",
+     "quote": "\"time.modified\": \"2024-10-13T15:41:27.532Z\"",
+     "date": "2024-10-13"
+    }
+   ],
+   "recommendation_tr": "node-app-attest'in sürümünü sabit tutarım. Apple'ın iOS 27 ile eklediği iki alanı (başlatma kategorisi ve paket sürümü) geldiğinde kendi kodumda okurum: TestFlight döneminde 2, App Store'da 4 beklenir; başka bir değer ya da yayımlamadığım bir sürüm kaydı işaretler. Paket güncellenmezse küçük olduğu için kendi koduma alırım.",
+   "confidence": "high"
+  },
+  {
+   "id": "S08-10",
+   "plan_line": 683,
+   "plan_quote": "İlk sürümlerde yazılım anahtarı (@noble/curves",
+   "kind": "SIMPLIFY",
+   "lenses": [
+    "compact",
+    "sustainable"
+   ],
+   "severity": "low",
+   "finding": "The interim software-key path adds @noble/curves, a getRandomValues polyfill on React Native (or passing native random bytes in), a second server verification branch for raw r||s, and the iOS keychain persistence issue in S08-06, all for a key that a modified app or rooted phone can read. The target hardware path needs no extra package: Keystore key material never enters the app process, @expo/app-integrity already creates the App Attest key on iPhone and an attested Keystore key on Android, and the plan's own module signs. Since unverified devices are only labelled anyway, the hardware key can ship from the first version while attestation checks are switched on later. expo-secure-store itself stays, because @better-auth/expo needs it for the instructor session.",
+   "evidence": [
+    {
+     "url": "https://github.com/paulmillr/noble-curves",
+     "quote": "For React Native, you may need a polyfill for getRandomValues.",
+     "date": "2.4.0, 2026-08-27"
+    },
+    {
+     "url": "https://developer.android.com/privacy-and-security/keystore",
+     "quote": "Key material never enters the application process.",
+     "date": "2026-03-06"
+    },
+    {
+     "url": "https://docs.expo.dev/versions/v57.0.0/sdk/app-integrity/",
+     "quote": "Generates a hardware-attested key pair in the Android Keystore. This key can be used for attestation on GrapheneOS and other secure Android distributions.",
+     "date": "SDK 57, accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Yazılım anahtarı yolunu yazmam. İlk sürümden itibaren anahtar Android'de Keystore'da, iPhone'da App Attest ile donanımda üretilir; doğrulama henüz yoksa ya da geçmezse kayıt yine 'Cihaz doğrulanmadı' etiketi alır. Böylece @noble/curves, rastgele sayı yaması ve sunucudaki ikinci imza dalı gerekmez. Donanım anahtarı üretemeyen telefon gerçekten görülürse yazılım anahtarı o zaman eklenir.",
+   "confidence": "medium"
+  }
+ ],
+ "compactness_notes": "Aşama 1 için dürüst görüş: Cihaz doğrulaması Aşama 1'in asıl açığını (evden ya da sınıf dışından yoklama, kod paylaşma) kapatmaz; plan bunu satır 301 ve 313'te zaten söylüyor. Aşama 1'deki gerçek getirisi, 'tek telefon, tek hesap' kuralını emülatöre, değiştirilmiş uygulamaya ve resmî uygulama dışından sunucuya istek atan araçlara karşı geçerli kılmak. Plan doğrulanamayan telefonu reddetmiyor, yalnız etiketliyor; Google da kararı tek engel değil, diğer sinyallerle birlikte kademeli kullanılacak bir sinyal sayıyor (https://developer.android.com/google/play/integrity/overview). Bu yüzden Aşama 1'de tam yığın gerekmez, en sade hal yeter: anahtar ilk günden donanımda (Android Keystore, iPhone App Attest), kayıtta platform başına tek doğrulama (Android'de Play Integrity, iPhone'da App Attest), sonuç yalnız etiket. Sunucuda kendi Android anahtar kanıtı doğrulayıcısı ve geçici yazılım anahtarı yolu iş getirir ama Aşama 1'e güvenlik katmaz. Apple risk sayısı ve Google cihaz hatırlama plana eklenmesin; ikincisi GitHub kurulumunda zaten gelmez (https://developer.android.com/google/play/integrity/improvements). Huawei gibi Google servisi olmayan telefonlar için Huawei'nin kendi doğrulamasını (HMS Safety Detect) eklemek ayrı SDK ve ayrı sunucu doğrulaması demek; küçük bir pay için değmez, plandaki hoca teyidi ve etiket yeterli. Google da Play dışı cihazların kendi kök sertifikasını kullanabileceğini, bu durumda donanım hakkında iddiada bulunmadığını söylüyor (https://developer.android.com/privacy-and-security/security-key-attestation). Bu bulgular kabul edilirse net parça değişimi: @peculiar/asn1-android ve @noble/curves çıkar, yeni araç eklenmez (eksi 2). Play Integrity için gereken Google bulut hizmet hesabı yeni değil, planın Play Integrity kararından zaten geliyor.",
+ "open_questions": [
+  "Android'de tek kontrol hangisi olsun? Play Integrity: Google'ın önerdiği yol, sunucuda az kod, ama Google bulut hizmet hesabı ve uygulama Play'de değilken artırılamayan günlük 10.000 sınırı var. Yalnız anahtar kanıtı: Google hesabı ve sınır yok, ama iki kök, iptal listesi ve kendi doğrulayıcı kodu var. Karar, uygulamanın Google Play'e de girip girmeyeceğine bağlı (Açık noktalar, satır 857).",
+  "iPhone'da her kayıt için App Attest onayı yerine, kayıtta App Attest ile bir kez bağlanan bir Secure Enclave anahtarı (CryptoKit, iOS 13 ve üstü) kullanılsın mı? İki platformda tek imza biçimi (P-256 ECDSA) ve sayaç sorunu olmayan bir sunucu sağlar; ama Apple'ın belgelediği akış değil, bu yüzden ayrıca güvenlik değerlendirmesi ister.",
+  "Satır 194, 293 ve 315'teki 'en çok 2' sınırı: saati doğrulanamayan kayıtlarla yedek kodla alınan kayıtlar için ortak tek bir 2 mi, yoksa her biri için ayrı 2 mi?"
+ ]
+}

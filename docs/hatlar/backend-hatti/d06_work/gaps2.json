@@ -1,0 +1,197 @@
+[
+ {
+  "question": "Kararın telefona ulaştığı an sunucuda nasıl belirlenir?",
+  "why": "Sorun bildirme süresi (3 gün) kaydı olan öğrencide 'sunucu kararı telefonuna ulaşınca' başlar (plan, Sorun bildir; tasarım: 'Karar telefonuna ulaştıktan sonraki 3 gün içinde bildirebilirsin.'). Sunucu cevabın telefona yazıldığını bilemez: zaman aşımı ya da kopan bağlantıda cevap kaybolur. Bu an tanımlanmazsa süre ya hiç başlamaz ya da öğrencinin görmediği karar için işler.",
+  "options": [
+   "Onay: telefon her istekte en son kalıcı yazdığı öğrenci durum sürümünü bildirir; sunucu o sürüme kadar verilip henüz teslim anı olmayan her karara teslim anı yazar",
+   "Cevabın gönderildiği an teslim sayılır",
+   "Süreyi telefon kendi hesaplar, sunucu denetlemez"
+  ],
+  "recommendation": "Birinci seçenek: kesin, ucuz (yalnız bildirilen sürüm sunucudaki onaylanmış sürümden büyükse yazar) ve kaybolan cevapta yanlış başlatmaz. Her karar değişikliği öğrencinin o anki durum sürümüyle kaydedilir; onay gelince o öğrencinin bu sürüme kadarki teslim anı boş kararlarına tek UPDATE ile teslim anı yazılır. Teslim anı kural taşıdığı için SQL now() ile değil ortak saat arayüzünden yazılır (teknik.html#testler, Saat ve sahteler). Kayıt (dönem, kimlik) çiftiyle başvurur (teknik.html#veritabani-donem-alani). Karar sonradan değişirse sürenin yeniden başlayıp başlamadığı D09'un kuralıdır; bu alan her karar sürümü için teslim anını sağlar.",
+  "needs_owner": false
+ },
+ {
+  "question": "Sunucu 'telefonu sunucuya hiç bağlanmamış' öğrenciyi nasıl bilir; bağlantı neyi kapsar?",
+  "why": "KARAR BEKLİYOR, 'son oturumdan sonra telefonu sunucuya hiç bağlanmamış ve sonucu tek kayıtla değişebilecek' öğrenciye konur (plan.html#devam-donem-sonu). Bağlanıp da kuyruğunda hâlâ gidemeyen kayıt (ör. ikinci çapa bekleyen) olan telefon gerçekte 'bağlanmış' sayılmamalı. Son temas anı tutulmazsa özet hesaplanamaz.",
+  "options": [
+   "Kurulum satırında son_temas_ani ve telefonun her istekte bildirdiği bekleyen öğe sayısı (ders başına); KARAR BEKLİYOR: son oturumun kapanışından sonra temas yok ya da son temasta o derse ait bekleyen öğe var",
+   "Yalnız son_temas_ani",
+   "Günlük sayaçlardaki 'gönderilmemiş kayıt' toplamı"
+  ],
+  "recommendation": "Birinci seçenek. Kurulum satırı her doğrulanmış istekte güncellenir: gönderim yolunda zaten açık olan işlemde, indirme yolunda tek satırlık birincil anahtar güncellemesiyle (ders çıkışında saniyede en çok birkaç yüz; yük testinde ölçülür). Seyreltme yapılmaz: son oturumun kapanışından hemen sonraki bir temas atlanırsa öğrenci yanlışlıkla KARAR BEKLİYOR görünür. Son temas anı kural taşıdığı için ortak saat arayüzünden yazılır. Hesabın kendisi D08 ve D10'un; bu alan verinin toplanmasını ve doğruluğunu sağlar.",
+  "needs_owner": false
+ },
+ {
+  "question": "İndirme ucunun biçimi, imlecin teldeki biçimi ve sayfalama nasıl olur; imleç hesap ve rol başına mı tutulur?",
+  "why": "Plan ve teknik imlecin değişiklik sürümü ile nesli (system_identifier, timeline_id) taşıdığını söyler ama teldeki biçimi, sayfalamayı, 'baştan indir' cevabının biçimini ve aynı telefonda öğrenci ile hoca kipinin imleçlerini tanımlamaz. system_identifier 64 bitlik tamsayıdır, JSON sayısı olarak taşınırsa JavaScript'te hassasiyet kaybolur.",
+  "options": [
+   "GET /v1/esitleme/degisiklikler?imlec=<opak metin>&sinir=N; cevap {imlec, devami_var, bastan_indir, tablolar: {ad: [satır ve surum, silindi]}, kayitlarim?, son_sira, saat_belgesi}; imleç opak base64url metin ('v1.<system_identifier>.<timeline_id>.<sürüm>'); telefon her sayfayı tek yerel işlemle yazar ve imleci aynı işlemde saklar; imleç hesap ve kip başına",
+   "Tablo başına ayrı uç ve ayrı imleç"
+  ],
+  "recommendation": "Birinci seçenek: ders çıkışındaki 'gerekirse değişenler' tek istektir (plan.html#teknoloji-sunucu-yeri). Sayfa sınırı sürüm sınırında kesilir: bir işlem tek sürüm aldığından aynı sürümün satırları bölünmez (büyük liste yüklemesi tek sayfada gelebilir). İmleç metin olduğu için 64 bit sorun olmaz ve istemci içini yorumlamaz. Sayfalama ve sorgu parametresi kuralları D13'le uyumlu yazılır.",
+  "needs_owner": false
+ },
+ {
+  "question": "Kullanıcının kapsamı değişince (derse sonradan eklenme, listeden çıkarılma ya da pasif olma, şube değişimi, derse hoca atanması ya da hocanın dersten alınması) süzülmüş indirme ne gönderir; hangi sütunlar hangi role iner?",
+  "why": "'Şu sürümden beri değişenler' sorgusu süzgeç değişince yanılır: derse sonradan eklenen öğrencinin dersi, ders saatleri ve oturumları değişmediği için eski sürümdedir ve hiç inmez; listeden çıkan öğrencinin telefonunda ders kalır ve yoklama sunmaya devam eder; dersten alınan hocanın telefonunda başkasının sınıf listesi kalır (plan: 'Herkes yalnız kendine gerekeni indirir'). Ayrıca teknikteki oturum satırı kafa sayısını da taşır; satırın tamamı öğrenciye inerse gereksiz veri iner.",
+  "options": [
+   "Kapsam olayı: kapsama yeni giren dersin bütün satırları sürüme bakılmadan gönderilir; kapsamdan çıkan ders için ders düzeyinde 'kapsamdan_cikti' işareti gider, telefon o dersin bütün yerel satırlarını siler; kapsam değişikliği liste satırının ya da hoca atamasının kendi sürümünden anlaşılır; rol başına sütun listesi sözleşmede",
+   "Kapsam değişince o kullanıcıya 'baştan indir'",
+   "Kapsam değişikliği gözetilmez"
+  ],
+  "recommendation": "Birinci seçenek, nadir karışık durumlarda (ör. şube birleşmesi) ikinci seçenek yedek olarak. Öğrenciye oturumun yalnız açılış, kapanış, ders, derslik, iptal ve tür alanları iner; kafa sayısı ve hoca ayarlarının ayrıntısı inmez. Liste satırının pasif olması ve eklenme tarihi D03'ün, ders atamaları D02'nin verisidir; bu alan onların sürüm ve silindi alanlarını nasıl taşıyacağını belirler.",
+  "needs_owner": false
+ },
+ {
+  "question": "Telefondaki özellikler için takvim ve dönem durumu gerekir mi; gerekirse hangi yoldan iner?",
+  "why": "Son hafta hatırlatması her açılışta çıkar (plan.html#devam-donem-sonu), ulaşmış kayıtlar dönem kilidine kadar saklanır (plan.html#kararlar-kayit-ve-makbuz); telefon dönemin son haftasını ve kilitlendiğini bilmelidir. Planın öğrenciye inen listesi 'yalnız' dersler, ders saatleri, oturumlar, tatiller ve kendi liste satırıdır; birim takvimi yoktur.",
+  "options": [
+   "Son hafta, telefonun bildiği oturumlardan (her dersin son oturumu) çıkarılır; dönem kilidi öğrencinin kendi kayıtları bölümünde dönem durumu olarak iner; plandaki liste değişmez",
+   "Birim takvimi ve dönem satırları ayrı indirilen tablo olur (kişisel veri yok)"
+  ],
+  "recommendation": "Birinci seçenek: plandaki 'yalnız' listesini değiştirmeden aynı işi görür, yeni tablo açmaz. Telefon kilitli dönemin yalnız ulaşmış öğelerini siler, gönderilmemiş öğeyi kilitten sonra da saklar ve gönderir (birimin son gününden sonra gelen kayıt yine saklanır). İkinci seçenek gerekirse sahibin onayıyla planın listesine eklenir.",
+  "needs_owner": false
+ },
+ {
+  "question": "Telefona hangi oturumlar iner: dönemin bütün oturumları mı, kayan bir pencere mi?",
+  "why": "İnternetsiz günlerde pencere telefonda açılabilmeli (oturumun açılış ve kapanış anı sunucudan iner). Kayan pencere (ör. önümüzdeki 14 gün) 'değişenler' mantığıyla ifade edilemez: pencereye giren oturum değişmediği için inmez.",
+  "options": [
+   "Dönemin bütün oturumları, üretildikçe (öğrenci başına dönemde en çok yaklaşık 170 satır)",
+   "Kayan pencere ve pencereye giren satırlar için ek kural"
+  ],
+  "recommendation": "Birinci seçenek: küçük ve doğru; aynı gün eklenen telafi dersi yeni satır olarak hemen sürüm alır ve internetteki telefona iner (plan, Telafi dersi). Oturumların dönem boyunca önceden üretilmesi D02'nin işidir.",
+  "needs_owner": false
+ },
+ {
+  "question": "Silindi işaretli satırlar ne kadar tutulur ve 'çok eski imleç' tam olarak nedir?",
+  "why": "Plan çok eski imlece 'baştan indir' dedirtir; teknik silinen satırı silindi işaretiyle tutar. Silinmiş satırlar hiç temizlenmezse 'çok eski' yalnız nesil değişince olur; temizlenirse temizlik sınırından eski imleçler silmeleri kaçırır.",
+  "options": [
+   "Aşama 1'de silindi işaretli satır temizlenmez (indirilen tablolar küçüktür); sunucu en_eski_gecerli_surum değerini tutar (başta 0), imleç bundan küçükse 'baştan indir'; ileride dönem arşivi temizlik yaparsa bu değer yükseltilir",
+   "Belli bir süreden eski silindi satırları düzenli silinir"
+  ],
+  "recommendation": "Birinci seçenek: bugün ek iş yok, gelecekteki temizlik de güvenli. Saklama kuralları D12'nindir.",
+  "needs_owner": false
+ },
+ {
+  "question": "Tek sayaç satırından sürüm alma sırası nasıldır; hangi yazmalar sürüm alır?",
+  "why": "Okuyucu v+1'i görüp v'yi işlemeyi bitirmemiş bir işlemi atlarsa değişiklik kaybolur. Satır kilitli sayaç (işlem içinde UPDATE ... RETURNING) yazma sırasıyla sürüm sırasını eşitler ama indirilen tablolara yazan bütün işlemleri kilit süresince sıraya sokar; SEQUENCE bu sırayı garanti etmez.",
+  "options": [
+   "Tek satır: indirilen bir sütunu değiştiren işlem sürümü bir kez ve işlemin son adımı olarak alır (kilit kısa kalır), bütün satırlarına aynı sürümü yazar; yoklama kaydı yazan gönderim yolu sürüm almaz",
+   "SEQUENCE ve okuyucuda en küçük açık işlem denetimi (pg_snapshot_xmin)"
+  ],
+  "recommendation": "Birinci seçenek, teknikteki karara uygun (teknik.html#kod-veri-modeli). Yalnız telefona inen bir sütun değişince sürüm alınır; ör. süresi dolan oturumu kapatan zamanlanmış iş (teknik.html#sunucu-arka-plan) inen bir alanı değiştirmiyorsa sürüm almaz. Öğrencinin kendi kayıtları ayrı, öğrenci başına sürümle iner (bkz. B11), böylece saniyede 70 ile 330 gönderimlik yol sayaç satırına hiç dokunmaz.",
+  "needs_owner": false
+ },
+ {
+  "question": "Nesil okunurken yetki ve geri dönüş anı nasıl güvenceye alınır?",
+  "why": "Teknik nesli pg_control_system() ve pg_control_checkpoint() ile okur. İki risk doğrulanmalı: uygulama rolünün bu fonksiyonları çağırma yetkisi (denetim tablosunda ayrı uygulama rolü var, süper kullanıcı değil); PITR'dan sonra denetim dosyasındaki checkpoint zaman çizelgesi ilk checkpoint bitene kadar eski değeri gösterebilir. Bu arada API açılırsa telefonlar geri sarılmış sürümler üzerinde eski imleçle kalır, tam da neslin önlemek istediği durum.",
+  "options": [
+   "Geri dönüş adımı: API, terfiden sonra CHECKPOINT çalışıp nesil değişimi doğrulanmadan açılmaz; yetki göçte açıkça verilir ve senaryoyla denenir",
+   "Zaman çizelgesi pg_current_wal_lsn() üzerinden pg_walfile_name() ile okunur",
+   "İkisi birlikte"
+  ],
+  "recommendation": "Birinci seçenek ve ikincisi denetim olarak: teknik zaten geri yükleme denemesinde neslin değiştiğini denetler (teknik.html#kod-veri-modeli); bu adım geri dönüş yönergesine yazılır. Yetki ve geri dönüş yönergesi D12'yle birlikte.",
+  "needs_owner": false
+ },
+ {
+  "question": "Saat belgesi telde nasıl taşınır: hangi istekler nonce taşır, hangi cevaplar yeni belge taşır?",
+  "why": "Plan 'sunucunun diğer cevapları da yeni belge taşır' der; ama belge telefonun tek kullanımlık değerini taşımazsa telefon onu kullanmaz ve istek ile cevap anındaki iç sayaç değerleri yazılmalıdır. Gönderim öncesi belge ise ayrı istektir (plan.html#teknoloji-sunucu-yeri).",
+  "options": [
+   "Telefonun her isteği tek kullanımlık nonce başlığı taşır; gönderim, indirme ve sürüm cevaplarının 2xx ve 4xx olanları o nonce'a bağlı yeni belgeyi taşır; 503 ve 429 taşımaz (iş yapılmadı)",
+   "Yalnız gönderim cevapları belge taşır"
+  ],
+  "recommendation": "Birinci seçenek: belgeyi her internet temasında tazeler, ilk çapayı güçlendirir. Belgenin biçimi, imzası ve ayrı belge ucu D04'ün; başlık adları D13'ün.",
+  "needs_owner": false
+ },
+ {
+  "question": "Bir oturumun gönderme süresinin sonu tam olarak nasıl hesaplanır?",
+  "why": "Plan 'en geç 7 gün; son haftada en geç birimin son günü' der ama başlangıç anını ve günün sınırını vermez. Bu an kafa sayısı karşılaştırmasının kesinleştiği, panelde 'Kayıtların bir kısmı henüz gelmemiş olabilir' şeridinin kalktığı (tasarım) ve geç kaydın 'sonradan değişenler'e düştüğü andır; üç alan aynı sonucu bulmalı.",
+  "options": [
+   "bitiş = en erken (oturumun kapanış anı + 7 x 24 saat, birimin son gününün Europe/Istanbul 23:59:59,999'u); packages/core'da saf fonksiyon, sorguda değil okumada hesaplanır",
+   "İstanbul takvim günüyle: oturum gününden 7 gün sonraki günün sonu"
+  ],
+  "recommendation": "Birinci seçenek: saatler UTC milisaniyeyle hesaplanır (teknik.html#kod), zamanlanmış iş gerekmez. D07, D09 ve D10 aynı fonksiyonu kullanır.",
+  "needs_owner": false
+ },
+ {
+  "question": "Sürüm kontrolü ucu ne alır, ne döner; kanal, kademeli APK duyurusu ve TestFlight geçiş bağlantısı nasıl taşınır?",
+  "why": "Cevap 'yeni sürüm ve izin verilen en düşük sürüm'dür; güncelleme ekranı kanala göre Play, App Store (denemede TestFlight) ya da GitHub bağlantısı açar; GitHub APK duyurusu cihazların bir yüzdesine gider; TestFlight'tan App Store'a geçiş bağlantısı yalnız kuyruk boşken gösterilir. Sunucu kanalı ve sabit bir cihaz kovasını bilmeden bunları veremez.",
+  "options": [
+   "GET /v1/esitleme/surum?platform&kanal&surum&runtime&guncelleme; kanal telefonun bildirdiği kurulum kaynağı (play, github, appstore, testflight); cevap {en_yeni: {surum, baglanti}, en_dusuk_surum, gecis_baglantisi?}; github kanalında en_yeni yalnız kurulum kimliğinin sabit özeti mod 100 yüzdenin altındaysa döner",
+   "Sürüm bilgisi indirme cevabına eklenir"
+  ],
+  "recommendation": "Birinci seçenek: plan sorguyu gönderimden bağımsız ve günde bir kez yapar (plan.html#dagitim-guncelleme), ayrı küçük uç bellekten cevaplanır. Kova kurulum kimliğinden çıktığı için aynı telefon her gün aynı kararı alır. Geçiş bağlantısını telefon yalnız kuyruğu boşken gösterir.",
+  "needs_owner": false
+ },
+ {
+  "question": "CI'nın yazdığı yayın bilgisi dosyası nerede durur, biçimi nedir, sunucu onu ne zaman yeniden okur?",
+  "why": "Mağaza yayınları sunucu imajı değişmeden olur; dosya imajın içindeyse her mağaza yayını API'nin yeniden kurulmasını ister. Bozuk dosya en düşük sürümü yanlışlıkla yükseltip öğrencileri güncelleme ekranına kilitleyebilir.",
+  "options": [
+   "CI dosyayı (surum.json) SSH ile sunucudaki salt okunur Compose birimine yazar; API birkaç dakikada bir değişikliğe bakar, Zod'la doğrular, geçersizse son geçerli dosyayla devam eder ve uyarı loglar",
+   "Dosya imaja gömülür",
+   "Bilgi veritabanı tablosunda tutulur"
+  ],
+  "recommendation": "Birinci seçenek, plandaki 'sunucu yalnız onu okur' kuralına uygun. Dosya her platform ve kanal için en yeni sürümü ve bağlantıyı, en düşük sürümü, APK yüzdesini ve geçiş bağlantısını taşır. En düşük sürümün dönem içinde yükseltilmemesi kuralının denetimi D13'ün (birimlerin takvimi farklıysa ortak dönem arası olmayabilir).",
+  "needs_owner": false
+ },
+ {
+  "question": "Bir kaydı hangi uygulama sürümü üretti: kaydın içinden mi, gönderen isteğin başlığından mı okunur?",
+  "why": "Plan hatalı bir sürümün yeni kayıtlarını gerekçe koduyla İncelemede almayı ve hatalı güncellemenin etkilediği kayıtları görmeyi ister. Kayıt bir sürümde üretilip telefon güncellendikten sonra gönderilebilir; o zaman istek başlığı yanlış sürümü gösterir.",
+  "options": [
+   "Kayıt metni imza anındaki uygulama sürümünü, runtimeVersion'ı ve updateId'yi taşır (D05 biçimi); istek başlığı yalnız gönderen sürümü olarak deftere yazılır",
+   "Yalnız istek başlığı kullanılır"
+  ],
+  "recommendation": "Birinci seçenek: imzalı metnin içinde olduğu için değiştirilemez ve doğru sürümü gösterir. Kural ve gerekçe kodu D07'nin, kayıt biçimi D05'in.",
+  "needs_owner": false
+ },
+ {
+  "question": "Hesap silme isteği kuyrukla nasıl sıralanır; silmeden sonra gelen öğeler ne alır?",
+  "why": "Plan silmeyi bekleyen kayıt ve işler gittikten sonra yapar ('silme sıraya girer'); silinen öğrenci yeni kayıt gönderemez. Silme ayrı bir çevrimiçi çağrıysa sunucu kuyruğun boşaldığını bilemez; çökme ya da yarıda kalan gönderimde sıra bozulabilir.",
+  "options": [
+   "Silme isteği ortak kuyruğa kendi sıra numarasıyla son öğe olarak girer; sunucu daha küçük sıralı bütün öğeleri işledikten sonra (aynı pakette de) silmeyi başlatır; daha büyük sıralı öğeler gönderim reti ve 'hesap_silindi' gerekçesi alır",
+   "Telefon silme ucunu yalnız kuyruk boşken çağırır"
+  ],
+  "recommendation": "Birinci seçenek: sıralama kesintisiz su seviyesiyle güvencededir (bkz. B07) ve çökmeden etkilenmez. Panelden başlatılan hoca silmesi kuyruksuzdur, doğrudan gider. Silmenin kendisi D01'in, silinen ve kalan veriler D12'nin.",
+  "needs_owner": false
+ },
+ {
+  "question": "Sunucu hocanın telefon oturumunu kendisi bitirdiğinde (4. cihaz, yöneticinin bütün oturumları kapatması, pasif hesap, 30 günün dolması) telefondaki sınıf listeleri ne olur?",
+  "why": "Plan yalnız hocanın kendi çıkışında listelerin silindiğini yazar. Sunucunun bitirdiği oturumda telefon yalnız 401 görür; listeler kalırsa erişimi kapatılmış bir telefonda öğrenci adları ve numaraları durur.",
+  "options": [
+   "Hoca oturumu için 401 alan telefon çıkış gibi davranır: sınıf listelerini ve hoca imlecini siler, kuyruktaki işleri saklar (yeniden girişten sonra gider); yeniden girişte hoca verisi baştan iner",
+   "Listeler bir sonraki girişe kadar kalır"
+  ],
+  "recommendation": "Birinci seçenek: çıkıştaki gizlilik gerekçesinin aynısı (plan.html#kararlar-indirme) ve kuyruk kuralı korunur (plan, Hoca oturumu: işler girişten sonra gider). Derste internetsizken telefon 401'i göremeyeceği için internetsiz çalışma etkilenmez.",
+  "needs_owner": false
+ },
+ {
+  "question": "Günlük sayaçlar kuyrukta nasıl gider: günün sınırı, tekillik, çok günlük birikme ve paneldeki onay ekranı süreleri?",
+  "why": "Plan sayaçların günlük toplam olarak ve yoklama kayıtlarından sonra gittiğini söyler, teknik ayrı ham olay tablosu istemez; ama günün sınırı, aynı günün iki kez gelmesi ve günlerce internetsiz kalan telefon tanımsız. Panelin ölçtüğü onay ekranı süresi kuyruktan geçmez.",
+  "options": [
+   "Gün başına tek öğe (tür gunluk_sayac, gün = Europe/Istanbul tarihi), (kurulum, gün) tekil, yeniden gelirse son değer yazılır; gün kapanınca kuyruğa yoklama öğelerinin arkasına girer; birikmiş günler sırayla gider; panel süreleri ayrı uçla",
+   "Sayaçlar her isteğin başlığında gider"
+  ],
+  "recommendation": "Birinci seçenek: tekrar gönderimde çift sayım olmaz, sıra kuralı korunur. Sayaç tablosu ve ölçümün kendisi D15'in; bu alan taşımayı sağlar.",
+  "needs_owner": false
+ },
+ {
+  "question": "Sunucu hangi durumda hangi Retry-After değerini verir; gönderim ve indirme uçlarında cihaz başına hız sınırı kaçtır?",
+  "why": "Telefon Retry-After'a uyar ve üstüne rastgele pay ekler. Teknik aşırı yükte 503 ve Retry-After verir ama havuz dolunca dönen 503'te Retry-After'dan söz etmez; 429'un değeri de yazılmamış. 400 ya da 413 sonrası ikiye bölme bir pakette yaklaşık 16 istek üretebilir; dar bir cihaz sınırı bölmeyi 429 fırtınasına çevirir.",
+  "options": [
+   "Her 503 (aşırı yük ve havuz) Retry-After taşır (sunucu yüküne göre ör. 5 ile 30 saniye); 429 sınır penceresinin bitişini taşır; gönderim ucunda cihaz başına sınır bir paket bölme dizisini kaldıracak genişlikte (ör. dakikada 30 istek)",
+   "Havuz 503'ünde Retry-After yok, telefon kendi aralığını kullanır"
+  ],
+  "recommendation": "Birinci seçenek; kesin değerler ders çıkışı yük testinden yazılır (teknik.html#testler-kalite). Hız sınırı ve hata kodları kuralı D13'ün, eşikler D15'in.",
+  "needs_owner": false
+ },
+ {
+  "question": "Sunucu tarafında gönderim isteğinin ve işleminin zaman sınırı nedir?",
+  "why": "Telefonun zaman aşımı 30 saniye. Sunucu işlemi 30 saniyeden uzun sürüp sonra işlenirse telefon aynı paketi yeniden gönderirken ilki hâlâ yazıyor olur; çift iş tekillikle zararsız ama yükü ikiye katlar ve ders çıkışı yoğunluğunda kilit bekletir.",
+  "options": [
+   "Gönderim işleminde statement_timeout ve istek zaman sınırı telefonunkinden kısa (ör. işlem 10 saniye, istek 20 saniye); süre dolunca işlem geri alınır, cevap 503 ve Retry-After olur",
+   "Sunucu tarafı sınır yok"
+  ],
+  "recommendation": "Birinci seçenek: telefon yeniden göndermeden önce sunucu kesin olarak vazgeçmiş olur; değerler yük testiyle ayarlanır. İşletim değerleri D15'le birlikte.",
+  "needs_owner": false
+ }
+]

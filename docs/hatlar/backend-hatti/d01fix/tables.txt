@@ -1,0 +1,164 @@
+=== tables[0] kisiler :: Bütün hesapların ortak satırı. Tür personel ya da öğrencidir; yönetici ayrı tür değil, personel rolüdür. Silinen hesapta satır silindi işaretiyle kalır (öğrencide numarası ogrenci_hesaplari satırında durur).
+  - id uuid NOT NULL def=uuidv7() :: Kişinin iç kimliği; dışa açık jeton olarak kullanılmaz.
+  - tur text NOT NULL :: personel ya da ogrenci.
+  - durum text NOT NULL :: kod_bekliyor, onay_bekliyor, aktif, pasif, reddedildi, kapandi, silindi. Öğrencide yalnız aktif, reddedildi, kapandi, silindi.
+  - ad_soyad text NULL :: Personelde başvurudaki ad-soyad (NFC, 2 ile 120 karakter); öğrencide NULL. Onaylanmamış başvuru silinince NULL olur; onaylı hocada silmeden sonra da kalır (denetim kaydında kimin yaptığı okunsun diye).
+  - eposta text NULL :: Yalnız personelde, epostaNormallestir çıktısı; silmede NULL.
+  - birim_id uuid NULL :: birimler(id), D02. Başvuruda seçilen birim; yönetici kapsamı bununla karşılaştırılır.
+  - bolum_id uuid NULL :: bolumler(id), D02. Başvuruda seçilen bölüm.
+  - inceleme_hesabi boolean NOT NULL def=false :: Apple ve Google deneme hesabı; 3 cihaz ve tek telefon kuralından muaf.
+  - son_ret_ani timestamptz NULL :: Son başvuru reddinin anı; yeniden başvuruda yöneticiye gösterilir.
+  - son_ret_gerekcesi text NULL :: hoca_degil, bolum_yanlis, bilgi_eksik, diger.
+  - olusturma_ani timestamptz NOT NULL :: Saat arayüzünden yazılır; veritabanı varsayılanı yok.
+  - durum_ani timestamptz NOT NULL :: Son durum değişikliğinin anı (saat arayüzünden).
+  - silinme_ani timestamptz NULL :: Hesap silme anı; durum silindi ile birlikte dolar.
+  [indexes] ["kisiler_pk: PRIMARY KEY (id)","kisiler_eposta_uq: UNIQUE (eposta) WHERE eposta IS NOT NULL","kisiler_durum_birim_id_idx: (durum, birim_id) WHERE tur = 'personel'","kisiler_inceleme_hesabi_idx: (inceleme_hesabi) WHERE inceleme_hesabi"]
+  [constraints] ["kisiler_tur_ck: tur IN ('personel','ogrenci')","kisiler_durum_ck: durum IN ('kod_bekliyor','onay_bekliyor','aktif','pasif','reddedildi','kapandi','silindi') AND (tur = 'personel' OR durum IN ('aktif','reddedildi','kapandi','silindi')) AND (tur = 'ogrenci' OR durum <> 'kapandi')","kisiler_eposta_ck: (tur = 'personel' OR eposta IS NULL) AND (eposta IS NULL OR eposta ~ '^[a-z0-9._-]{1,64}@istanbul[.]edu[.]tr$')","kisiler_silinme_ani_ck: ((durum = 'silindi') = (silinme_ani IS NOT NULL)) AND (durum <> 'silindi' OR eposta IS NULL)","kisiler_ad_soyad_ck: (tur = 'ogrenci' AND ad_soyad IS NULL) OR (tur = 'personel' AND (ad_soyad IS NOT NULL OR durum = 'silindi'))","kisiler_son_ret_gerekcesi_ck: son_ret_gerekcesi IS NULL OR son_ret_gerekcesi IN ('hoca_degil','bolum_yanlis','bilgi_eksik','diger')","kisiler_birim_id_fk: birim_id REFERENCES birimler(id); kisiler_bolum_id_fk: bolum_id REFERENCES bolumler(id)"]
+=== tables[1] personel_rolleri :: Personelin rolleri (hoca, yonetici) ve yöneticinin kapsamı. Kanca her istekte etkin satırları okur; geri alınan rol satırı silinmez, geri_alinma_ani dolar.
+  - id uuid NOT NULL def=uuidv7() :: 
+  - kisi_id uuid NOT NULL :: kisiler(id); yalnız personel.
+  - rol text NOT NULL :: hoca ya da yonetici. Asistan ve ortak hoca sonra yeni CHECK değeriyle eklenir (D01-A12).
+  - kapsam_birim_id uuid NULL :: Yalnız yöneticide; NULL bütün üniversite (tüm), dolu ise birimler(id).
+  - kaynak text NOT NULL :: basvuru_onayi, yonetici_ekleme, komut_satiri, inceleme_kurulumu.
+  - veren_kisi_id uuid NULL :: kisiler(id); komut satırı ve inceleme kurulumunda NULL.
+  - verilme_ani timestamptz NOT NULL :: 
+  - geri_alinma_ani timestamptz NULL :: 
+  - geri_alan_kisi_id uuid NULL :: kisiler(id).
+  - geri_alinma_nedeni text NULL :: yonetici ya da hesap_silindi.
+  [indexes] ["personel_rolleri_pk: PRIMARY KEY (id)","personel_rolleri_kisi_id_rol_uq: UNIQUE (kisi_id, rol) WHERE geri_alinma_ani IS NULL","personel_rolleri_rol_kapsam_birim_id_idx: (rol, kapsam_birim_id) WHERE geri_alinma_ani IS NULL"]
+  [constraints] ["personel_rolleri_rol_ck: rol IN ('hoca','yonetici')","personel_rolleri_kapsam_ck: rol = 'yonetici' OR kapsam_birim_id IS NULL","personel_rolleri_kaynak_ck: kaynak IN ('basvuru_onayi','yonetici_ekleme','komut_satiri','inceleme_kurulumu')","personel_rolleri_geri_alinma_ck: (geri_alinma_ani IS NULL) = (geri_alinma_nedeni IS NULL) AND (geri_alinma_nedeni IS NULL OR geri_alinma_nedeni IN ('yonetici','hesap_silindi'))","personel_rolleri_kisi_id_fk, personel_rolleri_kapsam_birim_id_fk (birimler), personel_rolleri_veren_kisi_id_fk, personel_rolleri_geri_alan_kisi_id_fk"]
+=== tables[2] giris_kodlari :: Personelin e-posta kodları: giriş, başvuru doğrulama ve başvuru silme. Kod açık durmaz; giriş kodu özet anahtarıyla HMAC özeti tutulur. Gönderim sınırı (dakikada 1, saatte 5, günde 10) bu tablodan değil D14'ün eposta_gonderimleri tablosundan sayılır.
+  - id uuid NOT NULL def=uuidv7() :: 
+  - kisi_id uuid NOT NULL :: kisiler(id); kod yalnız var olan kişi satırına üretilir.
+  - amac text NOT NULL :: giris, basvuru, basvuru_silme.
+  - kod_ozeti bytea NOT NULL :: HMAC-SHA256(giriş kodu özet anahtarı, 'kod:' + amac + ':' + kisi_id + ':' + kod); 32 bayt. Kod kişiye ve amaca bağlıdır.
+  - anahtar_kid text NOT NULL :: Özeti üreten anahtarın kimliği (D15.gizliAnahtar); anahtar değişince eski kodlar eski kid ile doğrulanır.
+  - olusturma_ani timestamptz NOT NULL :: 
+  - bitis_ani timestamptz NOT NULL :: olusturma_ani + 300 saniye (KOD_GECERLILIK_SN).
+  - yanlis_sayisi smallint NOT NULL def=0 :: Kişinin açık kodlarında ortak sayılır; 3 olunca kod geçersiz.
+  - kullanilma_ani timestamptz NULL :: 
+  - gecersiz_ani timestamptz NULL :: 3 yanlış ya da başka bir kodla başarılı giriş.
+  [indexes] ["giris_kodlari_pk: PRIMARY KEY (id)","giris_kodlari_kisi_id_amac_idx: (kisi_id, amac) WHERE kullanilma_ani IS NULL AND gecersiz_ani IS NULL","giris_kodlari_olusturma_ani_idx: (olusturma_ani)"]
+  [constraints] ["giris_kodlari_amac_ck: amac IN ('giris','basvuru','basvuru_silme')","giris_kodlari_kod_ozeti_ck: octet_length(kod_ozeti) = 32","giris_kodlari_bitis_ani_ck: bitis_ani > olusturma_ani AND bitis_ani <= olusturma_ani + interval '5 minutes'","giris_kodlari_yanlis_sayisi_ck: yanlis_sayisi BETWEEN 0 AND 3","giris_kodlari_kapanis_ck: NOT (kullanilma_ani IS NOT NULL AND gecersiz_ani IS NOT NULL)","giris_kodlari_kisi_id_fk"]
+=== tables[3] eposta_giris_durumlari :: Adres başına ardışık yanlış deneme sayacı ve uzayan bekleme. Kopyalar arası kesin olması gerektiği için PostgreSQL'de; adres açık değil, özetle tutulur. Kayıtsız adreste de aynı satır yazılır, böylece bekleme adresin varlığını sızdırmaz.
+  - adres_ozeti bytea NOT NULL :: HMAC-SHA256(giriş kodu özet anahtarı, 'adres:' + normal adres); 32 bayt.
+  - anahtar_kid text NOT NULL :: Özeti üreten anahtarın kimliği; anahtar değişince eski satırlar 24 saatte temizlenir, bekleme sıfırlanmış olur.
+  - ardisik_yanlis integer NOT NULL def=0 :: Başarılı girişte ya da 24 saat yanlış gelmeyince sıfırlanır (satır silinir).
+  - bekleme_bitis_ani timestamptz NULL :: Dolu ve gelecekteyse deneme sayılmadan KIMLIK_BEKLEME_SURUYOR döner.
+  - son_yanlis_ani timestamptz NULL :: 
+  - guncelleme_ani timestamptz NOT NULL :: 
+  [indexes] ["eposta_giris_durumlari_pk: PRIMARY KEY (adres_ozeti)","eposta_giris_durumlari_guncelleme_ani_idx: (guncelleme_ani)"]
+  [constraints] ["eposta_giris_durumlari_adres_ozeti_ck: octet_length(adres_ozeti) = 32","eposta_giris_durumlari_ardisik_yanlis_ck: ardisik_yanlis >= 0"]
+=== tables[4] giris_oturumlari :: Öğrenci ve personel giriş oturumları. Kökteki kanca her istekte anahtar özetinin tekil dizininden okur. Başka modül bu tabloya yabancı anahtar kurmaz: satırlar bittikten 30 gün sonra ve hesap silinince fiziksel silinir.
+  - id uuid NOT NULL def=uuidv7() :: Sözleşmede ve JSON'da girisOturumuId.
+  - kisi_id uuid NOT NULL :: kisiler(id).
+  - tur text NOT NULL :: personel ya da ogrenci (teknik.html'deki rol alanı).
+  - istemci text NOT NULL :: telefon ya da panel; öğrencide yalnız telefon.
+  - kapsam text NOT NULL def='tam' :: tam ya da degisim_bekliyor. Değişim bekleyen yeni telefonun oturumu yalnız /ben, /cikis ve değişim uçlarına girer.
+  - anahtar_ozeti bytea NOT NULL :: SHA-256(256 bit rastgele oturum anahtarı); 32 bayt, tekil.
+  - cihaz_id uuid NULL :: cihazlar(id); yalnız öğrencide ve zorunlu.
+  - cihaz_etiketi text NULL :: Oturumlarım ve bildirim için kısa etiket (en çok 80): panelde User-Agent'tan (ör. Edge, Windows), telefonda girişte gelen model ve platform. IP saklanmaz.
+  - olusturma_ani timestamptz NOT NULL :: 3 cihaz kuralında en eski oturum bu alana göre seçilir.
+  - son_kullanim_ani timestamptz NOT NULL :: En çok dakikada bir yazılır; X-Arka-Plan: 1 taşıyan panel isteği ilerletmez.
+  - bitis_ani timestamptz NULL :: Personel telefonunda olusturma + 30 gün, panelde + 24 saat; öğrencide NULL (bitiş yok).
+  - kapanma_ani timestamptz NULL :: 
+  - kapanma_nedeni text NULL :: cikis, kendisi_kapatti, yonetici, en_eski, yenilendi, pasif, cihaz_degisimi, degisim_ret, degisim_iptal, teyit_ret, bekleme_bitti, olay_komutu, geri_yukleme.
+  - onceki_oturum_id uuid NULL :: giris_oturumlari(id) ON DELETE SET NULL; telefon yenilemesinde yerine geçtiği oturum (D11 QR anahtar yuvasını bununla devreder).
+  [indexes] ["giris_oturumlari_pk: PRIMARY KEY (id)","giris_oturumlari_anahtar_ozeti_uq: UNIQUE (anahtar_ozeti)","giris_oturumlari_kisi_id_idx: (kisi_id) WHERE kapanma_ani IS NULL","giris_oturumlari_cihaz_id_idx: (cihaz_id) WHERE kapanma_ani IS NULL","giris_oturumlari_kapanma_ani_idx: (kapanma_ani) WHERE kapanma_ani IS NOT NULL","giris_oturumlari_bitis_ani_idx: (bitis_ani) WHERE bitis_ani IS NOT NULL"]
+  [constraints] ["giris_oturumlari_tur_ck: tur IN ('personel','ogrenci')","giris_oturumlari_istemci_ck: istemci IN ('telefon','panel') AND (tur = 'personel' OR istemci = 'telefon')","giris_oturumlari_kapsam_ck: kapsam IN ('tam','degisim_bekliyor') AND (tur = 'ogrenci' OR kapsam = 'tam')","giris_oturumlari_cihaz_id_ck: (tur = 'ogrenci') = (cihaz_id IS NOT NULL)","giris_oturumlari_bitis_ani_ck: (tur = 'ogrenci') = (bitis_ani IS NULL)","giris_oturumlari_kapanma_ck: (kapanma_ani IS NULL) = (kapanma_nedeni IS NULL) AND (kapanma_nedeni IS NULL OR kapanma_nedeni IN ('cikis','kendisi_kapatti','yonetici','en_eski','yenilendi','pasif','cihaz_degisimi','degisim_ret','degisim_iptal','teyit_ret','bekleme_bitti','olay_komutu','geri_yukleme'))","giris_oturumlari_anahtar_ozeti_ck: octet_length(anahtar_ozeti) = 32","giris_oturumlari_kisi_id_fk, giris_oturumlari_cihaz_id_fk, giris_oturumlari_onceki_oturum_id_fk (ON DELETE SET NULL)"]
+=== tables[5] ogrenci_hesaplari :: Öğrenciye özgü alanlar: numara, girilen isim, liste eşleşmesi ve ilk kayıt teyidi. Bir numaraya zamanla birden çok hesap düşebilir (silme ve yeniden kayıt, aynı numarayı isteyen iki kişi); teyitli ve silinmemiş olan en çok bir tanedir.
+  - kisi_id uuid NOT NULL :: kisiler(id), birincil anahtar; kişi türü ogrenci.
+  - ogrenci_no text NOT NULL :: 9 ya da 10 ASCII rakam, başı 0 olabilir (D03 şeması). Silmede kalır.
+  - girilen_ad_soyad text NULL :: Kayıtta yazılan isim (NFC, en çok 120); hoca ekranlarında liste satırındaki isim görünür. Silmede NULL.
+  - eslesme_durumu text NOT NULL :: eslesti, isim_uyusmuyor, listede_yok; D03.numaraIleEslestir sonucudur, teyit bekleyen hesapta liste değişince yenilenir.
+  - eslesme_ani timestamptz NOT NULL :: 
+  - teyit_durumu text NOT NULL def='bekliyor' :: bekliyor, teyitli, reddedildi.
+  - teyit_yolu text NULL :: hoca_toplu, hoca_tek, kayit_kodu, inceleme.
+  - teyit_eden_kisi_id uuid NULL :: kisiler(id); teyit eden hoca ya da kayıt kodunu veren hoca.
+  - teyit_ani timestamptz NULL :: 
+  - teyit_ret_gerekcesi text NULL :: bu_ogrenci_degil, numara_baskasinda, diger.
+  - kayit_kodu_id uuid NULL :: kayit_kodlari(id) ON DELETE SET NULL; kodla kayıtta.
+  - silinme_ani timestamptz NULL :: kisiler.silinme_ani kopyası; kısmi dizin koşulu başka tabloyu göremediği için aynı işlemde yazılır.
+  [indexes] ["ogrenci_hesaplari_pk: PRIMARY KEY (kisi_id)","ogrenci_hesaplari_ogrenci_no_uq: UNIQUE (ogrenci_no) WHERE teyit_durumu = 'teyitli' AND silinme_ani IS NULL","ogrenci_hesaplari_ogrenci_no_idx: (ogrenci_no)","ogrenci_hesaplari_eslesme_durumu_idx: (eslesme_durumu) WHERE teyit_durumu = 'bekliyor' AND silinme_ani IS NULL"]
+  [constraints] ["ogrenci_hesaplari_ogrenci_no_ck: ogrenci_no ~ '^[0-9]{9,10}$'","ogrenci_hesaplari_eslesme_durumu_ck: eslesme_durumu IN ('eslesti','isim_uyusmuyor','listede_yok')","ogrenci_hesaplari_teyit_ck: teyit_durumu IN ('bekliyor','teyitli','reddedildi') AND ((teyit_durumu = 'teyitli') = (teyit_yolu IS NOT NULL AND teyit_ani IS NOT NULL)) AND (teyit_durumu <> 'reddedildi' OR teyit_ret_gerekcesi IS NOT NULL)","ogrenci_hesaplari_teyit_yolu_ck: teyit_yolu IS NULL OR (teyit_yolu IN ('hoca_toplu','hoca_tek','kayit_kodu','inceleme') AND (teyit_yolu = 'inceleme' OR teyit_eden_kisi_id IS NOT NULL))","ogrenci_hesaplari_teyit_ret_gerekcesi_ck: teyit_ret_gerekcesi IS NULL OR teyit_ret_gerekcesi IN ('bu_ogrenci_degil','numara_baskasinda','diger')","ogrenci_hesaplari_kisi_id_fk, ogrenci_hesaplari_teyit_eden_kisi_id_fk, ogrenci_hesaplari_kayit_kodu_id_fk (ON DELETE SET NULL)"]
+=== tables[6] cihazlar :: Öğrenci telefonunun hesaba bağlanması: durum, platform, ikinci profil, doğrulama sonucu, telefon modeli (D11) ve son görülen istemci (D13). Öğrencide tek etkin cihaz; inceleme cihazları muaf. Cihazdan alınan son sıra numarası D06'nın kurulumlar tablosunda, App Attest sayaçları D07'nin app_attest_sayaclari tablosundadır.
+  - id uuid NOT NULL def=uuidv7() :: Kayıt metnindeki cihaz kimliği.
+  - kisi_id uuid NOT NULL :: kisiler(id); öğrenci.
+  - durum text NOT NULL :: etkin, degisim_bekliyor, kapandi.
+  - platform text NOT NULL :: android ya da ios.
+  - model text NULL :: Android Build.MODEL ya da iPhone donanım kimliği (en çok 60); D11'in model başına ölçümü için. Silmede NULL.
+  - inceleme_cihazi boolean NOT NULL def=false :: Hesabın inceleme_hesabi değerinin kopyası; kısmi dizin koşulu kişi tablosunu göremez.
+  - is_system_user boolean NULL :: Android UserManager.isSystemUser() sonucu, kanıta bağlı; false ise kayıtlara İkinci profil etiketi (D07). iPhone'da NULL. Silmede kalır (silmeden önce imzalanıp sonra ulaşan kayıtların etiketi için).
+  - dogrulama_sonucu text NOT NULL :: dogrulandi ya da dogrulanamadi; Cihaz doğrulanmadı etiketinin dayanağı. Kayıtta D07 sonucundan, sonra yalnız cihazDogrulamaSonucunuYaz ile.
+  - guvenlik_duzeyi text NULL :: Android kanıtındaki güvenlik düzeyi (en çok 32). Silmede NULL.
+  - dogrulanmis_acilis boolean NULL :: Silmede NULL.
+  - ios_acilis_dogrulama_turu text NULL :: iOS 27 kanıt alanı (en çok 64). Silmede NULL.
+  - ios_paket_surumu text NULL :: iOS 27 kanıt alanı (en çok 32). Silmede NULL.
+  - son_kanit_id uuid NULL :: D07 cihaz_kanitlari satırı; yabancı anahtar değil (kanıt satırının yaşam döngüsü D07'nin).
+  - dogrulama_ani timestamptz NOT NULL :: 
+  - olusturma_ani timestamptz NOT NULL :: 
+  - etkinlesme_ani timestamptz NULL :: Etkin olduğu an (kayıt ya da değişim onayı).
+  - kapanma_ani timestamptz NULL :: D13'ün kaldırılma anı, D07'nin etkinlik bitişi.
+  - kapanma_nedeni text NULL :: degisim, cikis, silme, teyit_ret, bekleme_bitti, degisim_ret, degisim_iptal.
+  - son_gorulme_ani timestamptz NULL :: Kanca öğrenci isteğinde en çok dakikada bir yazar. Silmede NULL.
+  - son_uygulama_surumu text NULL :: X-Uygulama-Surumu başlığından (en çok 32). Silmede NULL.
+  - son_guncelleme_kimligi text NULL :: X-Guncelleme-Kimligi başlığından (en çok 64). Silmede NULL.
+  - kanal text NULL :: X-Kanal başlığından (en çok 32). Silmede NULL.
+  [indexes] ["cihazlar_pk: PRIMARY KEY (id)","cihazlar_kisi_id_etkin_uq: UNIQUE (kisi_id) WHERE durum = 'etkin' AND NOT inceleme_cihazi","cihazlar_kisi_id_degisim_uq: UNIQUE (kisi_id) WHERE durum = 'degisim_bekliyor'","cihazlar_kisi_id_idx: (kisi_id)"]
+  [constraints] ["cihazlar_durum_ck: durum IN ('etkin','degisim_bekliyor','kapandi') AND ((durum = 'kapandi') = (kapanma_ani IS NOT NULL)) AND ((kapanma_ani IS NULL) = (kapanma_nedeni IS NULL)) AND (durum <> 'etkin' OR etkinlesme_ani IS NOT NULL)","cihazlar_platform_ck: platform IN ('android','ios') AND (platform = 'android' OR is_system_user IS NULL)","cihazlar_dogrulama_sonucu_ck: dogrulama_sonucu IN ('dogrulandi','dogrulanamadi')","cihazlar_kapanma_nedeni_ck: kapanma_nedeni IS NULL OR kapanma_nedeni IN ('degisim','cikis','silme','teyit_ret','bekleme_bitti','degisim_ret','degisim_iptal')","cihazlar_kisi_id_fk"]
+=== tables[7] cihaz_anahtarlari :: Cihaza bağlı açık anahtarlar: Android P-256, iPhone App Attest ve Secure Enclave. Kanıttır: satır silinmez, anahtar baytları değişmez; yenilenen App Attest anahtarının eskisi gecersiz_ani ile kalır ve eski kayıtları doğrular.
+  - id uuid NOT NULL def=uuidv7() :: Kayıt metnindeki anahtar kimliği; kayıtta ve yenilemede telefona döner.
+  - cihaz_id uuid NOT NULL :: cihazlar(id).
+  - tur text NOT NULL :: android_p256, app_attest, secure_enclave.
+  - acik_anahtar bytea NOT NULL :: SPKI DER, P-256.
+  - acik_anahtar_ozeti bytea NOT NULL :: SHA-256(acik_anahtar); tekil: bir donanım anahtarı tek cihaz satırına, dolayısıyla tek hesaba bağlanır.
+  - app_attest_anahtar_kimligi bytea NULL :: Apple keyId (32 bayt); yalnız app_attest türünde, tekil.
+  - olusturma_ani timestamptz NOT NULL :: 
+  - gecersiz_ani timestamptz NULL :: Yalnız yenilenen App Attest anahtarında dolar.
+  - yerine_gecen_id uuid NULL :: cihaz_anahtarlari(id); yenilemede yeni anahtar.
+  [indexes] ["cihaz_anahtarlari_pk: PRIMARY KEY (id)","cihaz_anahtarlari_acik_anahtar_ozeti_uq: UNIQUE (acik_anahtar_ozeti)","cihaz_anahtarlari_app_attest_anahtar_kimligi_uq: UNIQUE (app_attest_anahtar_kimligi) WHERE app_attest_anahtar_kimligi IS NOT NULL","cihaz_anahtarlari_cihaz_id_tur_uq: UNIQUE (cihaz_id, tur) WHERE gecersiz_ani IS NULL"]
+  [constraints] ["cihaz_anahtarlari_tur_ck: tur IN ('android_p256','app_attest','secure_enclave') AND ((tur = 'app_attest') = (app_attest_anahtar_kimligi IS NOT NULL)) AND (tur = 'app_attest' OR gecersiz_ani IS NULL)","cihaz_anahtarlari_acik_anahtar_ozeti_ck: octet_length(acik_anahtar_ozeti) = 32","cihaz_anahtarlari_degismez: BEFORE UPDATE OR DELETE tetikleyicisi; cihaz_id, tur, acik_anahtar, acik_anahtar_ozeti ve app_attest_anahtar_kimligi değişemez, satır silinemez (yalnız gecersiz_ani ve yerine_gecen_id bir kez dolar).","cihaz_anahtarlari_cihaz_id_fk, cihaz_anahtarlari_yerine_gecen_id_fk"]
+=== tables[8] cihaz_degisim_talepleri :: Yeni telefonun açtığı değişim talebi, QR'da gösterilen tek kullanımlık değerin özeti ve kararı. Hesap başına tek açık talep. Hoca kimliği görüp QR değeriyle onaylar; hesabın etkin cihazı ya da talebi açan yeni cihaz da reddedebilir.
+  - id uuid NOT NULL def=uuidv7() :: QR'da talep kimliği olarak taşınır; tek başına yetki vermez.
+  - ogrenci_kisi_id uuid NOT NULL :: kisiler(id); numarası teyitli hesap.
+  - yeni_cihaz_id uuid NOT NULL :: cihazlar(id); durum degisim_bekliyor.
+  - eski_cihaz_id uuid NULL :: cihazlar(id); talep anında etkin cihaz, yoksa NULL (çıkıştan sonra yeniden kurulum).
+  - durum text NOT NULL :: bekliyor, onaylandi, reddedildi, iptal.
+  - deger_ozeti bytea NOT NULL :: SHA-256(128 bit QR değeri); değer yenilenince değişir.
+  - deger_bitis_ani timestamptz NOT NULL :: Değer üretimi + 900 saniye; süresi geçen değerle onay olmaz, telefon yeni değer ister.
+  - olusturma_ani timestamptz NOT NULL :: 
+  - karar_ani timestamptz NULL :: 
+  - karar_veren_kisi_id uuid NULL :: kisiler(id).
+  - karar_veren_tur text NULL :: hoca, ogrenci_eski_cihaz, ogrenci_yeni_cihaz, sistem.
+  - karar_gerekcesi text NULL :: kimlik_goruldu, kimlik_uyusmadi, ogrenci_reddetti, vazgecildi, yeni_talep, hesap_kapandi.
+  [indexes] ["cihaz_degisim_talepleri_pk: PRIMARY KEY (id)","cihaz_degisim_talepleri_ogrenci_kisi_id_uq: UNIQUE (ogrenci_kisi_id) WHERE durum = 'bekliyor'","cihaz_degisim_talepleri_karar_ani_idx: (karar_ani) WHERE karar_ani IS NOT NULL"]
+  [constraints] ["cihaz_degisim_talepleri_durum_ck: durum IN ('bekliyor','onaylandi','reddedildi','iptal') AND ((durum = 'bekliyor') = (karar_ani IS NULL))","cihaz_degisim_talepleri_karar_ck: karar_veren_tur IS NULL OR karar_veren_tur IN ('hoca','ogrenci_eski_cihaz','ogrenci_yeni_cihaz','sistem')","cihaz_degisim_talepleri_gerekce_ck: karar_gerekcesi IS NULL OR karar_gerekcesi IN ('kimlik_goruldu','kimlik_uyusmadi','ogrenci_reddetti','vazgecildi','yeni_talep','hesap_kapandi')","cihaz_degisim_talepleri_cihaz_ck: eski_cihaz_id IS NULL OR eski_cihaz_id <> yeni_cihaz_id","cihaz_degisim_talepleri_deger_ozeti_ck: octet_length(deger_ozeti) = 32","cihaz_degisim_talepleri_ogrenci_kisi_id_fk, _yeni_cihaz_id_fk, _eski_cihaz_id_fk, _karar_veren_kisi_id_fk"]
+=== tables[9] kayit_kodlari :: Hocanın tek öğrenci numarası için verdiği tek kullanımlık kayıt kodu. Tablo ve uç baştan durur ki karar gelince göç gerekmesin; kullanım KAYIT_KODU_ACIK sabitine bağlıdır (D01-A06).
+  - id uuid NOT NULL def=uuidv7() :: 
+  - ogrenci_no text NOT NULL :: Kodun bağlı olduğu numara.
+  - kod_ozeti bytea NOT NULL :: HMAC-SHA256(giriş kodu özet anahtarı, 'kayit:' + ogrenci_no + ':' + kod); 40 bitlik kod düz özetle çevrimdışı denenebileceği için anahtarlı.
+  - anahtar_kid text NOT NULL :: 
+  - veren_kisi_id uuid NOT NULL :: kisiler(id); hoca.
+  - ders_id uuid NOT NULL :: dersler(id), D02; yetkiyi veren ders (denetim için).
+  - olusturma_ani timestamptz NOT NULL :: 
+  - bitis_ani timestamptz NOT NULL :: olusturma_ani + 72 saat.
+  - yanlis_sayisi smallint NOT NULL def=0 :: 5 olunca kod geçersiz.
+  - kullanilma_ani timestamptz NULL :: 
+  - kullanan_kisi_id uuid NULL :: kisiler(id); kodla açılan öğrenci hesabı.
+  - gecersiz_ani timestamptz NULL :: 5 yanlış ya da aynı numaraya yeni kod.
+  [indexes] ["kayit_kodlari_pk: PRIMARY KEY (id)","kayit_kodlari_ogrenci_no_uq: UNIQUE (ogrenci_no) WHERE kullanilma_ani IS NULL AND gecersiz_ani IS NULL","kayit_kodlari_bitis_ani_idx: (bitis_ani)"]
+  [constraints] ["kayit_kodlari_ogrenci_no_ck: ogrenci_no ~ '^[0-9]{9,10}$'","kayit_kodlari_kod_ozeti_ck: octet_length(kod_ozeti) = 32","kayit_kodlari_bitis_ani_ck: bitis_ani > olusturma_ani AND bitis_ani <= olusturma_ani + interval '72 hours'","kayit_kodlari_yanlis_sayisi_ck: yanlis_sayisi BETWEEN 0 AND 5","kayit_kodlari_kullanim_ck: (kullanilma_ani IS NULL) = (kullanan_kisi_id IS NULL)","kayit_kodlari_veren_kisi_id_fk, kayit_kodlari_ders_id_fk (dersler), kayit_kodlari_kullanan_kisi_id_fk"]
+=== tables[10] hesap_silme_istekleri :: "Hesabımı sil" isteğinin kaydı. Bekleyen iş yoksa istek aynı işlemde yapılır; varsa sıraya girer, telefon kuyruğun boşaldığını bildirince ya da 7 günlük gönderme süresi dolunca gecelik iş yapar.
+  - id uuid NOT NULL def=uuidv7() :: 
+  - kisi_id uuid NOT NULL :: kisiler(id); silinecek hesap.
+  - isteyen_kisi_id uuid NOT NULL :: kisiler(id); hesabın kendisi ya da yüz yüze başlatan hoca.
+  - kaynak text NOT NULL :: telefon, panel, hoca_yuz_yuze.
+  - durum text NOT NULL :: sirada, yapildi, iptal.
+  - istek_ani timestamptz NOT NULL :: Bu andan sonra imzalanan yoklama kaydı D07 kuralıyla sayılmaz (cihazGetir ve ogrenciHesabiGetir bu anı verir).
+  - bekleyen_oge_sayisi integer NULL :: Telefonun bildirdiği gönderilmemiş öğe sayısı.
+  - kuyruk_bos_ani timestamptz NULL :: Telefon 0 bildirdiği an.
+  - son_yurutme_ani timestamptz NOT NULL :: istek_ani + 7 gün (SILME_BEKLEME_GUN); gecelik iş bu anı geçeni yapar.
+  - yapilma_ani timestamptz NULL :: 
+  - iptal_ani timestamptz NULL :: 
+  [indexes] ["hesap_silme_istekleri_pk: PRIMARY KEY (id)","hesap_silme_istekleri_kisi_id_uq: UNIQUE (kisi_id) WHERE durum = 'sirada'","hesap_silme_istekleri_son_yurutme_ani_idx: (son_yurutme_ani) WHERE durum = 'sirada'"]
+  [constraints] ["hesap_silme_istekleri_kaynak_ck: kaynak IN ('telefon','panel','hoca_yuz_yuze')","hesap_silme_istekleri_durum_ck: durum IN ('sirada','yapildi','iptal') AND ((durum = 'yapildi') = (yapilma_ani IS NOT NULL)) AND ((durum = 'iptal') = (iptal_ani IS NOT NULL))","hesap_silme_istekleri_bekleyen_oge_sayisi_ck: bekleyen_oge_sayisi IS NULL OR bekleyen_oge_sayisi >= 0","hesap_silme_istekleri_kisi_id_fk, hesap_silme_istekleri_isteyen_kisi_id_fk"]

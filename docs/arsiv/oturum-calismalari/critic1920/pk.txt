@@ -1,0 +1,742 @@
+======== PHASE 19
+{
+ "id": "D14-P16",
+ "title": "worker.ts bileþim kökü, altyapý uyarlayýcýsý ve iþçi süreci senaryolarý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "altyapiIsleriniUyarla"
+ ],
+ "needs": [
+  "D15.ayarlariYukle",
+  "D15.logOlustur",
+  "D15.gizliAnahtar",
+  "D15.isletimIsleri",
+  "D15.TestDunyasi",
+  "D12.veritabaniKur",
+  "D12.veritabaniIsleri",
+  "D12.testVeritabaniHazirla",
+  "D12.testVeritabaniAdi",
+  "D13.uygulamaKur",
+  "D04.simdi"
+ ],
+ "tests": [
+  "Kayýtlý iþ tanýmlarý ad ve veri kurallarýna uyar",
+  "Zamanlama kurallarý bütün kayýtta tutar",
+  "Altyapý iþ fabrikalarý isTanimla'ya uyarlanýr",
+  "Ýþçi açýlýþ sýrasý ve çýkýþ kodlarý",
+  "Ýþçi kapanýþýnda e-posta önce kapanýr, uyarý iki kez gitmez",
+  "Koruyucu testler kasýtlý bozmada kýrmýzýya döner"
+ ],
+ "depends_on": [
+  "D14-P01",
+  "D14-P02",
+  "D14-P03",
+  "D14-P04",
+  "D14-P05",
+  "D14-P06",
+  "D14-P07",
+  "D14-P08",
+  "D14-P09",
+  "D14-P10",
+  "D14-P11",
+  "D14-P12",
+  "D14-P13",
+  "D14-P14",
+  "D14-P15"
+ ],
+ "size": "L",
+ "notes": "D15 tanýmlarýný isTanimla biçimine çeviren uyarlayýcý ve 11 adýmlý açýlýþ, kapanýþ ve kur alt komutunu taþýyan worker.ts yazýlýr; D14'te uygulamanýn tamamýný bekleyen tek pakettir ve arkasýnda D14 paketi yoktur. zamanlama.test.ts ve altyapi-uyarlayici.test.ts worker.ts'in topladýðý gerçek kayýtta ad ve veri kurallarýný, 14 günlük Ýstanbul zamanlama kurallarýný ve uyarlanan iþleri; isci-sureci.feature ve eklenen isci-adimlari.ts açýlýþ sýrasýný, çýkýþ kodlarýný ve kapanýþ sýrasýný denetler. Koruyucu testler: iþçi bozmalarý (isleriBaslat sýrasý, eposta.kapat sýrasý, ALTYAPI_CIKTI_SEMASI) burada denenir; öbür on beþ bozma kendi paketlerinde denenmiþtir ve bu paket on sekiz bozmanýn hepsini tek betikle son kez koþar, her dosyanýn md5'i geri yazýmdan sonra denetlenir."
+}
+{
+ "id": "D15-P11",
+ "title": "Kalite ve güvenlik iþ akýþlarý, OTA denetimi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [
+  "ci_kalite_kapilari",
+  "ci_gecelik_guvenlik_denetimi",
+  "dependabot_guncellemeleri",
+  "ota_yayin_denetimi"
+ ],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "OTA denetimi küçük yüzdeli yayýný kaçýrmaz"
+ ],
+ "depends_on": [
+  "D15-P01"
+ ],
+ "size": "L",
+ "notes": "kalite.yml her çekme isteðinde biome, tip, birim, senaryo, göç ve Compose kapýlarýný, guvenlik.yml gece pnpm audit ve OTA denetimini, dependabot.yml gruplu güncellemeleri tanýmlar, ota-denetimi.ts bütün kovalarý kapsayan sabit kimliklerle etiketsiz güncellemeyi arar; ota-denetimi.test.ts sahte xprem yalnýz yüzde 1 kovaya etiketsiz güncelleme verince kýrmýzý, bütün güncellemeler etiketliyken yeþil bitiþi denetler. Ýþ akýþý dosyalarý Compose testini adýyla çaðýrýr, Compose dosyasýný içe aktarmaz; OTA denetimi yalnýz sahte xprem'le koþar, bu yüzden yalnýz iskeleti bekler."
+}
+{
+ "id": "D15-P13",
+ "title": "Haftalýk iþ, yayýn akýþlarý ve mutasyon eþikleri",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [
+  "ci_haftalik_is"
+ ],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Telefon yayýn iþ akýþý sözleþme kapýsýný bekler",
+  "Ortak kurallar paketinin haftalýk mutasyon testi"
+ ],
+ "depends_on": [
+  "D15-P01"
+ ],
+ "size": "L",
+ "notes": "Haftalýk iþ Stryker mutasyonu ve imaj derlemesiyle, sunucu, OTA ve telefon yayýn iþ akýþlarý imza ve onay adýmlarýyla, kur.sh ana makine kurulumuyla yazýlýr; yayin-telefon.yml ayrýþtýrýlýp derleme iþinin sözleþme kapýsýna baðlý olduðu ve kapýnýn sahte GitHub API cevabýnda failure için 1, success için 0 verdiði, eþik betiðinin sahte düþük raporda kýrmýzý, yüksekte yeþil bittiði denetlenir. Testler yalnýz kendi dosyalarýný ve sahte raporlarý okur; imajýn derlenmesini sunucu imajý paketi sýnar, bu yüzden server.ts, betikler ve öbür iþ akýþlarý beklenmez."
+}
+{
+ "id": "D03-P07",
+ "title": "Dosya okuma ve core dizini",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Örnek dosyalar okunur",
+  "Ortak kurallar mutasyon eþiði"
+ ],
+ "depends_on": [
+  "D03-P02",
+  "D03-P03",
+  "D03-P04",
+  "D03-P05",
+  "D03-P06"
+ ],
+ "size": "M",
+ "notes": "Satýrlarý numara ve ada eþleyen okuma iþlevi (dosya türü, kodlama, CSV, baþlýk ve numara katmanlarýnýn üstünde) ve bütün core listeler iþlevlerini veren index.ts yazýlýr; dizini panel kullanýr, sunucu yalnýz gerektiði core dosyalarýný (isim, kova, fark, fark özeti, satýr denetimi, numara) doðrudan içe aktarýr ve bu paketi beklemez. Örnek dosya testi ve D15'in haftalýk Stryker eþiði doðrular."
+}
+{
+ "id": "D03-P16",
+ "title": "Saklama ve deneme listesi senaryolarý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D15.TestDunyasi",
+  "D12.saklamaIsleyicisiniCalistir",
+  "D02.isler",
+  "D02.denemeDersiniKur",
+  "D09.denetimeYaz"
+ ],
+ "tests": [
+  "Saklama iþleyicisi süresi dolan birim dönemini anonimleþtirir",
+  "Kilit adýmý saklama damgasýný yazar",
+  "Saklama damgasý mutasyonu",
+  "Deneme listesi kurulur",
+  "Denetim olaylarý kayýtlý ve birim taþýr"
+ ],
+ "depends_on": [
+  "D03-P13"
+ ],
+ "size": "M",
+ "notes": "Saklama anonimleþtirmesi D12.saklamaIsleyicisiniCalistir ile gerçek rolle, kilit damgasý D02'nin donem_kilidi iþiyle, deneme listesi D02.denemeDersiniKur'un açtýðý þubede, denetim olay türleri ve birim alaný D09.denetimeYaz ile modül dünyasýnda sýnanýr; bileþim kökünü beklemez. Saklama damgasý mutasyonu iki saklama senaryosunu kýrmýzýya döndürür."
+}
+{
+ "id": "D03-P18",
+ "title": "Eþzamanlýlýk senaryolarý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D15.TestDunyasi",
+  "D13.uygulamaKur"
+ ],
+ "tests": [
+  "Bekleyen kayýt liste uygulanýnca eþleþir",
+  "Gönderim ile canlanma yarýþý ret býrakmaz",
+  "Kayýt ile liste ayný anda kilitlenme kurmaz",
+  "Þube pasifleþtirme ile uygula yarýþmaz",
+  "muafIsaretle beklenen durumda fýrlatmaz",
+  "Danýþma kilidi mutasyonu"
+ ],
+ "depends_on": [
+  "D03-P13",
+  "D03-P14",
+  "D03-P15"
+ ],
+ "size": "M",
+ "notes": "D01 bekleyen kaydý, D07 gönderimi, D08 muaf ucu ve D02 þube pasifleþtirmesiyle yarýþlar P14'ün çok baðlantýlý adýmlarýyla bütün uygulamada pg_locks üzerinden sýnanýr; danýþma kilidi mutasyonu iki yarýþ senaryosunu ve P14'teki 'dogrulama:liste' senaryosunu kýrmýzýya döndürür."
+}
+{
+ "id": "D03-P19",
+ "title": "Yük testi ve hata kodu kapsamasý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D13.uygulamaKur"
+ ],
+ "tests": [
+  "Her LISTELER_ kodu en az bir senaryoda döner",
+  "Liste uçlarýnýn süre bütçesi",
+  "Dönem baþý yoðunluðu"
+ ],
+ "depends_on": [
+  "D03-P12",
+  "D03-P13",
+  "D03-P14"
+ ],
+ "size": "M",
+ "notes": "k6 betiði kurulmuþ sunucuda liste uçlarýnýn süre bütçesini ve öðrenci kayýtlarýyla birlikte dönem baþý yoðunluðunu ölçer; D13'ün kapsama testi on LISTELER_ kodunun her birinin P13 ve P14 senaryolarýnda gerçekten döndüðünü doðrular. Bileþim kökünden sonra gelen tek ve son pakettir, baþka senaryo paketi onu beklemez."
+}
+{
+ "id": "D04-P14",
+ "title": "Bütünleþik kayýt saat kurallarý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D13.uygulamaKur",
+  "D14.isiCalistirVeBekle",
+  "D15.TestDunyasi"
+ ],
+ "tests": [
+  "Kayýt saat kurallarý uçtan uca (@butunlesik)",
+  "Duvar saati sýçramasý belgeyi hemen durdurur",
+  "Tek açýk kesinti ve tek yeniden deðerlendirme",
+  "Yeniden deðerlendirme partili ve kaldýðý yerden",
+  "Yeniden deðerlendirme iþi ayný veriyle iki kez",
+  "Komþu CHECK listeleri D04 sabitleriyle ayný"
+ ],
+ "depends_on": [
+  "D04-P06",
+  "D04-P07",
+  "D04-P08",
+  "D04-P10",
+  "D04-P12"
+ ],
+ "size": "M",
+ "notes": "D05, D06 ve D07 bileþik uygulamada hazýr olunca koþan uçtan uca kayýt senaryolarý yazýlýr: kayýt saat kurallarý, duvar saati sýçramasý, tek kesinti ve tek yeniden deðerlendirme, partili ve kaldýðý yerden süren yeniden deðerlendirme, ayný veriyle iki kez çalýþan yeniden deðerlendirme, komþu CHECK listeleri; @butunlesik etiketiyle uygulamaKur ile kurulan uygulamada denetlenir."
+}
+{
+ "id": "D04-P15",
+ "title": "Bütünleþik kilit, sürüm ve süreç senaryolarý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D13.uygulamaKur",
+  "D15.TestDunyasi"
+ ],
+ "tests": [
+  "Öðrenci kaydý ile ders içi deðiþiklik yarýþmaz",
+  "Sürüm iþlemin son adýmýnda",
+  "Dinleyiciler iki süreçte ayný",
+  "Hoca hesabý silinince deðiþiklik izi kalýr",
+  "Ders çýkýþý yükü"
+ ],
+ "depends_on": [
+  "D04-P06",
+  "D04-P07",
+  "D04-P09",
+  "D04-P10",
+  "D04-P12"
+ ],
+ "size": "M",
+ "notes": "Bileþik uygulamada kayýt ile ders içi deðiþikliðin yarýþmadýðý, sayaç güncellemesinin iþlemin son adýmýnda bir kez olduðu, api ve iþçi süreçlerinde dinleyici kayýtlarýnýn ayný olduðu ve hoca hesabý silinince deðiþiklik izinin kaldýðý senaryolar ile D15 ders çýkýþý yük profilinin belge ucu eþikleri yazýlýr; @butunlesik etiketiyle uygulamaKur ile denetlenir."
+}
+{
+ "id": "D05-P13",
+ "title": "Uçtan uca gönderim: durum makinesi, yedekten dönüþ ve ders çýkýþý yükü",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D13.uygulamaKur"
+ ],
+ "tests": [
+  "Gönderme ucu durum makinesi",
+  "Yan etki belleði parça geri alýnýnca",
+  "Yedekten dönüþte ulaþma aný korunur",
+  "Ders çýkýþý yükü"
+ ],
+ "depends_on": [
+  "D05-P11"
+ ],
+ "size": "M",
+ "notes": "Birleþik uygulamada (uygulamaKur) iki öðe türünü karýþtýran fast-check gönderim durum makinesi (numRuns 200, sabit tohum 20261010), D06 parça geri almasý ve D08 hesabý, D06 ulaþma makbuzu ve POST /v1/saat/belge ile yedekten dönüþ ve D15 ders çýkýþý yük profili ölçümleri yazýlýr. Birden çok modülün eklentisini ve iþçiyi istediði için bileþim kökünü bekleyen tek pakettir; kimse bu paketi beklemez."
+}
+{
+ "id": "D06-P12",
+ "title": "Gönderim iþlemi: bütçe, süre sýnýrý ve danýþma kilidi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D12.danismaKilidi"
+ ],
+ "tests": [
+  "Zaman bütçesi kýsmi sonuç verir",
+  "Ayný paket ayný anda iki kez gönderilir",
+  "Ýþlem süresi sýnýrý",
+  "Danýþma anahtarlarý paket baþýnda tek çaðrýda"
+ ],
+ "depends_on": [
+  "D06-P08"
+ ],
+ "size": "M",
+ "notes": "Gönderim ucunun iþlem dallarý test uygulamasýnda sahte iþleyicilerle sýnanýr: parça ve öðe baþýna zaman bütçesi ile D13.kalanSureMs düþükken 5 saniyeye inen bütçe, ayný paketin eþzamanlý iki gönderiminde danýþma anahtarý ve kurulum kilidi sýrasý ile kilitten sonraki yeniden okumanýn mutasyonu (dosya md5 ile geri yazýlýr), transaction_timeout ile 503 ve þemaya uymayan sonuçla 500, D12.danismaKilidi iþlevinin iþlem baþýna tek çaðrýsý (sahte sayaçla). Hiçbir paket bunu beklemez."
+}
+{
+ "id": "D06-P13",
+ "title": "Sayaç eþzamanlýlýðý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Sayaç gönderimde bir kez ve en sonda alýnýr",
+  "Eþzamanlý yazmada deðiþiklik atlanmaz",
+  "Öðrenci gönderimi sayacý kilitlemez"
+ ],
+ "depends_on": [
+  "D06-P08",
+  "D06-P09"
+ ],
+ "size": "M",
+ "notes": "degisiklik_sayaci etrafýndaki zamanlama iki uç birlikteyken zorlanýr: hoca paketinde sayacýn bir kez ve defter ile kurulum yazýmýndan sonra alýndýðý, iki grubun damgalarýnýn ayný sürümü yazýp sonraki indirmede indiði, sayaçtan sonra yeni satýr kilidi olmadýðý; iki yazýcý ve bir okuyucuyla hiçbir deðiþikliðin atlanmadýðý; 200 yoklama öðelik öðrenci gönderimi açýkken sayacýn beklemeden arttýðý. Hiçbir paket bunu beklemez."
+}
+{
+ "id": "D06-P15",
+ "title": "Gönderim durum makinesi ve ikinci çapa baðlamý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D04.IKINCI_CAPA_YOK_NEDENLERI"
+ ],
+ "tests": [
+  "Gönderim durum makinesi",
+  "Ýkinci çapa baðlamý"
+ ],
+ "depends_on": [
+  "D06-P04",
+  "D06-P11",
+  "D06-P14"
+ ],
+ "size": "M",
+ "notes": "gonderim-durum-makinesi.feature fast-check ile açýkça 200 denemede rastgele paketleri, eþzamanlý tekrarlarý, bozulan sýrayý, yarýda kalan gönderimi, paket düzeyi hatalarý ve sonradan yedekten dönüþü protokol.ts ile sürer ve ULASTI olan her öðenin kendi modülünün tablosunda tam bir kez olduðunu gösterir (P14 geri sarma adýmlarýný kullanýr); ikinci-capa.feature eklentiye baðlý kimlik kancasýyla imzalý paketlerde öðe baþýna baðlamý, anahtar türü uyuþmazlýðýný ve her yokNedeni deðerinin D04 listesinde olduðunu doðrular."
+}
+{
+ "id": "D06-P17",
+ "title": "Sözleþme denetimleri ve hesap silme",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D13.uygulamaKur",
+  "D15.TestDunyasi"
+ ],
+ "tests": [
+  "Öðe türleri kayýtlý",
+  "Gönderim ve indirme þemalarý",
+  "Ýndirme kaynaðý sözleþme denetimi",
+  "Tablo kýsýtlarý sözleþmeyle ayný",
+  "Modül sýnýrý",
+  "Eklenti birleþimi ve kayýtlar",
+  "Hesap silinince D06 satýrlarý silinir"
+ ],
+ "depends_on": [
+  "D06-P11",
+  "D06-P16"
+ ],
+ "size": "M",
+ "notes": "Bileþik uygulamada (D13.uygulamaKur ve D15.TestDunyasi) koþan sözleþme senaryolarý: OGE_TURLERI listesindeki her türün tam bir kez kayýtlý olduðu ve çift kaydýn açýlýþý durdurduðu, OpenAPI belgesindeki geniþleyen enum alanlarý ve cevap þemasý, her kayýtlý indirme kaynaðýnda support/kurucular/esitleme.ts yardýmcýsý, bütün göçler uygulanmýþken tablo kýsýtlarýnýn sözleþme sabitleriyle aynýlýðý ve baþka modülün kurulumlar tablosuna yabancý anahtarý olmadýðý, jobs ve cli dahil dependency-cruiser modül sýnýrý, eklenti birleþimi ve denetim olayý kaydý; hesap-silme.feature D01 olayýyla dinleyicinin kiþinin D06 satýrlarýný sildiðini, silinmiþ kiþinin imzalý paketini ve silmeyle gönderimin eþzamanlý çalýþmasýný doðrular. Hiçbir paket bunu beklemez."
+}
+{
+ "id": "D06-P18",
+ "title": "Uçtan uca senaryolar ve yük testi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D13.uygulamaKur",
+  "D15.TestDunyasi",
+  "D05.kararSutunlariniYaz"
+ ],
+ "tests": [
+  "Öðrenci durum onayý karar yazýmýyla kilitlenmez",
+  "Karar sürümü telefondan sorun bildirimine aynen döner",
+  "Öðrenciye yalnýz kendi verisi iner",
+  "Kapsam deðiþince baþtan indir",
+  "Ders çýkýþý yük testi",
+  "Yedekten dönüþ sonrasý yük"
+ ],
+ "depends_on": [
+  "D06-P11"
+ ],
+ "size": "M",
+ "notes": "Öbür modüllerin gerçek iþleyici ve kaynaklarýyla bileþik uygulamada (D13.uygulamaKur ve D15.TestDunyasi) uçtan uca senaryolar ve k6 yük testleri koþulur; ogrenci-durumu.feature ve kapsam.feature kilitlenmesiz onayý, karar sürümünün sorun bildirimine aynen döndüðünü ve öðrenciye yalnýz kendi verisinin indiðini, yük testleri p95, p99 ve 503 eþiklerini doðrular. Hiçbir paket bunu beklemez."
+}
+======== PHASE 20
+{
+ "id": "D08-P15",
+ "title": "Muaf ve oran senaryolarý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D09.denetimOlaylariniKaydet"
+ ],
+ "tests": [
+  "Muaf ucu",
+  "Muaf þube deðiþiminde kalýr",
+  "Oran ucu",
+  "Denetim olaylarý",
+  "Sözleþme: rota listesi ve kodlar"
+ ],
+ "depends_on": [
+  "D08-P10",
+  "D08-P12",
+  "D08-P13"
+ ],
+ "size": "M",
+ "notes": "muaf.feature ve oranlar.feature uclar.steps.ts adýmlarýyla 404, 409 ve 403 kodlarýný, eþ güçlülüðü, D03 sonuç birliðinin sahte saat ve kurucuyla zorlanan kodlarýný, þube deðiþiminde muafýn kalmasýný ve iþ sonrasý sonucu (isler.steps.ts iþleyici adýmý) denetler; denetim olaylarý D09.denetimOlaylariniKaydet ile kaydedilip birimId, donemId ve listeSatiriId taþýr. Sözleþme testi üç rotanýn beyanýný, OpenAPI x-extensible-enum alanlarýný ve dört DEVAM_ kodunun her birinin bir senaryoda döndüðünü bu iki dosya ile karar bekleyenler senaryosu üstünden denetler."
+}
+{
+ "id": "D08-P16",
+ "title": "Ýndirme ve deneme dersi senaryolarý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Ayný numaranýn iki hesabý",
+  "Öðrenci bölümü yalnýz deðiþen dersler",
+  "Öðrenci bölümü yalnýz teyitli hesaba",
+  "Deneme dersi hesaplanmaz"
+ ],
+ "depends_on": [
+  "D08-P08",
+  "D08-P09",
+  "D08-P10",
+  "D08-P13"
+ ],
+ "size": "M",
+ "notes": "indirme.feature hesap.steps.ts ve isler.steps.ts adýmlarýyla tam ve kýsmi bölümü, teyitsiz hesabýn boþ bölümünü, ayný numaranýn iki hesabýný, pasif dersin silindi satýrýný, EXPLAIN'de sýralý tarama olmamasýný ve deneme dersinin satýr yazmadan atlanýp inceleme hesabýnýn indirmesinde devam bölümü taþýmamasýný denetler; kaynak ve dinleyiciler eklentiyle kaydolduðu için paket D08-P10'u bekler."
+}
+{
+ "id": "D08-P18",
+ "title": "Gizlilik, modül sýnýrý ve ders çýkýþý yükü",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D14.kuyruktakiIsler",
+  "D15.log"
+ ],
+ "tests": [
+  "Ýþ verisi ve loglarda kiþisel veri yok",
+  "Modül sýnýrý",
+  "Ders çýkýþý yükü"
+ ],
+ "depends_on": [
+  "D08-P10",
+  "D08-P14",
+  "D08-P17"
+ ],
+ "size": "M",
+ "notes": "Modülün son doðrulama paketi: gizlilik.feature devam_hesapla ve devam_tutarlilik_denetimi iþlerinin pg-boss verisinde (D14.kuyruktakiIsler) ve loglarýnda öðrenci numarasý ve isim olmadýðýný, bilerek numara içeren log çaðrýsýnýn D15 gizleme süzgecine takýldýðýný denetler; D13'ün sýnýr testi bütün D08 dosyalarý yazýldýktan sonra burada sýfýr ihlalle ve md5 ile geri yazýlan iki artý kontrolle koþar; ders çýkýþý yükü D15 yük testine D08-P14 kurucusunun verisini verir ve devam_hesapla gecikmesini, gönderim bütçesini ve indirmenin D08 bölümünü ölçer. Kimse bu paketi beklemez."
+}
+{
+ "id": "D10-P06",
+ "title": "Excel satýr modeli, dosya adý ve ortak paket giriþi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Dosya adý ASCII ve kararlý",
+  "Excel sayfa modeli yalnýz metin",
+  "Ortak paket mutasyon testi"
+ ],
+ "depends_on": [
+  "D10-P01",
+  "D10-P03",
+  "D10-P04",
+  "D10-P05"
+ ],
+ "size": "M",
+ "notes": "Kütüphaneden baðýmsýz yalnýz metin hücreli sayfa modeli, ASCII dosya adý ve packages/core/src/raporlar/index.ts toplu dýþa vermesi yazýlýr; özellik testleri ve bütün ortak paket üzerinde koþan Stryker mutasyon eþiði denetler."
+}
+{
+ "id": "D10-P16",
+ "title": "Rapor gizliliði, hata kodu kapsamý ve sunucu mutasyonlarý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D13.uygulamaKur"
+ ],
+ "tests": [
+  "Arþivlenmiþ ders hocasýna açýk, deneme dersi raporlarda yok",
+  "Numara ve isim loga ve adres satýrýna girmez",
+  "Her RAPORLAR_ hata kodu bir senaryoda döner",
+  "D10 denetim olayý yazmaz",
+  "Sunucu korumalarý bilerek bozulur"
+ ],
+ "depends_on": [
+  "D10-P14",
+  "D10-P15"
+ ],
+ "size": "M",
+ "notes": "rapor-gizliligi.feature numara ve ismin log ve adres satýrýna girmediðini, deneme dersinin hiçbir raporda ve iþte olmadýðýný, her RAPORLAR_ kodunun gerçek cevapta görüldüðünü ve raporlar. önekli denetim olayý yazýlmadýðýný denetler; yedi elle mutasyon md5 ile alýnýp özgün baytlar geri yazýlarak adý geçen testleri kýrmýzýya çevirir. Denetim olayý haritasýnýn açýlýþta kaydý bileþim kökünde yapýldýðýndan bu paket D13.uygulamaKur bekler; modülün tek uçtan uca paketi budur."
+}
+{
+ "id": "D11-P28",
+ "title": "Geri yükleme ve modül geneli denetimler",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D09.denetimOlaylariniKaydet",
+  "D13.TUM_ROTALAR",
+  "D13.TUM_HATALAR"
+ ],
+ "tests": [
+  "Anahtar deðiþince eski QR kaydý eski kid ile doðrulanýr",
+  "Sunucu yedekten dönünce QR kayýtlarý ret almaz",
+  "Danýþma anahtarlarý katman sýrasýyla ve ilk yazýmdan önce",
+  "Rota tablosu, hata kataloðu ve geniþleyen deðerler",
+  "Denetim olaylarý kayýtlý ve ders olaylarý birim taþýr"
+ ],
+ "depends_on": [
+  "D11-P13",
+  "D11-P15",
+  "D11-P17",
+  "D11-P18",
+  "D11-P19",
+  "D11-P20",
+  "D11-P21",
+  "D11-P22",
+  "D11-P23",
+  "D11-P24",
+  "D11-P25",
+  "D11-P26",
+  "D11-P27"
+ ],
+ "size": "M",
+ "notes": "Kid dönüþü ve yedekten dönüþ senaryolarý ile bütün modül senaryolarý koþtuktan sonra çalýþan kapsam denetimleri (spec listesine eklenen kapsam.steps.ts kancalarý) yazýlýr: her PROJEKSIYON_ kodunun ve her denetim olayýnýn en az bir senaryoda gerçekten oluþmasý, yedi ucun TUM_ROTALAR beyaný ve onay, eþleþtirme kodu, tarayýcý kapatma, QR anahtarlarý, yeniden hesap iþi ve gece aðý iþlemlerinin katman sýralý tek danýþma kilidi çaðrýsý (casus); bu yüzden bütün senaryo paketlerini bekler."
+}
+{
+ "id": "D13-P05",
+ "title": "Telefon ve panelin ortak fetch yardýmcýsý ve derlenmiþ paket denetimi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "istemciKur",
+  "sonucSinifi",
+  "IstekSonucu"
+ ],
+ "needs": [],
+ "tests": [
+  "Ýstemci yardýmcýsý protokol tablosuna uyar",
+  "Derlenmiþ sözleþme paketi Node'da açýlýr"
+ ],
+ "depends_on": [
+  "D13-P01",
+  "D13-P02",
+  "D13-P03",
+  "D13-P04"
+ ],
+ "size": "M",
+ "notes": "istemciKur girdiyi istek þemasýyla denetleyip zaman aþýmýyla gönderir ve sonucu protokol tablosuna göre basari, gecici, bol ya da dur diye sýnýflar; sahte fetch ile protokol tablosu testi her satýrý denetler. Derlenmiþ paket testi bütün giriþ noktalarýný (istemci, hatalar ve rotalar dahil) dist üstünden Node ile açtýðý için iki birleþtirmeden sonra koþar; sunucuda hiçbir paket bunun dýþa açýklarýný beklemez."
+}
+{
+ "id": "D13-P12",
+ "title": "Hýz sýnýfý ve hata kataloðu sözleþme kurallarý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D14.IS_KUYRUGU_HATA_KODLARI"
+ ],
+ "tests": [
+  "Hata kataloðu kurallarý",
+  "Hýz sýnýfý kurallarý"
+ ],
+ "depends_on": [
+  "D13-P03",
+  "D13-P04",
+  "D13-P08",
+  "D13-P09",
+  "D13-P10",
+  "D13-P11"
+ ],
+ "size": "M",
+ "notes": "TUM_HATALAR ve HIZ_SINIFLARI bütün modüllerin dolu sözleþmeleri ve TUM_ROTALAR üstünde taranýr; apiKur düzeneðiyle kurulan uygulamanýn sayaç tablolarý ve her API_ kodunun senaryo kapsamasý (hata zarfý, kimlik, gövde ve hýz ile sürüm senaryolarý) denetlenir, bileþim kökünü beklemez; iki sözleþme testi zemin denetimli sayýmlarla denetler."
+}
+{
+ "id": "D13-P16",
+ "title": "oasdiff kýrýlma kapýsý ve sözleþme iþ akýþý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [
+  "oasdiff_kirilma_denetimi"
+ ],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "oasdiff kapýsý kýrýlmayý yakalar"
+ ],
+ "depends_on": [
+  "D13-P15"
+ ],
+ "size": "M",
+ "notes": "oasdiff betiði önce örneklerle kendini sýnar, tam denetim tabanýndan ve süzgeçli bütün sürüm koþusuyla karþýlaþtýrýr, destek ve istisna dosyalarý ile sabitlenmiþ sozlesme.yml iþ akýþý yazýlýr; kýrýcý, ekleyen ve etiketli belge örnekleriyle kapý senaryosu denetler. Kapý senaryosunun adýmlarý sozlesme-adimlari.ts içinde olduðu için OpenAPI paketinden sonra gelir."
+}
+{
+ "id": "D13-P17",
+ "title": "Bütünleþik doðrulama",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D15.TestDunyasi",
+  "D04.saatBelgesiDogrula",
+  "D04.saatSonucu"
+ ],
+ "tests": [
+  "Beklenmeyen hata yalnýz sabit mesaj ve istek kimliði döner",
+  "Oturum isteyen her rota kimliksiz istekte 401 alýr",
+  "Kýsýtlý oturum hesabýn verisine ulaþamaz",
+  "Çerez kabul etmeyen rotada panel çerezi 403 alýr",
+  "Hocanýn saat belgesi kiþi kimliði öznesiyle doðrulanýr",
+  "Rota tablosu dýþý ve eksik kayýt açýlýþý durdurur",
+  "Ders çýkýþý yükünde sýnýrlar ve aþýrý yük doðru davranýr",
+  "Saat belgesi öznesi giriþ oturumundan kurulursa test kýrmýzý olur"
+ ],
+ "depends_on": [
+  "D13-P13"
+ ],
+ "size": "M",
+ "notes": "Bütün eklentilerle kurulan uygulamada kýsýtlý oturum, her oturumlu rotada 401, çerez kabul etmeyen saat belgesi ucu, hocanýn saat belgesi öznesi, öneksiz eklenti yolu, üretim log biçimi ve ders çýkýþý yükü D15 test dünyasýyla senaryolaþtýrýlýr; senaryolar ve saatOznesiKur mutasyonu denetler."
+}
+{
+ "id": "D15-P31",
+ "title": "ASVS eþlemesi ve eksiksizlik denetimi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "ASVS eþlemesi eksiksiz"
+ ],
+ "depends_on": [
+  "D15-P04",
+  "D15-P21",
+  "D15-P23",
+  "D15-P24",
+  "D15-P25",
+  "D15-P26",
+  "D15-P27",
+  "D15-P28"
+ ],
+ "size": "M",
+ "notes": "ASVS 5.0 seviye 2 maddeleri senaryo adlarýna, ayar denetimlerine ya da gerekçeye baðlanýr; asvs.test.ts feature dosyalarýný ayrýþtýrdýðýndan bütün D15 senaryo paketlerini bekler, her uygulanan maddenin var olan bir senaryoya baðlý, her uygulanmayan maddenin gerekçeli ve madde numaralarýnýn tekil olduðunu denetler. Senaryodan modül testine taþýnan beþ test (kalp atýþý adres seçimi, sertifika bitiþ eþikleri, bozuk girdi yalýtýmý, okunamayan girdi, çevrimdýþý yedek) eþlemede senaryo adý olarak kullanýlmaz."
+}
+{
+ "id": "D04-P05",
+ "title": "Çekirdek giriþi ve mutasyon eþiði",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Saat çekirdeði mutasyon testi"
+ ],
+ "depends_on": [
+  "D04-P01",
+  "D04-P02",
+  "D04-P03",
+  "D04-P04"
+ ],
+ "size": "S",
+ "notes": "packages/core/src/saat/index.ts çekirdeði tek giriþten yeniden dýþa verir ve packages/core/src/saat için en az yüzde 90 Stryker öldürme eþiði kurulur (haftalýk iþ D15 tarafýndadýr, eþik bu modülündür); kayma payýný sýfýrlayan, sýnýrý deðiþtiren ve sýralamayý ters çeviren mutantlar ölmelidir. Dýþa verimler tanýmlandýklarý paketlerdedir ve packages/core için dýþ yüz kuralý yoktur: komþular ve sunucu dosyalarý iþlevi tanýmlandýðý dosyadan alýr, bu yüzden bu paketi hiçbir paket beklemez."
+}
+{
+ "id": "D11-P29",
+ "title": "Bütünleþik projeksiyon senaryolarý",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D13.uygulamaKur"
+ ],
+ "tests": [
+  "Oturum kapanýnca yuva iptal edilir, yenilenince devredilir",
+  "Gösterim kaydý dinleyicisi iki aþamada, tek kilit çaðrýsýyla çaðrýlýr",
+  "Ders çýkýþýnda projeksiyon ve QR'lý gönderim yükü"
+ ],
+ "depends_on": [
+  "D11-P10",
+  "D11-P13",
+  "D11-P17",
+  "D11-P18",
+  "D11-P20",
+  "D11-P26"
+ ],
+ "size": "S",
+ "notes": "Bileþim kökünü gerektiren üç senaryo spec listesine eklenen butunlesik.feature dosyasýnda toplanýr: uygulamaKur'un dört aboneli kimlik dinleyicisi düzeninde gerçek D01 olayýyla yuva iptali ve devri, sahte ve gerçek D07 dinleyicisiyle iki aþamalý tek kilitli çaðrý ve D15'in k6 ders çýkýþý profiline eklenen projeksiyon yükü. Modülün öbür testleri bileþim kökünü beklemez."
+}
+{
+ "id": "D12-P02",
+ "title": "Kod kurallarý: hedefli ON CONFLICT, deðersiz sql.raw ve modül havuz eriþimi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "ON CONFLICT hedefli"
+ ],
+ "depends_on": [],
+ "size": "S",
+ "notes": "Hedefsiz onConflictDoNothing ve onConflictDoUpdate ile hedefsiz ham ON CONFLICT'i, sql.raw'a deðer vermeyi ve modules altýnda .db ya da .havuz eriþimini reddeden üç Biome kuralý yazýlýr; spec dosya listesine eklenen kurallar.test.ts her kuralý reddedilen ve geçen örnekle (yer kontrolü) ve depo taramasýyla denetler. Kurallar ilk aþamada geldiðinden öbür modüllerin kodu baþtan bu kurallarla yazýlýr. Hiçbir þey beklemez."
+}
+{
+ "id": "D12-P22",
+ "title": "Makine zamanlayýcýlarý ve takvim denetimi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Zamanlayýcýlar Ýstanbul saatiyle"
+ ],
+ "depends_on": [],
+ "size": "S",
+ "notes": "Beþ makine iþinin systemd service ve timer dosyalarý ile kurulum betiði yazýlýr; takvim-denetimi.sh her timer'da Europe/Istanbul ve Persistent=true olduðunu, systemd-analyze ile döküm saatinin 23:15 UTC ve denemenin ayýn ilk cumartesisi olduðunu denetler. Service dosyalarý betikleri yalnýz yol ve komut adýyla anar, takvim denetimi betikleri çalýþtýrmaz; paket hiçbir þey beklemez."
+}

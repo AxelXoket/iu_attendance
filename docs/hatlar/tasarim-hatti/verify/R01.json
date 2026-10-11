@@ -1,0 +1,164 @@
+{
+  "id": "R01",
+  "method": "Ham dosyalar (theme.css, light.ts, _themes.scss, @carbon/colors, @primer/primitives light.css, ColorLightTokens.kt, PaletteTokens.kt, CSS Color 4, Wikipedia ham metni, Rello PDF metni) curl ile indirilip grep ile birebir karşılaştırıldı; W3C sayfası curl ile 403 verdiği için WebFetch ile açıldı. Araştırmadaki tüm color.js değerleri (OKLCH, Lab, WCAG Y, kontrast, APCA) ve A, B, C ölçeklerinin üretim girdileri color.js ile yeniden çalıştırıldı; hepsi aynı çıktı. Kaynak kopyaları: verify/R01_src.",
+  "checked": [
+    {
+      "finding": "R01-F01",
+      "verdict": "kısmen",
+      "note": "Off-white adresi 'Shades of white' sayfasına yönleniyor. Sayfa beyaz tonlarını CIE D65 beyaz noktasından hafifçe sapan renkler olarak tanımlıyor ve dokuz hex değerinin hepsi (Cream #FFFDD0, Ivory #FFFFF0, Linen #FAF0E6, Eggshell #F0EAD6, Bone white #F9F6EE, Baby powder #FEFEFA, Ghost white #F8F8FF, White solid #F4F5FA, White smoke #F5F5F5) birebir orada; color.js ölçümleri aynen tekrar üretildi. Sayfadaki 28 isimli rengin tamamında sıcak adlılar b* artı, serinler (Ghost white, White solid, Chalk white) eksi; sarı yönlüler için 67 ile 107 aralığı doğru (Linen 67.6, Beige 107.0). Ancak 'kremleşmeyi asıl b* işareti belirler' cümlesi kaynakta yok, araştırmacının çıkarımı. Ayrıca b* artı olup krem değil pembe ya da şeftali okunan isimli beyazlar var: Snow H 17.2, Sunlight H 39.4, Seashell H 57.6. Yani b* eksi olması kremden kaçmaya yeter, ama b* artı her beyaz krem değildir; öneri (sayfa b* eksi) bundan etkilenmez.",
+      "url_checked": "https://en.wikipedia.org/wiki/Shades_of_white"
+    },
+    {
+      "finding": "R01-F02",
+      "verdict": "doğrulandı",
+      "note": "Sayfada 'Normally cleaned laundry appears yellowish, which consumers do not like' cümlesi ve optik beyazlatıcıların aynı etki için eskiden kullanılan bluing (çivit) yerini aldığı birebir geçiyor. Kaynak kumaş ve kağıt üzerine, ekran ölçümü değil; araştırma bunu zaten belirtiyor.",
+      "url_checked": "https://en.wikipedia.org/wiki/Optical_brightener"
+    },
+    {
+      "finding": "R01-F03",
+      "verdict": "doğrulandı",
+      "note": "Apple HIG: iOS'ta system ve grouped olmak üzere iki dinamik arka plan seti var, her birinde primary, secondary, tertiary; gruplanmış tablo görünümünde grouped set, diğer durumlarda system set kullanılır, birebir. Noah Gilmore açık mod tablosu: systemBackground #ffffffff, secondarySystemBackground #f2f2f7ff rgba(242.0, 242.0, 247.0, 1.0), systemGroupedBackground #f2f2f7ff, secondarySystemGroupedBackground #ffffffff, systemGray6 #f2f2f7ff, opaqueSeparator #c6c6c8ff, separator #3c3c4349, label #000000ff, secondaryLabel #3c3c4399 rgba(60.0, 60.0, 67.0, 0.6), hepsi birebir. Tablo 2019 (iOS 13) tarihli; güncel HIG arka plan hex'i vermiyor ama iOS systemGray6 açık değerini hâlâ R 242, G 242, B 247 gösteriyor, değer eskimemiş. color.js: #F2F2F7 oklch(0.9626 0.0066 286.3), lab(95.62 0.89 -2.4), beyazla 1.12:1, aynen tekrar üretildi.",
+      "url_checked": "https://noahgilmore.com/blog/dark-mode-uicolor-compatibility"
+    },
+    {
+      "finding": "R01-F04",
+      "verdict": "doğrulandı",
+      "note": "İki dosya da VERSION v0_210. Background, Surface, SurfaceBright = Neutral98 (254, 247, 255); SurfaceContainerLowest = Neutral100; Low = Neutral96 (247, 242, 250); Container = Neutral94 (243, 237, 247); High = Neutral92 (236, 230, 240); Highest = Neutral90 (230, 224, 233); SurfaceDim = Neutral87 (222, 216, 225); OnSurface = Neutral10 (29, 27, 32); OnSurfaceVariant = NeutralVariant30 (73, 69, 79); Outline = NeutralVariant50 (121, 116, 126); OutlineVariant = NeutralVariant80 (202, 196, 208), hepsi birebir. color.js: dört kabın kroması 0.0118 ile 0.0148, tonu 312.2 ile 314.8; #FEF7FF ve #F7F2FA değerleri aynen tekrar üretildi.",
+      "url_checked": "https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/PaletteTokens.kt"
+    },
+    {
+      "finding": "R01-F05",
+      "verdict": "doğrulandı",
+      "note": "Carbon sayfası (adres building-blocks/foundations/color/overview yoluna yönleniyor): 'In the light themes, layers alternate between White and Gray 10'; White temada global zemin White, ilk katman Gray 10, ikinci White, üçüncü Gray 10; Gray 10 teması bunun tersi, birebir. @carbon/themes 11.82.0 _themes.scss: White ve g10 için alıntılanan 13 ve 6 değerin hepsi birebir. Ek kontrol: g10'da field-02 #f4f4f4, yani beyaz katman içindeki form alanı bir basamak koyu; çıkarım doğru.",
+      "url_checked": "https://carbondesignsystem.com/elements/color/overview/"
+    },
+    {
+      "finding": "R01-F06",
+      "verdict": "doğrulandı",
+      "note": "@carbon/colors 11.59.0: coolGray10 #f2f4f8 ile coolGray100 #121619 arası ve gray10 #f4f4f4 ile gray100 #161616 arası yirmi değerin hepsi birebir; color.js değerleri (#F2F4F8 oklch(0.9668 0.0058 264.5), lab(96.14 0.05 -2.15); #DDE1E6 H 253.9, b* -2.91; #F4F4F4 kroma 0) aynen tekrar üretildi. İddia doğru. Ama çıkarımdaki 'bu renk sahada serin açık gri olarak kullanılıyor' kanıtlanmadı: Carbon'un dört hazır teması (white, g10, g90, g100) #f2f4f8'i hiç kullanmıyor, Cool Gray yalnızca palet rengi.",
+      "url_checked": "https://unpkg.com/@carbon/colors/es/index.js"
+    },
+    {
+      "finding": "R01-F07",
+      "verdict": "doğrulandı",
+      "note": "Adım görevleri birebir: 1 ve 2 uygulama ve hafif bileşen zeminleri (ana zemin, çizgili tablo, kod bloğu, kart, kenar çubuğu, tuval); 3 normal, 4 hover, 5 basılı ya da seçili; 6 etkileşimsiz bileşenlerde ince kenarlık, 7 etkileşimli bileşenlerde ince kenarlık, 8 etkileşimli bileşenlerde güçlü kenarlık ve odak halkası; 9 en yüksek kroma, 10 onun hover hali; 11 düşük, 12 yüksek kontrastlı metin. aynı ölçeğin 2. adımı üstünde Lc 60 ve Lc 90 APCA kontrastını güvenceye alan cümle ('guaranteed to Lc 60 and Lc 90 APCA contrast ratio') birebir. color.js: A ölçeğinde n-11 sayfa üstünde Lc 74.6, n-12 Lc 96.5, aynen tekrar üretildi.",
+      "url_checked": "https://www.radix-ui.com/colors/docs/palette-composition/understanding-the-scale"
+    },
+    {
+      "finding": "R01-F08",
+      "verdict": "doğrulandı",
+      "note": "gray ve slate'in 12'şer değeri, mauve 1 ve 2, sage 1 ve 2, olive 1 ve 2, sand 1 ile 3 birebir. color.js: slate2 H 286.4, b* -0.96; slate3 H 286.3; mauve2 H 308.4, a* 0.68; sage2 H 165.1, a* -0.84; olive2 H 145.5, a* -1.01, b* 0.72; sand2 H 106.4, b* 0.48; sand3 H 67.8, b* 0.6; gray kroma 0, aynen tekrar üretildi. Not: slate'in tonu koyu adımlarda düşüyor (10: 272.6, 11: 264.4, 12: 248.2); H 286 yalnızca açık adımlar için doğru.",
+      "url_checked": "https://raw.githubusercontent.com/radix-ui/colors/main/src/light.ts"
+    },
+    {
+      "finding": "R01-F09",
+      "verdict": "kısmen",
+      "note": "Kanıttaki 15 oklch değeri birebir doğru; slate ve gray tonları tüm adımlarda 247.839 ile 265.755 arası, doğru; 50 ve 100 adımlarında kroma 0 ile 0.007 arası, doğru. Ama 500 adımı aralığı yanlış: stone-500 oklch(55.3% 0.013 58.071), yani renkli gri ailelerinde 500 kroması 0.016 ile değil 0.013 ile 0.046 arası. Ayrıca güncel theme.css'te v4.2.0 (2026-02-18) ile mauve, olive, mist, taupe gri aileleri eklendi (500 kromaları 0.021 ile 0.034, 50 ve 100 kromaları 0 ile 0.005); bunlar diğer aralıkları bozmuyor. Güncel sürüm 4.3.3 (2026-07-16).",
+      "url_checked": "https://raw.githubusercontent.com/tailwindlabs/tailwindcss/main/packages/tailwindcss/theme.css"
+    },
+    {
+      "finding": "R01-F10",
+      "verdict": "doğrulandı",
+      "note": "@primer/primitives 11.10.0 light.css: --bgColor-default #ffffff, --bgColor-muted #f6f8fa, --bgColor-inset var(--bgColor-muted), --bgColor-emphasis #25292e, --borderColor-default #d1d9e0, --borderColor-muted #d1d9e0b3, --fgColor-default #1f2328, --fgColor-muted #59636e, --fgColor-disabled #818b98, hepsi birebir. color.js: #F6F8FA H 247.9, #D1D9E0 beyaz üstünde 1.43:1, #F6F8FA ile beyaz 1.06:1, aynen tekrar üretildi.",
+      "url_checked": "https://unpkg.com/@primer/primitives/dist/css/functional/themes/light.css"
+    },
+    {
+      "finding": "R01-F11",
+      "verdict": "doğrulandı",
+      "note": "'There are 10 color scales in the system'; Background 1 'Default element background', Background 2 'Secondary background'; renk 1 ile 3 bileşen zemini (default, hover, active), 4 ile 6 kenarlık (default, hover, active), 7 ile 8 yüksek kontrastlı zemin, 9 ile 10 metin ve ikon (ikincil, birincil), birebir. Sayfada --ds-background-100, --ds-background-200 ve --ds-gray-100 ile --ds-gray-1000 tokenları var; sayfa metninde hex yok, değerler sağ tıkla kopyalanıyor.",
+      "url_checked": "https://vercel.com/geist/colors"
+    },
+    {
+      "finding": "R01-F12",
+      "verdict": "doğrulandı",
+      "note": "28 Mart 2024 tarihli yazı: tema üretimi HSL yerine LCH; LCH'de açıklığı 50 olan kırmızı ve sarı yaklaşık eşit açık görünür; tema başına 98 değişken yerine üç girdi (base color, accent color, contrast); sistem artık ana açık ve koyu temalarda da kullanılıyor; 'limiting how much chrome (blue in our case)'; açık modda metin ve nötr ikonlar koyulaştırıldı, birebir. Sayısal renk değeri yok, doğru.",
+      "url_checked": "https://linear.app/now/how-we-redesigned-the-linear-ui"
+    },
+    {
+      "finding": "R01-F13",
+      "verdict": "doğrulandı",
+      "note": "'In practice, you want 8-10 shades to choose from' ve 'True black tends to look pretty unnatural' ile başlayıp beyaza eşit adımlarla çıkmayı öğütleyen cümle birebir. Önizlemede sıcak ya da serin gri, griyi doyurma konusu geçmiyor, doğru.",
+      "url_checked": "https://www.refactoringui.com/previews/building-your-color-palette"
+    },
+    {
+      "finding": "R01-F14",
+      "verdict": "doğrulandı",
+      "note": "Yazı 17 Eylül 2025 tarihli (datePublished 2025-09-17). 'Adding 10% lightness will have different results for blue and purple colors'; P3 ve sRGB için kroma her zaman 0.37'nin altında; her tonun en yüksek kroması farklı; Huetone varsayılan olarak Oklab kullanıyor; OkColor Figma eklentisi, birebir. 1. adımda hedef 270 iken ölçülen 286.4 değeri color.js ile aynen tekrar üretildi.",
+      "url_checked": "https://evilmartians.com/chronicles/oklch-in-css-why-quit-rgb-hsl"
+    },
+    {
+      "finding": "R01-F15",
+      "verdict": "doğrulandı",
+      "note": "README: HCT'yi CAM16 ve L* üzerine kurulu, görüntüleme koşullarını hesaba katan yeni renk uzayı diye tanımlayan cümle ('A new color space (hue, chrome, tone)') ve tonal palette için 'range of colors that varies only in tone' birebir. color_spaces.md: HCT, Cam16-JCH ile L*a*b* birleştirilerek kuruldu, doğru.",
+      "url_checked": "https://raw.githubusercontent.com/material-foundation/material-color-utilities/main/README.md"
+    },
+    {
+      "finding": "R01-F16",
+      "verdict": "doğrulandı",
+      "note": "renk örneklerinin hedef kontrast oranından üretildiğini ve elle kontrast denetimini gereksiz kıldığını söyleyen cümle ('Color swatches are generated by target contrast ratios') birebir; kontroller hedef açıklık girdisiyle eşli; çıktı @adobe/leonardo-contrast-colors tema parametreleri, birebir.",
+      "url_checked": "https://leonardocolor.io/"
+    },
+    {
+      "finding": "R01-F17",
+      "verdict": "doğrulandı",
+      "note": "Yazı 2 Şubat 2020 (güncelleme 24 Ocak 2024). Piepenbrock ve ark. (Ergonomics 2013): açık mod her yaşta görme keskinliği ve düzeltme okumada daha iyi; yorgunluk ölçümlerinin hiçbirinde anlamlı fark yok, birebir. Dobres ve ark. (Applied Ergonomics 2017): gündüz anlamlı etki yok, gece açık mod daha iyi, birebir. Küçük atıf ayrıntısı: 'yazı küçüldükçe açık modun üstünlüğü artıyor' bulgusu Ergonomics makalesinden değil, aynı grubun Human Factors dergisindeki ayrı çalışmasından; belgede ayrı atıf verilmeli. Sayfa ayrıca uzun süreli açık mod okumanın miyopiyle ilişkili olabileceğini ve katarakt gibi durumlarda koyu modun daha iyi olabileceğini yazıyor; iddiayı bozmaz.",
+      "url_checked": "https://www.nngroup.com/articles/dark-mode/"
+    },
+    {
+      "finding": "R01-F18",
+      "verdict": "doğrulandı",
+      "note": "PDF: 341 katılımcı (89 disleksili), siyah metin, 18 punto Arial, on zemin (Blue, Blue Grey, Green, Grey, Orange, Peach, Purple, Red, Turquoise, Yellow; beyaz yok), birebir. Tablo 1 kontrol grubu ortalamaları: Peach 12.28 sn (%100), Grey 16.03 (%130), Blue 16.24 (%132), Blue Grey 18.82 (%153); disleksi grubunda Blue Grey 21.57 (%145), birebir. İspanyolca ana dilli, 18 ile 60 yaş, dizüstü ya da masaüstü ve fare şartı, doğru. Yazarlar soğuk zeminlerin okunabilirliği düşürdüğünü ama bunun kaçınılması gerektiği anlamına gelmediğini yazıyor, doğru. Not: makale Peach ve Grey için RGB ile hex'i tutarsız veriyor (Peach RGB 237, 221, 110 ama #EDD1B0); araştırmanın dayandığı Blue Grey #DBE1F1 = RGB 219, 225, 241 tutarlı.",
+      "url_checked": "https://www.changedyslexia.org/publications/pdfs/2017-ASSETS-Good%20Background%20Colors.pdf"
+    },
+    {
+      "finding": "R01-F19",
+      "verdict": "doğrulandı",
+      "note": "Purdue, 28 Temmuz 2021: yüzde 100 parlaklıkta açıktan koyuya geçiş ortalama yüzde 39 ile 47 güç kazandırıyor; yüzde 30 ile 50 parlaklıkta yalnızca yüzde 3 ile 9; OLED'de LCD gibi arka ışık olmadığı için koyu pikseller daha az güç çeker; açık modda düşük parlaklık, koyu modda yüksek parlaklıkla aynı gücü çekebiliyor; Pranab Dash ve Y. Charlie Hu, birebir. color.js: #F2F4F8 WCAG Y 0.9036, aynen tekrar üretildi.",
+      "url_checked": "https://www.purdue.edu/newsroom/archive/releases/2021/Q3/dark-mode-may-not-save-your-phones-battery-life-as-much-as-you-think,-but-there-are-a-few-silver-linings.html"
+    },
+    {
+      "finding": "R01-F20",
+      "verdict": "kısmen",
+      "note": "Night Shift (102191, yayın 10 Şubat 2026): 'to the warmer end of the color spectrum' ve 'Warmer color temperatures show more yellow and less blue' birebir; Kelvin ya da sayı yok, doğru. True Tone (HT208909, 102147'ye yönleniyor, yayın 10 Mart 2026): ekranın ve Touch Bar'ın rengini ve parlaklığını ortam ışığına uyduran algılayıcılar cümlesi ('advanced multichannel sensors to adjust the color and intensity') birebir. Ama iddia ortam ışığı uyarlamasının da tüm renkleri sarıya kaydırdığını söylüyor; kaynak yalnızca ortam ışığına uydurduğunu yazıyor, yön vermiyor (serin ortam ışığında sarıya kayma kanıtlanmadı). 'Nötr gri bej görünebilir' de kaynakta yok, çıkarım. İki sayfa da Mac sürümü; araştırma bunu belirtiyor.",
+      "url_checked": "https://support.apple.com/en-us/102191"
+    },
+    {
+      "finding": "R01-F21",
+      "verdict": "doğrulandı",
+      "note": "Ölçüt metni 'Visual information required to identify user interface components and states, except for inactive components' için en az 3:1; etkileşime kapalı bileşenleri (örneğin devre dışı denetim) kontrast şartından muaf tutan cümle ('are not required to meet contrast requirements') birebir. Etiketsiz metin alanı örneği: kenarlık alanın varlığını gösteren tek şeyse komşu zemine karşı 3:1 gerekir, doğru. Sayfa curl ile 403 verdi, WebFetch ile açıldı. color.js: #7D8497 n-1 üstünde 3.71, n-2 3.39, n-3 3.16, aynen tekrar üretildi (n-4 ve n-5 için bkz. R01-K04 sorunu).",
+      "url_checked": "https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html"
+    },
+    {
+      "finding": "R01-F22",
+      "verdict": "doğrulandı",
+      "note": "Kaynaklardaki hex çiftleri (iOS #F2F2F7 ve #FFFFFF, Carbon #f4f4f4 ve #ffffff, Primer #f6f8fa ve #ffffff, Radix slate1 #fcfcfd ve slate2 #f9f9fb, M3 #F7F2FA, #FEF7FF ve #FFFFFF) birebir; altı kontrast (1.12, 1.10, 1.10, 1.05, 1.06, 1.03) ve A ölçeği çiftleri (1.09, 1.10, 1.07) color.js ile aynen tekrar üretildi. İki not: Primer'da #f6f8fa kart değil gömük ve ikincil alan zemini (aralığı değiştirmiyor, en düşük değer M3 1.05); 'Radix 1 ile 2 kartı tek başına ayırmaya yetmez' araştırmacının yargısı, Radix belgesi 1 ve 2'yi ana zemin ve kart zemini için birbirinin yerine kullanılabilir diye anlatıyor ve aksini iddia etmiyor.",
+      "url_checked": "https://raw.githubusercontent.com/radix-ui/colors/main/src/light.ts"
+    },
+    {
+      "finding": "R01-F23",
+      "verdict": "kısmen",
+      "note": "CSS Color 4: midnightblue #191970 (25 25 112) birebir; color.js oklch(0.2881 0.1436 272.8), lab(15.86 31.71 -49.57) aynen tekrar üretildi; kanıttaki tek tek ton ölçümlerinin hepsi doğru. Ama küme genellemesi yalnızca açık adımlarda geçerli: Carbon Cool Gray 70, 80, 90, 100 tonları 243.0, 243.2, 229.3, 240.4 (244 ile 266 dışında); Radix slate koyu adımlarda 286'dan uzaklaşıyor (8: 277.8, 9: 277.7, 10: 272.6, 11: 264.4, 12: 248.2). Tailwind zinc tüm adımlarda 285.8 ile 286.4, Tailwind slate ve gray 247.8 ile 265.8, Primer örnekleri 244.3 ile 255.0, doğru.",
+      "url_checked": "https://www.w3.org/TR/css-color-4/"
+    }
+  ],
+  "signals_checked": [],
+  "benchmarks_checked": [],
+  "recommendation_issues": [
+    {
+      "recommendation": "R01-K04",
+      "issue": "'n-9 her açık zeminde 3:1 üstünde' (K04 gerekçesi, özette de 'tüm açık zeminlerde') yanlış: color.js ile #7D8497, n-4 #E3E6EC üstünde 2.99:1, n-5 #DCDEE6 üstünde 2.78:1. K01 n-4'ü satır hover, n-5'i seçili satır zemini yapıyor; seçili ya da hover satırdaki onay kutusu veya form kenarlığı WCAG 1.4.11'i (F21) geçemez. B ölçeğinde 2.98 ve 2.77, C ölçeğinde 2.99 ve 2.78, aynı sorun. Çözüm: n-4 ve n-5 üstündeki tek gösterge kenarlıklarda n-10 (#6E7589, n-5 üstünde 3.42:1) kullanılsın ya da n-9'un tek gösterge rolü n-1 ile n-3 zeminleriyle sınırlansın."
+    },
+    {
+      "recommendation": "R01-K02",
+      "issue": "'IBM Carbon Cool Gray 10 ile aynı, yani sahada denenmiş bir bölgede' gerekçesi Carbon için doğrulanmadı: Carbon'un dört hazır teması (white, g10, g90, g100) #f2f4f8'i hiç kullanmıyor, açık temalar nötr Gray 10 #f4f4f4 ile çalışıyor (F05); Cool Gray 10 yalnızca @carbon/colors paletinde bir renk. Sahada denenmişlik için geçerli dayanak iOS #F2F2F7 yakınlığı; cümle 'büyük bir sistemin paletinde yer alan değer' diye düzeltilmeli."
+    },
+    {
+      "recommendation": "R01-K05",
+      "issue": "Kaçınılacak ton bölgesi (H 60 ile 110, H 300 üstü) H 0 ile 60 arasını kapsamıyor; F01 kaynağındaki sıcak beyazların bir kısmı bu bölgede ve hepsi b* artı: Snow H 17.2, Sunlight H 39.4, Seashell H 57.6. Bölge 'H 0 ile 110 ve H 300 üstü' ya da doğrudan 'b* artı veren her ton' diye yazılmalı. Aynı öneride alternatif olarak geçen 'H 286 kümesi: Radix slate' ifadesi de yalnızca slate'in açık adımları için doğru (bkz. R01-K01)."
+    },
+    {
+      "recommendation": "R01-K01",
+      "issue": "Alternatiflerdeki 'Radix slate H 286 civarında hafif mora çalıyor' ifadesi yalnızca açık ve orta adımlar için doğru (1 ile 9 arası 277.2 ile 286.4); slate'in metin adımları 264.4 (11) ve 248.2 (12), yani mor değil. Zemin adımları için ret gerekçesi geçerli kalır, ama ifade Tailwind slate için yapıldığı gibi 'açık adımlarda' diye daraltılmalı."
+    }
+  ]
+}

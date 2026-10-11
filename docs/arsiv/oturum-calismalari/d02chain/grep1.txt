@@ -1,0 +1,50 @@
+##### DersBilgisi
+ *  dersGetir DersBilgisi
+ * "],"exports":[{"name":"dersGetir","signature":"dersGetir(tx: VeritabaniIslemi, dersId: string, s?: { kilitle?: 'paylasimli' }): Promise<DersBilgisi | null>","purpose":"Dersin ayarları ve sahipliği: DersBilgisi { id, donemId, birimId: string | null, bolumId: string | null, sahipKisiId, sahiplikGecmisi: readonly { kisiId: string; baslangicAni: Date; bitisAni: Date | null }[] (eski sahipler devir anıyla kapanır, şimdiki sahip sonda ve bitisAni null; I027, I0
+ * "},{"name":"hocaninDersleri","signature":"hocaninDersleri(tx: VeritabaniIslemi, kisiId: string, s?: { acikDonem?: boolean; donemId?: string }): Promise<DersBilgisi[]>","purpose":"Hocanın sahibi olduğu dersler kod sırasıyla (dersler_sahip_kisi_id_donem_id_idx); acikDonem true: kilidi gelmemiş birim dönemindeki etkin dersler; deneme dersi hariç
+##### OturumBilgisi
+ * "},{"name":"oturumGetir","signature":"oturumGetir(tx: VeritabaniIslemi, oturumId: string): Promise<OturumBilgisi | null>","purpose":"OturumBilgisi { id, dersId, donemId, birimId: string | null, tur: OturumTuru, tarih, baslangicSaati, bitisSaati, baslangicAni: Date, bitisAni: Date, teoriSaat, uygulamaSaat, derslik, yoklamaSuresiDk, yoklamaSuresiElle, qrIleYoklama, durum: OturumDurumu, iptalNede
+ * "},{"name":"oturumlariGetir","signature":"oturumlariGetir(tx: VeritabaniIslemi, suzgec: OturumSuzgeci): Promise<OturumBilgisi[]>","purpose":"OturumSuzgeci { dersId?, subeId?, subeIdleri?: string[], sahipKisiId?, donemId?, birimId?, oturumIdleri?, kisaKod?, durum?: OturumDurumu, yapildi?: boolean | 'cevapsiz', yapilmadiHaric?: boolean (yapildi = false olanları dışlar; D03-B
+ *  Her satır OturumBilgisi'dir ve D08'in istediği alanları taşır: subeIdleri, tur, iptalNedeni, telafiEdilenOturumId, yapildi, baslangicAni, bitisAni (I038)
+ * "},{"name":"oturumSayfasi","signature":"oturumSayfasi(tx: VeritabaniIslemi, suzgec: OturumSuzgeci, sayfa: { imlec?: string | null; adet?: number }): Promise<{ oturumlar: OturumBilgisi[]; sonrakiImlec: string | null }>","purpose":"Büyük taramalar için anahtar kümesi imleci (baslangicAni, id; oturumlar_baslangic_ani_id_idx): adet varsayılan 1000, en çok 5000; imleç opak base64url, numara ve isim taşımaz (D13-B13 deseni)
+##### OturumSuzgeci
+ * "},{"name":"oturumlariGetir","signature":"oturumlariGetir(tx: VeritabaniIslemi, suzgec: OturumSuzgeci): Promise<OturumBilgisi[]>","purpose":"OturumSuzgeci { dersId?, subeId?, subeIdleri?: string[], sahipKisiId?, donemId?, birimId?, oturumIdleri?, kisaKod?, durum?: OturumDurumu, yapildi?: boolean | 'cevapsiz', yapilmadiHaric?: boolean (yapildi = false olanları dışlar; D03-B12'nin 'yapılmadı değil' süzg
+ * "},{"name":"oturumSayfasi","signature":"oturumSayfasi(tx: VeritabaniIslemi, suzgec: OturumSuzgeci, sayfa: { imlec?: string | null; adet?: number }): Promise<{ oturumlar: OturumBilgisi[]; sonrakiImlec: string | null }>","purpose":"Büyük taramalar için anahtar kümesi imleci (baslangicAni, id; oturumlar_baslangic_ani_id_idx): adet varsayılan 1000, 
+##### KilitDurumu {
+ * "},{"name":"kilitDurumu","signature":"kilitDurumu(tx: VeritabaniIslemi, birimId: string | null, donemId: string, an?: Date): Promise<KilitDurumu>","purpose":"KilitDurumu { kilitli: boolean, kilitAni: Date | null, sonGun: string | null, uygulandi: boolean, kaynak: 'takvim' | 'inceleme' | 'takvim_yok' }
+##### core/src/dersler
+ * ts","packages/core/src/dersler/index
+ * ts","packages/core/src/dersler/uretim
+ * ts","packages/core/src/dersler/takvim
+ * ts","packages/core/src/dersler/normallestir
+ * ts","packages/core/src/dersler/cakisma
+ * ts","packages/core/src/dersler/uretim
+##### normallestir
+ * ts","packages/core/src/dersler/normallestir
+ * ts","packages/core/src/dersler/normallestir
+ * "},{"name":"Normalleştirme sabit noktadır ve Türkçe harfi doğru büyütür","kind":"property","asserts":"numRuns 500: normallestir(normallestir(x)) = normallestir(x); \"bil 301\" BİL 301, \"ısı\" ISI olur; baş, son ve çoklu boşluk sadeleşir; Intl kullanılmaz
+##### takvim.ts
+ * ts","apps/server/src/modules/dersler/servis-takvim.ts","apps/server/src/modules/dersler/servis-kilit
+ * ts","packages/core/src/dersler/takvim.ts","packages/core/src/dersler/normallestir
+##### cakisma.ts
+ * ts","apps/server/src/modules/dersler/servis-cakisma.ts","apps/server/src/modules/dersler/servis-deneme
+ * ts","packages/core/src/dersler/cakisma.ts","packages/core/src/dersler/uretim
+##### uretim.ts
+ * ts","apps/server/src/modules/dersler/uretim.ts","apps/server/src/modules/dersler/indirme
+ * ts","packages/core/src/dersler/uretim.ts","packages/core/src/dersler/takvim
+##### saat.ts
+ * ts","apps/server/src/modules/dersler/saat.ts","apps/server/src/jobs/dersler/index
+##### kurucular
+ * ts","apps/server/test/support/kurucular/dersler
+##### sorgular.ts
+ * ts","apps/server/src/modules/dersler/sorgular.ts","apps/server/src/modules/dersler/denetim
+##### kayitlar.ts
+ * ts","apps/server/src/modules/dersler/kayitlar.ts","apps/server/src/modules/dersler/sorgular
+##### denetim.ts
+ * ts","apps/server/src/modules/dersler/denetim.ts","apps/server/src/modules/dersler/saat
+##### yetki.ts
+ * ts","apps/server/src/modules/dersler/yetki.ts","apps/server/src/modules/dersler/servis-ders
+##### kapsam.ts
+ * ts","apps/server/src/modules/dersler/kapsam.ts","apps/server/src/modules/dersler/kayitlar
+##### indirme.ts
+ * ts","apps/server/src/modules/dersler/indirme.ts","apps/server/src/modules/dersler/kapsam

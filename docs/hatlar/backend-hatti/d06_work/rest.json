@@ -1,0 +1,278 @@
+{
+ "contradictions": [
+  {
+   "a": "plan.html#kararlar-gonderme: \"sunucu kayıt kayıt doğrular, bozuk kayıt paketi düşürmez\"",
+   "b": "teknik.html#sunucu-mimari (Sözleşme): \"Sunucu rotalarını bu tablodan kaydeder, istekleri bu şemalarla doğrular\" ve teknik.html#telefon-gonderme-protokolu: \"400 ya da 413'te paket tek kayıt kalana kadar ikiye bölünür\"",
+   "note": "Rota şeması öğelerin içini de tiplerse Fastify doğrulaması işleyiciden önce çalışır ve tek bozuk öğe bütün paketi 400 ile düşürür; telefon da ikiye bölmeye girer. Plandaki 'bozuk kayıt paketi düşürmez' ancak şema yalnız zarfı denetler, öğe içi doğrulama işleyicide öğe başına yapılırsa tutar (bkz. D06-B03)."
+  },
+  {
+   "a": "plan.html#gun-kenar-durumlar: hocanın kafa sayısı, erken kapatma, süre değişikliği, elle ekleme, makbuz okutma işleri de sıra numarasıyla saklanır; \"sunucu her eşitlemede cihazdan aldığı son sıra numarasını bildirir\"",
+   "b": "teknik.html#sunucu-kimlik: \"Ayrı bir tanınan cihaz kaydı tutulmaz.\" ve teknik.html#kod-veri-modeli (Cihazlar): son sıra numarası öğrenci cihaz kaydında, anahtar kanıtıyla birlikte",
+   "note": "Hoca telefonunun sunucuda kalıcı bir kaydı yoksa son sıra numarası hiçbir yerde tutulamaz; oturum en geç 30 günde ve çıkışta değiştiği için oturuma bağlamak da kurtarmayı bozar. Giriş güveninde kullanılmayan bir kurulum kaydı iki cümleyi birlikte doğru kılar (bkz. D06-B08); teknik.html'e bu ayrım yazılmalı."
+  },
+  {
+   "a": "teknik.html#telefon-gonderme-protokolu: \"401 ya da 403'te gönderim durur\" ve teknik.html#kod-veri-modeli: öğrencinin oturum anahtarı \"telefon değişiminde ve hesap silinince kapanır\"",
+   "b": "plan.html#gun-kenar-durumlar: \"Cihaz değişimi sırasında eski telefonda bekleyen kayıt: Değişim onaylanınca birlikte karara bağlanır.\"",
+   "note": "Gönderim ucu oturum isterse değişimden sonra eski telefon 401 alır, gönderim durur ve bekleyen kayıtlar karara hiç ulaşmaz. Plan.html#kararlar ('Yoklama kayıtları donanım anahtarıyla imzalanır; diğer istekler ... oturum anahtarıyla gider') kayıt öğelerinin oturumsuz, cihaz imzasıyla doğrulanmasına izin verir; 401 yalnız oturum gerektiren öğelere uygulanmalı (bkz. D06-B10)."
+  }
+ ],
+ "entities": [
+  {
+   "name": "gonderim_defteri",
+   "purpose": "Her kurulumdan gelen her kuyruk öğesinin (yoklama kaydı, hoca işi, sorun bildirimi, sayaç, makbuz okutma) tek satırı: kesintisiz son sıra hesabı, hoca işleri ve öbür öğelerde tekrar gönderim tekilliği, gönderim retlerinin kanıtı ve (cihaz, sıra) boşluk ölçümü.",
+   "key_fields": [
+    "kurulum_id",
+    "sira",
+    "oge_turu",
+    "oge_kimligi",
+    "sonuc",
+    "gerekce_kodu",
+    "ulasma_ani",
+    "gonderen_uygulama_surumu",
+    "gonderen_guncelleme_kimligi",
+    "paket_kimligi"
+   ],
+   "proposed_owner": "D06"
+  },
+  {
+   "name": "kurulum",
+   "purpose": "Telefondaki uygulama kurulumunun sunucudaki kalıcı izi (öğrenci ve hoca): kesintisiz son sıra, son temas, bekleyen öğe sayısı, sürüm ve kanal; giriş güveninde kullanılmaz. Öğrencide cihaz kaydına bağlanır.",
+   "key_fields": [
+    "kurulum_id",
+    "kisi_id",
+    "rol",
+    "cihaz_id",
+    "kesintisiz_son_sira",
+    "son_temas_ani",
+    "bekleyen_ogeler_ders_basina",
+    "platform",
+    "kanal",
+    "uygulama_surumu",
+    "runtime_version",
+    "guncelleme_kimligi",
+    "olusturma_ani"
+   ],
+   "proposed_owner": "D06"
+  },
+  {
+   "name": "degisiklik_sayaci",
+   "purpose": "Telefona inen tabloların değişiklik sürümünü veren tek satır; ayrıca imleç geçerlilik sınırı.",
+   "key_fields": [
+    "surum",
+    "en_eski_gecerli_surum"
+   ],
+   "proposed_owner": "D06"
+  },
+  {
+   "name": "ogrenci_durum_surumu",
+   "purpose": "Öğrencinin kendi kayıtları, kararları, düzeltmeleri ve son durumları için öğrenci başına sürüm; telefonun onayladığı son sürüm ve onay anı (kararın telefona ulaştığı anın kaynağı).",
+   "key_fields": [
+    "ogrenci_id",
+    "surum",
+    "telefonun_onayladigi_surum",
+    "onay_ani"
+   ],
+   "proposed_owner": "D06"
+  },
+  {
+   "name": "karar_teslimi",
+   "purpose": "Bir kaydın her karar sürümünün telefona ulaştığı an; sorun bildirme süresinin başlangıcı.",
+   "key_fields": [
+    "donem_id",
+    "kayit_id",
+    "ogrenci_id",
+    "karar_surumu",
+    "telefona_ulasti_ani"
+   ],
+   "proposed_owner": "D06"
+  },
+  {
+   "name": "indirilen_satir_alanlari",
+   "purpose": "Telefona inen tablolarda (dersler, ders saatleri, oturumlar, liste satırları, tatiller) her satırda bulunan eşitleme alanları; tablolar sahip alanlarındadır, alanların kuralı bu alandadır.",
+   "key_fields": [
+    "degisiklik_surumu",
+    "silindi"
+   ],
+   "proposed_owner": "D06"
+  },
+  {
+   "name": "esitleme_imleci",
+   "purpose": "Teldeki opak imleç: nesil (system_identifier metin olarak, timeline_id) ve son alınan değişiklik sürümü; hesap ve kip başına.",
+   "key_fields": [
+    "bicim_surumu",
+    "system_identifier",
+    "timeline_id",
+    "surum"
+   ],
+   "proposed_owner": "D06"
+  },
+  {
+   "name": "gonderim_paketi",
+   "purpose": "Teldeki paket zarfı: kurulum kimliği, imzalı ikinci çapa bölümü (saat belgesi ve öğe başına geçen süre), en çok 200 öğe.",
+   "key_fields": [
+    "kurulum_id",
+    "paket_kimligi",
+    "capa_metni",
+    "capa_imza_turu",
+    "capa_imzasi",
+    "ogeler"
+   ],
+   "proposed_owner": "D06"
+  },
+  {
+   "name": "kuyruk_ogesi",
+   "purpose": "Teldeki tek kuyruk öğesi: tür, sıra, öğe kimliği, hesap, çapalı işlem anı ve türe özgü gövde (yoklama kaydında imzalı zarf aynen).",
+   "key_fields": [
+    "tur",
+    "sira",
+    "oge_kimligi",
+    "hesap_kimligi",
+    "islem_ani_capasi",
+    "govde"
+   ],
+   "proposed_owner": "D06"
+  },
+  {
+   "name": "surum_bilgisi",
+   "purpose": "CI'nın yayında yazdığı surum.json: platform ve kanal başına en yeni sürüm ve bağlantı, izin verilen en düşük sürüm, GitHub APK duyuru yüzdesi, TestFlight geçiş bağlantısı.",
+   "key_fields": [
+    "platform",
+    "kanal",
+    "en_yeni_surum",
+    "baglanti",
+    "en_dusuk_surum",
+    "apk_yuzdesi",
+    "gecis_baglantisi"
+   ],
+   "proposed_owner": "D06"
+  },
+  {
+   "name": "telefon_sayaclari",
+   "purpose": "Telefonların kuyruktan gün başına gönderdiği toplamlar (gönderilmemiş kayıt, başarısız deneme, bildirim izni, hatalar, çökmeler, onay ekranı süresi).",
+   "key_fields": [
+    "kurulum_id",
+    "gun",
+    "sayac_adi",
+    "deger"
+   ],
+   "proposed_owner": "D15"
+  }
+ ],
+ "endpoints": [
+  {
+   "method": "POST",
+   "path": "/v1/esitleme/gonderim",
+   "client": "telefon",
+   "purpose": "Ortak kuyruğun toplu gönderimi: en çok 200 öğe, öğe başına sonuç (kabul, zaten var, ret, tekrar dene), ulaşma anı, karar, kesintisiz son sıra ve yeni saat belgesi.",
+   "proposed_owner": "D06"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/esitleme/degisiklikler",
+   "client": "telefon",
+   "purpose": "İmleçle artımlı indirme: rol ve kapsama göre süzülmüş dersler, ders saatleri, oturumlar, liste satırları, tatiller; öğrencide kendi kayıtları bölümü; baştan indir işareti, son sıra, yeni saat belgesi.",
+   "proposed_owner": "D06"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/esitleme/surum",
+   "client": "telefon",
+   "purpose": "Günlük sürüm kontrolü: kanala göre en yeni sürüm ve bağlantı, izin verilen en düşük sürüm, kademeli APK duyurusu, TestFlight geçiş bağlantısı.",
+   "proposed_owner": "D06"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/saat/belge",
+   "client": "telefon",
+   "purpose": "Gönderimden hemen önce ikinci çapa için tek kullanımlık değere bağlı yeni saat belgesi.",
+   "proposed_owner": "D04"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/olcum/panel-sureleri",
+   "client": "panel",
+   "purpose": "Panelde ölçülen onay ekranı sürelerinin günlük toplamı (telefondaki karşılığı kuyruktan gider).",
+   "proposed_owner": "D15"
+  }
+ ],
+ "jobs": [
+  {
+   "name": "sira_boslugu_raporu",
+   "schedule": "Her gece, Europe/Istanbul, yoğunluk dışı ve gecelik pg_dump ile çakışmayan bir dakikada; işçi kapalıysa açılınca bir kez",
+   "purpose": "Kurulum başına (kurulum, sıra) boşluklarını, uzun süredir kesintisiz son sırası ilerlemeyen kurulumları ve gönderim reti sayılarını çıkarıp ölçüme yazar; aynı girdiyle iki kez çalışsa da sonuç değişmez.",
+   "proposed_owner": "D06"
+  }
+ ],
+ "depends_on": [
+  "D01",
+  "D02",
+  "D03",
+  "D04",
+  "D05",
+  "D07",
+  "D08",
+  "D09",
+  "D12",
+  "D13",
+  "D14",
+  "D15"
+ ],
+ "touches_other_domains": [
+  {
+   "domain": "D01",
+   "what": "Kurulum kaydının kişiye ve öğrenci cihaz kaydına bağlanması; öğrenci oturumu kapandıktan sonra (cihaz değişimi) eski telefonun imzalı bekleyen kayıtlarının kabulü; hoca oturumu bitince kuyruktaki işlerin girişten sonra gitmesi ve hesap uyuşmazlığı; sunucunun kapattığı hoca oturumunda listelerin silinmesi; hesap silme isteğinin kuyrukta son öğe olarak sıralanması."
+  },
+  {
+   "domain": "D02",
+   "what": "Dersler, ders saatleri, oturumlar ve tatiller telefona iner: her satırda değişiklik sürümü ve silindi işareti, sürüm tek sayaç satırından; dönemin bütün oturumları önceden üretilmeli; aynı gün telafi dersi yeni sürümle hemen inmeli; ders ataması değişince kapsam olayı."
+  },
+  {
+   "domain": "D03",
+   "what": "Liste satırları rol süzgeciyle iner (hocaya tam liste, öğrenciye kendi satırı); pasif olma, sonradan eklenme ve şube değişimi kapsam olayı üretir; satırlar silinmez, silindi ya da pasif işaretiyle sürüm alır."
+  },
+  {
+   "domain": "D04",
+   "what": "Saat belgesinin teldeki taşınması (her istekte nonce, cevaplarda yeni belge), gönderim öncesi belge ucu, paketteki ikinci çapa bölümü; hoca işlerinin çapalı işlem anı ve pencere değişikliği geç gelince kararların yeniden verilmesi."
+  },
+  {
+   "domain": "D05",
+   "what": "Yoklama kaydı zarfı kuyruk öğesinin gövdesidir; tekillik ('zaten var') ve çakışma ('ret') kuralları öğe sonucuna yansır; kayıt metni üreten uygulama sürümünü taşımalı; makbuz okutma öğesi aynı doğrulamadan geçer."
+  },
+  {
+   "domain": "D07",
+   "what": "İkinci çapa doğrulaması, gönderim cevabındaki karar ve gerekçe; gerekçelerin gönderim reti mi karar Ret mi olduğu (D06-B05); hatalı sürüm kuralı için kaydı üreten sürüm; pasif cihazın kayıtları ve eski App Attest anahtarıyla imzalı bekleyen kayıtlar."
+  },
+  {
+   "domain": "D08",
+   "what": "Öğrencinin kendi kayıtları bölümü kalan hak ve yerel uyarı için gereken alanları taşımalı; KARAR BEKLİYOR hesabı kurulumun son temas anını ve bekleyen öğe sayısını kullanır."
+  },
+  {
+   "domain": "D09",
+   "what": "Sorun bildirimi kuyruk öğesidir ve oturum ister; 3 günlük süre karar_teslimi anından başlar (karar değişince yeniden başlayıp başlamadığı D09'un); gönderme süresinden geç gelen kayıt 'sonradan değişenler'e düşer; telafi işaretlemesinin hangi öğe ve sebep koduyla gideceği."
+  },
+  {
+   "domain": "D10",
+   "what": "Panel yoklama tablosundaki 'Kayıtların bir kısmı henüz gelmemiş olabilir' şeridi ve AKSİS özetindeki KARAR BEKLİYOR ile 'geçici' durumu, gönderme süresi sonu fonksiyonunu ve son temas verisini kullanır."
+  },
+  {
+   "domain": "D11",
+   "what": "Aşama 2'de QR gösterim kaydı ortak kuyruğun bir öğe türüdür ve ikinci çapası kurulur; hocanın 5 günlük QR anahtarlarının indirilmesi aynı indirme kurallarını (imleç, kapsam, silme) izlemeli; hoca cihaz anahtarları kurulum kaydına bağlanır."
+  },
+  {
+   "domain": "D12",
+   "what": "Nesil okuma yetkisi ve PITR sonrası checkpoint adımı; pg_dump dönüşünün yalnız yeni kümeye yapılması; silindi işaretli satırların saklanması ve en_eski_gecerli_surum; gonderim_defteri tablosunun büyümesi ve dönemle bölünmesi."
+  },
+  {
+   "domain": "D13",
+   "what": "Yol kuralları (/v1/<modül>), başlık adları (uygulama sürümü, updateId, kurulum kimliği, nonce), hata gövdesi ve kodları, genişleyebilen değerler, sayfalama, hız sınırı ve Retry-After. En düşük sürümün yalnız dönem arasında yükselmesi kuralı birimlerin farklı takviminde ortak bir dönem arası bırakmayabilir; kuralın birim bazında mı uygulanacağı D13'ün ve sahibin kararı."
+  },
+  {
+   "domain": "D14",
+   "what": "sira_boslugu_raporu gece işi pg-boss zamanlamasıyla, Europe/Istanbul saatiyle ve missed: once kuralıyla çalışır."
+  },
+  {
+   "domain": "D15",
+   "what": "Ders çıkışı yük testi modeli (telefon başına 2 ile 3 istek, 20.000 telefon 1 dakikada); sunucu tarafı zaman sınırları ve under-pressure eşikleri; surum.json'un CI'dan sunucuya taşınması; telefon sayaçları tablosu ve panel süre ucu; gönderme hedefi (%95 24 saatte) ve kayıp ölçümü."
+  }
+ ]
+}

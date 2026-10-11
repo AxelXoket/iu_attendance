@@ -1,0 +1,38 @@
+D07.tables[5].columns[8].note :: kesinleşme ve kesinti süzgeci.
+D07.tables[5].columns[9].note :: kesinti kapanışında gerekçeden bağımsız seçim için.
+D07.tables[5].columns[15].note :: GECMIS_OLAYLARI listesinden (kodlar.ts): KAYIT_GELDI, YenidenNeden değerleri (dış çağıranların on bir nedeni), D07'nin iç yeniden değerlendirme nedenleri (PENCERE_DEGISTI, KAFA_SAYISI_GELDI, AYAR_KESINLESTI, KESINTI_KAPANDI, BEKLEME_SURESI_DOLDU) ve KARAR_OLAYLARI'ndaki hoca olayları (KENDI_BEYANI_ONAY, KENDI_BEYANI_RET, INCELEME_ONAY, INCELEME_RET, ISARETLI_OTURUM_RET, KARAR_DEGISTIR, SINIFTA_DEGIL, SINIFTA_DEGIL_GERI_ALINDI).
+D07.tables[5].columns[20].note :: Geçmişin değişen tek alanıdır: güncel kararı (bekleyen kararlar, oturum karşılaştırması, kesinti) D05'e süzgeç dış yüzü açtırmadan tek kısmi dizinle bulmayı sağlar.
+D07.tables[5].indexes[6] :: kayit_karar_gecmisi_kayit_ulasma_ani_idx (kayit_ulasma_ani, donem_id, kayit_id) WHERE guncel AND esitleme_bozukken_ulasti: kesinti kapanışının partileri, D04'ün imleç sırası (ulaşma anı, kayıt anahtarı)
+D07.jobs[1].does :: 22 gün, 7 günlük süreye işçinin iki haftalık kesintisini ve bir gün payı ekler, daha geç gelen kafa sayısını kafaSayisiOgesi kendisi kesinleştirir.
+D07.exports[7].purpose :: dış imza kesinti partileri için değişmez, partileri D07'nin kesintiKapandi dinleyicisi işler.
+D07.tests[26].asserts :: kesinti ulasmaAnlariGuvenilir true ile kapanınca aralıkta eşitleme bozukken ulaşmış bütün kayıtlar (birincil gerekçesi SAYAC_ARTMADI ya da TEYIT_BEKLIYOR olup SAAT_ESITLEMESI_BOZUK'u ek gerekçe taşıyanlar dahil) yeniden değerlendirilir ve ulaşma anını aşan Ret ULASMA_ANINI_ASIYOR alır;
+D07.tests[26].asserts :: sonraki teyit olayı kapanmış kesintiyi D04.kesintiAraliklari'nın ulasmaAnlariGuvenilir alanıyla bağlamda temizlenmiş görür;
+D07.tests[27].name :: Kesinti partileri
+D07.tests[27].asserts :: D04'ün esitleme_sonrasi_yeniden_degerlendir işi 1200 işaretli kayıtlı kesintide D07 dinleyicisini { imlec, adet: 500 } ile üç kez çağırır: 500, 500 ve 200 kayıt, son çağrı bitti true;
+D07.tests[27].asserts :: aralık dışındaki (degerlendirmeAltAni'dan önce, acikKesintiBaslangici'ndan sonra) kayıt dokunulmaz (kontrol);
+===kafa
+D07.summary :: 2'lik ortak sınır, kafa sayısı karşılaştırması ve işareti, rastgele isim ve burada değil işaretleri, dönem kilidindeki karar kapanışı ve Google iptal listesi de bu modüldedir.
+D07.tables[5].columns[5].note :: Kafa sayısı karşılaştırması ve rastgele isim liste satırını sayar: aynı numaranın iki hesabı ya da düzeltmesi de olan öğrenci bir kez sayılır.
+D07.tables[6].purpose :: Kafa sayısı girilmiş her oturum kesinleşmede bir satır alır, eşik hiç aşılmadıysa gecerli false ile.
+D07.tables[6].columns[4].note :: Son hesapta eşik hâlâ aşılıyor mu;
+D07.tables[6].columns[5].note :: Eşik hiç aşılmadıysa boş.
+D07.endpoints[1].response.isaret :: eşik aşılıyor mu (kesinleşmeden canlı hesap, sonra işaret satırındaki donmuş gecerli)
+D07.jobs[1].does :: (4) kafa sayısı girilmiş, gönderme süresi bitmiş ve işaret satırı kesinleşmemiş oturumların karşılaştırmasını kesinleştirir: satır eşik aşılmışsa da aşılmamışsa da yazılır (gecerli true ya da false, kesinlesti_ani).
+D07.state_machines[0].transitions[10].when :: Ders sonrası toplu inceleme (Kafa sayısı (plan.html#kararlar-kafa-sayisi)): oturumun KAFA_SAYISI_ASIMI satırında ilk_isaret_ani dolu (işaret sonradan kalksa da), birim-dönem kilitli değil;
+D07.state_machines[1].transitions[3].when :: Kesinleşmede eşik hiç aşılmamış: satır gecerli false, ilk_isaret_ani ve derste boş olarak yazılır;
+D07.state_machines[3].transitions[2].when :: Seçim yok ama oturumun KAFA_SAYISI_ASIMI satırında derste true;
+D07.invariants[15] :: Kafa sayısı karşılaştırmasında bir liste satırı en çok bir kez sayılır (kayıt ve Elle eklendi düzeltmesi birleşimi).
+D07.exports[4].purpose :: Kafa sayısı girilmiş oturumda işaret anahtarını alıp karşılaştırmayı yeniler, eşik ilk kez aşıldıysa işaret satırını INSERT ...
+D07.exports[5].purpose :: Biçim D09 ile birleşiktir: yeniKarar { karar: 'VAR' | 'RET';
+D07.tests[46].name :: Kafa sayısı karşılaştırmasında çift sayım yok
+===D03KARAR
+D07.tables[5].columns[5].name :: liste_satiri_id
+D07.tables[5].indexes[2] :: kayit_karar_gecmisi_oturum_id_idx (oturum_id) INCLUDE (ogrenci_id, liste_satiri_id, yeni_karar, kaynak, kayit_ulasma_ani) WHERE guncel: oturum karşılaştırması, rastgele isim ve oturum yeniden değerlendirmesi
+D07.exports[7].purpose :: YenidenSuzgec alanları isteğe bağlıdır ve birlikte uygulanır: kayitAnahtarlari, oturumId ve gerekce, ogrenciId, cihazId, dersId ile subeIdleri ve ogrenciNolari (LISTE_DEGISTI), belgeKid?: { amac: 'saat_belgesi' | 'qr_anahtar_kaynagi';
+D07.exports[7].purpose :: D01, D03, D11 ve D15 sabitten içe aktarır, yeniden yazmaz): TEYIT_VERILDI, TEYIT_REDDEDILDI, CIHAZ_DEGISIMI_ONAYLANDI, CIHAZ_DEGISIMI_REDDEDILDI, DEGISIM_IPTAL, HESAP_SILINDI, HESAP_KAPANDI, CIHAZ_KAPANDI, LISTE_DEGISTI, QR_GOSTERIM_KAYDI, ANAHTAR_ELE_GECIRILDI.
+D07.tests[24].asserts :: liste satırı eklenince D03'ün liste işleminin içinde, iş kuyruğu olmadan, D07'nin KARAR dinleyicisi yenidenDegerlendir(tx, { dersId, subeIdleri, ogrenciNolari }, 'LISTE_DEGISTI') ile kararı Var yapar;
+D07.resolved_gaps[4].decision :: Kayıt sayısı farklı liste satırı sayısıdır: oturumda güncel kararı Ret olmayan kaydı bulunan liste satırları (kayit_karar_gecmisi.liste_satiri_id, üyeliği veren satır) ile etkin Elle eklendi düzeltmelerinin listeSatiriId'leri birleşimi;
+D07.resolved_gaps[19].decision :: dönen satirId kayit_karar_gecmisi.liste_satiri_id'ye yazılır.
+D07.resolved_gaps[19].decision :: Liste satırı eklenir, yeniden etkinleşir ya da tarihi değişirse D07'nin KARAR dinleyicisi iş kuyruğa koymadan liste işleminin içinde yenidenDegerlendir(tx, { dersId, subeIdleri, ogrenciNolari }, 'LISTE_DEGISTI') çağırır;
+===D10
+D10.open_points[5].recommendation :: ders raporunda pasif öğrenci tablonun sonunda "listeden çıkarıldı (tarih)" işaretiyle, çıkarıldığı ana kadarki oturumlarıyla (itirazda kanıt kalsın, plan.html#hoca-liste-yukleme).

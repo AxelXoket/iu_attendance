@@ -1,0 +1,550 @@
+/* src/css/base.css · owner F1a (OWNERS.md)
+   Page variables, reset, page layout and type, the side navigation, section scaffolding, fragment styles, page
+   overlays (dialog, toasts), and every rule that sections of both groups use: utilities, icons, buttons, form controls,
+   tabs, status marks, the phone kit, device frames, Röntgen pins, the focus ring, table cross-fades and accordions.
+   tools/lib/sources.js merges base, system and screens: every chunk starts with an "@order" marker line,
+   and the chunks of all three files are joined in marker order, so the page sees one stylesheet in that order (the cascade).
+   Markers and this note never reach tasarim.html. To add rules, extend a chunk, or start one with a free number
+   between its neighbours. */
+/* @order 0100 */
+/* İÜ Yoklama design document. Every color comes from tokens.css; the font stacks, shadows, scrim, timing constants,
+   scale factors, distances, focus ring geometry, line widths, component sizes (--component-*) and the timing of every
+   interaction pattern (--motion-*, with its reduced-motion value) come from the block tools/build.js writes from
+   tokens.json just above this stylesheet. Component rules read those variables, so a demo is drawn with the anatomy's
+   values (decisions-r2 E1) and moves with the interaction table's timing (E3). */
+:root {
+  /* Documentation-only inks, resolved here at the root so the Röntgen token swap on a screen never repaints them. */
+  --doc-pin: var(--neutral-12);
+  --doc-pin-text: var(--neutral-1);
+  --doc-hw: var(--neutral-12);
+  /* The old name of the only dark surface, kept for the Erişilebilirlik fragment's dark example until it uses bg.camera;
+     not a token (tokens.json has no bg.inverse: the camera is the product's one dark surface). */
+  --bg-inverse: var(--bg-camera);
+  /* Color transitions read --hov and --hov-e: the hover pattern's exit at rest, its entry while hovered, the press
+     pattern while pressed and for the release (.rel, kept by the page script). */
+  --hov: var(--motion-hover-exit-dur);
+  --hov-e: var(--motion-hover-exit-ease);
+  --mv: 1;
+  --side: 232px;
+  color-scheme: light;
+}
+/* One switch for reduced motion: every translate and scale is multiplied by --mv, so they collapse to 0 and leave cross-fades. */
+@media (prefers-reduced-motion: reduce) { :root { --mv: 0; } }
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 72px; }
+body {
+  margin: 0; background: var(--bg-page); color: var(--text-primary);
+  font: 400 14px/20px var(--font-sans); letter-spacing: 0.16px;
+  font-variant-ligatures: no-common-ligatures; font-feature-settings: "liga" 0, "clig" 0;
+  font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; overflow-wrap: break-word;
+}
+h1, h2, h3, h4, p, ol, ul, figure { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+button, input { font: inherit; letter-spacing: inherit; color: inherit; }
+button { cursor: pointer; }
+svg { display: block; }
+.vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mono { font-family: var(--font-mono); letter-spacing: 0; }
+.num { font-variant-numeric: tabular-nums; }
+.ink { color: var(--text-figure); }
+/* Inline code never breaks inside a name (--mv: 0 stays whole) and is never smaller than 12 px; code of 40 characters or
+   more is marked .wrap by the build and may break anywhere. */
+code { font-family: var(--font-mono); font-size: max(12px, 0.92em); letter-spacing: 0; white-space: nowrap; }
+code.wrap, pre code { white-space: normal; overflow-wrap: anywhere; }
+pre code { white-space: inherit; }
+code.nb { white-space: nowrap; }
+
+/* Every interactive element animates with motion tokens; components refine below (Etkileşim tablosu: press, hover). */
+:where(button, a[href], input, select, textarea, summary, [role=tab], [role=switch], [role=menuitem], [role=radio], [tabindex]:not([tabindex="-1"])) {
+  transition-property: color, background-color, border-color, opacity, transform, text-decoration-color;
+  transition-duration: var(--hov), var(--hov), var(--hov), var(--hov), var(--motion-press-enter-dur), var(--hov);
+  transition-timing-function: var(--hov-e), var(--hov-e), var(--hov-e), var(--hov-e), var(--motion-press-enter-ease), var(--hov-e);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(button, a[href], input, select, textarea, summary, [role=tab], [role=switch], [role=menuitem], [role=radio], label, tr):hover { --hov: var(--motion-hover-enter-dur); --hov-e: var(--motion-hover-enter-ease); }
+}
+/* Press and its release take the press pattern's timing; the page script keeps .rel for that long after the release. */
+:where(button, a[href], [role=tab], [role=switch], [role=menuitem], [role=radio], label):active, .rel { --hov: var(--motion-press-enter-dur); --hov-e: var(--motion-press-enter-ease); }
+
+/* Focus ring (Etkileşim tablosu, odak): line.odak in focus.ring, focus.offset away, only on :focus-visible. It appears
+   with the focus pattern's timing: the color comes in from transparent and the ring settles from focus.offsetFrom to its
+   place; a ring drawn inside its element (--ring-from equal to its offset, focus.offsetInset) only changes color. It
+   leaves at once; under reduced motion the pattern's entry is instant, so the ring appears at once. */
+:focus-visible { outline: var(--line-odak) solid var(--focus-ring); outline-offset: var(--focus-offset); animation: ringIn var(--motion-focus-enter-dur) var(--motion-focus-enter-ease); }
+@keyframes ringIn { from { outline-color: transparent; outline-offset: var(--ring-from, var(--focus-offsetFrom)); } }
+.side-nav a, .tabs [role="tab"], .lrow, .menu [role="menuitem"], .opt, .ph-tab, .pnl-link, .tbl-wrap, summary { --ring-from: var(--focus-offsetInset); }
+.skip { position: absolute; left: 16px; top: -48px; z-index: 60; padding: 8px 12px; background: var(--bg-surface); color: var(--text-primary); box-shadow: var(--shadow-2); }
+.skip:focus-visible { top: 8px; }
+:focus:not(:focus-visible) { outline: none; }
+
+/* Links: always underlined (the link color differs from body text by only 2,42:1). An inline link in prose gets a
+   24 px tall hit area without moving the line (inline padding never changes the line box). */
+a { color: var(--text-link); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+:where(p, li, dd, td) > a:not([class]) { padding-block: 4px; }
+@media (hover: hover) and (pointer: fine) { a:hover { color: var(--text-linkHover); text-decoration-thickness: 2px; } }
+
+/* Icons */
+.ic { width: 24px; height: 24px; fill: currentColor; flex: none; }
+.ic20 { width: 20px; height: 20px; }
+.ic16 { width: 16px; height: 16px; }
+
+/* ---------- Shell ---------- */
+.shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); min-height: 100vh; }
+/* The side bar scrolls on its own when the window is shorter than the list (21 sections and two links). */
+.side { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; display: flex; flex-direction: column; border-right: 1px solid var(--border-subtle); padding: 24px 0 16px; background: var(--bg-page); z-index: 30; }
+.brand { display: flex; align-items: center; gap: 12px; padding: 0 24px 16px; text-decoration: none; color: var(--text-primary); flex: none; }
+.brand-mark { width: 28px; height: 28px; flex: none; }
+.brand-mark rect, .brand-mark path { fill: none; stroke: var(--text-primary); stroke-width: 2; }
+.brand-mark path { stroke: var(--accent-fill); stroke-width: 3; stroke-linecap: square; }
+.brand-t { font: 600 14px/18px var(--font-sans); letter-spacing: 0.16px; }
+.brand-s { font: 400 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); }
+.side-nav { display: flex; flex-direction: column; }
+.side-nav a { position: relative; display: flex; gap: 12px; align-items: baseline; padding: 4px 24px; color: var(--text-secondary); text-decoration: none; }
+.side-nav a .n { font: 400 12px/16px var(--font-mono); width: 20px; flex: none; }
+.side-nav a::before { content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: var(--line-isaret); background: var(--accent-mark); transform: scaleY(0); transition: transform var(--motion-tab-indicator-enter-dur) var(--motion-tab-indicator-enter-ease); }
+.side-nav a[aria-current="true"] { color: var(--text-primary); }
+.side-nav a[aria-current="true"]::before { transform: scaleY(1); }
+@media (hover: hover) and (pointer: fine) { .side-nav a:hover { color: var(--text-primary); background: var(--bg-hover); } }
+.side-sep { display: block; height: 1px; margin: 8px 24px; background: var(--border-subtle); flex: none; }
+.side-nav a.ext { align-items: center; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.side-nav a.ext .ic { width: 16px; height: 16px; margin-left: 2px; margin-right: 2px; flex: none; }
+/* Own compositing layer: text is drawn with grayscale antialiasing, so no subpixel color fringe ever puts a yellow or green pixel on the page. */
+main, .side { will-change: transform; }
+main { min-width: 0; padding: 0 48px 128px; }
+.wrap { max-width: 1140px; }
+
+@media (max-width: 1099px) {
+  :root { --side: 0px; }
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .side { top: env(safe-area-inset-top, 0px); height: auto; overflow: visible; flex-direction: row; align-items: stretch; border-right: 0; border-bottom: 1px solid var(--border-subtle); padding: 0; }
+  .brand { padding: 0 16px; border-right: 1px solid var(--border-subtle); }
+  .brand-s { display: none; }
+  .side-nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+  .side-nav::-webkit-scrollbar { display: none; }
+  .side-nav a { padding: 16px 12px; white-space: nowrap; }
+  .side-nav a .n { width: auto; }
+  .side-sep { width: 1px; height: auto; margin: 16px 4px; }
+  .side-nav a::before { left: 12px; right: 12px; top: auto; bottom: 0; width: auto; height: var(--line-isaret); transform: scaleX(0); }
+  .side-nav a[aria-current="true"]::before { transform: scaleX(1); }
+  main { padding: 0 32px 96px; }
+}
+@media (max-width: 600px) {
+  main { padding: 0 16px 80px; }
+  .brand-t { display: none; }
+  .side-nav a .n { display: none; }
+}
+
+/* @order 0300 */
+/* ---------- Sections ---------- */
+.sec { padding-top: 80px; }
+.sec:focus-visible { outline: none; }
+.sec-h { display: grid; grid-template-columns: 72px minmax(0, 1fr); column-gap: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--text-primary); margin-bottom: 32px; }
+.sec-no { font: 400 14px/20px var(--font-mono); color: var(--text-secondary); padding-top: 12px; }
+.sec h2 { font: 400 40px/48px var(--font-sans); letter-spacing: -0.6px; }
+/* Prose measure: 29em keeps every line within 70 characters of Plex Sans in Turkish, the Tipografi rule (30em reached 72;
+   ch is the width of "0", wider than an average letter). One measure for the whole page. */
+.sec .lead { font: 400 16px/24px var(--font-sans); letter-spacing: 0; color: var(--text-secondary); max-width: 29em; margin-top: 12px; }
+.sub { margin-top: 48px; }
+.sub:first-of-type { margin-top: 0; }
+.sub-h { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; flex-wrap: wrap; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); }
+.sub h3 { font: 400 24px/32px var(--font-sans); letter-spacing: -0.2px; }
+.sub .note { font: 400 12px/16px var(--font-mono); letter-spacing: 0.32px; color: var(--text-secondary); }
+.body { font: 400 14px/20px var(--font-sans); max-width: 29em; }
+.body + .body { margin-top: 8px; }
+@media (max-width: 600px) {
+  .sec { padding-top: 64px; }
+  .sec-h { grid-template-columns: minmax(0, 1fr); }
+  .sec-no { padding-top: 0; margin-bottom: 8px; }
+  .sec h2 { font-size: 32px; line-height: 40px; letter-spacing: -0.4px; }
+  .sub h3 { font-size: 20px; line-height: 28px; }
+}
+.g2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+@media (max-width: 1000px) { .g3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 720px) { .g2, .g3 { grid-template-columns: minmax(0, 1fr); } }
+
+.plate { background: var(--bg-surface); border: 1px solid var(--border-subtle); min-width: 0; }
+.plate-cap { display: flex; justify-content: space-between; gap: 16px; padding: 8px 16px; border-bottom: 1px solid var(--border-subtle); font: 400 12px/16px var(--font-mono); letter-spacing: 0.32px; color: var(--text-secondary); }
+.plate-cap b { font-weight: 500; color: var(--text-primary); }
+.plate-body { padding: 24px; }
+
+/* A box that scrolls sideways shows a soft edge on the side where more content waits (the covers move with the content,
+   the shadows stay with the box, so a shadow shows only where the content continues). */
+.scroll-x {
+  --sx-bg: var(--bg-page);
+  overflow-x: auto; max-width: 100%;
+  background:
+    linear-gradient(to right, var(--sx-bg) 30%, transparent) left center / 32px 100% no-repeat local,
+    linear-gradient(to left, var(--sx-bg) 30%, transparent) right center / 32px 100% no-repeat local,
+    linear-gradient(to right, rgba(26, 32, 48, 0.14), transparent) left center / 12px 100% no-repeat scroll,
+    linear-gradient(to left, rgba(26, 32, 48, 0.14), transparent) right center / 12px 100% no-repeat scroll;
+}
+.plate .scroll-x, .plate-body.scroll-x, details .scroll-x { --sx-bg: var(--bg-surface); }
+/* One table look for the whole document (this page's tables and the fragments'): a 12/16 600 head in text.secondary
+   over a text.primary rule, 1 px border.subtle row rules, no box, no band, no vertical rule, no zebra. */
+.tbl-doc { width: 100%; border-collapse: collapse; font: 400 14px/20px var(--font-sans); }
+.tbl-doc th { text-align: left; font: 600 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); padding: 12px 16px 8px 0; border-bottom: 1px solid var(--text-primary); white-space: nowrap; vertical-align: bottom; }
+.tbl-doc td { padding: 12px 16px 12px 0; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
+.tbl-doc td.mono, .tbl-doc code { font: 400 12px/20px var(--font-mono); letter-spacing: 0; }
+.tbl-doc .r { text-align: right; }
+.tbl-doc tr:last-child td { border-bottom: 0; }
+.tbl-doc.compact td { padding-top: 8px; padding-bottom: 8px; }
+.scroll-x > .tbl-doc { min-width: 640px; }
+.scroll-x > .tbl-doc.ramp-tbl { min-width: 720px; }
+/* Below 600 px a table marked .stack becomes one card per row: each cell carries its column name (data-th). */
+@media (max-width: 600px) {
+  .scroll-x > .tbl-doc.stack { min-width: 0; }
+  .tbl-doc.stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .tbl-doc.stack, .tbl-doc.stack tbody, .tbl-doc.stack tr, .tbl-doc.stack td { display: block; }
+  .tbl-doc.stack tr { padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+  .tbl-doc.stack tr:last-child { border-bottom: 0; }
+  .tbl-doc.stack td, .tbl-doc.stack td.r { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 2px 0; border: 0; text-align: left; }
+  .tbl-doc.stack td::before { content: attr(data-th); font: 400 12px/20px var(--font-mono); letter-spacing: 0; color: var(--text-secondary); }
+  .tbl-doc.stack td:empty { display: none; }
+}
+.td-v { min-width: 0; }
+
+/* @order 0500 */
+.rules-3 { display: grid; gap: 0; border-top: 1px solid var(--border-subtle); }
+.rules-3 li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border-subtle); }
+.rules-3 .k { font: 400 12px/20px var(--font-mono); color: var(--text-secondary); }
+.rules-3 b { font-weight: 600; }
+/* @order 0800 */
+/* ---------- Status ---------- */
+/* Stamp (Bileşenler, Durum damgası): sizes from component.stamp; no ground, the ink draws icon, word and frame. */
+.stamp { display: inline-flex; align-items: center; gap: var(--component-stamp-gap); min-height: var(--component-stamp-minHeight); padding: var(--component-stamp-padY) var(--component-stamp-padRight) var(--component-stamp-padY) var(--component-stamp-padLeft); border: var(--component-stamp-border) solid currentColor; font: var(--type-phone-etiket); letter-spacing: var(--type-phone-etiket-ls); background: transparent; max-width: 100%; }
+.stamp .ic { width: var(--component-stamp-icon); height: var(--component-stamp-icon); }
+/* @order 1000 */
+.st-var { color: var(--att-var-fg); }
+.st-yok { color: var(--att-yok-fg); }
+/* @order 1200 */
+.st-beklemede, .st-tel { color: var(--status-info-text); }
+.st-incelemede { color: var(--status-warning-text); }
+.st-ret, .st-danger { color: var(--status-danger-text); }
+.st-ulasti { color: var(--status-success-text); }
+/* @order 1400 */
+/* ---------- Buttons (Bileşenler, Düğme: component.button) ---------- */
+.btn {
+  --h: var(--component-button-height-panel);
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--component-button-gap);
+  min-height: var(--h); min-width: var(--component-button-minWidth); padding: var(--component-button-padY) var(--component-button-padX-panel); border: var(--component-button-border) solid transparent; border-radius: var(--radius-button);
+  font: var(--type-panel-dugme); letter-spacing: var(--type-panel-dugme-ls); text-decoration: none; text-align: center; user-select: none;
+  transition: background-color var(--hov) var(--hov-e), border-color var(--hov) var(--hov-e), color var(--hov) var(--hov-e), transform var(--motion-press-enter-dur) var(--motion-press-enter-ease), opacity var(--motion-press-enter-dur) var(--motion-press-enter-ease);
+}
+.btn .ic { width: var(--component-button-icon-panel); height: var(--component-button-icon-panel); }
+.btn-lg { --h: var(--component-button-height-phone); padding-left: var(--component-button-padX-phone); padding-right: var(--component-button-padX-phone); font-size: 16px; line-height: 24px; letter-spacing: 0; }
+.btn-lg .ic { width: var(--component-button-icon-phone); height: var(--component-button-icon-phone); }
+.btn-sm { --h: var(--component-button-height-small); min-width: 0; padding-left: var(--component-button-padX-small); padding-right: var(--component-button-padX-small); }
+.btn-block { width: 100%; }
+.btn-icon { min-width: 0; width: var(--h); padding: 0; }
+.btn-primary { background: var(--accent-fill); color: var(--text-onAccent); }
+.btn-secondary { background: transparent; border-color: var(--border-strong); color: var(--text-primary); }
+.btn-ghost { background: transparent; color: var(--text-primary); }
+.btn-danger { background: var(--danger-fill); color: var(--text-onDanger); }
+/* Press: scale.basma with the press pattern's timing (no movement under reduced motion) and one step darker fill. */
+.btn:active, .btn[data-state="pressed"] { transform: scale(calc(1 - (1 - var(--scale-basma)) * var(--mv))); }
+.btn-primary:active, .btn-primary[data-state="pressed"] { background: var(--accent-fillPressed); }
+.btn-secondary:active, .btn-ghost:active, .btn-secondary[data-state="pressed"], .btn-ghost[data-state="pressed"] { background: var(--bg-pressed); }
+.btn-danger:active, .btn-danger[data-state="pressed"] { background: var(--danger-fillPressed); }
+/* Fixed demo states for the state table (attribute selectors, not :hover). */
+.btn-primary[data-state="hover"] { background: var(--accent-fillHover); }
+.btn-secondary[data-state="hover"], .btn-ghost[data-state="hover"] { background: var(--bg-hover); }
+.btn-danger[data-state="hover"] { background: var(--danger-fillHover); }
+.btn[data-state="focus"] { outline: var(--line-odak) solid var(--focus-ring); outline-offset: var(--focus-offset); }
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover { background: var(--accent-fillHover); }
+  .btn-secondary:hover, .btn-ghost:hover { background: var(--bg-hover); }
+  .btn-danger:hover { background: var(--danger-fillHover); }
+  .btn-primary:active { background: var(--accent-fillPressed); }
+  .btn-secondary:active, .btn-ghost:active { background: var(--bg-pressed); }
+  .btn-danger:active { background: var(--danger-fillPressed); }
+}
+.btn:focus-visible { outline: var(--line-odak) solid var(--focus-ring); outline-offset: var(--focus-offset); }
+.btn:disabled, .btn[aria-disabled="true"]:not([aria-busy="true"]) { background: var(--bg-disabled); color: var(--text-disabled); border-color: transparent; cursor: not-allowed; transform: none; }
+.btn-ghost:disabled { background: transparent; }
+/* Loading (Etkileşim tablosu, yükleniyor): the resting label and the busy label (three squares and a word) share one
+   grid cell, so the button is as wide as the wider of the two and never changes width. The busy layer shows only once
+   the page script sets data-wait, after time.gosterge; until then the button is busy (aria-busy) but looks the same. */
+.btn[aria-busy="true"] { cursor: progress; }
+.btn-c { display: grid; }
+.btn-c > * { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: var(--component-button-gap); transition: opacity var(--motion-loading-appear-enter-dur) var(--motion-loading-appear-enter-ease); }
+.btn-wait, .btn[data-wait] .btn-rest { opacity: 0; }
+.btn[data-wait] .btn-wait { opacity: 1; }
+.btn-inv { background: transparent; color: var(--text-onInverse); border-color: var(--neutral-7); }
+.btn-inv:active { background: var(--overlay-cameraPressed); }
+
+/* Loading mark (Bileşenler, Yükleniyor göstergesi: component.spinner): three squares light up in turn, one time.dongu
+   per round, linear. Only a running job loops: inside a busy button, a busy message, and the demo plate. Under reduced
+   motion they stand still and fully drawn (the page's only loop stops). */
+.spin { width: var(--component-spinner-box); height: var(--component-spinner-box); flex: none; }
+.spin rect { fill: currentColor; opacity: var(--component-spinner-restOpacity); }
+.btn[data-wait] .spin rect, .msg.busy .spin rect, .spin-demo .spin rect { animation: dots var(--motion-loading-loop-enter-dur) var(--motion-loading-loop-enter-ease) infinite; }
+.btn[data-wait] .spin rect:nth-child(2), .msg.busy .spin rect:nth-child(2), .spin-demo .spin rect:nth-child(2) { animation-delay: calc(var(--motion-loading-loop-enter-dur) / 3); }
+.btn[data-wait] .spin rect:nth-child(3), .msg.busy .spin rect:nth-child(3), .spin-demo .spin rect:nth-child(3) { animation-delay: calc(var(--motion-loading-loop-enter-dur) * 2 / 3); }
+@keyframes dots { 0% { opacity: 1; } 33.3%, 100% { opacity: var(--component-spinner-restOpacity); } }
+@media (prefers-reduced-motion: reduce) { .spin rect, .spin rect:nth-child(n), .btn[data-wait] .spin rect:nth-child(n), .msg.busy .spin rect:nth-child(n), .spin-demo .spin rect:nth-child(n) { animation: none; opacity: 1; } }
+
+/* @order 1600 */
+.live-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+
+/* ---------- Fields (Bileşenler, Metin alanı: component.input) ---------- */
+.field { display: grid; gap: var(--component-input-gap); min-width: 0; align-content: start; }
+.lbl { font: var(--type-panel-etiket-01); letter-spacing: var(--type-panel-etiket-01-ls); color: var(--text-secondary); }
+.help { font: var(--type-panel-etiket-01); letter-spacing: var(--type-panel-etiket-01-ls); color: var(--text-secondary); max-width: 52ch; }
+.input {
+  width: 100%; min-height: var(--component-input-height-panel); padding: 0 var(--component-input-padX); border: var(--component-input-border) solid var(--border-strong); border-radius: var(--radius-input);
+  background: var(--bg-surface); color: var(--text-primary); font: var(--type-panel-govde-kompakt-01); letter-spacing: var(--type-panel-govde-kompakt-01-ls);
+  transition: border-color var(--hov) var(--hov-e), background-color var(--hov) var(--hov-e), box-shadow var(--motion-error-color-enter-dur) var(--motion-error-color-enter-ease);
+}
+.input::placeholder { color: var(--text-secondary); opacity: 1; }
+@media (hover: hover) and (pointer: fine) { .input:hover:not(:disabled):not(:focus) { border-color: var(--border-hover); } }
+.input[data-state="hover"] { border-color: var(--border-hover); }
+.input:focus-visible, .input[data-state="focus"] { outline: var(--line-odak) solid var(--focus-ring); outline-offset: var(--focus-offset); }
+.input[aria-invalid="true"] { border-color: var(--status-danger-border); box-shadow: inset 0 0 0 var(--component-input-border) var(--status-danger-border); }
+.input:disabled { background: var(--bg-disabled); border-color: var(--bg-disabled); color: var(--text-disabled); cursor: not-allowed; }
+/* @order 1800 */
+/* ---------- Selection controls (Bileşenler, Onay kutusu and Anahtar; Etkileşim tablosu, anahtar) ---------- */
+.cb { display: inline-flex; align-items: center; gap: var(--component-checkbox-gap); cursor: pointer; font: var(--type-panel-govde-01); letter-spacing: var(--type-panel-govde-01-ls); }
+.cb input { appearance: none; -webkit-appearance: none; margin: 0; width: var(--component-checkbox-box-panel); height: var(--component-checkbox-box-panel); flex: none; border: var(--component-checkbox-border) solid var(--border-strong); border-radius: var(--radius-checkbox); background: var(--bg-surface); display: grid; place-content: center; cursor: pointer; transition: background-color var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease), border-color var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease); }
+/* The check: a component.checkbox.mark box turned 45 degrees; it grows from scale.isaret (no growth under reduced motion). */
+.cb input::after { content: ''; width: var(--component-checkbox-mark-panelWidth); height: var(--component-checkbox-mark-panelHeight); margin-top: calc(var(--component-checkbox-mark-stroke) * -1); border: solid var(--text-onAccent); border-width: 0 var(--component-checkbox-mark-stroke) var(--component-checkbox-mark-stroke) 0; transform: rotate(45deg) scale(calc(1 - (1 - var(--scale-isaret)) * var(--mv))); opacity: 0; transition: opacity var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease), transform var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease); }
+.cb input:checked { background: var(--accent-fill); border-color: var(--accent-fill); }
+.cb input:checked::after { opacity: 1; transform: rotate(45deg) scale(1); }
+.cb input:indeterminate { background: var(--accent-fill); border-color: var(--accent-fill); }
+.cb input:indeterminate::after { width: var(--component-checkbox-mark-barPanel); height: 0; margin: 0; border-width: 0 0 var(--component-checkbox-mark-stroke) 0; transform: none; opacity: 1; }
+.cb input:focus-visible { outline: var(--line-odak) solid var(--focus-ring); outline-offset: var(--focus-offset); }
+.cb input:disabled { background: var(--bg-disabled); border-color: var(--bg-disabled); cursor: not-allowed; }
+
+@media (hover: hover) and (pointer: fine) { .cb:hover input:not(:checked):not(:indeterminate):not(:disabled) { border-color: var(--border-hover); } }
+.sw { position: relative; width: var(--component-switch-width); height: var(--component-switch-height); flex: none; padding: 0; border: var(--component-switch-border) solid var(--border-strong); border-radius: var(--radius-switch); background: var(--bg-surface); transition: background-color var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease), border-color var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease); }
+/* The knob sits component.switch.inset from the outer edge (inside the border) and travels component.switch.travel. */
+.sw-thumb { position: absolute; top: calc(var(--component-switch-inset) - var(--component-switch-border)); left: calc(var(--component-switch-inset) - var(--component-switch-border)); width: var(--component-switch-knob); height: var(--component-switch-knob); background: var(--neutral-10); display: grid; place-items: center; transition: transform var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease), background-color var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease); }
+.sw-thumb::after { content: ''; width: var(--component-switch-mark-width); height: var(--component-switch-mark-height); margin-top: calc(var(--component-switch-mark-stroke) * -1); border: solid var(--accent-fill); border-width: 0 var(--component-switch-mark-stroke) var(--component-switch-mark-stroke) 0; transform: rotate(45deg); opacity: 0; transition: opacity var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease); }
+.sw[aria-checked="true"] { background: var(--accent-fill); border-color: var(--accent-fill); }
+.sw[aria-checked="true"] .sw-thumb { transform: translateX(var(--component-switch-travel)); background: var(--neutral-1); }
+.sw[aria-checked="true"] .sw-thumb::after { opacity: 1; }
+/* Reduced motion (Etkileşim tablosu, anahtar): the knob and the check appear in their new place; the colors change
+   with the pattern's reduced timing. */
+@media (prefers-reduced-motion: reduce) { .sw-thumb { transition: background-color var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease); } }
+@media (hover: hover) and (pointer: fine) { .sw:hover { border-color: var(--border-hover); } .sw[aria-checked="true"]:hover { background: var(--accent-fillHover); border-color: var(--accent-fillHover); } }
+.sw:disabled { background: var(--bg-disabled); border-color: var(--bg-disabled); cursor: not-allowed; }
+.sw:disabled .sw-thumb { background: var(--neutral-7); }
+.set-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--component-switch-gap); align-items: start; padding: 16px 0; border-bottom: 1px solid var(--border-subtle); }
+.set-row:first-child { border-top: 1px solid var(--border-subtle); }
+.set-row .t { font: var(--type-panel-govde-01); letter-spacing: var(--type-panel-govde-01-ls); }
+/* @order 2000 */
+/* ---------- Tabs (Bileşenler, Sekme: component.tab; Etkileşim tablosu, sekme) ---------- */
+.tabs { position: relative; display: flex; border-bottom: 1px solid var(--border-subtle); overflow-x: auto; scrollbar-width: none; }
+.tabs [role="tab"] { position: relative; min-height: var(--component-tab-height-panel); padding: 0 var(--component-tab-padX); border: 0; background: transparent; color: var(--text-secondary); font: var(--type-panel-dugme); letter-spacing: var(--type-panel-dugme-ls); white-space: nowrap; display: inline-flex; align-items: center; gap: var(--component-tab-gap); transition: color var(--hov) var(--hov-e), background-color var(--hov) var(--hov-e); }
+/* @order 2200 */
+.tabs [role="tab"][aria-selected="true"] { color: var(--text-primary); }
+.tabs [role="tab"]:focus-visible { outline-offset: var(--focus-offsetInset); }
+.tabs [role="tab"]:active { background: var(--bg-pressed); }
+@media (hover: hover) and (pointer: fine) { .tabs [role="tab"]:hover { color: var(--text-primary); background: var(--bg-hover); } .tabs [role="tab"]:active { background: var(--bg-pressed); } }
+.tabs-ind { position: absolute; left: 0; top: 0; width: 100px; height: var(--component-tab-indicator); background: var(--accent-mark); transform-origin: 0 0; pointer-events: none; transition: transform var(--motion-tab-indicator-enter-dur) var(--motion-tab-indicator-enter-ease), opacity var(--motion-tab-indicator-enter-dur) var(--motion-tab-indicator-enter-ease); }
+/* A keyboard choice and the first placement: the indicator appears in its new place (Hareket, Kurallar). */
+.tabs-ind.no-anim { transition: none; }
+@media (prefers-reduced-motion: reduce) { .tabs-ind { transition: opacity var(--motion-tab-indicator-enter-dur) var(--motion-tab-indicator-enter-ease); } }
+/* @order 2400 */
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes fadeOut { to { opacity: 0; } }
+
+/* @order 2600 */
+/* ---------- Dialog (Katmanlar, Diyalog: component.dialog; Etkileşim tablosu, diyalog) ---------- */
+.dlg { width: min(var(--component-dialog-width), calc(100vw - 2 * var(--component-dialog-edge))); max-width: none; padding: 0; border: 0; border-radius: var(--radius-dialog); background: var(--bg-surface); color: var(--text-primary); box-shadow: var(--shadow-3); }
+.dlg::backdrop { background: var(--scrim-a); }
+.dlg[open] { animation: dlgIn var(--motion-dialog-enter-dur) var(--motion-dialog-enter-ease); }
+.dlg[open]::backdrop { animation: fadeIn var(--motion-dialog-enter-dur) var(--motion-dialog-enter-ease); }
+.dlg[data-closing] { animation: dlgOut var(--motion-dialog-exit-dur) var(--motion-dialog-exit-ease) forwards; }
+.dlg[data-closing]::backdrop { animation: fadeOut var(--motion-dialog-exit-dur) var(--motion-dialog-exit-ease) forwards; }
+@keyframes dlgIn { from { opacity: 0; transform: translateY(calc(var(--distance-orta) * var(--mv))) scale(calc(1 - (1 - var(--scale-katman)) * var(--mv))); } }
+@keyframes dlgOut { to { opacity: 0; transform: translateY(calc(var(--distance-orta) * var(--mv))) scale(calc(1 - (1 - var(--scale-katman)) * var(--mv))); } }
+.dlg-h { position: relative; padding: var(--component-dialog-pad) calc(var(--component-dialog-closeInset) + var(--component-dialog-close) + var(--component-dialog-titleGap)) 0 var(--component-dialog-pad); }
+.dlg-h h4 { font: var(--type-panel-baslik-kompakt-02); letter-spacing: var(--type-panel-baslik-kompakt-02-ls); }
+.dlg-h .btn-icon { --h: var(--component-dialog-close); position: absolute; top: var(--component-dialog-closeInset); right: var(--component-dialog-closeInset); }
+.dlg-b { padding: var(--component-dialog-titleGap) var(--component-dialog-pad) var(--component-dialog-pad); font: var(--type-panel-govde-02); letter-spacing: var(--type-panel-govde-02-ls); }
+.dlg-b p + p, .dlg-b .help { margin-top: 8px; }
+/* What happens to the data, line by line (Katmanlar, Diyalog: plan.html, Hesap silme). */
+.dlg-dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; }
+.dlg-dl dt { font-weight: 600; }
+.dlg-dl dd { margin: 0; }
+.dlg-f { display: flex; justify-content: flex-end; gap: var(--component-dialog-buttonGap-panel); padding: 0 var(--component-dialog-pad) var(--component-dialog-pad); }
+.dlg-f .btn { --h: var(--component-dialog-button-panel); }
+@media (max-width: 600px) { .dlg-f { gap: var(--component-dialog-buttonGap-phone); } .dlg-f .btn { --h: var(--component-dialog-button-phone); flex: 1 1 0; } .dlg-dl { grid-template-columns: minmax(0, 1fr); gap: 0; } .dlg-dl dd + dt { margin-top: 8px; } }
+
+/* ---------- Toast (panel; Katmanlar, Bildirim: component.toast.panel; Etkileşim tablosu, bildirim) ---------- */
+.toasts { position: fixed; z-index: 50; right: var(--component-toast-panel-edge); bottom: calc(var(--component-toast-panel-edge) + env(safe-area-inset-bottom, 0px)); width: min(var(--component-toast-panel-width), calc(100vw - 2 * var(--component-toast-panel-edgeNarrow))); display: grid; gap: var(--component-toast-stack); pointer-events: none; }
+@media (max-width: 600px) { .toasts { right: var(--component-toast-panel-edgeNarrow); bottom: calc(var(--component-toast-panel-edgeNarrow) + env(safe-area-inset-bottom, 0px)); } }
+.toast { pointer-events: auto; display: grid; grid-template-columns: var(--component-toast-icon) minmax(0, 1fr) auto; gap: var(--component-toast-gap); align-items: start; padding: var(--component-toast-panel-padY) var(--component-toast-panel-padRight) var(--component-toast-panel-padY) var(--component-toast-panel-padLeft); background: var(--bg-surface); box-shadow: var(--shadow-2); border-radius: var(--radius-toast); animation: toastIn var(--motion-toast-enter-dur) var(--motion-toast-enter-ease); }
+.toast .ic { width: var(--component-toast-icon); height: var(--component-toast-icon); }
+.toast .tt { font: var(--type-panel-baslik-kompakt-01); letter-spacing: var(--type-panel-baslik-kompakt-01-ls); }
+.toast .tx { font: var(--type-panel-govde-01); letter-spacing: var(--type-panel-govde-01-ls); color: var(--text-secondary); margin-top: 4px; }
+.toast .btn { --h: var(--component-toast-panel-close); margin-top: -8px; }
+.toast.out { animation: toastOut var(--motion-toast-exit-dur) var(--motion-toast-exit-ease) forwards; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(calc(var(--distance-orta) * var(--mv))); } }
+@keyframes toastOut { to { opacity: 0; transform: translateY(calc(var(--distance-kucuk) * var(--mv))); } }
+
+/* ---------- Device frames (hardware drawing: rounded corners allowed) ---------- */
+.devices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: start; }
+@media (max-width: 1180px) { .devices { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .devices { grid-template-columns: minmax(0, 1fr); } }
+/* @order 2800 */
+.device-fig { display: grid; gap: 16px; justify-items: center; min-width: 0; }
+/* Every phone is drawn at 360 dp in a 372 px frame; the page script zooms a phone whose column is narrower. */
+.device { width: 372px; max-width: none; flex: none; padding: 6px; border-radius: 46px; background: var(--neutral-12); box-shadow: 0 0 0 1px var(--neutral-11), 0 1px 2px rgba(26, 32, 48, 0.1), 0 24px 40px -24px rgba(26, 32, 48, 0.4); }
+/* Drawn screens are their own compositing layer: text gets grayscale antialiasing as on phones, so the color measurement counts design colors, not subpixel fringes. */
+.device-screen { position: relative; height: 760px; border-radius: 40px; overflow: hidden; background: var(--bg-page); isolation: isolate; will-change: transform; }
+.device-notch { position: absolute; left: 50%; top: 12px; z-index: 20; width: 18px; height: 18px; margin-left: -9px; background: var(--doc-hw); border-radius: 50%; pointer-events: none; }
+.device-cap { width: 100%; max-width: 372px; display: grid; gap: 4px; }
+.device-cap .t { font: 600 14px/20px var(--font-sans); display: flex; justify-content: space-between; gap: 12px; }
+.device-cap .t span { font: 400 12px/20px var(--font-mono); color: var(--text-secondary); }
+.device-cap .d { font: 400 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); }
+.device-ctl { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; max-width: 372px; }
+
+/* ---------- Phone UI (.ph) ---------- */
+.ph { position: absolute; inset: 0; display: flex; flex-direction: column; color: var(--text-primary); background: var(--bg-page); font-family: var(--font-sans); letter-spacing: 0; }
+.ph-status { height: 40px; flex: none; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 30px 6px; font: 500 13px/16px var(--font-sans); letter-spacing: 0.2px; position: relative; z-index: 4; }
+.ph-status .sys { display: flex; gap: 4px; }
+.ph-status .ic { width: 16px; height: 16px; }
+.ph-status .sys-on, .ph-status .sys-off { display: flex; gap: 4px; }
+.ph-status .sys-off, .offline .ph-status .sys-on { display: none; }
+.offline .ph-status .sys-off { display: flex; }
+.ph-top { flex: none; padding: 12px 16px 16px; }
+.ph-date { font: var(--type-phone-govde-kucuk); letter-spacing: var(--type-phone-govde-kucuk-ls); color: var(--text-secondary); }
+.ph-title { font: var(--type-phone-baslik-1); letter-spacing: var(--type-phone-baslik-1-ls); }
+.ph-scroll { flex: 1; min-height: 0; overflow: hidden; padding: 0 16px; position: relative; }
+/* @order 3000 */
+/* Tab bar (Bileşenler, Alt sekme çubuğu: component.tabbar): its height and the drawn 16 px home indicator area. */
+/* The bar is component.tabbar.height tall above the drawn safe area; its top line (line.ince) is drawn inside the bar, so
+   each tab is the full height and the active tab's mark covers the line. */
+.ph-tabbar { flex: none; height: calc(var(--component-tabbar-height) + 16px); padding-bottom: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--bg-surface); box-shadow: inset 0 var(--line-ince) 0 var(--border-subtle); position: relative; z-index: 3; }
+.ph-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: transparent; color: var(--text-secondary); font: var(--type-phone-mini); letter-spacing: var(--type-phone-mini-ls); }
+.ph-tab .ic { width: var(--component-tabbar-icon); height: var(--component-tabbar-icon); }
+.ph-tab[aria-current="page"] { color: var(--text-primary); }
+.ph-tab[aria-current="page"]::before { content: ''; position: absolute; top: -1px; left: 50%; width: var(--component-tabbar-markWidth); margin-left: calc(var(--component-tabbar-markWidth) / -2); height: var(--component-tabbar-mark); background: var(--accent-mark); }
+.ph-tab:active { background: var(--bg-pressed); }
+.ph-tab:focus-visible { outline-offset: var(--focus-offsetInset); }
+/* @order 3200 */
+.icon-btn { width: var(--target-phone); height: var(--target-phone); display: grid; place-items: center; border: 0; background: transparent; color: inherit; border-radius: var(--radius-iconButton); }
+.icon-btn:active { background: var(--bg-pressed); }
+.icon-btn[aria-pressed="true"] { background: var(--neutral-1); color: var(--text-primary); }
+@media (hover: hover) and (pointer: fine) { .icon-btn:hover { background: var(--bg-hover); } }
+
+/* @order 3400 */
+.prog { position: relative; height: var(--component-progress-height); background: var(--bg-hover); margin: 8px 0 16px; }
+.prog span { position: absolute; inset: 0; background: var(--accent-progress); transform-origin: 0 0; }
+/* @order 3600 */
+.dark :focus-visible { outline-color: var(--focus-ringInverse); }
+@media (hover: hover) and (pointer: fine) { .btn-inv:hover { background: var(--overlay-cameraHover); } .dark .icon-btn:hover { background: var(--overlay-cameraHover); } }
+/* @order 3800 */
+/* A status that changes in place (Etkileşim tablosu, durum değişimi): the old one fades out as the new one fades in. */
+.swap { display: grid; }
+.swap > * { grid-area: 1 / 1; transition: opacity var(--motion-swap-enter-dur) var(--motion-swap-enter-ease); }
+.swap > [data-off] { opacity: 0; visibility: hidden; }
+/* @order 4300 */
+/* Numbered rules. A one-column list is as wide as its text, so its top rule never runs past the words; a list of short
+   rules uses two columns (.rules-2) across the width. */
+.rules-list { counter-reset: r; border-top: 1px solid var(--text-primary); max-width: calc(29em + 56px); }
+.rules-list li { counter-increment: r; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+.rules-list li::before { content: counter(r, decimal-leading-zero); font: 400 12px/20px var(--font-mono); color: var(--text-secondary); }
+.rules-list li > p { max-width: 29em; }
+.rules-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; max-width: none; }
+.plate .rules-list, .g2 > .rules-list, .devices .rules-list { border-top: 0; max-width: none; }
+.plate .rules-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+.plate .rules-list li:first-child { padding-top: 0; }
+/* @order 4500 */
+@media (max-width: 720px) { .rules-2 { grid-template-columns: minmax(0, 1fr); } .plate .rules-2 li:nth-last-child(2) { border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px; } .plate .rules-2 li:nth-child(2) { padding-top: 12px; } }
+/* @order 4700 */
+.src-ids { display: flex; flex-wrap: wrap; gap: 4px; }
+.src-ids code { font: 400 12px/16px var(--font-mono); padding: 2px 8px; background: var(--bg-sunken); }
+/* @order 4800 */
+/* Page footer with the Kaynaklar line (id kaynaklar): page chrome, so it lives in base.css. */
+.foot { margin-top: 96px; padding: 32px 0 0; border-top: 1px solid var(--text-primary); display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; font: 400 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); }
+/* Kaynaklar (id kaynaklar): the first row of the footer, across its width. */
+.foot-src { flex-basis: 100%; max-width: 46em; font: 400 14px/20px var(--font-sans); letter-spacing: 0.16px; }
+.foot-src b { font-weight: 600; color: var(--text-primary); }
+/* @order 4900 */
+.scroll-x > .tbl-doc.compact { min-width: 0; }
+
+/* @order 5100 */
+/* ---------- Page controls: Röntgen, 4x slow, reduced-motion preview ---------- */
+.ctl-plate { display: grid; gap: 0 32px; margin-bottom: 32px; padding: 0 24px; background: var(--bg-surface); border: 1px solid var(--border-subtle); }
+.ctl-plate.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ctl-plate .set-row { border-bottom: 0; }
+.ctl-plate .set-row:first-child { border-top: 0; }
+.ctl-plate .help { max-width: 64ch; }
+@media (max-width: 720px) { .ctl-plate.two { grid-template-columns: minmax(0, 1fr); } .ctl-plate.two .set-row + .set-row { border-top: 1px solid var(--border-subtle); } }
+
+/* ---------- Measured share under each screen (values from coverage.json) ---------- */
+.sbar { display: grid; gap: 4px; margin: 4px 0; }
+.sbar-track { position: relative; height: 8px; background: var(--bg-surface); box-shadow: inset 0 0 0 1px var(--border-subtle); }
+.sbar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-fill); }
+.sbar-b { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--text-primary); }
+.sbar-t { display: flex; justify-content: space-between; gap: 12px; font: 400 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); }
+.sbar-t b { font-weight: 600; color: var(--text-primary); }
+
+/* ---------- Röntgen pins (placed by the page script on what stays midnight blue) ---------- */
+.xr-pin { position: absolute; z-index: 30; width: 20px; height: 20px; display: grid; place-items: center; background: var(--doc-pin); color: var(--doc-pin-text); font: 500 12px/16px var(--font-mono); box-shadow: 0 0 0 2px var(--neutral-1); pointer-events: none; }
+.xr-tag { position: absolute; z-index: 30; left: 12px; right: 12px; top: 44px; padding: 4px 8px; background: var(--doc-pin); color: var(--doc-pin-text); font: 500 12px/16px var(--font-sans); letter-spacing: 0.32px; pointer-events: none; }
+/* Under the screen, in its caption (base.js puts it there on every screen). */
+.device-cap .xr-tag, .panel-cap .xr-tag { position: static; width: auto; max-width: 100%; margin: 4px 0; }
+
+/* ---------- Panel tables: the cross-fade copy (Etkileşim tablosu, tablo) ---------- */
+/* The page script lays a copy of the table as it was over the table and fades it out with the table pattern's timing;
+   its head is hidden so the real head (and its sort arrow) stays in view, its body is opaque so the new rows never show
+   twice. The real body does not fade as well: one fade only. */
+.xf-ghost { position: absolute; z-index: 1; margin: 0; pointer-events: none; }
+.xf-ghost thead { visibility: hidden; }
+.xf-ghost tbody { background: var(--bg-surface); }
+/* @order 5300 */
+/* ---------- Sections written by other documents' authors (doc/sections): plain HTML on this page's type ---------- */
+.frag .sec-h + * { margin-top: 0; }
+/* Free-standing h3 only: headings inside this page's own .sub-h already carry their rule. */
+.frag :not(.sub-h) > h3 { font: 400 24px/32px var(--font-sans); letter-spacing: -0.2px; margin: 48px 0 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); }
+.frag h4 { font: 600 16px/22px var(--font-sans); margin: 24px 0 8px; }
+.frag p { max-width: 29em; }
+.frag p + p { margin-top: 8px; }
+.frag :where(ul, ol):not([class]) { list-style: disc; padding-left: 24px; margin: 8px 0 12px; max-width: 29em; }
+.frag ol:not([class]) { list-style: decimal; }
+.frag :where(ul, ol):not([class]) li + li { margin-top: 4px; }
+.frag code { padding: 1px 4px; background: var(--bg-sunken); }
+/* Fragment tables take the document's one table look (see .tbl-doc): no box, no grey head band. */
+.frag table { width: 100%; border-collapse: collapse; font: 400 13px/20px var(--font-sans); letter-spacing: 0.16px; }
+.frag th { text-align: left; vertical-align: top; font: 600 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-primary); padding: 12px 16px 12px 0; border-bottom: 1px solid var(--border-subtle); }
+.frag thead th { color: var(--text-secondary); background: none; white-space: nowrap; vertical-align: bottom; padding-top: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--text-primary); }
+.frag td { vertical-align: top; padding: 12px 16px 12px 0; border-bottom: 1px solid var(--border-subtle); }
+.frag tbody th { font-size: 13px; line-height: 20px; }
+.frag tr:last-child > * { border-bottom: 0; }
+.frag td p + p, .frag td ul { margin-top: 4px; }
+.frag td ul { list-style: none; padding: 0; }
+.frag .lib-v, .frag .lib-m { display: block; font: 400 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); }
+.frag .lib-m + .lib-m { margin-top: 2px; }
+
+/* ---------- Accordion (Etkileşim tablosu, akordeon): every details element on the page ---------- */
+/* Sharp, no box radius. The page script wraps the content in .det > .det-i > .det-c. Opening: the body grows from 0fr to
+   1fr (grid-template-rows, the accordion's one allowed layout transition), the content fades in and the arrow turns,
+   all with the accordion pattern's entry timing; closing runs back with its exit timing, then [open] is removed. Under
+   reduced motion the height and the arrow change at once and the content fades in dur.mikro (the pattern's reduced
+   timing). Without the script the browser's own details still opens and closes. */
+details { border: 1px solid var(--border-subtle); background: var(--bg-surface); border-radius: 0; }
+summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 40px; padding: 8px 16px; cursor: pointer; list-style: none; font-weight: 600; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: ''; flex: none; width: 8px; height: 8px; border: solid currentColor; border-width: 0 var(--line-isaret) var(--line-isaret) 0; transform: translateY(-2px) rotate(45deg); transition: transform var(--motion-accordion-enter-dur) var(--motion-accordion-enter-ease); }
+details[open]:not([data-shut]) > summary::after { transform: translateY(2px) rotate(225deg); }
+details[data-shut] > summary::after { transition-duration: var(--motion-accordion-exit-dur); transition-timing-function: var(--motion-accordion-exit-ease); }
+summary:focus-visible { outline-offset: var(--focus-offsetInset); }
+@media (hover: hover) and (pointer: fine) { summary:hover { background: var(--bg-hover); } }
+details > :not(summary):not(.det) { padding: 0 16px 16px; }
+.det { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--motion-accordion-enter-dur) var(--motion-accordion-enter-ease); }
+.det-i { min-height: 0; overflow: hidden; opacity: 1; transition: opacity var(--motion-accordion-content-enter-dur) var(--motion-accordion-content-enter-ease); }
+.det-c { padding: 0 16px 16px; }
+details[data-shut] > .det { grid-template-rows: 0fr; transition-duration: var(--motion-accordion-exit-dur); transition-timing-function: var(--motion-accordion-exit-ease); }
+details[data-shut] > .det > .det-i { opacity: 0; transition-duration: var(--motion-accordion-content-exit-dur); transition-timing-function: var(--motion-accordion-content-exit-ease); }
+/* The first frame of an opening: the body is set closed without a transition (its last style may be the open one), so
+   the growth always starts from 0fr in the next frame. */
+details[data-still] > .det, details[data-still] > .det > .det-i { transition: none; }
+
+/* ---------- Toast regions (polite for success, assertive for errors) ---------- */
+.toast-list { display: grid; gap: var(--component-toast-stack); }
+.toast-list:empty { display: none; }

@@ -1,0 +1,122 @@
+{
+ "id": "D08",
+ "instructions": [
+  {
+   "refs": [
+    "I037",
+    "I103",
+    "I001"
+   ],
+   "do": "D08-A07'yi kapat: D01 D08'in reads_from listesine eklendi (contracts.json). Öğrenci kimliği (I001, contracts.json ortak kural): ogrenci_id hesap (kisiler) kimliğidir ve yalnız hesaptan gelen satırlarda durur; ders içindeki öğrenci (ders, numara) ile anılır ve aynı numaranın derste birden çok liste satırı tek öğrencidir; yolda, iş verisinde ve logda numara yoktur, liste satırı kimliği (satirId) taşınır ve numara D03.satirGetir ile çözülür; hesap ile numara arasında D01.ogrenciHesabiGetir(tx, { kisiIdler }) ve ({ numaralar }) toplu çağrısı kullanılır, silinmiş hesabın kayıtları da sayılır. D08 için: tek D01 çağrısı ogrenciHesabiGetir'dir; hesap işi, canlı uçlar ve dersSonuclari dersin bütün liste numaraları için { numaralar }, kayıtların kişi kimlikleri için { kisiIdler } biçimiyle tek toplu çağrı yapar; öğrencinin kendi indirmesi ve ogrenciDevamDurumu { kisiId } ile."
+  },
+  {
+   "refs": [
+    "I038",
+    "A2"
+   ],
+   "do": "D08-A08'i kapat; sonuçlar: D02 denetlenecekDersler(tx, { an, kilittenSonraGun: 30 }) ve tetik çağrılarını ekliyor; D03 muafı (ders, numara) başına tek değer tutuyor, saklama sırası katalogda (devam.donem_verisi yoklama ve listelerden önce, süresi listelerinkinden uzun olamaz); D05 karar ve sayılan değişiminde iş koyuyor; D06 ders başına sayı değil bekleyenYoklamaVar (boolean) veriyor ve toplu kurulumSonTemaslari(tx, kisiIdler) ekliyor: canlı hesapta bunu kullan; D09 girdi kaynağı kaydetmiyor: D08 duzeltmeleriGetir(tx, { dersId }) ve acikSorunBildirimleri(tx, { dersId }) işlevlerini doğrudan modules/duzeltmeler/yaprak.ts'ten içe aktarır, sonDurumOnceligi'ni packages/core/src/duzeltmeler'den; devamGirdiKaynagiKaydet dış yüzü ve 'girdi kaynağı kaydedilmeden işçi açılmaz' denetimi kalkar; D15 DEVAM_SAYIM_TABANI ve uyarı kuralını ekliyor. Yaprak kuralı: D08 D09'un index.ts'ini içe aktarmaz; D09 D08'in index.ts'ini (dersSonuclari, sonucuDegistirebilirMi, ogrenciDevamDurumu) ve modules/devam/yaprak.ts'i (devamHesaplaIsiKoy) kullanır; devam/yaprak.ts yalnız infra/is-kuyrugu ve sözleşmeyi içe aktarır."
+  },
+  {
+   "refs": [
+    "I039"
+   ],
+   "do": "D08-A09'u kapat: contracts.json'da muaf ucu PUT /v1/devam/dersler/{dersId}/ogrenciler/{satirId}/muaf oldu."
+  },
+  {
+   "refs": [
+    "I040"
+   ],
+   "do": "D08-A10'u kapat: son gün D02'nin kilit genel kaynağındaki birim dönemi satırıyla iner (D02-B32); D08'in sunucu hesabı son güne ihtiyaç duymaz."
+  },
+  {
+   "refs": [
+    "I041",
+    "I046",
+    "I111",
+    "I047"
+   ],
+   "do": "D08-A12'yi kapat. dersSonuclari(tx, subeId, { an, hucreler? }) ve oturumSonDurumlari(tx, subeId, { an, tarihten?, tarihe? }) çağıranın işleminde canlı hesaplanır (saklanan oturum_son_durumlari'nı okumak gerekmez); her öğrenci satırı ogrenciNo ve satirId taşır (öğrencinin o şubedeki liste satırı: etkin olan, yoksa en son pasifleşen). KARAR BEKLİYOR nedeni dizidir (ACIK_ISARET, BAGLANTI_YOK birlikte olabilir). Telafi eksiğinin tek tanımı D08-B15'tir ve dersSonuclari.telafiEksigi'nde döner; D10 yalnız gösterir; tanım farkı sahibe sorulan D02-A02'ye gider."
+  },
+  {
+   "refs": [
+    "I042",
+    "I102",
+    "A4"
+   ],
+   "do": "D08-A14'ü kapat: oran ucu PUT /v1/devam/yonetim/dersler/{dersId}/oranlar (contracts.json); spec'teki uç yolunu ve yetki metnini buna çek; muaf ucu yerinde."
+  },
+  {
+   "refs": [
+    "I043"
+   ],
+   "do": "D08-A15'i kapat: D09.sonDurumOnceligi girdisine SonDurumKaydi.sayimDisi ve SonDurumOturumu.kilitli ekleniyor; bu alanları doldur ve oturum-katmani.ts'teki kopya kuralları kaldır; D08 katmanı yalnız kapsam ve MUAF örtüsüdür."
+  },
+  {
+   "refs": [
+    "I045"
+   ],
+   "do": "devam_hesapla işi öğrenci satırlarını D09-B32'deki kanonik sırayla kilitler; oturumSaatleri ve kapsam yüklemi packages/core/src/devam'dan dışa açıktır (spec.exports'a ayrı adlarla). Denetim (I045): dersId taşıyan her denetim olayı birimId de taşır; olay türleri sözleşme dosyasında DEVAM_DENETIM_OLAYLARI listesindedir ve D09.denetimOlaylariniKaydet ile kaydolur."
+  },
+  {
+   "refs": [
+    "I065"
+   ],
+   "do": "Zaman sütunu adları: devam_sonuclari, devam_durumlari ve oturum_son_durumlari'nda hesaplandigi_an hesaplanma_ani; devam_sonuclari.denetlendigi_an denetlenme_ani; devam_seviye_gecmisi.an degisim_ani; hassasiyet tabloYardimcilari.an (3)."
+  },
+  {
+   "refs": [
+    "I067"
+   ],
+   "do": "dersSonuclari, sonucuDegistirebilirMi ve karar bekleyenler islem'i yalitim: 'repeatable_read' ile açar ya da öyle açılmış işlemde çağrılır; current_setting('transaction_isolation') ile denetler."
+  },
+  {
+   "refs": [
+    "I078"
+   ],
+   "do": "devam_hesapla tanımı partiIsleyici ve parti { boyut: 50, esZamanli: 2 } ile, sureAsimiSaniye bütün parti için; devam_tutarlilik_denetimi kuyruğu çıktı şemasıyla { dersSayisi, ogrenciSayisi, farkSayisi (açık sınırlı tam sayı), farkTurleri (enum dizisi) } ve işleyici bu nesneyi döndürür; saat 05:35 kalır."
+  },
+  {
+   "refs": [
+    "I009"
+   ],
+   "do": "D02.dersYetkisi(tx, kimlik: Kimlik, dersId): Promise<'sahip' | 'yonetici' | null> (yoneticiKapsami parametresi yok; yönetici kapsamı kimlik.roller'dan okunur). Çağırdığın her yerde üç parametreyle çağır, YoneticiKapsami ya da personelRolleri'nden kurulan nesne kalkar; durum, tür ve neden değerlerini D02'nin sözleşme sabitlerinden (OTURUM_TURLERI, OTURUM_DURUMLARI, IPTAL_NEDENLERI) içe aktar, yeniden yazma. dersYetkisi değeri 'hoca' değil 'sahip'tir (D11 de bunu kullanır); oturum türü normal ve telafi D02 sabitinden, büyük harf kopyası yok; D02 neden olarak DEVAM_NEDENLERI'ni D08'in sözleşmesinden içe aktarır."
+  },
+  {
+   "refs": [
+    "I112"
+   ],
+   "do": "packages/contracts/src/devam.ts'e DEVAM_SON_DURUMLARI sabitini ekle: D09'un SON_DURUMLAR değerleri artı MUAF; oturum_son_durumlari CHECK'i ve D10'un M hücresi bu sabitten türer."
+  },
+  {
+   "refs": [
+    "I064",
+    "I025"
+   ],
+   "do": "Saklama: yalnız D12 kataloğundaki 'devam.donem_verisi' sınıfı için tek işleyici kaydet (saklamaIsleyicisiKaydet); öneksiz ya da ince sınıf adı (ör. 'yoklama_kayitlari', 'hesap_silme', 'aksis_ozet_anliklari', '<modül>.<tablo>') ve kayıtta oncekiSiniflar listesi yoktur, sıra kataloğun oncesinde listesinden gelir. İşleyici yoklama_saklama girişiyle açılan işlemde yalnız kendi tablolarında SELECT, UPDATE ve DELETE yapar; testi D12.saklamaIsleyicisiniCalistir ile yazılır. devam_sonuclari.ogrenci_no numara kopyası taşıdığından sınıfın süresi listeler.donem_verisi süresinden uzun olamaz."
+  },
+  {
+   "refs": [
+    "I014"
+   ],
+   "do": "Danışma kilidi katmanları (contracts.json ortak kural): 1 dogrulama:liste, devam:hesap, is-kuyrugu:eposta, isletim:*; 2 listeler:kova, dogrulama:teyit; 3 yoklama:cift, projeksiyon:*, esitleme:kurulum_siniri, duzeltmeler:zincir; 4 dogrulama:sayac; 5 dogrulama:isaret. Tek genel sıra vardır, önce katman sonra anahtar metni: D12.danismaKilidi(tx, anahtarlar) bir çağrıdaki anahtarları bu sırayla alır; bir işlem birden çok kez çağırabilir ama yeni her anahtar işlemin tuttuğu bütün anahtarlardan sonra gelir; işlemin zaten tuttuğu anahtarı yeniden istemek işlemsizdir; sırada geride kalan yeni anahtar yalnız D12.danismaKilidiDene(tx, anahtar) ile alınır (beklemez, false dönerse çağıran TEKRAR_DENE döner ya da işi yeniden dener). Çok öğeli işlem öğelerin anahtarlarını saf anahtar işlevleriyle (D05 yoklamaCiftAnahtari, D07 kararAnahtarlari, dogrulamaTeyitAnahtari, dogrulamaListeAnahtari, D03 listeKovaAnahtari, D11 qrKilitAnahtarlari) baştan toplar ve tek çağrıda alır. Anahtar biçimi string ya da { anahtar, kip: 'paylasimli' }. Elle pg_advisory_xact_lock yazılmaz. Sıra: danışma anahtarları, satırlar, iş kuyruğu (D14.isGonder) ve öğrenci sürümü (D06.ogrenciDurumuDegisti), en son genel sayaç (D06.surumAl, bir kez). D08 için: 'devam:hesap:<dersId>' (katman 1) her ders grubunun işleminde ilk kilittir."
+  },
+  {
+   "refs": [
+    "I074"
+   ],
+   "do": "İşler (I074): her pg-boss işi jobs/<modül>/index.ts'teki export const isler dizisinde D14.isTanimla ile tanımlıdır; KuyrukTanimi modules/<ad>/ içindedir; zamanlama D14 çizelge kurallarına uyar (03:00 ile 05:00 arası günlük iş yok, en az 5 dakika aralık); her iş için D14'ün adımıyla 'aynı veriyle iki kez çalışırsa' senaryosu vardır. Uymayan satırı düzelt."
+  },
+  {
+   "refs": [
+    "I070"
+   ],
+   "do": "Birleşim (I070): index.ts devamEklentisi adlı Fastify eklentisini ve EklentiTemelSecenekleri'ni ({ surec }) genişleten seçenek tipini dışa verir (spec.exports'a 'devamEklentisi' adıyla); eklenti altyapıyı seçenekten alır, kayıt sırasında veritabanına dokunmaz, zamanlayıcıyı yalnız surec 'api' iken kurar, dinleyici kayıtlarını her süreçte yapar; rotalar yalnız D13.rotalariKaydet ile; setErrorHandler ve setNotFoundHandler yok; hata kodu öneki modül adının büyük harfi; kaynak düzeyi ret 404 <MODÜL>_BULUNAMADI, rota düzeyi rol reddi API_ROL_YETKISIZ."
+  },
+  {
+   "refs": [
+    "A1"
+   ],
+   "do": "Göç klasörü (A1): spec'te ve bölümde göç yerini contracts.json migration_dir ile aynı yaz: apps/server/migrations/<14 haneli UTC>_devam_<açıklama>/ (migration.sql ve snapshot.json; dosya haritasında apps/server/migrations/??????????????_devam_* globu bu modülündür). Göç yalnız bu modülün tablolarına dokunur; göç dosyaları spec.files'a değil iş paketine yazılır; klasör kuralı ve CI göç denetimi D12'nindir. Paralel paketler birleşmeden önce ana dala yeniden dayanır, araya göç girdiyse kendi klasörünü silip drizzle-kit generate ile yeniden üretir."
+  }
+ ]
+}

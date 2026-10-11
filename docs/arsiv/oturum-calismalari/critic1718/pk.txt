@@ -1,0 +1,242 @@
+##### ASAMA 17
+===== D03-P06 Başlık sözlüğü ve örnek dosyalar
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: []
+  tests: ['Başlık anahtarı yazım farkında aynı kalır']
+  notes: Başlık sözlüğü ve kendi harf katlamalı başlık anahtarı (ad eşleştirmesinden bağımsız) ile örnek dosya üreticisi ve örnek dosyalar yazılır; üretici baytları okuyucunun kodlama ve CSV işlevlerini kullanmadan kendisi yazar ki örnek testi okuyucuyu kendi çıktısıyla onaylamasın. Başlık özellik testi doğrular; örneklerin okunması P07'nin testidir.
+===== D04-P12 Kapanış ve yeniden değerlendirme işleri
+  tables: []
+  endpoints: []
+  jobs: ['oturum_pencere_kapat', 'esitleme_sonrasi_yeniden_degerlendir']
+  exports: []
+  needs: ['D14.isTanimla', 'D14.isiCalistirVeBekle', 'D12.islem', 'D06.surumAl', 'D15.uyariAc', 'D15.log', 'D15.TestDunyasi']
+  tests: ['Kapanış işi tekrar güvenli ve now() kullanmaz', 'Uzatma kapanmış pencereyi yeniden açar', 'Bir dinleyici hatası öbür kapanışları durdurmaz', 'İş tanımları D14 kurallarına uyar']
+  notes: Dakikalık, partili ve satır başına geri dönüş noktalı oturum_pencere_kapat (son adımda bir kez surumAl), imleçli esitleme_sonrasi_yeniden_degerlendir ve isler dizisi yazılır; işler dinleyici kayıt defterini ve kuyruk tanımlarını kullanır, eklentiyi beklemez. pencere-kapatma.feature sahte saat, sahte dinleyici ve D14 iki kez çalıştırma yardımcısıyla denetler.
+===== D06-P14 Ulaşma anı ve yedekten dönüş
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: []
+  tests: ['Sunucu tarafı bekletme ulaşma anını korur', 'Ulaşma makbuzu başka öğeye geçmez', 'Yedekten dönüşte makbuzlu kayıt kaybolmaz']
+  notes: packages/core/src/esitleme/protokol.ts ile sürülen telefon benzetimi ve defter, kurulum su seviyesi ile kayıtları geri saran adımlar yazılır; yedekten-donus.feature sunucu tarafı bekletmede ulaşma anının korunduğunu, makbuzun başka öğeye, sıraya ya da kuruluma geçmediğini ve ELE_GECIRILDI anahtarının yok sayıldığını, geri sarmadan sonra sonSira gerilediğinde makbuzlu hiçbir kaydın kaybolmadığını doğrular.
+===== D06-P16 Sıra boşluğu raporu ve en eski sürüm komutu
+  tables: []
+  endpoints: []
+  jobs: ['sira_boslugu_raporu']
+  exports: ['enEskiGecerliSurumuYukselt']
+  needs: ['D14.isTanimla', 'D14.isiCalistirVeBekle', 'D04.istanbulTarihi', 'D12.veritabaniKur', 'D12.islem', 'D15.ayarlariYukle', 'D09.denetimeYaz', 'D09.denetimOlaylariniKaydet']
+  tests: ['sira_boslugu_raporu boşlukları bulur ve eskiyi temizler', 'Boşluk raporlandıktan sonra eksik sıra gelir', 'En eski geçerli sürüm komutu']
+  notes: SIRA_BOSLUGU_RAPORU kuyruk tanımı (kuyruklar.ts, D14 içe aktarılmaz), gecelik sira_boslugu_raporu işi, enEskiGecerliSurumuYukselt (en-eski-surum.ts) ve onu D09.denetimeYaz ile aynı işlemde çağıran komut girişi yazılır; komut modülün dosyasını doğrudan içe aktarır, index.ts bu işlevi dışa vermez, eklenti bu paketi beklemez. sira-boslugu-raporu.feature boşluk ölçüsünü, eski defter temizliğini, iki kez çalışmanın aynı sonucu verdiğini ve raporlanan boşluk gönderimle kapanınca ilk_eksik_sira alanının boşaldığını (gönderim ucu gerekir); en-eski-surum.feature sürüm yükseltmesiyle denetim olayının tek işlemde yazıldığını ve sonraki indirmenin baştan indiğini (indirme ucu gerekir) doğrular.
+===== D07-P22 Core dizini ve mutasyon eşiği
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: []
+  tests: ['Mutasyon']
+  notes: Core dogrulama dizinini (index.ts) saf işlevlerin tek dışa veriliş noktası olarak yazar; telefon ve panel bu dizinden içe aktarır, sunucu dosyaları ise kullandıkları core dosyasını doğrudan içe aktarır, bu yüzden hiçbir sunucu paketi bu paketi beklemez (eskiden dizin, D03 ve D04 dış yüzünü bekleyen bağlam dosyasıyla aynı paketteydi). Haftalık Stryker koşusu packages/core/src/dogrulama için yüzde 90 kırma eşiğini ve kararVer, izinliGecis, ortakSinirKarari, pencereEslemesi, qrEslemesi, kafaSayisiKarsilastir, sayacDenetle, meydanOkumaMetni ile baglamaMetni'nde hayatta kalan mutant olmadığını denetler.
+===== D08-P12 Karar bekleyenler ve canlı okuma senaryoları
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D15.TestDunyasi']
+  tests: ['Karar bekleyenler ucu', 'Canlı hesap süresi', 'Yalıtım denetimi']
+  notes: uclar.steps.ts üç ucun istek ve cevap adımlarını verir (muaf ve oran senaryoları da kullanır); karar-bekleyenler.feature son ders gününden önce boş listeyi, BAGLANTI_YOK nedenini ve çevirecek oturumu, kilitten sonra nedenin düşmesini, başka hocanın dersinde 404 DEVAM_BULUNAMADI'yı, agir hız sınıfını, READ COMMITTED işlemde DevamYalitimHatasi'nı, salt okunur repeatable read cevabını ve 300 öğrencide 1 saniyelik p95 ile sabit sorgu sayısını denetler. Canlı okumalar iş çalıştırmadığı için paket iş işleyicisini beklemez.
+===== D08-P17 Gece tutarlılık denetimi ve iş tanımları
+  tables: []
+  endpoints: []
+  jobs: ['devam_hesapla', 'devam_tutarlilik_denetimi']
+  exports: []
+  needs: ['D02.denetlenecekDersler', 'D12.islem', 'D12.danismaKilidi', 'D14.isTanimla', 'D14.isiCalistirVeBekle', 'D14.kuyruktakiIsler', 'D14.isSagligi', 'D15.log']
+  tests: ['Kayıt gelince seviye işle güncellenir', 'Aynı durumda ikinci çalışma hiçbir şey yazmaz', 'Canlı hesap bekleyen işe bağlı değil', 'Gece tutarlılık denetimi', 'dersSonuclari D10 sözleşmesi', 'Parti işleyicisi']
+  notes: devamTutarlilikKuyrugu, her dersi devam:hesap kilidiyle sıfırdan hesaplayıp farkları DEVAM_FARK_TURLERI ile sayan ve düzelten gece işi ve iki işin isTanimla tanımları (parti 50 ve 2, cron 35 5 * * *) yazılır; tutarlilik.feature D14 kuyruk adımlarıyla (isiCalistirVeBekle, kuyruktakiIsler, isSagligi) aynı işlemde kuyruğa girmeyi, ikinci çalışmanın yazmamasını, canlı ile saklananın eşitliğini, bozulan satırın sayılmasını, ölü kuyruktaki dersin EKSIK_SATIR sayılmasını, partinin 50 ve 2 ile alınmasını ve iş bittikten sonra dersSonuclari'nin saklananla aynı kalmasını denetler. Paket eklentiyi beklemez; uç ve indirme senaryoları iş işleyicisini doğrudan çağırdığı için bu paketi beklemez.
+===== D10-P04 Harf, yüzde, tarih ve hücre metinleri
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D09.SON_DURUMLAR', 'D08.DEVAM_SON_DURUMLARI']
+  tests: ['yuzdeMetni Intl olmadan doğru metin verir', 'Yüzde metni kararla çelişmez', 'Hücre metni ve harf tablosu', 'Tarih metinleri Intl olmadan']
+  notes: Intl kullanmayan harf tablosu (V, Y, G, B ve E D09 kataloğundan, M D08 sabitinden), onda bir birimli yüzde metni, tablo ve metin tarihleri ile kısmi hücre gösterimi yazılır; özellik testleri Intl bozulmuşken ve iki saat diliminde aynı sonucu ve yüzde metninin kararla çelişmediğini denetler.
+===== D11-P22 Onay güvenliği senaryoları
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: []
+  tests: ['Onaydan sonra çerez yenilenir, kopyalanan çerez düşer', 'Kod ikinci kez kullanılırsa reddedilir ve projeksiyon kapanır', 'Zaman aşımıyla yinelenen onay ikinci kullanım sayılmaz', 'Yanlış eşleştirme kodu sınırı kesin sayılır', 'Başka hocanın dersine onay verilemez ve varlık sızmaz', 'Panel ve kürsü kimliğiyle QR anahtarı ve onay alınamaz', 'Kid döndürmesinde eşleştirme kodu bulunur']
+  notes: Kürsü ve hoca telefonu adımlarıyla onayın güvenlik davranışı senaryolaştırılır: çerez yenileme, ikinci kullanım (kapanış hocanın listesinde görünür), zaman aşımı tekrarı, deneme sınırı, varlık sızmayan ret, panel ve kürsü kimliğinin QR anahtarı ve onay reddi ve kid dönüşü; dört uç paketinin hepsi bittikten sonra eklentiyi beklemeden koşar.
+===== D11-P24 Gösterim ve kanıt etkileşim senaryoları
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: []
+  tests: ['Hoca telefonu koduyla gelen kayıt gösterim kaydı gelene kadar bekler', 'Hoca payı sınırlara eklenir', 'Hoca saati kurulamazsa öğrenci gecikme yüzünden reddedilmez', 'Ders devrinde önceki hocanın anahtarı yalnız devirden önce geçer', 'Yedek kod eşleşir ve 20 saniye sınırıyla değerlendirilir']
+  notes: gosterim-kaniti.feature (spec listesine eklenen senaryo dosyası) öğrenci kanıtı ile hoca gösterim kaydının birlikte gerektiği senaryoları toplar: bekleyen kaydın gösterimle tamamlanması, hoca payı, hoca saati yok (gosterimAraliklari ilkCapaGecerli false), ders devri ve yedek kodun 20 saniye sınırı; kanıt, gösterim ve hoca telefonu adımlarını kullanır.
+===== D11-P26 Gösterim yarışı senaryoları
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: []
+  tests: ['Öğrenci kaydı ile gösterim kaydı yarışında bekleyen kalmaz', 'Bluetooth ve konum bekleyen satırlar gösterim kaydıyla tamamlanır']
+  notes: İki bağlantı ve engel noktalı yarış adımları yazılır; öğrenci ile hoca yarışında her sırada bekleyen kalmaması ve Bluetooth ile konum bekleyenlerin gösterim kaydıyla tamamlanması senaryolarıyla denetlenir. İşe ve eklentiye ihtiyaç duymaz, kanıt ve gösterim paketleri bitince koşar.
+===== D11-P27 Gece temizliği ve iş listesi
+  tables: []
+  endpoints: []
+  jobs: ['projeksiyon_eslestirme_temizle']
+  exports: ['isler']
+  needs: ['D14.isTanimla', 'D15.log']
+  tests: ['Gece temizliği ve güvenlik ağı', 'Üç iş aynı veriyle iki kez çalışınca ikinci çalışma satır değiştirmez']
+  notes: Gece temizliği ve gösterim güvenlik ağı işi (ortak kapatma ve ortak yeniden hesap işlevleriyle, dış yüzden) ile üç işi toplayan isler listesi yazılır; temizlik, güvenlik ağı ve üç işin aynı veriyle iki kez çalışma senaryolarıyla denetlenir.
+===== D13-P10 Kimlik, köken ve rota beyanı senaryoları
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: []
+  tests: ['Yanlış rol 403 alır, doğru rol geçer', 'Değişim bekleyen oturum yalnız izinli rotalara girer', "Panel dışı Origin'le yazma isteği 403 alır", "Origin'siz yazma isteğinde çerez okunmaz", 'Bearer varken çerez okunmaz', 'Cihaz imzalı rotada geçersiz oturum isteği düşürmez', 'Kimlik birleşimleri beyan edildiği gibi işler', 'Rota yalnız beyan ettiği kodları döndürür', 'Örtük kodlar beyan gerektirmez', "Oluşturma rotası 200 ve 201'i aynı şemayla serileştirir", 'Projeksiyon çerezi yalnız projeksiyon kimlikli rotada okunur', 'Köken denetimi bozulunca senaryo kırmızı olur', "Çerez Origin'siz okunursa senaryo kırmızı olur", 'Kısıtlı oturum denetimi kaldırılınca senaryo kırmızı olur', 'Projeksiyon çerezi oturum rotasında okunursa senaryo kırmızı olur']
+  notes: Rol ve kısıtlı oturum beyanı, Origin ve çerez kuralları, Bearer önceliği, cihaz imzası, altı kimlik birleşimi, projeksiyon çerezi, beyan dışı ve örtük kodlar ile 200 ve 201 serileştirmesi apiKur düzeneğinin deneme rotalarıyla senaryolaştırılır; senaryolar ile köken, çerez, beyan ve projeksiyon mutasyonları denetler.
+===== D13-P11 Gövde, hız, aşırı yük, saat belgesi ve süre bütçesi senaryoları
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: []
+  tests: ['JSON dışı içerik ve sıkıştırılmış gövde 415 alır', 'Gövde sınırı tam değerde geçer, bir bayt üstünde 413 alır', 'Yetki ve hız denetimi gövdeden önce çalışır', 'Girişsiz uçta IP sınırı aşılınca 429 ve Retry-After döner, başka IP etkilenmez', 'Oturum sınıfında sayaç oturuma bağlıdır', 'Yalnız kimliksiz biten istek IP sayacına girer', 'Sınırı aşmış adresten Bearer püskürtmesi veritabanına gitmez', 'Aşırı yükte 503 ve 15 ile 45 saniye arası Retry-After döner', 'Aşırı yükte oturum kancası hiç çalışmaz', 'Saat belgesi başlığı yalnız koşullar tutunca eklenir', 'İstek bütçesi aşılınca kalan öğeler TEKRAR_DENE alır', 'Sonuç sınırı aşılınca 422 döner', 'Oturum kancası baskıdan önceye alınırsa senaryo kırmızı olur', 'Yetki denetimi gövdeden sonraya alınırsa senaryo kırmızı olur', 'Kimliksiz sayaç imzalı isteği sayarsa senaryo kırmızı olur']
+  notes: İçerik türü ve gövde sınırı, gövdeden önce yetki ve hız, IP ve oturum sayaçları, kimliksiz sayaç, aşırı yük 503, saat belgesi başlığı koşulları ve istek bütçesi ile sonuç sınırı apiKur düzeneğinin deneme rotalarıyla senaryolaştırılır (kimlik senaryolarının dosyalarını kullanmaz, onları beklemez); senaryolar ile kanca sırası, preParsing ve kimliksiz sayaç mutasyonları denetler.
+===== D13-P15 OpenAPI belgesi üretimi ve saklama işi
+  tables: []
+  endpoints: []
+  jobs: ['openapi_belgesi_sakla']
+  exports: []
+  needs: ['D15.ayarlariYukle', 'D15.log', 'D04.simdi']
+  tests: ['Cevap şemalarında enum yok, genişleyen alanlar x-extensible-enum taşıyor', 'İstek şemalarında üst sınırlar var', 'Cevaplarda isteğe bağlı alan yok', 'OpenAPI belgesi kararlı ve eksiksiz', 'genisleyenEnum enum üretirse sözleşme testi kırmızı olur']
+  notes: openapi-belgesi-sakla.ts uygulamayı belge kipinde sahte altyapıyla kurar, öğe türü bileşenlerini ve yapay /x-oge yollarını ekler, sıralı anahtarlı belgeyi yazar ve denetim ile etiket kiplerini uygular; belge taraması senaryoları ve genisleyenEnum mutasyonu denetler.
+##### ASAMA 18
+===== D15-P27 Eski sürüm istek örnekleri
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D13.TUM_ROTALAR', 'D13.surumKarsilastir']
+  tests: ['Eski sürüm istekleri hâlâ kabul edilir']
+  notes: Adımlar ornekler/surumler altındaki saklı istekleri tamDenetimTabani kuralına göre seçip sahte saati örneğin penceresine kurarak oynatır; eski-surum-istekleri.feature beklenen durum ve öğe sonuçlarının aynen döndüğünü ve ilk uygulama yayınından sonra boş klasörün kırmızı olduğunu denetler.
+===== D15-P29 Yük testi ortak parçaları ve ders çıkışı
+  tables: []
+  endpoints: []
+  jobs: ['yayin_oncesi_yuk_testi']
+  exports: []
+  needs: ['D13.HIZ_SINIFLARI', 'D11.KODLAR_ISTEGI']
+  tests: ['Ders çıkışı yük testi geçme ölçütleri']
+  notes: k6 eşikleri HIZ_SINIFLARI'ndan, imzalı telefon ve kürsü istemcileri, kurucularla tohum, 50 hocalık panel rapor yükü ve koşu sonrası denetimle ders çıkışı profili yazılır; ders-cikisi.ts 20.000 telefonda gönderim ve saat belgesi gecikme eşiklerini, 5xx ve 429 yokluğunu, makbuzlu her kaydın tam bir kez yazıldığını ve bağlantı sınırını denetler. Koşu çalışan sunucu imajına karşı yapılır, bu yüzden kancaları değil imajı bekler.
+===== D01-P18 Gerçek kanca, köken ve yetki senaryoları
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D13.uygulamaKur']
+  tests: ['Gerçek kanca köken ve çerez kuralını uygular', 'Panel girişinde köken denetimi', 'Kanca yük altında hafif kalır', 'Teyitli numaraya gelen kayıt değişim talebine döner', 'Hoca rolü yönetici ucundan verilir ve alınır', 'Rol geri alınınca açık oturumda yetki hemen düşer', 'Değişim talebini hesabın etkin cihazı reddeder']
+  notes: D13 bileşimi üstünde gerçek kanca, çerez ve köken kuralı, kısıtlı değişim oturumunun öbür modül rotalarında reddi, D02 ders ucuyla rol verme ve geri alma ve etkin cihazın talep reddinin D05 kaydını karara bağlaması uçtan uca denetlenir; kanca.feature ve yetki.feature sahte oturumDogrula olmadan koşar, yük senaryosu kancanın p95 payını ölçer. Öbür uçtan uca kimlik paketlerini beklemez.
+===== D01-P19 Bileşim kökleri ve ilk yönetici komutu
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D13.uygulamaKur', 'D02.derslerKimlikDinleyicisi', 'D06.esitlemeKimlikDinleyicisi', 'D11.projeksiyonKimlikDinleyicisi', 'D15.kimlikOlayiDinleyicisi', 'D15.ayarlariYukle', 'D12.veritabaniKur', 'D14.isiCalistirVeBekle']
+  tests: ['İlk yönetici komutu', 'Dinleyiciler her bileşim kökünde kurulur', 'Dinleyici hatası işlemi geri alır', 'Kimlik olayları yapısal loga yalnız iç kimlikle yazılır', 'Denetim olay türleri kayıtlı ve birimId taşır']
+  notes: yonetici-ekle komutu dört aboneyle kendi bileşim kökünü kurar; bilesim.feature dinleyicilerin her kökte sırayla kurulduğunu, işçide hesap_silme_yurutucu ile dört abonenin aynı işlemde işlediğini, dinleyici hatasının işlemi geri aldığını, olay log satırlarını ve denetim türlerinin kaydını, ilk-yonetici.feature komutun tekrar çalışmasını denetler. Öbür uçtan uca kimlik paketlerini beklemez.
+===== D01-P20 İş ve inceleme yolu uçtan uca senaryoları
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D13.uygulamaKur', 'D14.isiCalistirVeBekle']
+  tests: ['İşçide personel silmesi anahtarsız biter', 'Bekleyen kayıt kapatma', 'Temizlik işleri yalnız eski satırları işler', 'Beş iş aynı veriyle iki kez çalışınca sonuç aynı', 'İnceleme hesapları her an çalışır', 'Boş veritabanında inceleme yolu uçtan uca', 'İnceleme ayarı değişince eski hesap ayrıcalığını kaybeder']
+  notes: İşçi süreci bileşimiyle beş iş, D14'ün 'aynı veriyle iki kez çalışırsa' adımı, işçide anahtarsız personel silmesi, bekleyen kayıt kapatma ve temizlik eşikleri; boş veritabanında işçi açılışından inceleme girişine ve deneme öğrencisinin kaydına kadar inceleme yolu ve ayar değişince eski inceleme hesabının ayrıcalığını kaybetmesi denetlenir. Öbür uçtan uca kimlik paketlerini beklemez.
+===== D01-P21 Eşzamanlılık, kilit katmanları ve gizlilik taramaları
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D13.uygulamaKur']
+  tests: ['Kişisel veri hiçbir loga, adres satırına ve iş verisine girmez', 'Liste uygulanırken eşzamanlı kayıt bekleyende kalmaz', 'Aynı numarada eşzamanlı iki teyit tek teyitli hesap bırakır', 'Kayıt ile teyit aynı numarada sıralanır', 'Personel akışları eşzamanlı kilitlenmez', 'Kopya alanlar tutarlı kalır', 'Hata kodları ve genişleyen değerler', 'Danışma kilidi katmanlarına uyulur', 'Kurallar mutasyona dayanıklı']
+  notes: İki bağlantıda eşzamanlı kayıt, teyit ve personel akışları, danışma kilidi sırası, kişisel veri taraması, kopya alan tutarlılığı, hata kodlarının tamlığı ve mutasyon koşusu modül düzeyindeki bütün kimlik senaryoları üstünde denetlenir; aynı aşamadaki öbür uçtan uca kimlik paketlerini beklemez, onların senaryoları CI'da aynı taramaya girer.
+===== D02-P27 Eşzamanlılık, yük ve bilinçli hatalar
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D13.uygulamaKur', 'D15.TestDunyasi']
+  tests: ['Bağ ve takvim yazımı eşzamanlı olunca bayat kilit anı kalmaz', 'Liste yazımı pasifleştirme ve arşivle yarışınca pasif şubede ya da arşivdeki derste etkin satır kalmaz', 'Toplu cevap ve devir yarışında kilitlenme ve eski hocanın yazımı olmaz', 'Cevaplar sözleşme şemasına uyar', 'Ders çıkışında kafa sayısı kayıtları bekletmez', 'Ders çıkışında D02 indirme kaynaklarının payı', 'Bilinçli hatalar testleri kırmızıya çevirir']
+  notes: Üç eşzamanlılık senaryosu çok bağlantılı adımlarla, iki ders çıkışı ölçümü D15'in k6 koşusuyla yazılır; bütün D02 senaryoları cevap şemasıyla bir kez daha koşar ve bilinçli hata listesinin her maddesi kendi senaryosunu kırmızıya çevirir, özgün baytlar md5 denetimiyle geri yazılır.
+===== D03-P17 Açılış, dinleyici zinciri ve modüller arası senaryolar
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D15.TestDunyasi', 'D13.uygulamaKur']
+  tests: ['Liste kaynağı ve kayıtlar açılışta hazır', 'Dinleyiciler basamak sırasıyla ve aynı işlemde çağrılır', 'Yanlış dosya onaysız uygulanmaz, doğru dosya kaybı geri getirir', 'Yanlış şubeye yüklenen dosya düzeltilince oturumlar karışmaz', 'Geçmiş dönemin satırı eşleşmeye ve yetkiye girmez', 'PATCH gövdesi muaf alanını kabul etmez', 'Kırpma mutasyonu']
+  notes: Uygulamanın bütün olarak kurulmasını gerektiren senaryolar: API ve işçi kurulumundaki altı kayıt, D01, D07 ve D08 dinleyicileriyle aynı işlemdeki zincir, KARAR dinleyicisiyle doğru dosyanın kaybı geri getirmesi, D08'in T hesabıyla yanlış şube düzeltmesi, D09 teyit ucunda geçmiş dönem ve D08 muaf ucuyla PATCH ayrımı uygulamaKur'un kurduğu dünyada yeşil olur; kırpma mutasyonu bu paketin ve P15'in aralık senaryolarını kırmızıya döndürür.
+===== D05-P12 Ret, zaten var ve eşzamanlı gönderim senaryoları
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: []
+  tests: ['İmzalı başka metin aynı kimlikle gelir', 'Aynı metin aynı anahtarın yeni imzasıyla gelir', 'Aynı kimlik başka dönemin oturumuyla gelir', 'Başka öğrencinin telefonundan gönderilen kayıt', 'Bağlam değişiyor', 'Karar sürümü telefona iner', 'İmzasız çakışmalar iz bırakmaz', 'Aynı dönemde (cihaz, sıra) başka kimlikle gelir', 'Aynı öğrencinin aynı oturuma iki kaydı aynı anda gelir', 'Eklenmeyen yarış iz bırakmaz']
+  notes: Modül düzeyinde kalan senaryolar yazılır: imzalı ve imzasız kimlik çakışmaları, başka dönem, başka telefon (okutmayla pozitif kontrol), bağlam değişiyor (okutma satırı yazılmaz), karar sürümünün indirmeye inmesi ve iki bağlantılı eşzamanlı gönderim yarışları. İki öğe türü ve indirme kaynağı gerektiği için eklentiden sonra gelir, kendi D05 test uygulamasıyla ve atılan veritabanıyla koşar; uygulamanın tamamını beklemez ve kimse bu paketi beklemez.
+===== D07-P21 Liste değişikliği, hile senaryoları ve modül geneli denetimler
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D13.uygulamaKur', 'D08.ogrenciDevamDurumu', 'D15.TestDunyasi']
+  tests: ['Listede olmayan derse yoklama', 'Ders sırasında listeye eklenen öğrenci', 'Hoca kararı korunur', 'Geçmiş ile kayıt satırı aynı', 'Sözleşme ve genişleyen enum', 'Dosya döngüsü yok', 'Kişisel veri sızmaz']
+  notes: Uçtan uca: liste-degisikligi.feature D03, D07 ve D08'in ortak senaryosunu (D08.ogrenciDevamDurumu ile), hile-senaryolari.feature durum makinesi özelliklerini bileşik uygulamada sınar. Modülün bütününe bakan üç denetim de burada, bütün D07 dosyaları ve senaryoları bittikten sonra koşar: her DOGRULAMA_ kodunun bir senaryoda döndüğü sözleşme denetimi, dependency-cruiser dosya döngüsü ve yaprak kuralı, log ve iş verisinde kişisel veri taraması.
+===== D09-P18 Saklama, hesap silme ve bütünleşik denetimler
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D01.hesabiSil', 'D12.saklamaIsleyicisiniCalistir', 'D13.uygulamaKur']
+  tests: ['Saklama işleyicisi tek sınıfla ve yalnız yoklama_saklama girişiyle siler', 'Hesap silme D09 satırlarına takılmaz', 'duzeltmelerEklentisi birleşim kuralına uyar', 'Denetim olay türleri kayıtlı ve kişisel alansız', 'Hata kodları sözleşmede ve senaryoda', 'Korumalar bozulunca test kırmızı olur', "D09'dan yalnız yaprak içe aktarılır", 'Onay özeti ve listeler süre bütçesinde']
+  notes: Tam bileşim isteyen uçtan uca denetimler en sonda: belge kipinde uygulamaKur ile eklenti birleşimi, D05 işleyicisiyle birlikte saklama, D01 hesap silmesi, bütün modüllerin denetim olay türleri, hata kodu kapsamı, dokuz korumanın md5 ile geri yazılan mutasyonu, D13 sınır testi ve k6 yük bütçesi. Hiçbir paket bunu beklemez.
+===== D12-P16 Saklama senaryoları ve koruma kodu mutasyonu
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D15.TestDunyasi', 'D14.isGonder']
+  tests: ['Saklama: süre yokken dokunmaz', 'Saklama: sınır bir kez, takvim ayıyla', 'Saklama: işleyicisiz sınıf', 'Saklama: test yardımcısı işle aynı yoldan', 'Koruma kodu bozulunca kırmızı']
+  notes: Süre yokken dokunmama, takvim ayıyla tek sınır ve kanıttan sürme, işleyicisiz sınıf ve yoklama_saklama yolunun aynılığı senaryoları örnek işleyici ve sahte saatle yazılır. Koruma kodu mutasyonu burada koşar, çünkü kaldırılan korumaların senaryoları (P14 işlem ve kilit, P15 göç, bu paketin saklaması, birim testleri) bu noktada hazırdır: her koruma tek tek kaldırılır, ilgili senaryonun kırmızıya döndüğü görülür ve özgün baytlar md5 ile geri yazılır.
+===== D12-P17 Sıfırlama, hazırlık, bölüm, zaman tipleri ve log gizliliği senaryoları
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D15.TestDunyasi', 'D13.apiKur', 'D13.DenemeSecenekleri']
+  tests: ['Senaryo öncesi sıfırlama', 'Hazırlık: geride değil, ileride hazır', 'Dönem bölümü açma', 'Log gizliliği', 'An gidiş dönüşü', 'Gün metni']
+  notes: Senaryo öncesi sıfırlamanın pgboss'a dokunmaması, semaDurumu hazırlığı, dönem bölümü açma, pino ile PostgreSQL loglarında değer bulunmaması ve tabloYardimcilari an ve gün sütunlarının iki saat diliminde gidiş dönüşü senaryoları yazılır; sürücü kancası, log taraması ve fast-check ile kendi test veritabanında denetlenir; log gizliliği senaryosu uygulamanın bütününü değil, D13.apiKur ile kurulan ve 23505, 22P02 ve yavaş sorgu üreten deneme rotası taşıyan bir API'yi kullanır. Zaman tipleri senaryoları katalog değil sütun gidiş dönüşü olduğundan şema paketinden buraya alındı.
+===== D12-P19 Şema ve yetki denetimleri
+  tables: []
+  endpoints: []
+  jobs: []
+  exports: []
+  needs: ['D15.TestDunyasi', 'D09.denetimeYaz', 'D14.kuyruklariKur']
+  tests: ['Şema: sunucu kimlikleri uuidv7() varsayılanlı', 'Şema: zaman sütunları tipten denetlenir', "Şema: enum yok, durum CHECK'leri sözleşmeyle aynı", 'Şema: yerel ve sıralama kuralı', 'Şema: kısıt, dizin ve tetikleyici adları', 'Şema: bölünebilir tablolarda donem_id', "Şema: public'te tablo yok, dizinsiz yabancı anahtar bilerek kabul", 'Yetki: yalnız ekleme tabloları', 'Yetki: uygulama rolleri DDL ve TRUNCATE yapamaz, dizileri kullanır', 'Yetki: drizzle ve pgboss şemaları', 'Yetki: saklama rolü ayrı girişle', 'Yetki: nesil işlevleri uygulama rolüyle çalışır', 'Şema denetimleri bozulunca kırmızı']
+  notes: D12-B11'in katalog testi: göçlerle kurulmuş test veritabanının kataloğunda TABLO_ISARETLERI'yle iki yönlü şema kuralları ve rol yetkisi senaryoları yazılır, her şema kuralı bir kez bozulup senaryonun kırmızıya döndüğü görülür ve özgün baytlar md5 ile geri yazılır. Yalnız iki gerçek bekleme vardır: pgboss yetki senaryosu D14'ün kur adımını (kuyruklariKur) çalıştırır, saklama rolü senaryosu D09.denetimeYaz'ı çağırır. Hiçbir paket bunu beklemez. Katalog bütün modüllerin işaretli tablolarını içerdiğinde anlamlıdır.
+===== D12-P21 Geri yükleme betiği ve aylık deneme
+  tables: []
+  endpoints: []
+  jobs: ['geri_yukleme_denemesi']
+  exports: []
+  needs: []
+  tests: ['Geri yükleme denemesi']
+  notes: Trafiği kapatıp nesil, göç, kayıt ve iptallerden sonra açan geri-yukle.sh (ortak.sh ve pgbackrest.sh'yi kullanır, cli/geri-yukleme'yi çağırır), ayrı Compose projesinde (P18'in deneme dosyaları) PITR ve döküm dönüşünü sınayan aylık deneme ve geri yükleme kılavuzu yazılır; geri-yukleme-denemesi.sh gerçek yedekten koşup nesil, pg_amcheck, satır sayısı ve anahtar kurallarını raporlar. Deneme API, Mailpit ve xprem açan uçtan uca bir koşudur, bu yüzden geri yükleme komutunu bekler.

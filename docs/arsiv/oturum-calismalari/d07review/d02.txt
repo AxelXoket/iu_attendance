@@ -1,0 +1,356 @@
+dersYetkisi
+  SIG: dersYetkisi(tx: VeritabaniIslemi, kisi: OturumKisisi, dersId: string): Promise<'sahip' | 'yonetici' | null>
+  PURPOSE: Kaynak yetkisinin tek yeri: kişi dersin sahibiyse sahip; sahibi değil ama yönetici rolü ve kapsamı dersin birimini içeriyorsa yonetici; değilse null. D01'i çağırmaz, rol ve kapsam kökteki kancanın kişi nesnesinden okunur. Liste, yoklama, onay ve düzeltme işlemleri yalnız sahip sonucunu kabul eder; yonetici sonucu yalnız yönetici işleri (oran, devir) içindir. Asistan rolü gelirse yalnız burada genişler (D02-A09). yaprak.ts içinde.
+
+oturumGetir
+  SIG: oturumGetir(tx: VeritabaniIslemi, oturumId: string): Promise<OturumBilgisi | null>
+  PURPOSE: OturumBilgisi { id, dersId, donemId, birimId: string | null, tur, tarih, baslangicSaati, bitisSaati, baslangicAni: Date, bitisAni: Date, teoriSaat, uygulamaSaat, derslik, yoklamaSuresiDk, qrIleYoklama, durum, iptalNedeni, kisaKod: string, kafaSayisi, kafaSayisiAni, yapildi: boolean | null, yapildiKaynagi, yapildiCeliskili, telafiEdilenOturumId, subeIdleri: string[], degisiklikler: { an: Date, neden, oncekiBaslangicAni, oncekiBitisAni, oncekiDurum }[] }. Eski programla gelen kaydın kararı için değişiklik geçmişiyle (D04, D05, D07, D09, D11). yaprak.ts içinde.
+
+oturumlariGetir
+  SIG: oturumlariGetir(tx: VeritabaniIslemi, suzgec: OturumSuzgeci): Promise<OturumBilgisi[]>
+  PURPOSE: OturumSuzgeci { dersId?, subeId?, donemId?, birimId?, oturumIdleri?, kisaKod?, durum?: 'planlandi' | 'iptal', yapildi?: boolean | 'cevapsiz', bitmis?: boolean, baslangicAniEnAz?: Date, baslangicAniEnCok?: Date, tarihten?: string, tarihe?: string, tur?: ('normal' | 'telafi' | 'deneme')[], denemeDahil?: boolean (varsayılan false), sira?: 'artan' | 'azalan', adet?: number (en çok 5000) }; değişiklik geçmişi dönmez. T, kalan planlı saat ve sonraki oturum (D08), onaysız oturum engeli (D10), kısa kodla oturum (D11). yaprak.ts içinde.
+
+oturumSubeleri
+  SIG: oturumSubeleri(tx: VeritabaniIslemi, oturumId: string): Promise<string[]>
+  PURPOSE: Kaydın öğrencisinin şubesi oturumun kümesinde mi sorusu (D05, D07). yaprak.ts içinde.
+
+birimDonemiGetir
+  SIG: birimDonemiGetir(tx: VeritabaniIslemi, birimId: string, donemId: string): Promise<BirimDonemiBilgisi | null>
+  PURPOSE: BirimDonemiBilgisi { birimId, donemId, takvimId, dersBaslangic, dersBitis, ekleBirakBitis, sonGun, sonHaftaBaslangici, kilitAni: Date, kilitUygulandiAni: Date | null }; çağıran gönderme süresi sonu için D06.gondermeSuresiSonu saf işlevine verir (D07, D09, D10); kilit anı (D08, D09), son hafta. yaprak.ts içinde.
+
+kilitDurumu
+  SIG: kilitDurumu(tx: VeritabaniIslemi, birimId: string | null, donemId: string, an?: Date): Promise<KilitDurumu>
+  PURPOSE: KilitDurumu { kilitli: boolean, kilitAni: Date | null, sonGun: string | null, uygulandi: boolean, kaynak: 'takvim' | 'inceleme' | 'takvim_yok' }. an verilmezse bileşim kökünün verdiği saat; kayıt kararında kaydın ulaşma anı verilir (D05, D07). Deneme dersi (birimsiz) hiç kilitlenmez. yaprak.ts içinde.
+
+kafaSayisiniYaz
+  SIG: kafaSayisiniYaz(tx: VeritabaniIslemi, oturumId: string, kafaSayisi: number, yapildi: true): Promise<{ sonuc: 'yazildi' | 'degismedi' | 'celiski' | 'oturum_yok'; yapildi: boolean | null; celiskili: boolean }>
+  PURPOSE: Yalnız D07'nin kafa_sayisi öğesi çağırır. 0 ile 5000 tam sayı; oturum satırı FOR UPDATE ile kilitlenir; 'yapılmadı' ya da iptal oturumda çelişki açar, kafa_sayisi_ani saat arayüzünden yazılır; yapıldı bilgisi değişirse aynı işlemde D08.devamHesaplaIsiKoy(tx, dersId, null, 'program') koyar. Denetim olayını çağıran (D07) yazar; inen sütun olmadığından sürüm almaz.
+
+oturumUretimDinleyicisiKaydet
+  SIG: oturumUretimDinleyicisiKaydet(dinleyici: (tx: VeritabaniIslemi, olay: OturumUretimOlayi) => Promise<void>): void
+  PURPOSE: OturumUretimOlayi { neden: 'uretim' | 'program' | 'telafi' | 'oturum' | 'iptal' | 'iptal_geri' | 'takvim' | 'sure' | 'arsiv' | 'deneme' | 'saat_dilimi', dersId, oturumlar: { oturumId, donemId, baslangicAni, bitisAni, yoklamaSuresiDk, durum, yeni: boolean, onceki: { baslangicAni, bitisAni } | null }[] }. D04 pencereleriHesapla bu yolla kaydolur. Her üretim ve oturum değişikliğinde sürüm alınmadan önce aynı işlemde kayıt sırasıyla çağrılır; hata işlemi geri alır. Eklentiler yüklenirken bir kez çağrılır.
+
+kilitAdimiKaydet
+  SIG: kilitAdimiKaydet(adim: { ad: string; sira: number; calistir: (tx: VeritabaniIslemi, birimDonemi: { birimId: string; donemId: string; kilitAni: Date }) => Promise<void> }): void
+  PURPOSE: D07 donemKilidiKararKapanisi bu yolla kaydolur; donem_kilidi işi adımları sıra numarasıyla aynı işlemde çağırır; aynı ad iki kez kaydolursa hata.
+
+D02.summary: D02 (dersler) birimi, bölümü, genel dönemi, birim takvimini, birim ve dönem kilidini, dersi, şubeyi ve haftalık programı tutar; oturumları programdan dönemin tamamı için önceden üretir ve her değişiklikte yalnız başlamamış oturumları saf bir plan fonksiyonuyla yeniden hesaplayıp farkı yazar. Oturum bir program saatinin tek buluşmasıdır ve hiç silinmez: iptal, taşıma, telafi, tek oturum düzenlemesi ve "Ders yapıldı mı?" cevabı oturum satırında ve değişiklik geçmişinde iz bırakır, sayımı D08 ve D10 oturum durumundan okur. Yerel program saati UTC ana PostgreSQL'in saat dilimi verisiyle (AT TIME ZONE 'Europe/Istanbul') çevrilir; kilit dahil kural taşıyan her an bileşim kökünün verdiği saat arayüzünden gelir, kilit anı son günün ertesi 00:00 İstanbul'dur. Pencere hesabı (D04) üretim dinleyicisi, kilit kapanışı (D07) kilit adımı olarak D02'ye kaydolur; telefona inen beş tablo D06'nın tek sürümüyle damgalanır ve D02'nin indirme kaynağıyla kullanıcının kapsamına göre iner. Ürün kararı isteyen 11 soru önerilen varsayılanla açık noktada bekliyor; 3 sözleşme eki (liste kaynağı, deneme dersi kurulumu, dönem arası) contracts.json'a işlenmeli.
+
+D02.tables[4].purpose: Takvimdeki tatil: tam gün ya da yarım gün (arife öğleden sonra). Telefona tatil satırı olarak iner; oturum üretiminde tatil günündeki oluşum üretilmez, sonradan girilen tatil gelecekteki oturumu iptal (tatil) yapar.
+
+D02.tables[11].purpose: Dersin tek buluşması (ders oturumu; plan.html#sozluk): programdan (normal), telafiden ya da deneme dersi işinden üretilir, hiç silinmez. Açılış ve kapanış anı UTC, telefona iner (teknik.html#kod-veri-modeli). Pencere ve kapanma D04'ün kendi tablosundadır; kafa sayısı, yapıldı onayı, kısa kod ve QR ayarı kopyası bu satırdadır ve yalnız D02 yazar.
+
+D02.tables[11].columns[15].note: planlandi, iptal (metin ve CHECK).
+
+D02.tables[11].columns[16].name: iptal_nedeni
+
+D02.tables[11].columns[17].name: iptal_ani
+
+D02.tables[11].columns[18].name: iptal_eden_kisi_id
+
+D02.tables[11].columns[18].note: Hoca iptalinde hoca; sistem iptalinde boş.
+
+D02.tables[11].columns[19].note: Hoca tek oturumun saatini, dersliğini ya da saat sayılarını değiştirdiyse true; yeniden üretim bu alanlara dokunmaz, yalnız iptal edebilir.
+
+D02.tables[11].columns[22].name: kafa_sayisi
+
+D02.tables[11].columns[22].note: Hocanın kafa sayısı (0 ile 5000); yalnız kafaSayisiniYaz (D07 çağırır) yazar. Telefona inmez.
+
+D02.tables[11].columns[23].name: kafa_sayisi_ani
+
+D02.tables[11].columns[23].note: Kafa sayısının sunucuya yazıldığı an (saat arayüzü); D07 işaret anı için okur.
+
+D02.tables[11].columns[24].name: yapildi
+
+D02.tables[11].columns[24].note: Boş: cevap yok. true: kafa sayısı ya da hoca cevabı. false: hoca "yapılmadı" dedi; bu oturumun kayıtları ve saatleri sayılmaz (plan.html#kararlar-kafa-sayisi). Telefona inmez.
+
+D02.tables[11].columns[25].name: yapildi_kaynagi
+
+D02.tables[11].columns[25].note: kafa_sayisi, hoca_cevabi.
+
+D02.tables[11].columns[26].name: yapildi_ani
+
+D02.tables[11].columns[27].name: yapildi_celiskili
+
+D02.tables[11].columns[27].note: "Yapılmadı" cevabından sonra (ya da iptal oturuma) kafa sayısı geldiyse true; yapildi boşalır ve soru yeniden çıkar (D02-B18).
+
+D02.tables[11].indexes[8]: oturumlar_onaysiz_idx (ders_id, bitis_ani) WHERE durum = 'planlandi' AND yapildi IS NULL
+
+D02.tables[11].indexes[9]: oturumlar_celiski_idx (ders_id) WHERE yapildi_celiskili
+
+D02.tables[11].constraints[3]: oturumlar_iptal_eden_kisi_id_fk: iptal_eden_kisi_id REFERENCES kisiler (id)
+
+D02.tables[11].constraints[9]: oturumlar_iptal_ck: (durum = 'planlandi' AND iptal_nedeni IS NULL AND iptal_ani IS NULL AND iptal_eden_kisi_id IS NULL) OR (durum = 'iptal' AND iptal_nedeni IN ('hoca','tasindi','tatil','sinav_haftasi','takvim','program','arsiv') AND iptal_ani IS NOT NULL)
+
+D02.tables[11].constraints[11]: oturumlar_kafa_sayisi_ck: (kafa_sayisi IS NULL) = (kafa_sayisi_ani IS NULL) AND (kafa_sayisi IS NULL OR kafa_sayisi BETWEEN 0 AND 5000)
+
+D02.tables[11].constraints[12]: oturumlar_yapildi_ck: (yapildi IS NULL) = (yapildi_kaynagi IS NULL) AND (yapildi IS NULL) = (yapildi_ani IS NULL) AND (yapildi_kaynagi IS NULL OR yapildi_kaynagi IN ('kafa_sayisi','hoca_cevabi')) AND NOT (yapildi_celiskili AND yapildi IS NOT NULL)
+
+D02.tables[11].constraints[13]: oturumlar_iptal_yapildi_ck: durum = 'planlandi' OR yapildi IS NULL
+
+D02.tables[12].purpose: Oturumun kapsadığı şubeler (birlikte işlenen şubeler dahil): öğrenciye hangi oturumun ineceğini ve kaydın hangi oturuma sayılacağını belirler (D05 ve D07 oturumSubeleri ile okur).
+
+D02.tables[13].purpose: Oturumun program tarafındaki değişiklik geçmişi (saat, derslik, saat sayıları, süre, şube kümesi, iptal ve geri alma): eski programla internetsiz telefondan gelen kaydın kararında D07'nin kanıtı (D02-B13). Ders içi ayar değişiklikleri D04'ün pencere_degisiklikleri tablosundadır.
+
+D02.tables[13].columns[2].note: hoca, program, takvim, tatil, sinav_haftasi, tasindi, arsiv, sure, saat_dilimi, yapildi_cevabi (metin ve CHECK).
+
+D02.tables[13].columns[3].note: planlandi ya da iptal.
+
+D02.tables[13].columns[4].note: planlandi ya da iptal.
+
+D02.tables[13].columns[9].note: Önceki ve yeni derslik, saat sayıları, süre, iptal nedeni ve şube kümesi; şeması packages/contracts/src/dersler.ts içinde Zod ile (numara ve isim yok).
+
+D02.tables[13].constraints[2]: oturum_degisiklikleri_neden_ck: neden IN ('hoca','program','takvim','tatil','sinav_haftasi','tasindi','arsiv','sure','saat_dilimi','yapildi_cevabi')
+
+D02.tables[13].constraints[3]: oturum_degisiklikleri_durum_ck: (onceki_durum IS NULL OR onceki_durum IN ('planlandi','iptal')) AND (yeni_durum IS NULL OR yeni_durum IN ('planlandi','iptal'))
+
+D02.endpoints[2].response.sayilar: { planlanan: int, yapilan: int, yapilmayan: int, cevapsiz: int, iptal: int } (deneme dersi hariç dönem toplamı)
+
+D02.endpoints[3].response.oturumEtkisi: OturumEtkisi { eklenen: int, guncellenen: int, iptal: int, geriAlinan: int }
+
+D02.endpoints[4].response.iptalEdilenOturum: int (gelecekteki planlı oturumlar iptal, neden arsiv)
+
+D02.endpoints[5].response.oturumEtkisi: OturumEtkisi { eklenen: int, guncellenen: int, iptal: int, geriAlinan: int }
+
+D02.endpoints[6].request.durum: etkin|pasif, isteğe bağlı; pasif yalnız şubede etkin liste satırı yokken (liste kaynağı sorulur) ve dersin başka etkin şubesi varken; pasif şube başlamamış oturumlardan ve program saatlerinden çıkar, şubesiz kalan oturum iptal (program)
+
+D02.endpoints[6].response.oturumEtkisi: OturumEtkisi { eklenen: int, guncellenen: int, iptal: int, geriAlinan: int }
+
+D02.endpoints[9].response.oturumEtkisi: OturumEtkisi { eklenen: int, guncellenen: int, iptal: int, geriAlinan: int }
+
+D02.endpoints[10].request.durum: planlandi|iptal, isteğe bağlı
+
+D02.endpoints[10].response.oturumlar: OturumPanel { id, dersId, tur: normal|telafi|deneme, tarih, baslangicSaati, bitisSaati, baslangicAni: an, bitisAni: an, teoriSaat, uygulamaSaat, derslik: metin|null, yoklamaSuresiDk: int|null, qrIleYoklama: bool, durum: planlandi|iptal, iptalNedeni: metin|null, kisaKod: 10 rakamlık metin, subeIdleri: uuid[], elleDuzenlendi: bool, telafiEdilenOturumId: uuid|null, yapildi: { durum: cevapsiz|yapildi|yapilmadi|celiskili, kaynak: kafa_sayisi|hoca_cevabi|null, kafaSayisi: int|null } } (durum alanları x-extensible-enum)[]; başlangıç anı sırasıyla, en çok 1000
+
+D02.endpoints[11].request.eskisiniIptalEt: bool, varsayılan false; true ise telafiEdilenOturumId zorunlu ve o oturum başlamamış olmalı: aynı işlemde iptal (tasindi) olur (taşıma); çakışma denetiminde iptal edilecek eski oturum sayılmaz
+
+D02.endpoints[11].response.oturum: OturumPanel { id, dersId, tur: normal|telafi|deneme, tarih, baslangicSaati, bitisSaati, baslangicAni: an, bitisAni: an, teoriSaat, uygulamaSaat, derslik: metin|null, yoklamaSuresiDk: int|null, qrIleYoklama: bool, durum: planlandi|iptal, iptalNedeni: metin|null, kisaKod: 10 rakamlık metin, subeIdleri: uuid[], elleDuzenlendi: bool, telafiEdilenOturumId: uuid|null, yapildi: { durum: cevapsiz|yapildi|yapilmadi|celiskili, kaynak: kafa_sayisi|hoca_cevabi|null, kafaSayisi: int|null } } (durum alanları x-extensible-enum)
+
+D02.endpoints[11].idempotency: Gövdedeki id (istemcinin ürettiği UUIDv7) tekrar anahtarıdır: aynı id ve aynı içerik 200 ile var olan telafi oturumu döner, aynı id farklı içerik 409 DERSLER_KIMLIK_CAKISMASI (D13-B12 deseni). Hedefli ON CONFLICT (id) DO NOTHING. eskisiniIptalEt true iken telafiEdilenOturumId yoksa istek şema düzeyinde 400 alır (Zod refine).
+
+D02.endpoints[13].request.iptaliGeriAl: true, isteğe bağlı; yalnız hoca nedeniyle iptal edilmiş, başlamamış oturumda; öteki alanlarla birlikte gelemez
+
+D02.endpoints[13].response.oturum: OturumPanel { id, dersId, tur: normal|telafi|deneme, tarih, baslangicSaati, bitisSaati, baslangicAni: an, bitisAni: an, teoriSaat, uygulamaSaat, derslik: metin|null, yoklamaSuresiDk: int|null, qrIleYoklama: bool, durum: planlandi|iptal, iptalNedeni: metin|null, kisaKod: 10 rakamlık metin, subeIdleri: uuid[], elleDuzenlendi: bool, telafiEdilenOturumId: uuid|null, yapildi: { durum: cevapsiz|yapildi|yapilmadi|celiskili, kaynak: kafa_sayisi|hoca_cevabi|null, kafaSayisi: int|null } } (durum alanları x-extensible-enum)
+
+D02.endpoints[13].errors[2]: DERSLER_OTURUM_IPTAL
+
+D02.endpoints[13].errors[3]: DERSLER_IPTAL_GERI_ALINAMAZ
+
+D02.endpoints[14].path: /v1/dersler/oturumlar/{oturumId}/iptal
+
+D02.endpoints[14].response.oturum: OturumPanel { id, dersId, tur: normal|telafi|deneme, tarih, baslangicSaati, bitisSaati, baslangicAni: an, bitisAni: an, teoriSaat, uygulamaSaat, derslik: metin|null, yoklamaSuresiDk: int|null, qrIleYoklama: bool, durum: planlandi|iptal, iptalNedeni: metin|null, kisaKod: 10 rakamlık metin, subeIdleri: uuid[], elleDuzenlendi: bool, telafiEdilenOturumId: uuid|null, yapildi: { durum: cevapsiz|yapildi|yapilmadi|celiskili, kaynak: kafa_sayisi|hoca_cevabi|null, kafaSayisi: int|null } } (durum alanları x-extensible-enum)
+
+D02.endpoints[14].idempotency: Zaten iptal oturuma 200 ve değişiklik yok. Oturum silinmez; kimliği geçerli kalır, eski programla gelen kaydın kararı D07'nindir.
+
+D02.endpoints[15].response.oturumlar: [{ oturumId, dersId, dersKodu, dersAdi, tarih, baslangicSaati, bitisSaati, teoriSaat, uygulamaSaat, durum: planlandi|iptal, celiskili: bool, kafaSayisi: int|null }]; tarih sırasıyla. Kapsam: bitmiş (bitis_ani <= şimdi), planlı ve cevapsız oturumlar ile kafa sayısı çelişkisi olan (iptal dahil) oturumlar; deneme dersi hariç
+
+D02.endpoints[16].path: /v1/dersler/oturumlar/{oturumId}/yapildi-mi
+
+D02.endpoints[16].response.oturum: { oturumId, durum: planlandi|iptal, yapildi: { durum, kaynak, kafaSayisi } }
+
+D02.endpoints[16].errors[2]: DERSLER_OTURUM_IPTAL
+
+D02.endpoints[17].path: /v1/dersler/oturumlar/yapildi-mi
+
+D02.endpoints[17].response.sonuclar: [{ oturumId, sonuc: yazildi|degismedi|bulunamadi|baslamadi|iptal|kilitli (x-extensible-enum) }]; istekteki sırayla
+
+D02.endpoints[29].auth: Oturum, rol yonetici; kapsam her istekte D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorulur (ilk sürümde genel yönetici: D02-A06). Rol uymazsa 403 (D13 genel kodu). Öğrenci listesi, yoklama ve kafa sayısı dönmez (D02-A08).
+
+D02.jobs[0].does: Takvime (ya da birim ve döneme) bağlı birimlerin etkin ve deneme olmayan derslerini kod sırasıyla gezer; her derste başlamamış normal oturumları saf üretim planıyla yeniden hesaplar (yeni oluşum, tatil, sınav haftası ve takvim iptali, geri alma), üretim dinleyicilerini (D04) çağırır, D08.devamHesaplaIsiKoy(tx, dersId, null, 'takvim') koyar, ders başına tek denetim olayı (dersler.oturumlar_yenilendi, sayılarla) yazar ve sürüm alır. Gece çalışmasında ayrıca başlamamış planlı oturumlarda baslangic_ani ve bitis_ani değerini (tarih + yerel saat) AT TIME ZONE 'Europe/Istanbul' ile yeniden türetip farklı olanları düzeltir (neden saat_dilimi, dinleyiciler çağrılır) ve kilit anı geçmemiş birim_donemleri.kilit_ani değerini yeniden türetir; düzeltilen satır sayısını dersler.yenileme.fark log satırına yazar. İş verisi yalnız iç kimlik taşır.
+
+D02.jobs[1].does: Kilit anı geçmiş her birim ve dönem için tek işlemde: kilitAdimiKaydet ile kayıtlı adımları sıra numarasıyla çağırır (D07 donemKilidiKararKapanisi: onaysız Kendi beyanı sayılmış haliyle, kararsız kayıtlar, denetim kaydıyla); birimin o dönemdeki etkin derslerini arşivler (arsiv_nedeni kilit); her ders için D08.devamHesaplaIsiKoy(tx, dersId, null, 'takvim') koyar (D10'un gün sonu anlığı bu işleri bekler); birim_donemleri ve ders satırlarını yeni sürümle damgalar (telefon kilidi öğrenir); kilit_uygulandi_ani yazar; dersler.donem_kilitlendi denetim olayını yazar.
+
+D02.state_machines[0].states[1]: iptal
+
+D02.state_machines[0].transitions[0].to: iptal
+
+D02.state_machines[0].transitions[0].by: hoca: POST /v1/dersler/oturumlar/{oturumId}/iptal
+
+D02.state_machines[0].transitions[1].to: iptal
+
+D02.state_machines[0].transitions[1].by: hoca: POST /v1/dersler/{dersId}/telafi (eskisiniIptalEt)
+
+D02.state_machines[0].transitions[2].to: iptal
+
+D02.state_machines[0].transitions[3].to: iptal
+
+D02.state_machines[0].transitions[4].from: iptal
+
+D02.state_machines[0].transitions[4].by: hoca: PATCH /v1/dersler/oturumlar/{oturumId} (iptaliGeriAl)
+
+D02.state_machines[0].transitions[5].from: iptal
+
+D02.state_machines[0].transitions[5].when: Neden program, takvim, tatil ya da sinav_haftasi, oluşum yeniden isteniyor ve oturum başlamamış. Hoca, tasindi ve arsiv iptali hiç kendiliğinden geri gelmez.
+
+D02.state_machines[0].transitions[6].from: iptal
+
+D02.state_machines[0].transitions[6].when: İptal oturuma kafa sayısı gelmiş (çelişkili) ve hoca dersin yapıldığını söylüyor; değişiklik geçmişine yapildi_cevabi nedeniyle yazılır.
+
+D02.state_machines[1].states[1]: yapildi
+
+D02.state_machines[1].states[3]: celiskili
+
+D02.state_machines[1].transitions[0].to: yapildi
+
+D02.state_machines[1].transitions[0].by: D07: kafaSayisiniYaz
+
+D02.state_machines[1].transitions[0].when: Kafa sayısı geldi (ders yapıldı onayı da budur).
+
+D02.state_machines[1].transitions[1].to: yapildi
+
+D02.state_machines[1].transitions[1].when: Oturum başlamış; yapildi true.
+
+D02.state_machines[1].transitions[3].to: celiskili
+
+D02.state_machines[1].transitions[3].by: D07: kafaSayisiniYaz
+
+D02.state_machines[1].transitions[3].when: "Yapılmadı" cevabından sonra kafa sayısı geldi; yapildi boşalır, soru yeniden çıkar.
+
+D02.state_machines[1].transitions[4].to: celiskili
+
+D02.state_machines[1].transitions[4].by: D07: kafaSayisiniYaz
+
+D02.state_machines[1].transitions[4].when: İptal oturuma kafa sayısı geldi.
+
+D02.state_machines[1].transitions[5].from: celiskili
+
+D02.state_machines[1].transitions[5].to: yapildi
+
+D02.state_machines[1].transitions[5].when: Çelişki kapanır (kilitten sonra da); iptal oturum planlı olur.
+
+D02.state_machines[1].transitions[6].from: celiskili
+
+D02.state_machines[1].transitions[6].when: Çelişki kapanır; kafa sayısı kanıt olarak kalır.
+
+D02.state_machines[1].transitions[7].from: yapildi
+
+D02.state_machines[1].transitions[8].to: yapildi
+
+D02.state_machines[1].transitions[9].from: yapildi
+
+D02.state_machines[1].transitions[9].to: yapildi
+
+D02.state_machines[1].transitions[9].by: D07: kafaSayisiniYaz
+
+D02.state_machines[1].transitions[9].when: Hoca cevabıyla yapıldı olan oturuma kafa sayısı gelir: kaynak kafa_sayisi olur.
+
+D02.state_machines[2].transitions[0].when: Başlamış ve iptal edilmemiş oturumu yok; arsiv_nedeni hoca; ders telefonlardan kalkar.
+
+D02.invariants[0]: Tek yazar: bu 14 tabloya yalnız D02 kodu yazar; oturumlar.kafa_sayisi yalnız kafaSayisiniYaz ile, oturumlar.yapildi yalnız kafaSayisiniYaz ve "Ders yapıldı mı?" uçlarıyla, dersler.teori_p ve uygulama_p yalnız oranlariYaz ile değişir.
+
+D02.invariants[1]: Ders, şube, program saati, oturum, tatil, birim, bölüm, dönem, takvim ve birim dönemi satırı hiç silinmez (göç uygulama rollerinden DELETE yetkisini alır); kaldırma silindi, pasif, iptal ya da arşiv işaretidir. oturum_degisiklikleri yalnız eklenir.
+
+D02.invariants[3]: Başlamış ya da geçmiş oturumun saati, dersliği, saat sayıları, şube kümesi ve durumu program, takvim, telafi, arşiv ya da düzenleme yoluyla değişmez; geçmişe dokunan yollar yalnız "Ders yapıldı mı?" cevabı, kafa sayısı ve D09 düzeltmesidir.
+
+D02.invariants[6]: Hoca, tasindi ve arsiv nedeniyle iptal edilen oturum yeniden üretimle geri gelmez; hoca iptali yalnız hocanın açık isteğiyle (iptaliGeriAl) döner.
+
+D02.invariants[9]: Kilitli birim ve dönemin derslerinde program, telafi, iptal, düzenleme, şube ve ders ayarı reddedilir; "Ders yapıldı mı?" cevabı yalnız cevapsız ya da çelişkili oturuma yazılır; kafa sayısı kilitten sonra da aynı kurallarla yazılır (yapılmadı oturumda çelişki açar); devir yalnız sahibi silinmiş ya da pasif dersin cevapsız oturumları için (D02-A07).
+
+D02.invariants[10]: Telefona inen bir sütunu değiştiren her işlemin sonunda D06.surumAl(tx) bir kez alınır ve işlemin değiştirdiği bütün inen satırlara yazılır; inen sütun sürüm almadan değişmez, inmeyen sütun (kafa sayısı, yapıldı) sürüm almaz.
+
+D02.invariants[11]: Program, takvim, telafi, iptal, düzenleme, yapıldı ve kilit yazımı tek işlemdir: oturumlar, şube kümeleri, değişiklik geçmişi, üretim dinleyicileri (D04), denetim kaydı (D09), devam işi (D08), yeniden üretim işi (D14) ve sürüm birlikte yazılır ya da hiçbiri yazılmaz.
+
+D02.invariants[13]: yapildi_celiskili doğruyken yapildi boştur; iptal oturumda yapildi hep boştur; kafa sayısı varken kafa_sayisi_ani doludur.
+
+D02.invariants[14]: Dersin tek sahibi vardır; başka hocanın dersi, şubesi ve oturumu hocaya 404 döner; yönetici ucu öğrenci listesi, yoklama ve kafa sayısı döndürmez.
+
+D02.invariants[15]: Öğrencinin indirmesine yalnız etkin liste satırının şubesini kapsayan program saatleri ve oturumlar ile bu derslerin ders, tatil ve kilit satırları girer; kafa sayısı ve yapıldı bilgisi hiçbir telefona inmez.
+
+D02.files[36]: apps/server/test/features/dersler/telafi-iptal-ve-duzenleme.feature
+
+D02.files[37]: apps/server/test/features/dersler/ders-yapildi-mi.feature
+
+D02.tests[1].name: Yarım gün tatil yalnız tatil saatinden sonra başlayan oturumu iptal eder
+
+D02.tests[1].asserts: Tatil 13:00'te başlıyor: aynı günün 09:00 oturumu planlı kalır (pozitif kontrol), 14:00 oturumu iptal (tatil) olur; tatil saati 15:00'e alınınca 14:00 oturumu yeniden planlı olur.
+
+D02.tests[2].asserts: dersYapilir false iken haftada oturum yok; aynı hafta dersYapilir true yapılıp iş çalışınca oluşumlar üretilir; tekrar false yapılınca başlamamış olanlar iptal (sinav_haftasi) olur (iki yönlü kontrol).
+
+D02.tests[4].name: Hoca iptali yeniden üretimle geri gelmez
+
+D02.tests[4].asserts: Hoca 8. hafta oturumunu iptal eder, sonra derslik değişikliğiyle program kaydedilir: oturum iptal (hoca) kalır; kontrol: tatil nedeniyle iptal olan oturum tatil kaldırılınca planlı olur; iptaliGeriAl hoca iptalini geri getirir.
+
+D02.tests[9].name: Aynı gün telafi uyarıyla oluşur, taşıma eskisini iptal eder
+
+D02.tests[9].asserts: Bugün 15:00 telafisi AYNI_GUN uyarısı ve kısa kodla oluşur, D04 dinleyicisi tek yeni oturumla çağrılır; eskisiniIptalEt ile eski oturum aynı işlemde iptal (tasindi) olur; telafi bir kısıta takılırsa eski oturum da planlı kalır.
+
+D02.tests[10].name: Başlamış oturum düzenlenemez, iptal edilemez, taşınamaz
+
+D02.tests[10].asserts: Başlangıçtan bir dakika sonra PATCH, iptal ve eskisiniIptalEt 409 DERSLER_OTURUM_BASLAMIS; kontrol: başlangıçtan bir dakika önce üçü de 200 (sahte saatle).
+
+D02.tests[11].name: Kafa sayısı yapıldı yapar, yapılmadı cevabından sonra çelişki açar
+
+D02.tests[11].asserts: Hoca yapılmadı der, sonra kafaSayisiniYaz 30 ile gelir: sonuç celiski, oturum onaysız listede celiskili true; hoca yapıldı deyince listeden çıkar ve tek D08 işi konur; kontrol: cevapsız oturuma gelen kafa sayısı doğrudan yapıldı yapar.
+
+D02.tests[12].asserts: Bitişten bir dakika önce oturum listede yok, bir dakika sonra var (pozitif kontrol); kafa sayısı gelince çıkar; deneme dersinin oturumları hiç görünmez.
+
+D02.tests[14].asserts: Son gün 2 Ocak: 2 Ocak 23:59:59.999 İstanbul anında kilitDurumu false ve program kaydı 200; 3 Ocak 00:00:00.000 anında true ve program kaydı 409 DERSLER_DONEM_KILITLI (sahte saat setTime ile).
+
+D02.tests[15].asserts: Kilitten sonra cevapsız oturuma yapıldı cevabı 200; yapıldı cevabı olan oturumu yapılmadı yapmak 409 DERSLER_DONEM_KILITLI; telafi, iptal ve şube eklemek 409.
+
+D02.tests[18].asserts: Tatil eklenen takvim PUT'u takvim_oturumlarini_yenile işini koyar; aynı PUT işlemi zorla geri alınırsa iş de yoktur; iş çalışınca o günün oturumu iptal (tatil) olur, ikinci çalışma boş fark bulur.
+
+D02.tests[23].asserts: İlk oturum başladıktan sonra arşivle 409 DERSLER_DERS_BASLAMIS; kontrol: hiç oturumu başlamamış derste 200 ve gelecekteki oturumlar iptal (arsiv) olur, ders öğrencinin ve hocanın indirmesinde kapsamdanCikti ile iner.
+
+D02.tests[25].asserts: Aynı numara iki dersin listesinde: 09:00 ile 10:00 ve 09:30 ile 10:30 çakışır; 10:00 ile 11:00 çakışmaz (yarı açık aralık); iptal oturum çakışmaz; cevapta numara ve isim yok, liste satırı kimliği var.
+
+D02.tests[26].asserts: A şubesindeki öğrenciye yalnız A'yı kapsayan oturumlar iner; yalnız B'yi kapsayan oturum inmez, B öğrencisine iner (pozitif kontrol); satırlarda kafa sayısı ve yapıldı alanı yok.
+
+D02.tests[31].asserts: İş iki kez çalışır: 14 oturum, her biri 00:00 ile 24:00 İstanbul; ertesi gün çalışınca 15. gün eklenir; kilitDurumu false; onaysız listede ve çakışmada görünmez.
+
+D02.tests[38].name: Geçmiş oturuma dokunulmaz, hoca iptali geri gelmez
+
+D02.tests[38].asserts: numRuns 1000: planın hiçbir öğesi başlamış oturumu hedeflemez; iptal nedeni hoca, tasindi ya da arsiv olan oturum geri alma listesine girmez; elle düzenlenmiş oturumun alanları güncellenmez.
+
+D02.tests[44].asserts: DERSLER_ önekli her kod katalogda ve tek HTTP durumuna bağlı; uçların döndürdüğü her kod katalogda; cevap şemalarında durum, tur, iptalNedeni, yapildi.durum, uyarilar ve toplu sonuç alanları OpenAPI belgesinde x-extensible-enum taşır, enum anahtarı taşımaz.
+
+D02.tests[45].asserts: Her davranış senaryosunda D02 cevapları packages/contracts şemasıyla doğrulanır: tarih YYYY-MM-DD, saat HH:MM, an Z ile ve milisaniyeli, sürüm ve kısa kod metin; inen satır şeması rol başına (öğrencide kafa sayısı ve yapıldı alanı yok).
+
+D02.tests[49].asserts: Beş hata tek tek yerleştirilir ve md5 denetimiyle özgün baytlar geri yazılır: yarım gün kuralında >= yerine > (yarım gün ve tatil özelliği kırmızı); AT TIME ZONE yerine sabit +03 (saat dilimi senaryosu kırmızı); kilit anında +1 gün eksik (kilit anı senaryosu kırmızı); hoca iptalinin geri alınması (hoca iptali senaryosu ve özelliği kırmızı); indirmede şube süzgecinin kaldırılması (şube indirme senaryosu kırmızı). Yeşil kalan olursa test eksik sayılır ve yazılır.
+
+D02.resolved_gaps[4].why: Telefon kalan planlı saatleri ve sonraki oturumu yerelde hesaplar, pencere internetsiz açılır; ders başına yaklaşık 30 satır küçük bir yazımdır; tatil ve iptal kararı sunucuda kalır (plan.html#gun-kenar-durumlar).
+
+D02.resolved_gaps[5].decision: Tatil tarih aralığı ve isteğe bağlı yarım gün başlangıç saatidir; o gün tatil saatinden önce başlayan oturum kalır. Sonradan girilen tatil gelecekteki oturumu iptal (tatil) yapar, silmez; tatil kalkınca oturum geri gelir.
+
+D02.resolved_gaps[5].why: Basit ve izlenebilir; iptal oturumun kimliği internetsiz telefondan gelen kayıt için geçerli kalır, son karar sunucudadır.
+
+D02.resolved_gaps[11].decision: Aynı gün içinde saat, derslik ve saat sayısı değişikliğinde kimlik korunur, önceki değerler oturum_degisiklikleri satırına yazılır. Gün değişikliği taşımadır: telafi ucunda eskisiniIptalEt ile eski oturum iptal (tasindi), yenisi telafi olarak aynı işlemde açılır. Oturum hiç silinmez.
+
+D02.resolved_gaps[11].why: Kayıtlar kimlikle oturuma bağlı kalır; eski anlar D07'nin internetsiz kayıt kararında kanıttır (plan.html#gun-kenar-durumlar).
+
+D02.resolved_gaps[12].decision: Değişiklik yalnız başlangıcı saat arayüzüne göre gelecekte olan oturumlara uygulanır; program saatinde isteğe bağlı geçerlilik aralığı vardır; başlamış oturumda yalnız "Ders yapıldı mı?" cevabı, kafa sayısı ve D04'ün ders içi ayarları değişir; kilitli dönemde yalnız cevapsız oturumun cevabı yazılır.
+
+D02.resolved_gaps[13].decision: Onaysız oturum bitmiş, planlı ve yapıldı bilgisi olmayan oturumdur; panelde ve hoca telefonunda listelenir. "Yapıldı" cevabı kafa sayısız yapıldı yapar. "Yapılmadı" cevabından sonra (ya da iptal oturuma) gelen kafa sayısı çelişki açar: yapildi boşalır, oturum listede çelişkili görünür. Toplu cevap ucu vardır; her cevap denetim kaydına yazılır.
+
+D02.resolved_gaps[13].why: Kafa sayısı internetsiz kuyrukta gecikebilir; çelişki sessizce çözülürse sayım değişir; dönem sonu çıktısı zaten cevap bekliyor (plan.html#kararlar-kafa-sayisi).
+
+D02.resolved_gaps[15].decision: Kilitte: kilitDurumu doğru olur (D05 ve D07 son günden sonra gelen kaydı yalnız saklar); kayıtlı kilit adımları çalışır (D07: onaysız Kendi beyanı sayılmış haliyle, kararsızlar denetim kaydıyla); birimin dersleri arşivlenir; program, telafi, iptal, düzenleme, şube, ders ayarı, devir ve D03 liste yazımı kapanır; cevapsız oturuma cevap ve D09 düzeltmesi sürer; kilit telefona iner, eski saat belgesi ve QR anahtarları kilitliBirimDonemleri ile bırakılabilir.
+
+D02.resolved_gaps[19].why: Plan çakışmanın hocalara gösterilmesini ve çift anadal listeleri arasında da denetlenmesini istiyor (plan.html#kararlar-kafa-sayisi); "tek derse yoklama" kararı D04 ve D07'de kalır.
+
+D02.resolved_gaps[20].decision: İnen ders satırı: kod, ad, hocanın görünen adı (D01.kisiGetir), teori ve uygulama p, süre, QR ayarı, durum, arşiv nedeni, şubeler. Program saati satırı: gün, saatler, saat sayıları, derslik, geçerlilik, şubeler. Oturum satırı: tarih, yerel saatler, UTC anlar, saat sayıları, derslik, süre, QR ayarı, tür, durum, iptal nedeni, kısa kod, şubeler. Tatil ve kilit satırları (son gün, kilit anı, uygulandı). Kafa sayısı ve yapıldı inmez.
+
+D02.resolved_gaps[23].decision: Son hafta: birimin son günü dahil geriye 7 takvim günü (İstanbul). Son oturum: dersin iptal edilmemiş son oturumu, son ders günü onun tarihi. Son gün ve kilit anı kilit satırıyla telefona iner.
+
+D02.resolved_gaps[27].decision: Arşiv salt okunurdur ve etkin listelerden çıkıştır. Kilitte birimin dersleri kendiliğinden arşivlenir (telefonda Dönem kapandı olarak kalır). Hoca, başlamış ve iptal edilmemiş oturumu olmayan kendi dersini arşivleyebilir; gelecekteki oturumlar iptal (arsiv) olur, ders telefonlardan kalkar. Raporlar arşivli dersi gösterir.
+
+D02.resolved_gaps[28].decision: Oturum hiç silinmez, iptal durum alanıyla iner; kaldırılan program saati ve tatil silindi işaretiyle iner; şube kümesi daralınca öğrencinin şubesini artık kapsamayan değişmiş program saati ve oturum ona silindi olarak iner. Derse sonradan eklenen öğrenciye ve devirle yeni hocaya dersin bütün satırları sürüme bakılmadan iner; takvim bağı değişince yeni takvimin tatilleri de. Pasifleşen liste satırında, hoca arşivinde ve devirde eski hocaya ders kapsamdanCikti işaretiyle iner.
+
+D02.resolved_gaps[28].why: Öğrenci iptali görür; değişiklik sürümü tek sayaçtan (teknik.html#kod-veri-modeli); kapsam olayı D06-B15'teki gibi.
+
+D02.resolved_gaps[31].decision: Ders açma ve değişikliği, arşiv, devir, şube, program, telafi, oturum düzenleme ve iptali, yapıldı cevabı, yeniden üretim, birim, bölüm, dönem, takvim, birim dönemi bağı ve kilit D09.denetimeYaz ile yazılır; olay türleri dersler.* olarak sözleşme dosyasında; önceki ve sonraki değer taşır, isim ve numara taşımaz. p değişikliğinin olayını D08 yazar.
+
+D02.resolved_gaps[34].decision: Program, telafi, iptal ve düzenleme panel uçlarıdır; hoca telefonu programı indirmeyle gösterir, "Ders yapıldı mı?" listesini ve cevabını internetliyken aynı uçlardan çağırır.
+
+D02.resolved_gaps[36].decision: Kayıtların sayılan işareti ve kararı değişmez; "yapılmadı" ve iptal oturumun kayıtları ve saatleri sayımda oturum durumuyla dışlanır (D08 ve D10 oturumlariGetir ile okur). D02 her yapıldı ve iptal değişikliğinde aynı işlemde D08.devamHesaplaIsiKoy koyar.
+
+D02.resolved_gaps[36].why: contracts.json'a göre D02 D07'yi çağırmaz; ham kayıt kanıt olarak kalır, hoca fikrini değiştirirse karar geri alınmaz; D07-B27 ile aynı.
+
+D02.open_points[1].question: D02-B15: Hangi iptal telafi borcu doğurur, "yapılmayıp telafi edilmeyen saat" nasıl sayılır?
+
+D02.open_points[1].recommendation: Oturum iptal nedenini (hoca, tasindi, tatil, sinav_haftasi, takvim, program, arsiv) ve isteğe bağlı telafi bağını tutar. Borç, tür başına hoca iptali ve "yapılmadı" saatleri eksi yapılan telafi saatleri; tatil, sınav haftası, takvim ve program iptali borç değildir, taşınan oturumun telafisi borcu kapatır. Hesap D08 ve D10'da (D08-B15, D10-B19); D02 alanları baştan taşır.
+
+D02.open_points[7].recommendation: Yönetici ders listesinde kod, ad, hoca, birim, p, süre ve durum görür; öğrenci listesi, yoklama ve kafa sayısı görmez (D01-B03 ile aynı). Uç bu kurala göre yazılır.
+
+D02.open_points[9].recommendation: Derste hocanın açtığı ayar, başlamamış oturumlara kopyalanır; o oturumda QR hiç gösterilmediyse Aşama 1 kuralı uygulanır (D11-B01 üçüncü seçenek, kararı D07 ve D11 verir). Sütunlar baştan var; ayarı true yapan istek bileşim kökünden gelen QR ayarı bayrağı kapalıyken DERSLER_QR_AYARI_KAPALI alır.
+

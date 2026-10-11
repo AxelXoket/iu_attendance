@@ -1,0 +1,105 @@
+===== D05-P04 Yaprak: kayıt okuma, kilitleme, sayılan seçimi ve karar yazımı
+tables : []
+endpoints : []
+jobs : []
+exports : ["kayitGetir", "kayitlariKilitle", "oturumKayitlari", "sayilanKayitlar", "kararSutunlariniYaz"]
+tests : ["Karar değişince sayılan yeniden seçilir", "Onay girdisi doldurulur ve boşaltılır", "Kendi beyanı onaysız süzgeci", "Ders ve etiket süzgeci", "Modül sınırı", "İlk kesin karar bir kez yazılır"]
+notes : "D07, D08 ve D09'un beklediği yaprak işlevleri, (oturum, öğrenci) çift kilidi ve sayılanın kilit altında yeniden seçimi yalnız izinli yaprak içe aktarmalarıyla yazılır; kurucuyla kurulan satırlarda sayılan, onay, süzgeç ve sorgu planı senaryoları, gerçek veritabanında karar sürümü özellik testi (numRuns 300) ve D13 modül sınırı testiyle sınanır. Yalnız tabloları, sayilan.ts'i (çekirdek girişini değil) ve gerçekten çağırdığı üç dış işlevi bekler: kararSutunlariniYaz devam işini D08.devamHesaplaIsiKoy ile, öğrenci sürümünü D06.ogrenciDurumuDegisti ile yazar. Saat eşlemesi, imza ve gönderim kodu bu paketten sonra ve ona paralel gelir."
+===== D08-P08 Saklanan durumun okumaları, dinleyiciler ve saklama işleyicisi
+tables : []
+endpoints : []
+jobs : []
+exports : []
+tests : ["Saklama"]
+notes : "indirme.ts D06 öğrenci indirme kaynağını (teyitli hesaba yalnız verilen sürümden sonra değişen ders satırları, pasif ders silindi satırı) ve ogrenciDevamDurumu okumasını (kişi kimliği D01.ogrenciHesabiGetir ile numaraya) yazar; dinleyiciler.ts D02 oturum üretimi, D03 liste değişikliği ve D04 oturum kapanışı dinleyicilerini (devamHesaplaIsiKoy ile) ve kilit adımını (devam_sonuclari.kilit_ani yazımı ve KILIT işi) yazar, kayıtlarını eklenti yapar; saklama.ts devam.donem_verisi işleyicisini yazar. Üçü hesabı beklemez; böylece eklenti ve dış yüz canlı hesabın hemen arkasından kurulur. saklama.feature işleyiciyi D12.saklamaIsleyicisiKaydet ile kendisi kaydedip kilit adımıyla damgalanan satırlarda D12.saklamaIsleyicisiniCalistir ile kilit anına göre parti parti silmeyi, CASCADE'i, sınırdan 1 ms sonraki ve boş satırın kalmasını ve yoklama_isci'nin geçmiş tablosunda 42501 almasını denetler; indirme senaryoları iş çalıştırdığı için D08-P16'dadır."
+===== D11-P06 Çekirdek: yuva seçimi, eşleştirme QR ve dış yüz
+tables : []
+endpoints : []
+jobs : []
+exports : []
+tests : ["Yuva seçimi (hoca, yuva, gün) tekilliğini korur", "Ortak kural mutasyonları öldürülür"]
+notes : "(hoca, rakam, gün) tekilliğini koruyan yuva seçimi, IUY:E1: önekli eşleştirme QR içeriği ve bütün çekirdeği dışa veren index.ts yazılır (index.ts öbür dört çekirdek paketini yeniden dışa verdiği için onları bekler); 2.000 koşulu fast-check durum makinesiyle ve çekirdeğin ortak kural mutantlarını öldüren haftalık Stryker koşusuyla denetlenir."
+===== D01-P06 Oturum servisi ve kök oturum kancası
+tables : []
+endpoints : []
+jobs : []
+exports : ["oturumDogrula", "oturumlariKapat"]
+tests : ["Telefon oturumu 30 günde biter, kullanımla uzamaz", "Panel oturumu 1 saat işlemsizlikte ve 24 saatte biter", "Olay komutu bütün personel oturumlarını kapatır"]
+notes : "Oturum açma, üç oturum sınırı (kişi satırı kilidinde), telefon yenilemesi, kısıtlı değişim oturumu, kapatma ve oturumlariKapat ile kökteki oturumDogrula kancası yazılır; kanca son kullanımı kendi kısa işleminde yazar. kanca.test.ts sahte saatle telefon ve panel sürelerini, X-Arka-Plan başlığını, kapanmış cihazın oturumunu ve oturumlariKapat'tan sonra olay_komutu nedenini denetler."
+===== D07-P07 Kanıt ölçütleri, doğrulama değeri ve kanıt arayüzü
+tables : []
+endpoints : []
+jobs : []
+exports : ["dogrulamaDegeriniTuket", "cihazKanitiniDogrula", "cihazDogrulanmadiMi"]
+tests : ["Android kanıt ölçütü tablosu"]
+notes : "Android ve App Attest ölçütlerini core'da, değer üretimini ve dogrulamaDegeriniTuket'i deger.ts'te, CihazDogrulayici arayüzünü, bağlama imzası denetimini, cihazKanitiniDogrula ve cihazDogrulanmadiMi'yi dogrulayici.ts'te yazar. D01'in beklediği üç dış yüz işlevi yalnız tablolar, meydan okuma ve seri numarası paketleriyle D04 ve D15'in erken işlevlerini bekler; test dünyasını, karar ve saklama paketlerini beklemez (cihazDogrulamaSonucunuYaz eklenti seçeneğiyle gelir, D01 içe aktarılmaz). Ölçüt tablosu Vitest ile koşar; sunucu yolu D07-P12'nin cihaz senaryolarında sınanır."
+===== D10-P08 Okuma işlemi, okunan tablolar, kaynak yetkisi ve geçici nedenleri
+tables : []
+endpoints : []
+jobs : []
+exports : []
+tests : ["Büyüyebilen kodlar x-extensible-enum taşır", "Okunan yabancı sütunlar şemada var", "Rapor işlemi yazamaz"]
+notes : "okuma-islemi.ts READ ONLY ve REPEATABLE READ işlemi süre bütçesi ve isteğe bağlı rapor okuma havuzuyla açar, okunan-tablolar.ts okuma istisnasındaki sorguları tabloları yazan modüllerin tipli tablolarıyla, yetki.ts yalnız 'hoca' sonucunun kabulünü, yönetici kapsamını ve varlık sızdırmayan 404 RAPORLAR_BULUNAMADI kararını toplar; sunucu gecicilik.ts çağıranın verdiği D08 satırlarından ve hücrelerinden, okunan-tablolar.ts kafa sayısı işareti ve kilitten sonra ulaşan kayıt okumalarından, D02.oturumlariGetir cevapsız listesinden ve D06.gondermeSuresiSonu ile süren gönderme sürelerinden neden sayılarını core gecicilik.ts sırası ve süzgeciyle toplar. gecicilik.ts D08 dış yüzünü çağırmaz (D08 satır tipleri sözleşmeden gelir), bu yüzden ders raporu ve AKSİS özeti paketleri birbirini beklemeden aynı toplayıcıyı kullanır; neden sayıları o iki paketin senaryolarında doğrulanır. rapor-sozlesmesi.feature EXPLAIN, 25006 ve x-extensible-enum senaryolarıyla, bütün rapor adımlarını taşıyan rapor-adimlari.ts üzerinden denetler."
+===== D14-P09 Süreç içi gönderici, e-posta dış yüzü, D14 kancaları ve şablon senaryoları
+tables : []
+endpoints : []
+jobs : []
+exports : ["epostaKur", "epostaGonder", "epostaSiniriDenetle", "smtpTasiyicisi"]
+tests : ["Giriş bildirimi İstanbul saatini Türkçe yazar", "Cihaz etiketindeki bağlantı e-postaya girmez"]
+notes : "Deneme beklemeli, kapasite sınırlı ve kapanışlı süreç içi gönderici, epostaGonder ile epostaSiniriDenetle'yi bağlayan ve ayarları denetleyen epostaKur, smtpTasiyicisi'ni de dışa veren dış yüz, D12 test veritabanı yardımcılarıyla veritabanını, epostaKur'u ve sahte posta kutusunu kurup her senaryodan önce sıfırlayan D14 kancaları ve ortak e-posta adımları yazılır. eposta-sablon.feature TestClock ile giriş bildirimi metnini ve cihaz etiketi kuralını denetler; koruyucu bozma burada denenir: bağlantı süzgeci kaldırılınca 'Cihaz etiketindeki bağlantı' kırmızı. Uygulamanın tamamını ve iş kuyruğunu beklemez."
+===== D02-P03 Oturum üretim planı
+tables : []
+endpoints : []
+jobs : []
+exports : []
+tests : ["Üretim planı deterministik ve idempotenttir", "Tatilde ve ders yapılmayan sınav haftasında planlı oturum kalmaz", "Geçmiş oturuma dokunulmaz, hoca iptali geri gelmez", "Oturum sayısı gün gün sayımla eşittir", "Ortak kural paketi mutasyon kapısı"]
+notes : "Programdan dönemin bütün oluşumlarını çıkaran ve yalnız başlamamış oturumların farkını (eklenecek, güncellenecek, iptal, geri alınacak) veren deterministik plan işlevi takvim kurallarının üstüne yazılır, iptal nedeni ve oturum türü tipleri sözleşmeden gelir; numRuns 1000 özellikleri, satır ve dal kapsamı yüzde 90 ve packages/core/src/dersler üzerinde Stryker kırma eşiğiyle denetlenir."
+===== D11-P08 Altyapı: ayarlar, kuyruklar, dinleyici kaydı, kilitler ve denetim
+tables : []
+endpoints : []
+jobs : []
+exports : ["gosterimKaydiDinleyicisiKaydet"]
+tests : ["Kilit sarmalayıcısı anahtarları katman sırasıyla tek çağrıda alır", "Gösterim kaydı dinleyicisi aynı adla iki kez kaydedilemez"]
+notes : "Ayarlar (projeksiyonAyarSemasi tipi), üç KuyrukTanimi (stately, exclusive, stately), gosterimKaydiDinleyicisiKaydet kayıt defteri, katman sıralı danışma kilidi sarmalayıcısı ve PROJEKSIYON_DENETIM_OLAYLARI ile denetim yazıcısı yazılır; uçlar, kanıt ve işler bunları ortak kullanır. Eklenen kilitler.test.ts D12 kilidini saran casusla tek çağrıyı ve katman sırasını, eklenen dinleyiciler.test.ts aynı adın ikinci kaydının reddini sınar."
+===== D06-P06 Öğe dağıtıcısı, danışma anahtarları ve gönderim test dili
+tables : []
+endpoints : []
+jobs : []
+exports : []
+tests : ["İşleyicide kısıt hatası yalnız o öğeyi düşürür", "Geçici çakışma yalnız parçayı bekletir", "İşleyici sonuç sözleşmesi"]
+notes : "Parçalı SAVEPOINT dağıtıcısı (ardışık aynı tür grupları, 50 öğelik parçalar, hızlı ve yedek yol, geçici kod ayrımı, bütçe denetimi, sonuç sözleşmesi), işleyicilerin kilitAnahtarlari kancalarından gelen anahtarları esitleme:kurulum_siniri anahtarıyla birleştiren saf işlevler (danisma-anahtarlari.ts; DanismaAnahtari tipi D12 sözleşmesinden), sahte işleyici ve sahte kaynak kurucuları ile kaynak sözleşme denetimi yardımcısı (support/kurucular/esitleme.ts; kaynağı kaydeden modüller kendi kaynak testlerinde çağırır, geç ihtiyacı yoktur) ve paket kuran, sahte işleyici kaydeden, dağıtıcıyı süren gönderim adımları yazılır. dagitim-hatalari.feature kısıt hatası, geçici çakışma ve sonuç sözleşmesi dallarını sahte işleyicilerle ve sorgu günlüğüyle sınar. Bütçe dalı ve danışma anahtarlarının tek çağrısı gönderim ucu hazır olunca P12 içinde sınanır."
+===== D06-P07 Kurulum satırı, karar teslimi, iz, ulaşma makbuzu ve ikinci çapa bağlamı
+tables : []
+endpoints : []
+jobs : []
+exports : []
+tests : ["Teslim bilgisi"]
+notes : "İki ucun ortak parçaları yazılır: kurulum satırının açılması, kişi başına 20 kurulum sınırı ve sayım anahtarı, 2 saniyelik kilit beklemesi, son temas ve su seviyesi yazımı, kişinin D06 satırlarını silme; karar teslimi sunum ve onay yazımı; gönderim ve indirme log satırı; ulaşma makbuzunun üretimi ve doğrulanması (kid anahtarı eklenti seçeneğinden); öğe başına ikinci çapa bağlamı (yokNedeni D04 sabitlerinden). kurulum.ts hata fırlatmaz: MESGUL, SINIR, ACILAMAZ ve BASKA_HESABIN sonuçlarını birlik tipiyle döner, uçlar bunları D13.uygulamaHatasi ile ESITLEME_KURULUM_ hatalarına çevirir; bu yüzden paket D13 api dış yüzünü beklemez. son-temas.feature kararTeslimAni dönüşünün üç durumunu ve sunan kurulumun son temas anını teslim.ts ile kurulum.ts işlevlerinin yazdığı satırlar üzerinden doğrular. Uçların son temas yazımı, 403 ve 503 dönüşleri P11, ulaşma makbuzu P14, ikinci çapa bağlamı P15 içinde uçtan sınanır."
+===== D09-P04 Yetki, imleç, toplu işleyici ve test desteği
+tables : []
+endpoints : []
+jobs : []
+exports : []
+tests : ["Toplu işleyici kanonik sırayla işler, anahtarları baştan tek çağrıda alır ve 40P01'de öğeyi bir kez yeniden dener"]
+notes : "Her uç paketinin ortak parçaları tek erken pakette: yetki.ts dersin hocası ve yönetici kapsam kuralı, imlec.ts opak keyset imleci, toplu-isleyici.ts kanonik sıra, baştan danışma anahtarları, öğe SAVEPOINT'i ve tek yeniden deneme ile zincir anahtarı üreteci (duzeltmeler:zincir:<oturumId>:<listeSatiriId>, sorun bildirimi öğesi de kullanır); kurucular D09 satır kurucularını, denetim-adimlari ortak denetim adımlarını verir. Düzeltme ve karar paketleri birbirini beklemesin diye toplu işleyici düzeltme servisinden ayrıldı; sahte işlemle (sahte 40P01 dahil) birim testi veritabanı istemez."
+===== D05-P05 Gönderim yardımcıları: saat sütunları, çekirdek girişi, kilit anahtarları ve denetim sınırı
+tables : []
+endpoints : []
+jobs : []
+exports : []
+tests : ["Saat sonucu sütun gidiş dönüşü", "Denetim olayı sınırı"]
+notes : "Kayıt işleyicisinin yardımcıları yaprağa paralel yazılır: SaatSonucu sütun eşlemesi ve çekirdek girişi (zarf, karşılaştırma, sayılan, gerekçe, panel ve saat dosyalarını dışa verir, örnek zarflar girmez), kilitAnahtarlari kancası (gövdeyi imzadan önce çözer, yalnız paketin kişisinin çiftine yoklamaCiftAnahtari, D07.kararAnahtarlari ve D11.qrKilitAnahtarlari anahtarlarını verir), işlem önbelleği (aynı işlemde tekrarlanan okumaları bir kez yapan genel bellek; okunan işlevleri P10 verir) ve (cihaz, gerekçe, İstanbul günü) başına 20 olaylık denetim sınırı. Saat gidiş dönüşü gerçek veritabanında D04 saatSonucu girdileriyle (numRuns 500), denetim sınırı 25 imzalı olayla ve sahte saatin ertesi gününe geçişle sınanır; kancanın paket içi davranışı P10 senaryolarında koşar."
+===== D05-P06 İmza ve bağ denetimi, kayıtlı örnek zarflar
+tables : []
+endpoints : []
+jobs : []
+exports : []
+tests : ["Kayıtlı örnek zarflar"]
+notes : "Android P-256, Secure Enclave ve App Attest imzalarının gelen baytlar üzerinde doğrulanması (anahtar etkinliğine bakmadan D01.cihazAnahtariGetir ile) ve anahtar, cihaz, öğrenci ve oturum bağ denetimi yazılır, kayıtlı örnek zarflar packages/core'a eklenir; üç tür örnek zarfın çekirdek ayrıştırmasında ve sunucu doğrulamasında aynı sonucu vermesi ve tek bayt değişince YOKLAMA_IMZA_GECERSIZ ile sınanır. Yaprağı ve tabloları beklemez, yalnız P01'in zarf ayrıştırmasını kullanır."
+===== D02-P06 Yetki, liste sorguları ve çakışma ucu
+tables : []
+endpoints : ["GET /v1/dersler/{dersId}/cakismalar"]
+jobs : []
+exports : []
+tests : ["Yetki yardımcısı: başka hocanın dersi ve kapsam dışı yönetici DERSLER_BULUNAMADI alır, inceleme hesabı deneme dışı derste reddedilir", "Çakışma işleyicisi sahte liste kaynağıyla kesişen saati verir, bitişik saati vermez ve 2000 satırda API_SONUC_COK_BUYUK fırlatır"]
+notes : "Kaynak ve inceleme hesabı yetki yardımcısı (dersYetkisi ve D01.yetkiDenetle), başka modüle bağlanmayan liste sorguları (hoca adı D01.kisiGetir'den) ve kayıtlı liste kaynağının etkin satırlarıyla numara ve isim döndürmeyen çakışma ucu işleyicisi yazılır; test dosyası işleyicileri geçici test veritabanında doğrudan çağırır, uygulama kurulmaz."

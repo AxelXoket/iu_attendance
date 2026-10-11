@@ -1,0 +1,469 @@
+{
+ "id": "D04",
+ "packages": [
+  {
+   "id": "D04-P01",
+   "title": "Saat arayüzü ve İstanbul yardımcıları",
+   "files": [
+    "packages/core/src/saat/saat.ts",
+    "apps/server/src/infra/saat/index.ts",
+    "apps/server/src/infra/saat/sistem-saati.ts",
+    "apps/server/src/infra/saat/istanbul.ts",
+    "apps/server/src/infra/saat/istanbul.test.ts",
+    "apps/server/test/support/sahte-saat.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "simdi",
+    "istanbulTarihi",
+    "istanbulAni",
+    "istanbulGunSonuAni",
+    "duvarSaatiFarkiMs"
+   ],
+   "needs": [],
+   "tests": [
+    "Saat dilimi bağımsızlığı ve İstanbul yardımcıları"
+   ],
+   "depends_on": [],
+   "size": "S",
+   "notes": "Kural anlarının tek kaynağı Saat arayüzü, sistem saati, duvar saati farkı, pg-boss saatine bağlı sahte saat ve İstanbul tarih yardımcıları hiçbir modüle bağlanmadan yazılır; istanbul.test.ts yaz saatli ve bugünkü örnekleri TZ=UTC ve TZ=Europe/Istanbul altında iki kez koşar."
+  },
+  {
+   "id": "D04-P02",
+   "title": "Saat sözleşmesi ve belge biçimi",
+   "files": [
+    "packages/contracts/src/saat.ts",
+    "packages/core/src/saat/sabitler.ts",
+    "packages/core/src/saat/tipler.ts",
+    "packages/core/src/saat/base64url.ts",
+    "packages/core/src/saat/belge.ts",
+    "packages/core/src/saat/belge.test.ts",
+    "packages/core/src/saat/belge-ornekleri.json"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "ILK_CAPA_DURUMLARI",
+    "IKINCI_CAPA_DURUMLARI",
+    "IKINCI_CAPA_YOK_NEDENLERI",
+    "ILK_CAPA_TELEFON_BILDIRIMLERI",
+    "SAAT_DURUMLARI",
+    "SAAT_KAYNAKLARI",
+    "PENCERE_SONUCLARI",
+    "KAPANIS_NEDENLERI",
+    "DEGISIKLIK_TURLERI",
+    "SAAT_DENETIM_OLAYLARI",
+    "SAAT_ROTALARI",
+    "PENCERE_SURESI_OGESI",
+    "ERKEN_KAPATMA_OGESI"
+   ],
+   "needs": [
+    "D13.CihazId",
+    "D13.KisiId",
+    "D13.rotaTanimla",
+    "D13.ogeTuruTanimla",
+    "D13.genisleyenEnum",
+    "D13.hataKodlariTanimla",
+    "D13.anSemasi"
+   ],
+   "tests": [
+    "Belge biçimi kayıtlı örnekle aynı"
+   ],
+   "depends_on": [],
+   "size": "M",
+   "notes": "packages/contracts/src/saat.ts (kod sabitleri, denetim olayları, SAAT_ROTALARI, iki öğe şeması, SAAT_ hata kataloğu) ile çekirdeğin sabitleri, tipleri, base64url kodlayıcısı ve 82 baytlık belge biçimi yazılır; belge.test.ts kayıtlı örnek belgeyi Buffer ve atob silinmiş ortamda bayt bayt denetler."
+  },
+  {
+   "id": "D04-P03",
+   "title": "Çapa aralığı ve saat sonucu",
+   "files": [
+    "packages/core/src/saat/capa.ts",
+    "packages/core/src/saat/sonuc.ts",
+    "packages/core/src/saat/capa.test.ts",
+    "packages/core/src/saat/sonuc.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [],
+   "tests": [
+    "Çapa aralığı gerçek anı kapsar",
+    "Pay plan formülüne uyar",
+    "7 gün sınırı iki çapada da geçerli",
+    "10 saniyeden uzun belge isteği çapa kurmaz",
+    "İki çapanın birleşimi",
+    "Ulaşma anı denetimi",
+    "Tahmin yalnız kaynak YOK iken boş",
+    "Başka öznenin belgesi çapa kurmaz"
+   ],
+   "depends_on": [
+    "D04-P02"
+   ],
+   "size": "M",
+   "notes": "İleri ve geri çapa aralığı (100 ppm kayma payı) ile iki çapayı birleştiren saf saatSonucu yazılır; capa.test.ts ve sonuc.test.ts sabitleri içe aktararak fast-check özellikleri ve sınır tablolarıyla denetler."
+  },
+  {
+   "id": "D04-P04",
+   "title": "Pencere hesabı ve çekirdek girişi",
+   "files": [
+    "packages/core/src/saat/pencere.ts",
+    "packages/core/src/saat/program.ts",
+    "packages/core/src/saat/pencere.test.ts",
+    "packages/core/src/saat/program.test.ts",
+    "packages/core/src/saat/index.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "SaatOznesi",
+    "saatSonucu",
+    "capaAraligi",
+    "pencereHesapla",
+    "pencereIcindeMi",
+    "pencereDurumu",
+    "belgeCoz",
+    "belgeImzaGirdisi",
+    "KAYMA_PPM",
+    "BELGE_EN_COK_YAS_MS",
+    "BELGE_ISTEK_EN_COK_MS",
+    "BELGE_BAYT",
+    "BELGE_KARAKTER",
+    "DEGER_BAYT"
+   ],
+   "needs": [],
+   "tests": [
+    "Pencere sınırı öğrenci lehine ve yarı açık",
+    "Pencere hesabı varış sırasından bağımsız",
+    "Aynı kurulumun değişiklikleri sıra düzeninde",
+    "Değişiklik geçmişe işlemez",
+    "Kayıt anındaki süre ayarı",
+    "Eski programla gelen kayıt",
+    "Saat çekirdeği mutasyon testi"
+   ],
+   "depends_on": [
+    "D04-P01",
+    "D04-P02",
+    "D04-P03"
+   ],
+   "size": "L",
+   "notes": "Varış sırasından bağımsız pencereHesapla, öğrenci lehine pencereIcindeMi, pencereDurumu, eski program penceresi ve dış modüllerin çekirdeği aldığı index.ts girişi yazılır (çekirdek dışa verimleri bu yüzden bu pakettedir); özellik testleri ve en az yüzde 90 Stryker eşiğiyle denetlenir."
+  },
+  {
+   "id": "D04-P05",
+   "title": "Saat tabloları ve pencere servisi",
+   "files": [
+    "apps/server/src/modules/saat/tablolar.ts",
+    "apps/server/migrations/20261012080000_saat_pencere_tablolari/migration.sql",
+    "apps/server/migrations/20261012080000_saat_pencere_tablolari/snapshot.json",
+    "apps/server/src/modules/saat/pencere-servisi.ts",
+    "apps/server/src/modules/saat/pencere-kilidi.ts",
+    "apps/server/src/modules/saat/surum-damgasi.ts",
+    "apps/server/test/features/saat/pencere-plani.feature",
+    "apps/server/test/steps/saat/pencere-adimlari.ts"
+   ],
+   "tables": [
+    "oturum_pencereleri",
+    "pencere_degisiklikleri",
+    "saat_esitleme_kesintileri"
+   ],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D12.tabloYardimcilari",
+    "D12.kisitAdi",
+    "D12.Islem",
+    "D02.dersGetir",
+    "D02.oturumGetir",
+    "D02.OturumUretimOlayi",
+    "D02.OTURUM_DURUMLARI",
+    "D06.surumDamgasiIste",
+    "D06.surumAl"
+   ],
+   "tests": [
+    "Oturum üretimi pencere açar",
+    "Bileşik yabancı anahtar dönemi korur"
+   ],
+   "depends_on": [
+    "D04-P01",
+    "D04-P02",
+    "D04-P04"
+   ],
+   "size": "L",
+   "notes": "Üç tablonun Drizzle tanımı ve göçü (bileşik yabancı anahtarlar, sözleşme sabitlerinden CHECK listeleri), pencere kilidi, sürüm damgası, pencereleriHesapla, pencereGetir ve FOR KEY SHARE ile okuyan pencereSonucu yazılır; pencere-plani.feature D15 test dünyasında denetler ve pencere adımları sonraki paketlerin senaryolarınca da kullanılır."
+  },
+  {
+   "id": "D04-P06",
+   "title": "Eşitleme denetimi ve kesinti kaydı",
+   "files": [
+    "apps/server/src/modules/saat/esitleme-durumu.ts",
+    "apps/server/src/modules/saat/kesinti-servisi.ts",
+    "apps/server/src/modules/saat/kuyruklar.ts",
+    "apps/server/src/jobs/saat/saat-esitleme-denetimi.ts",
+    "apps/server/test/features/saat/esitleme-kesintisi.feature",
+    "apps/server/test/steps/saat/esitleme-adimlari.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [
+    "saat_esitleme_denetimi"
+   ],
+   "exports": [],
+   "needs": [
+    "D12.islem",
+    "D14.isGonder",
+    "D14.KuyrukTanimi",
+    "D15.saatEsitlemeDurumu",
+    "D15.log",
+    "D13.uygulamaHatasi"
+   ],
+   "tests": [
+    "Bozuk süreç varken kesinti kapanmaz",
+    "Tek süreçte kesinti sonraki sağlıklı okumada kapanır",
+    "Yazılamayan açılış kaybolmaz",
+    "Kesinti sonrası güvenilirlik bilgisi"
+   ],
+   "depends_on": [
+    "D04-P01",
+    "D04-P05"
+   ],
+   "size": "L",
+   "notes": "Süreç içi eşitleme durumu, api sürecindeki 5 saniyelik denetim, LEAST ile açılan tek açık kesinti satırı, 15 saniye kuralıyla koşullu kapanış ve yeniden değerlendirme işini kuyruğa koyma yazılır; esitleme-kesintisi.feature iki sahte API süreci ve sahte chrony dosyasıyla denetler."
+  },
+  {
+   "id": "D04-P07",
+   "title": "Saat belgesi servisi ve uçlar",
+   "files": [
+    "apps/server/src/modules/saat/anahtarlar.ts",
+    "apps/server/src/modules/saat/belge-servisi.ts",
+    "apps/server/src/modules/saat/rotalar.ts",
+    "apps/server/test/features/saat/saat-belgesi.feature",
+    "apps/server/test/steps/saat/belge-adimlari.ts"
+   ],
+   "tables": [],
+   "endpoints": [
+    "POST /v1/saat/belge",
+    "GET /v1/saat/pencereler/{oturumId}"
+   ],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D15.gizliAnahtar",
+    "D13.uygulamaHatasi",
+    "D02.dersYetkisi"
+   ],
+   "tests": [
+    "Ele geçirilmiş anahtarla belge çapa kurmaz",
+    "Saat belgesi ucu",
+    "Belge ucu yalnız Bearer oturumuyla",
+    "Eşitleme bozukken belge verilmez",
+    "Belge servisi veritabanına dokunmaz",
+    "Eski kid doğrulanır, yabancı kid ve bozuk MAC reddedilir",
+    "Belge ucu hız sınırı"
+   ],
+   "depends_on": [
+    "D04-P04",
+    "D04-P05",
+    "D04-P06"
+   ],
+   "size": "M",
+   "notes": "Saat belgesi anahtar halkası, veritabanına dokunmayan saatBelgesiVer ve saatBelgesiDogrula ile belge ve pencere uçlarının işleyicileri yazılır; saat-belgesi.feature Bearer kimliği, hız sınırı, eşitleme bozukken 503 ve kid senaryolarıyla denetler."
+  },
+  {
+   "id": "D04-P08",
+   "title": "Ders içi pencere değişikliği",
+   "files": [
+    "apps/server/src/modules/saat/degisiklik-isleyicisi.ts",
+    "apps/server/src/modules/saat/dinleyiciler.ts",
+    "apps/server/test/features/saat/pencere-degisikligi.feature",
+    "apps/server/test/features/saat/eski-program.feature",
+    "apps/server/test/features/saat/pencere-ucu.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D02.dersGetir",
+    "D02.dersYetkisi",
+    "D02.kilitDurumu",
+    "D02.birimDonemiGetir",
+    "D06.gondermeSuresiSonu",
+    "D09.denetimeYaz"
+   ],
+   "tests": [
+    "Taşınan oturumda önceki erken kapatma etkisiz",
+    "D02 olayındaki oturum baştan hesaplanır",
+    "Erken kapatma basma anında kapatır",
+    "Ters sırada ulaşan değişiklikler",
+    "Aynı öğe iki kez",
+    "Yetki: sahip, önceki sahip, yönetici",
+    "Süre sınırları",
+    "Kilitten sonra ulaşan değişiklik yalnız saklanır",
+    "Deneme dersi ve takvimsiz birim",
+    "Çapası kurulamayan hoca işlemi",
+    "Pencere ucu yetkisi",
+    "Denetim olayları kayıtlı ve birimli"
+   ],
+   "depends_on": [
+    "D04-P04",
+    "D04-P05",
+    "D04-P07"
+   ],
+   "size": "L",
+   "notes": "pencere_suresi ve erken_kapatma öğe işleyicisi (kimlik tekrarı, yetki, süre sınırı, kilit, çapa, geçmişe işlememe, denetim olayı) ve üç dinleyici kaydı yazılır; pencere-degisikligi, eski-program ve pencere-ucu senaryolarıyla denetlenir."
+  },
+  {
+   "id": "D04-P09",
+   "title": "Pencereler indirme kaynağı",
+   "files": [
+    "apps/server/src/modules/saat/indirme-kaynagi.ts",
+    "apps/server/test/features/saat/pencere-indirme.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [],
+   "tests": [
+    "Şube eklenen oturumun penceresi yeni şubeye iner",
+    "Pencereler indirmesinin kapsamı"
+   ],
+   "depends_on": [
+    "D04-P05"
+   ],
+   "size": "S",
+   "notes": "Şube ve sürüm süzgeçli pencereler indirme kaynağı yazılır; pencere-indirme.feature öğrenci ve hoca kapsamını, başka şubenin inmediğini ve şube eklenince yeniden damgalanan satırı denetler."
+  },
+  {
+   "id": "D04-P10",
+   "title": "Saklama, saat eklentisi ve dış yüz",
+   "files": [
+    "apps/server/src/modules/saat/saklama.ts",
+    "apps/server/test/features/saat/saat-saklama.feature",
+    "apps/server/src/modules/saat/eklenti.ts",
+    "apps/server/src/modules/saat/index.ts",
+    "apps/server/src/modules/saat/sozlesme.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "saatBelgesiVer",
+    "saatBelgesiDogrula",
+    "pencereleriHesapla",
+    "pencereGetir",
+    "pencereSonucu",
+    "esitlemeSaglikliMi",
+    "kesintiAraliklari",
+    "oturumKapandiDinleyicisiKaydet",
+    "kesintiKapandiDinleyicisiKaydet",
+    "pencereDegistiDinleyicisiKaydet",
+    "saatEklentisi",
+    "SaatEklentisiSecenekleri"
+   ],
+   "needs": [
+    "D02.oturumUretimDinleyicisiKaydet",
+    "D06.ogeTuruKaydet",
+    "D06.indirmeKaynagiKaydet",
+    "D12.saklamaIsleyicisiKaydet",
+    "D12.saklamaIsleyicisiniCalistir",
+    "D13.rotalariKaydet",
+    "D13.EklentiTemelSecenekleri",
+    "D13.TUM_OGE_TURLERI"
+   ],
+   "tests": [
+    "İstanbul çevirisi D02 SQL çevirisiyle aynı",
+    "Öğe işleyicisi D06 sözleşmesine uyar",
+    "Hoca hesabı silinince değişiklik izi kalır",
+    "Saklama sınıfı ve partisi",
+    "Kod değerleri BÜYÜK_HARF ve genişleyen enum",
+    "Eklenti birleşim kurallarına uyar",
+    "pencere_degisiklikleri yalnız eklenir"
+   ],
+   "depends_on": [
+    "D04-P05",
+    "D04-P06",
+    "D04-P07",
+    "D04-P08",
+    "D04-P09"
+   ],
+   "size": "M",
+   "notes": "saat.donem_verisi saklama partisi, D02, D06, D12 ve rota kayıtlarını yapan saatEklentisi ile modülün index.ts dış yüzü yazılır (modül dışa verimleri bu yüzden bu pakettedir); sozlesme.test.ts ve saat-saklama.feature birleşim, kod, öğe sözleşmesi ve saklama kurallarını denetler."
+  },
+  {
+   "id": "D04-P11",
+   "title": "Kapanış ve yeniden değerlendirme işleri",
+   "files": [
+    "apps/server/src/jobs/saat/index.ts",
+    "apps/server/src/jobs/saat/oturum-pencere-kapat.ts",
+    "apps/server/src/jobs/saat/esitleme-sonrasi-yeniden-degerlendir.ts",
+    "apps/server/test/features/saat/pencere-kapatma.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [
+    "oturum_pencere_kapat",
+    "esitleme_sonrasi_yeniden_degerlendir"
+   ],
+   "exports": [],
+   "needs": [
+    "D14.isTanimla",
+    "D12.islem",
+    "D15.uyariAc",
+    "D15.log"
+   ],
+   "tests": [
+    "Sürüm işlemin son adımında",
+    "Kapanış işi tekrar güvenli ve now() kullanmaz",
+    "Uzatma kapanmış pencereyi yeniden açar",
+    "Bir dinleyici hatası öbür kapanışları durdurmaz",
+    "İş tanımları D14 kurallarına uyar"
+   ],
+   "depends_on": [
+    "D04-P10"
+   ],
+   "size": "M",
+   "notes": "Dakikalık, partili ve satır başına geri dönüş noktalı oturum_pencere_kapat, imleçli esitleme_sonrasi_yeniden_degerlendir ve isler dizisi yazılır; pencere-kapatma.feature sahte saat ve D14 iki kez çalıştırma adımıyla denetler."
+  },
+  {
+   "id": "D04-P12",
+   "title": "Bütünleşik saat senaryoları",
+   "files": [
+    "apps/server/test/features/saat/saat-kurallari-kayit.feature",
+    "apps/server/test/features/saat/pencere-kilidi.feature",
+    "apps/server/test/support/kurucular/saat.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D15.kurucuTanimla",
+    "D13.uygulamaKur"
+   ],
+   "tests": [
+    "Duvar saati sıçraması belgeyi hemen durdurur",
+    "Öğrenci kaydı ile ders içi değişiklik yarışmaz",
+    "Tek açık kesinti ve tek yeniden değerlendirme",
+    "Yeniden değerlendirme partili ve kaldığı yerden",
+    "Yeniden değerlendirme işi aynı veriyle iki kez",
+    "Kayıt saat kuralları uçtan uca (@butunlesik)",
+    "Komşu CHECK listeleri D04 sabitleriyle aynı",
+    "Dinleyiciler iki süreçte aynı",
+    "Ders çıkışı yükü"
+   ],
+   "depends_on": [
+    "D04-P10",
+    "D04-P11"
+   ],
+   "size": "M",
+   "notes": "Saat veri kurucusu ile D05, D06 ve D07 hazır olunca koşan uçtan uca senaryolar (kayıt saat kuralları, yarışma, sıçrama, kesinti sonrası yeniden değerlendirme, komşu CHECK listeleri, iki süreçte dinleyiciler, ders çıkışı yükü) yazılır; @butunlesik etiketiyle bileşik uygulamada denetlenir."
+  }
+ ]
+}

@@ -1,0 +1,1507 @@
+{
+  "id": "D06",
+  "module": "esitleme",
+  "summary": "esitleme modülü telefonun ortak kuyruğunu tek uçtan (POST /v1/esitleme/gonderim) alır, her öğeyi türünün sahibine aynı veritabanı işleminde dağıtır ve her (kurulum, sıra) için tek defter satırı tutar; bozuk öğe paketi düşürmez, her öğeye KABUL, ZATEN_VAR, RET ya da TEKRAR_DENE döner. Kurulum, bir uygulama kopyasında bir hesabın kuyruğudur; kesintisiz son sıra her eşitlemede telefona bildirilir, yedekten dönüşte telefon sonrakileri yeniden gönderir ve imzalı ulaşma makbuzu ilk ulaşma anını korur. İndirme (GET /v1/esitleme/degisiklikler) tek sayaç satırından alınan sürümle artımlıdır; imleç nesli, genel ve kapsam sürümünü, öğrencinin durum sürümünü, yerel yapı sürümünü ve hesap özetini taşır, nesil, kapsam ya da yapı değişince baştan indir der ve gönderme kuyruğuna dokunmaz. Öğrencinin kendi kayıtları, kararları, düzeltmeleri ve devam durumu öğrenci başına sürümle iner; telefonun imleçle sakladığını bildirdiği sürüm, kararın telefona ulaştığı anı (sorun bildirme süresinin başı) yazar. Modül iş kuralı tutmaz: öğe işleyicileri ve indirme kaynakları sahip modüllerin eklentisinde ogeTuruKaydet ve indirmeKaynagiKaydet ile kaydolur.",
+  "tables": [
+    {
+      "name": "gonderim_defteri",
+      "purpose": "Her kurulumdan gelen her kuyruk öğesinin tek satırı (bütün öğe türleri). Kesintisiz son sıranın, sıra çakışmasının, tekrar gönderim sayısının ve sıra boşluğu ölçüsünün kaynağı. Öğenin içeriğini değil taşınmasını saklar; içerik öğe sahibinin tablosundadır.",
+      "columns": [
+        {
+          "name": "kurulum_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Kurulum (kurulumlar.kurulum_id); telefonun ürettiği UUIDv7."
+        },
+        {
+          "name": "sira",
+          "type": "bigint",
+          "null": false,
+          "default": "",
+          "note": "Kurulumun sırası: 1'den başlar, boşluksuz artar, dönemle sıfırlanmaz. JSON'da sayı (2^53 altında kalır)."
+        },
+        {
+          "name": "oge_kimligi",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "Öğenin UUIDv7 kimliği; yalnız zarfı çözülemeyen öğede (ESITLEME_OGE_GECERSIZ) boş."
+        },
+        {
+          "name": "oge_turu",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Öğe türü (ör. yoklama_kaydi); desene uymayan değer boş yazılır."
+        },
+        {
+          "name": "sonuc",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "KABUL, ZATEN_VAR, RET ya da TEKRAR_DENE. KABUL ve ZATEN_VAR olmuş satır başka sonuca dönmez."
+        },
+        {
+          "name": "gerekce",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "RET ve TEKRAR_DENE kodu: ESITLEME_ önekli ya da öğe sahibinin kodu. KABUL ve ZATEN_VAR'da boş."
+        },
+        {
+          "name": "ilk_gorulme_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Öğenin geldiği ilk paketin ulaşma anı (saat arayüzü, paket başına bir kez okunur)."
+        },
+        {
+          "name": "son_gorulme_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Öğenin geldiği son paketin ulaşma anı."
+        },
+        {
+          "name": "kabul_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Öğenin sunucuya ulaşma anı: ilk KABUL ya da ZATEN_VAR anı; geçerli ulaşma makbuzuyla yeniden gelen öğede makbuzdaki an. Ulaşma makbuzu bu anı imzalar."
+        },
+        {
+          "name": "gorulme_sayisi",
+          "type": "integer",
+          "null": false,
+          "default": "1",
+          "note": "Öğenin kaç pakette geldiği (tekrar gönderim ölçüsü)."
+        },
+        {
+          "name": "son_paket_kimligi",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Öğenin geldiği son paketin kimliği (iz)."
+        },
+        {
+          "name": "gonderen_uygulama_surumu",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Son gönderen isteğin X-Uygulama-Surumu değeri (en çok 32 karakter). Kaydı üreten sürüm kayıt metnindedir (D05)."
+        },
+        {
+          "name": "gonderen_guncelleme_kimligi",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "Son gönderen isteğin X-Guncelleme-Kimligi değeri (expo-updates updateId)."
+        }
+      ],
+      "indexes": [
+        "gonderim_defteri_kurulum_id_sira_pk: PRIMARY KEY (kurulum_id, sira)",
+        "gonderim_defteri_son_gorulme_ani_idx: (son_gorulme_ani); sira_boslugu_raporu'nun temizlik adımı ve günlük RET sayımı"
+      ],
+      "constraints": [
+        "gonderim_defteri_kurulum_id_fk: FOREIGN KEY (kurulum_id) REFERENCES kurulumlar (kurulum_id) ON DELETE CASCADE; iki tablo da D06'nın",
+        "gonderim_defteri_sira_ck: CHECK (sira BETWEEN 1 AND 9007199254740991)",
+        "gonderim_defteri_sonuc_ck: CHECK (sonuc IN ('KABUL', 'ZATEN_VAR', 'RET', 'TEKRAR_DENE')); liste OGE_SONUCLARI sözleşme sabitinden üretilir",
+        "gonderim_defteri_gerekce_ck: CHECK ((gerekce IS NULL) = (sonuc IN ('KABUL', 'ZATEN_VAR')) AND (gerekce IS NULL OR gerekce ~ '^[A-Z][A-Z0-9_]{2,63}$'))",
+        "gonderim_defteri_kabul_ani_ck: CHECK ((kabul_ani IS NOT NULL) = (sonuc IN ('KABUL', 'ZATEN_VAR')))",
+        "gonderim_defteri_oge_ck: CHECK ((oge_kimligi IS NOT NULL AND oge_turu ~ '^[a-z][a-z0-9_]{1,63}$') OR gerekce = 'ESITLEME_OGE_GECERSIZ')",
+        "gonderim_defteri_gorulme_ck: CHECK (gorulme_sayisi >= 1 AND son_gorulme_ani >= ilk_gorulme_ani)",
+        "gonderim_defteri_surum_ck: CHECK (gonderen_uygulama_surumu IS NULL OR char_length(gonderen_uygulama_surumu) <= 32)"
+      ]
+    },
+    {
+      "name": "kurulumlar",
+      "purpose": "Bir uygulama kopyasında bir hesabın kuyruğunun sunucudaki kalıcı izi (öğrenci ve personel): kesintisiz son sıra, en büyük sıra, son temas, bekleyen öğe sayısı, sürüm ve kanal, sıra boşluğu durumu. Kişisi açılışta yazılır, değişmez. Giriş güveninde kullanılmaz; tanınan cihaz kaydı değildir (teknik.html#sunucu-kimlik).",
+      "columns": [
+        {
+          "name": "kurulum_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Birincil anahtar: telefonun bu hesap için ürettiği UUIDv7 (X-Kurulum-Kimligi); sunucu üretmez."
+        },
+        {
+          "name": "kisi_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Kurulumun hesabı (kisiler.id, D01); satır açılırken isteğin doğrulanmış kişisinden yazılır, sonra değişmez."
+        },
+        {
+          "name": "rol",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "OGRENCI ya da PERSONEL; açılıştaki kişiden."
+        },
+        {
+          "name": "son_cihaz_id",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "Öğrencide son isteğin cihazı (oturumdan ya da paket imzasından; cihazlar.id, D01). Personelde boş."
+        },
+        {
+          "name": "platform",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "X-Platform; D13 sözleşmesindeki listede değilse boş."
+        },
+        {
+          "name": "kanal",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "X-Kanal; D13 sözleşmesindeki listede değilse boş."
+        },
+        {
+          "name": "uygulama_surumu",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "X-Uygulama-Surumu (en çok 32 karakter)."
+        },
+        {
+          "name": "guncelleme_kimligi",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "X-Guncelleme-Kimligi (expo-updates updateId)."
+        },
+        {
+          "name": "yapi_surumu",
+          "type": "integer",
+          "null": true,
+          "default": "",
+          "note": "Telefonun yerel veri yapısı sürümü (PRAGMA user_version); indirme isteğinden."
+        },
+        {
+          "name": "kesintisiz_son_sira",
+          "type": "bigint",
+          "null": false,
+          "default": "0",
+          "note": "En büyük n ki 1..n her sıra defterde bir satıra sahip; her eşitlemede sonSira olarak döner."
+        },
+        {
+          "name": "en_buyuk_sira",
+          "type": "bigint",
+          "null": false,
+          "default": "0",
+          "note": "Defterdeki en büyük sıra."
+        },
+        {
+          "name": "sira_ilerleme_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "kesintisiz_son_sira'nın son ilerlediği an; açık boşluğun yaşı buradan ölçülür."
+        },
+        {
+          "name": "bekleyen_oge_sayisi",
+          "type": "integer",
+          "null": false,
+          "default": "0",
+          "note": "Son temasta telefonun bildirdiği sonuçlanmamış öğe sayısı; gönderimde paketin TEKRAR_DENE öğeleri eklenir."
+        },
+        {
+          "name": "son_temas_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Son doğrulanmış gönderim ya da indirme anı (saat arayüzü); KARAR BEKLİYOR hesabının girdisi."
+        },
+        {
+          "name": "son_gonderim_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Son başarılı gönderimin anı."
+        },
+        {
+          "name": "son_indirme_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Son başarılı indirmenin anı."
+        },
+        {
+          "name": "acik_bosluk_sayisi",
+          "type": "integer",
+          "null": false,
+          "default": "0",
+          "note": "sira_boslugu_raporu'nun bulduğu eksik sıra sayısı (kesintisiz son sıranın üstünde)."
+        },
+        {
+          "name": "ilk_eksik_sira",
+          "type": "bigint",
+          "null": true,
+          "default": "",
+          "note": "İlk eksik sıra; boşluk yoksa boş."
+        },
+        {
+          "name": "bosluk_denetim_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Son boşluk denetiminin anı."
+        },
+        {
+          "name": "olusturma_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Satırın açıldığı an (saat arayüzü)."
+        }
+      ],
+      "indexes": [
+        "kurulumlar_kurulum_id_pk: PRIMARY KEY (kurulum_id)",
+        "kurulumlar_kisi_id_idx: (kisi_id); kurulumSonTemasi, kişi başına 20 kurulum sınırı ve hesap silme",
+        "Depolama: fillfactor 80. İndirmedeki son temas güncellemesi dizinli sütuna dokunmaz, HOT güncelleme kalır."
+      ],
+      "constraints": [
+        "kurulumlar_kisi_id_fk: FOREIGN KEY (kisi_id) REFERENCES kisiler (id)",
+        "kurulumlar_son_cihaz_id_fk: FOREIGN KEY (son_cihaz_id) REFERENCES cihazlar (id)",
+        "kurulumlar_rol_ck: CHECK (rol IN ('OGRENCI', 'PERSONEL') AND (rol = 'OGRENCI' OR son_cihaz_id IS NULL))",
+        "kurulumlar_sira_ck: CHECK (kesintisiz_son_sira >= 0 AND en_buyuk_sira >= kesintisiz_son_sira)",
+        "kurulumlar_sayilar_ck: CHECK (bekleyen_oge_sayisi BETWEEN 0 AND 100000 AND acik_bosluk_sayisi >= 0 AND (ilk_eksik_sira IS NULL OR ilk_eksik_sira > kesintisiz_son_sira))",
+        "kurulumlar_yapi_surumu_ck: CHECK (yapi_surumu IS NULL OR yapi_surumu BETWEEN 1 AND 10000)",
+        "kurulumlar_metin_ck: CHECK (char_length(coalesce(uygulama_surumu, '')) <= 32 AND char_length(coalesce(platform, '')) <= 16 AND char_length(coalesce(kanal, '')) <= 16)"
+      ]
+    },
+    {
+      "name": "degisiklik_sayaci",
+      "purpose": "Telefona inen bütün tabloların değişiklik sürümünü veren tek satırlık sayaç. surumAl satırı işlem sonuna kadar kilitler; bu yüzden sürümler yazma işlemlerinin bitiş sırasıyla verilir ve okuyucu henüz bitmemiş bir sürümün üstüne geçemez (teknik.html#kod-veri-modeli).",
+      "columns": [
+        {
+          "name": "id",
+          "type": "smallint",
+          "null": false,
+          "default": "1",
+          "note": "Tek satır; değeri her zaman 1."
+        },
+        {
+          "name": "surum",
+          "type": "bigint",
+          "null": false,
+          "default": "0",
+          "note": "Son verilen değişiklik sürümü; surumAl satırı kilitleyip bir artırır."
+        },
+        {
+          "name": "en_eski_gecerli_surum",
+          "type": "bigint",
+          "null": false,
+          "default": "0",
+          "note": "Genel sürümü bundan küçük imleç baştan indirir. Yalnız D06 göçüyle yükseltilir (ör. bir veri düzeltmesinden sonra herkese baştan indirme)."
+        }
+      ],
+      "indexes": [
+        "degisiklik_sayaci_id_pk: PRIMARY KEY (id)"
+      ],
+      "constraints": [
+        "degisiklik_sayaci_id_ck: CHECK (id = 1)",
+        "degisiklik_sayaci_surum_ck: CHECK (surum >= 0 AND en_eski_gecerli_surum BETWEEN 0 AND surum)",
+        "İlk göç tek satırı (1, 0, 0) ekler; satır silinmez."
+      ]
+    },
+    {
+      "name": "ogrenci_durum_surumleri",
+      "purpose": "Öğrenci başına durum sürümü: öğrencinin kendi kayıtları, kararları, düzeltmeleri, sorun bildirimleri ve devam durumu değişince aynı işlemde artar. Telefonun imleçle sakladığını bildirdiği en büyük sürüm karar teslim anının kaynağıdır. Genel sayaçtan ayrıdır; ders çıkışındaki gönderim yolu sıcak satır üretmez.",
+      "columns": [
+        {
+          "name": "kisi_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Öğrenci (kisiler.id, D01); birincil anahtar."
+        },
+        {
+          "name": "surum",
+          "type": "bigint",
+          "null": false,
+          "default": "0",
+          "note": "Öğrencinin kendi verisinin sürümü; ogrenciDurumuDegisti satırı kilitleyip bir artırır, satır yoksa 1 ile açar."
+        },
+        {
+          "name": "onaylanan_surum",
+          "type": "bigint",
+          "null": false,
+          "default": "0",
+          "note": "Telefonun imleçle sakladığını bildirdiği en büyük sürüm."
+        },
+        {
+          "name": "onay_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "onaylanan_surum'un son arttığı an (saat arayüzü)."
+        }
+      ],
+      "indexes": [
+        "ogrenci_durum_surumleri_kisi_id_pk: PRIMARY KEY (kisi_id)"
+      ],
+      "constraints": [
+        "ogrenci_durum_surumleri_kisi_id_fk: FOREIGN KEY (kisi_id) REFERENCES kisiler (id)",
+        "ogrenci_durum_surumleri_surum_ck: CHECK (surum >= 0 AND onaylanan_surum BETWEEN 0 AND surum)",
+        "ogrenci_durum_surumleri_onay_ck: CHECK ((onay_ani IS NULL) = (onaylanan_surum = 0))"
+      ]
+    },
+    {
+      "name": "karar_teslimleri",
+      "purpose": "Bir yoklama kaydının her karar sürümünün öğrencinin telefonuna sunulduğu ve telefonun sakladığını bildirdiği an. Sorun bildirme süresi (3 gün) bu andan başlar (plan.html#kararlar-supheli-kayit); karar değişince sürenin yeniden başlayıp başlamadığı D09'un kuralıdır.",
+      "columns": [
+        {
+          "name": "donem_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Kaydın dönemi; (donem_id, kayit_id) yoklama_kayitlari'na başvurur (teknik.html#veritabani-donem-alani)."
+        },
+        {
+          "name": "kayit_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Yoklama kaydının kimliği."
+        },
+        {
+          "name": "karar_surumu",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Kararın sürümü (D07 karar geçmişi numarası); öğrenci kaynağı (D05) verir."
+        },
+        {
+          "name": "kisi_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Kaydın öğrencisi (kisiler.id)."
+        },
+        {
+          "name": "sunulan_durum_surumu",
+          "type": "bigint",
+          "null": false,
+          "default": "",
+          "note": "Bu karar sürümünü taşıyan son sunumun öğrenci durum sürümü."
+        },
+        {
+          "name": "ilk_sunulma_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Karar sürümünün telefona ilk gönderildiği an."
+        },
+        {
+          "name": "son_sunulma_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Onaydan önceki son gönderim anı; cevap kaybolup yeniden sunulursa ilerler."
+        },
+        {
+          "name": "telefona_ulasti_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Telefonun sakladığı sunumun anı: onay gelince son_sunulma_ani yazılır, bir daha değişmez."
+        },
+        {
+          "name": "onay_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Onayı taşıyan isteğin anı (saat arayüzü)."
+        }
+      ],
+      "indexes": [
+        "karar_teslimleri_donem_id_kayit_id_karar_surumu_pk: PRIMARY KEY (donem_id, kayit_id, karar_surumu)",
+        "karar_teslimleri_kisi_id_idx: (kisi_id); onay güncellemesi ve hesap silme"
+      ],
+      "constraints": [
+        "karar_teslimleri_donem_id_kayit_id_fk: FOREIGN KEY (donem_id, kayit_id) REFERENCES yoklama_kayitlari (donem_id, id) ON DELETE NO ACTION; kayıt saklama silmesinde D06'nın işleyicisi önce bu satırları siler",
+        "karar_teslimleri_kisi_id_fk: FOREIGN KEY (kisi_id) REFERENCES kisiler (id)",
+        "karar_teslimleri_surum_ck: CHECK (karar_surumu >= 1 AND sunulan_durum_surumu >= 1)",
+        "karar_teslimleri_sunum_ck: CHECK (son_sunulma_ani >= ilk_sunulma_ani)",
+        "karar_teslimleri_teslim_ck: CHECK ((telefona_ulasti_ani IS NULL) = (onay_ani IS NULL) AND (telefona_ulasti_ani IS NULL OR (telefona_ulasti_ani = son_sunulma_ani AND onay_ani >= telefona_ulasti_ani)))"
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/v1/esitleme/gonderim",
+      "client": "telefon",
+      "auth": "Kişi isteğin kendisinden çözülür: geçerli oturum (Bearer; öğrenci ya da personel, D01.oturumDogrula) ya da ikinci çapa bölümünün D01'de kayıtlı bir cihaz anahtarıyla geçerli imzası (anahtar etkin, yenilenmiş, cihazı değişmiş ya da hesabı silinmiş olabilir). En az biri gerekir; ikisi de varsa aynı kişi, o kişi de kurulumun kişisi olmalı. Rota tablosunda kimlik ['cihaz-imzasi', 'oturum'] ve geçersiz Bearer kökte 401 değildir (D13-B06). Öğe düzeyinde türün rolü ve oturum isteği ayrıca aranır.",
+      "request": {
+        "X-Kurulum-Kimligi (başlık)": "UUIDv7, zorunlu: bu paketin kurulumu (bir kopyada bir hesabın kuyruğu). Yoksa ya da geçersizse 400 ESITLEME_KURULUM_KIMLIGI_GECERSIZ.",
+        "Authorization (başlık)": "Bearer oturum anahtarı, isteğe bağlı; yoksa paket imzası gerekir.",
+        "X-Uygulama-Surumu, X-Guncelleme-Kimligi, X-Platform, X-Kanal, X-Saat-Istegi (başlık)": "İsteğe bağlı (D13). Geçersiz değer isteği düşürmez, boş yazılır.",
+        "paketKimligi": "UUIDv7, zorunlu; her deneme ve bölünen her yarı yeni kimlik alır.",
+        "imlec": "metin (en çok 256) ya da null: telefonun sakladığı indirme imleci; öğrenci durum onayı ve degisiklikVar için.",
+        "bekleyenOgeSayisi": "tam sayı 0 ile 100000: bu paketin dışında bu kurulumda sonuçlanmamış öğe sayısı.",
+        "ikinciCapa": "null ya da { metin: base64url (en çok 32768), imzaTuru: 'a' | 's' | 'o', imza: base64url (en çok 200) ya da null, anahtarId: UUID ya da null }. 'a' ve 's'de imza ve anahtarId zorunlu, 'o'da ikisi de null.",
+        "ikinciCapaYokNedeni": "null ya da 'esitleme_bozuk' | 'imzalanamadi'; yalnız ikinciCapa null iken anlamlı.",
+        "ogeler": "dizi, en çok 200: { tur: metin (en çok 64), sira: tam sayı 1 ile 9007199254740991, ogeKimligi: metin (en çok 64), govde: metin (en çok 65536), ilkCapa: nesne ya da null (IlkCapaAlanlari, şeması packages/contracts/src/saat.ts; yalnız işlem anı taşıyan personel işlerinde), ulasmaMakbuzu: metin (en çok 128) ya da null }. Öğe içi biçim öğe başına denetlenir, paketi düşürmez.",
+        "yerelRetler": "dizi, en çok 200: { sira, ogeKimligi: metin (en çok 64), tur: metin (en çok 64), httpKodu: 400 ile 499, hataKodu: metin (en çok 64) ya da null }; ogeler ile yerelRetler toplamı en az 1.",
+        "gövde sınırı": "1 MiB (D13-B11); telefon paketi en çok 200 öğe ve 768 KiB ile kurar."
+      },
+      "response": {
+        "sonuclar": "dizi, istekteki ogeler sırasıyla birebir: { sira, ogeKimligi, tur, sonuc: 'KABUL' | 'ZATEN_VAR' | 'RET' | 'TEKRAR_DENE', gerekce: metin ya da null, ulasmaAni: ISO 8601 UTC milisaniyeli ya da null, ulasmaMakbuzu: metin ya da null, beklemeSaniye: tam sayı ya da null, ayrinti: nesne ya da null (şeması öğe türünün sahibinin sözleşmesinde) }; sonuc ve gerekce x-extensible-enum.",
+        "sonSira": "tam sayı: bu kurulumun kesintisiz son sırası.",
+        "degisiklikVar": "boolean: imleç nesil, genel sayaç ya da öğrenci durumu bakımından geride olabilir (kaba işaret); telefon değişenleri ister.",
+        "X-Saat-Belgesi (başlık)": "Kök kanca ekler (D13, D04); eşitleme bozukken yok."
+      },
+      "errors": [
+        "400 D13 doğrulama hatası: zarf şemaya uymuyor ya da 200'ü aşan öğe (telefon ikiye böler)",
+        "400 ESITLEME_KURULUM_KIMLIGI_GECERSIZ",
+        "401 ESITLEME_KIMLIK_YOK",
+        "401 ESITLEME_KIMLIK_UYUSMUYOR",
+        "403 ESITLEME_KURULUM_SINIRI",
+        "413 GOVDE_COK_BUYUK (D13)",
+        "415 JSON dışı içerik (D13)",
+        "429 D13 hız sınırı, Retry-After ile",
+        "503 SUNUCU_YOGUN (D13), Retry-After ile",
+        "503 ESITLEME_KURULUM_MESGUL, Retry-After 5",
+        "500 SUNUCU_HATASI (D13)"
+      ],
+      "idempotency": "Öğe düzeyinde: (kurulum, sıra) defter anahtarı ve öğe kimliği. Aynı öğe yeniden gelirse işleyici yine çağrılır ve ZATEN_VAR döner (ilk ulaşma anıyla); KABUL olmuş satır değişmez; aynı sıra başka öğe kimliğiyle gelirse RET ESITLEME_SIRA_CAKISMASI. Aynı kurulum için eşzamanlı iki istek kurulum satırı kilidinde sıraya girer. Ayrı Idempotency-Key yok (D13-B12).",
+      "rate_limit": "D13.hizSinifi('esitleme_gonderim'): X-Kurulum-Kimligi başına dakikada 30 istek (D13-B09); aşan 429 ve Retry-After. IP sınırı yok (kampüs NAT). En düşük sürüm denetimi bu ucu hiçbir zaman kapatmaz (plan.html#dagitim-guncelleme-ilkesi)."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/esitleme/degisiklikler",
+      "client": "telefon",
+      "auth": "Geçerli oturum (Bearer): öğrenci ya da personel, kök oturum kancası (D01). Oturum yok, bitmiş ya da kapanmışsa kökte 401; personel telefonu 401'de çıkış gibi davranır. Oturumun kişisi kurulumun kişisi olmalı.",
+      "request": {
+        "X-Kurulum-Kimligi (başlık)": "UUIDv7, zorunlu: isteği yapan hesabın bu kopyadaki kurulumu.",
+        "Authorization (başlık)": "Bearer, zorunlu.",
+        "imlec (sorgu)": "metin (en çok 256), isteğe bağlı; yoksa ya da tanınmazsa tam indirme.",
+        "adet (sorgu)": "tam sayı 100 ile 5000, varsayılan 1000: sayfa satır hedefi. Tek sürümün satırları bölünmediğinden aşılabilir.",
+        "yapiSurumu (sorgu)": "tam sayı 1 ile 10000, zorunlu: telefonun yerel veri yapısı sürümü (PRAGMA user_version).",
+        "bekleyenOgeSayisi (sorgu)": "tam sayı 0 ile 100000, varsayılan 0: bu kurulumda sonuçlanmamış öğe sayısı."
+      },
+      "response": {
+        "imlec": "metin: bu sayfa uygulandıktan sonra aynı yerel işlemde saklanır.",
+        "bastanIndir": "boolean: true ise bu sayfa tam indirmenin ilk sayfasıdır; hata kodu değil 200 cevabında alandır.",
+        "devamiVar": "boolean: true ise yeni imleçle hemen yeniden istenir.",
+        "tablolar": "{ [kaynakAdi]: Array<{ id: metin, silindi: boolean, veri: nesne ya da null }> }: yalnız satırı olan kaynaklar; silindi satırda veri null. Rol başına sütunlar kaynağın sahibinin sözleşmesinde.",
+        "ogrenci": "null ya da { bolumler: { [ad]: { tam: boolean, satirlar: Array<{ id, silindi, veri }> } } }: yalnız öğrencide ve durum sürümü imleçten ilerideyse; tam true ise telefon o bölümün yerel satırlarını bununla değiştirir.",
+        "sonSira": "tam sayı: bu kurulumun kesintisiz son sırası (her eşitlemede bildirilir).",
+        "X-Saat-Belgesi (başlık)": "Kök kanca ekler (D13, D04)."
+      },
+      "errors": [
+        "400 D13 doğrulama hatası (sorgu)",
+        "400 ESITLEME_KURULUM_KIMLIGI_GECERSIZ",
+        "401 D01 oturum kodları (kök kanca)",
+        "401 ESITLEME_KIMLIK_UYUSMUYOR",
+        "403 ESITLEME_KURULUM_SINIRI",
+        "429 D13 hız sınırı, Retry-After ile",
+        "503 SUNUCU_YOGUN (D13), Retry-After ile",
+        "500 SUNUCU_HATASI (D13)"
+      ],
+      "idempotency": "Güvenli: kullanıcı verisini değiştirmez. Yalnız D06 defterine yazar (son temas, karar sunumu, onay); aynı istek iki kez gelirse aynı veri döner ve onay bir kez yazılır. Rota tablosunda defter yazan GET olarak işaretlenir, çerez kabul etmez.",
+      "rate_limit": "Oturum başına dakikada 120 (D13-B09 girişli uç sınıfı)."
+    }
+  ],
+  "jobs": [
+    {
+      "name": "sira_boslugu_raporu",
+      "schedule": "Her gün 05:10 Europe/Istanbul (D14 zamanlama çizelgesindeki yer; 03:30 gecelik pg_dump ve 05:00 saklama işinden sonra), pg-boss zamanlaması, politika exclusive, işçi kapalıysa açılınca bir kez (missed: once), süre aşımı 600 saniye.",
+      "idempotency": "Tekillik anahtarı İstanbul günü; iş verisi yalnız gün (YYYY-MM-DD) taşır. Sonuç defterin o anki halinden hesaplanır; aynı gün iki kez çalışınca aynı boşluk durumu yazılır.",
+      "does": "Birinci adım, rapor: kesintisiz_son_sira < en_buyuk_sira ya da acik_bosluk_sayisi > 0 olan kurulum satırlarını 500'lük işlemlerle tarar. Her biri için kesintisiz son sıranın üstündeki defter satırlarını LEAD ile sıralayıp eksik sıra sayısını ve ilk eksik sırayı bulur (boşluk aralığını üretmez, satır sayısıyla sınırlıdır); acik_bosluk_sayisi, ilk_eksik_sira ve bosluk_denetim_ani yazar, boşluğu kapanmış satırı sıfırlar. İkinci adım, temizlik (contracts: her modül kendi geçici verisini kendi işiyle siler): kesintisiz son sıranın altında kalan ve son görülmesi 400 günden eski defter satırlarını, 400 gündür temassız ve boşluksuz kurulum satırlarını 5000'lik işlemlerle siler. Sonunda tek log satırı: boşluklu kurulum sayısı, 24 saatten eski boşluk sayısı (sira_ilerleme_ani), toplam eksik sıra, önceki İstanbul gününün gerekçe koduna göre RET ve TEKRAR_DENE sayıları, silinen satır sayıları; numara, isim ve gövde yok. D15'in olcum_ görünümleri kurulumlar ve gonderim_defteri tablolarını okur."
+    }
+  ],
+  "state_machines": [
+    {
+      "name": "Defter satırı (öğe sonucu)",
+      "states": [
+        "YOK",
+        "TEKRAR_DENE",
+        "RET",
+        "KABUL",
+        "ZATEN_VAR"
+      ],
+      "transitions": [
+        {
+          "from": "YOK",
+          "to": "KABUL",
+          "by": "öğe işleyicisi",
+          "when": "Öğe ilk kez geldi, sahibi kabul edip sakladı."
+        },
+        {
+          "from": "YOK",
+          "to": "ZATEN_VAR",
+          "by": "öğe işleyicisi",
+          "when": "Öğe başka yoldan zaten ulaşmıştı (ör. aynı kayıt önce makbuz okutmasıyla geldi)."
+        },
+        {
+          "from": "YOK",
+          "to": "RET",
+          "by": "D06 ya da öğe işleyicisi",
+          "when": "Zarf geçersiz, rol uymuyor, beklenmeyen kısıt hatası ya da sahip öğeyi saklamadan reddetti; yerelRetler ile bildirilen öğe de RET ESITLEME_YEREL_RET yazılır."
+        },
+        {
+          "from": "YOK",
+          "to": "TEKRAR_DENE",
+          "by": "D06 ya da öğe işleyicisi",
+          "when": "Tür kayıtlı değil, oturum gerekli, geçici çakışma, işleyici hatası ya da sahibin geçici gerekçesi (ör. saati yalnız ikinci çapayla kurulabilen kayıtta ikinci çapa yok)."
+        },
+        {
+          "from": "TEKRAR_DENE",
+          "to": "KABUL, ZATEN_VAR, RET ya da TEKRAR_DENE",
+          "by": "öğe işleyicisi",
+          "when": "Öğe bekleme süresinden sonra yeniden geldi; yeniden değerlendirilir."
+        },
+        {
+          "from": "RET",
+          "to": "KABUL, ZATEN_VAR ya da RET",
+          "by": "öğe işleyicisi",
+          "when": "Öğe uygulama ya da uzaktan güncelleme değişince ya da sonSira altına düşünce bir kez yeniden geldi; sonuç önbellekten değil yeniden değerlendirmeden gelir."
+        },
+        {
+          "from": "KABUL",
+          "to": "KABUL",
+          "by": "D06",
+          "when": "Aynı öğe yeniden geldi: cevap ZATEN_VAR, satırın sonucu ve kabul_ani değişmez, gorulme_sayisi artar. ZATEN_VAR satırı da aynı kuralla kalır."
+        }
+      ]
+    },
+    {
+      "name": "Telefondaki kuyruk öğesi (D06 protokolü, uygulaması apps/mobile)",
+      "states": [
+        "BEKLIYOR",
+        "GONDERILIYOR",
+        "ULASTI",
+        "RET",
+        "YEREL_RET"
+      ],
+      "transitions": [
+        {
+          "from": "BEKLIYOR",
+          "to": "GONDERILIYOR",
+          "by": "telefon",
+          "when": "Sırası geldi ve bekleme süresi doldu; paket kurulumun öğeleriyle artan sırada, en çok 200 öğe ve 768 KiB."
+        },
+        {
+          "from": "GONDERILIYOR",
+          "to": "ULASTI",
+          "by": "telefon",
+          "when": "Sonuç KABUL ya da ZATEN_VAR; ulaşma anı ve ulaşma makbuzu saklanır, makbuz 'Sunucuya ulaştı' olur."
+        },
+        {
+          "from": "GONDERILIYOR",
+          "to": "RET",
+          "by": "telefon",
+          "when": "Sonuç RET; makbuz 'Telefonda kayıtlı, gönderilmedi' kalır, günlük sayaçlara yazılır."
+        },
+        {
+          "from": "GONDERILIYOR",
+          "to": "BEKLIYOR",
+          "by": "telefon",
+          "when": "Sonuç TEKRAR_DENE ya da bilinmeyen sonuç (bekleme en az beklemeSaniye, 2 saniyeden 10 dakikaya artan, rastgele kaydırılmış) ya da paket düzeyinde ağ hatası, zaman aşımı, beklenmeyen biçim, 408, 429, 5xx."
+        },
+        {
+          "from": "GONDERILIYOR",
+          "to": "YEREL_RET",
+          "by": "telefon",
+          "when": "Bölünen paket tek öğeye indi ve yine 400 ya da 413 aldı; sonraki pakette yerelRetler ile bildirilir."
+        },
+        {
+          "from": "ULASTI",
+          "to": "BEKLIYOR",
+          "by": "telefon",
+          "when": "Cevaptaki sonSira öğenin sırasından küçük (sunucu yedekten döndü); bir kez, ulaşma makbuzuyla yeniden gönderilir."
+        },
+        {
+          "from": "RET",
+          "to": "BEKLIYOR",
+          "by": "telefon",
+          "when": "runtimeVersion ya da updateId değişti, ya da sonSira öğenin sırasından küçük; bir kez."
+        },
+        {
+          "from": "YEREL_RET",
+          "to": "BEKLIYOR",
+          "by": "telefon",
+          "when": "Yalnız runtimeVersion ya da updateId değişince, bir kez. sonSira öğenin sırasından küçükse öğe gönderilmez, sonraki pakette yerelRetler ile yeniden bildirilir (yeniden göndermek bölme döngüsü açardı)."
+        },
+        {
+          "from": "BEKLIYOR",
+          "to": "BEKLIYOR",
+          "by": "telefon",
+          "when": "401 ya da 403: bu kurulumun gönderimi durur, cihaz ya da giriş durumu gösterilir; öğe silinmez."
+        }
+      ]
+    },
+    {
+      "name": "İndirme imleci",
+      "states": [
+        "YOK",
+        "TAM_INDIRME",
+        "GUNCEL"
+      ],
+      "transitions": [
+        {
+          "from": "YOK",
+          "to": "TAM_INDIRME",
+          "by": "sunucu",
+          "when": "İmleçsiz istek: bastanIndir true, ilk sayfa."
+        },
+        {
+          "from": "GUNCEL ya da TAM_INDIRME",
+          "to": "TAM_INDIRME",
+          "by": "sunucu",
+          "when": "Nesil, hesap özeti ya da yapı sürümü tutmuyor, imleç sayaçtan ileri ya da en_eski_gecerli_surum altında, imleç çözülemiyor ya da kapsam kaynağı kapsamın imleçteki kapsamSurumu'ndan sonra değiştiğini söylüyor; ilk sayfa yeniden gelir."
+        },
+        {
+          "from": "TAM_INDIRME",
+          "to": "TAM_INDIRME",
+          "by": "telefon",
+          "when": "devamiVar true: sayfa ve imleç tek yerel işlemde yazılır, hemen sonraki sayfa istenir."
+        },
+        {
+          "from": "TAM_INDIRME",
+          "to": "GUNCEL",
+          "by": "telefon",
+          "when": "devamiVar false: bu tam indirmede gelmeyen program ve liste satırları silinir; gönderme kuyruğuna dokunulmaz."
+        },
+        {
+          "from": "GUNCEL",
+          "to": "GUNCEL",
+          "by": "telefon",
+          "when": "Artımlı sayfa uygulandı."
+        },
+        {
+          "from": "GUNCEL ya da TAM_INDIRME",
+          "to": "YOK",
+          "by": "telefon",
+          "when": "Personel çıkış yaptı ya da indirmede 401 aldı: sınıf listeleri ve o hesabın imleci silinir, kuyruktaki işler kalır."
+        }
+      ]
+    },
+    {
+      "name": "Karar teslimi (karar_teslimleri satırı)",
+      "states": [
+        "SUNULMADI",
+        "SUNULDU",
+        "TELEFONA_ULASTI"
+      ],
+      "transitions": [
+        {
+          "from": "SUNULMADI",
+          "to": "SUNULDU",
+          "by": "indirme",
+          "when": "Öğrenci bölümü bu karar sürümünü telefona gönderdi: satır açılır, sunulan_durum_surumu ve iki sunum anı yazılır."
+        },
+        {
+          "from": "SUNULDU",
+          "to": "SUNULDU",
+          "by": "indirme",
+          "when": "Onay gelmeden yeniden sunuldu (önceki cevap kaybolmuş olabilir): son_sunulma_ani ve sunulan_durum_surumu ilerler."
+        },
+        {
+          "from": "SUNULDU",
+          "to": "TELEFONA_ULASTI",
+          "by": "gönderim ya da indirme",
+          "when": "İstekteki geçerli imlecin öğrenci sürümü sunulan_durum_surumu'na eşit ya da büyük: telefona_ulasti_ani = son_sunulma_ani, onay_ani = istek anı; bir daha değişmez."
+        }
+      ]
+    }
+  ],
+  "invariants": [
+    "Gönderim cevabındaki sonuçlar istekteki öğelerle aynı sırada ve birebirdir; (sira, ogeKimligi) çiftleri eşleşmeyen cevap telefonda hiçbir öğeyi ULASTI yapmaz (D13-B21).",
+    "(kurulum, sıra) için defterde en çok bir satır vardır; KABUL ya da ZATEN_VAR olmuş satır başka sonuca dönmez ve kabul_ani değişmez.",
+    "kesintisiz_son_sira, 1'den o sayıya kadar her sıranın defterde bulunduğu en büyük sayıdır ve en_buyuk_sira'yı aşmaz.",
+    "Bir kurulumun kişisi açılışta yazılır ve değişmez; başka kişinin oturumu ya da imzasıyla gelen istek o kurulum için hiçbir öğe işletmez. Bir kişinin en çok 20 kurulum satırı olur.",
+    "Bir gönderim her zaman ilerler: işleme bütçesi dolarsa işlenen öğeler kalır, kalanlar TEKRAR_DENE alır; bütçe aşımı hiçbir zaman bütün paketi geri almaz.",
+    "Bir gönderim tek bağlantıda tek veritabanı işlemidir; 4xx ya da 5xx cevapta ne defterde ne öğe sahiplerinin tablolarında değişiklik kalır, 200 cevaptaki her sonuç işlenmiştir.",
+    "Hızlı yolda işlem başına geri dönüş noktası sayısı paketteki ardışık öğe türü grubu sayısını aşmaz; öğe başına geri dönüş noktası yalnız bir grup hata verince açılır.",
+    "Öğrencinin yoklama gönderimi degisiklik_sayaci satırını kilitlemez; sayaç yalnız telefona inen bir satır yazan işlemde alınır.",
+    "Telefona inen bir satırın sürümü, onu yazan işlem bitmeden hiçbir okuyucunun gördüğü sayaç değerinden küçük ya da eşit olamaz; okuyucu imleci yazılmamış bir sürümün üstüne geçmez.",
+    "Öğrenciye inen hiçbir satırda ve öğrenci bölümünde başka öğrencinin adı, numarası ya da kaydı bulunmaz.",
+    "Baştan indirme gönderme kuyruğunu etkilemez: aynı istekteki sonSira baştan indirmeyle değişmez.",
+    "Kayıt gönderme ucu hiçbir uygulama sürümüne kapanmaz; bilinmeyen öğe türü atılmaz, TEKRAR_DENE alır ve defterde saklanır.",
+    "telefona_ulasti_ani yalnız telefonun imleçle sakladığını bildirdiği öğrenci durum sürümüne kadar sunulmuş karar sürümlerine ve bir kez yazılır.",
+    "Kural taşıyan anlar (ulaşma, son temas, sunum, teslim, gönderme süresi sonu) saat arayüzünden gelir; modülün SQL kodunda now(), TypeScript kodunda Date.now() yoktur.",
+    "Ulaşma makbuzu yalnız aynı kurulum, sıra, öğe kimliği ve gövde baytları için geçer; geçerli makbuz ulaşma anını ileri almaz, ilk anı geri getirir.",
+    "D06 öğe gövdesini ayrıştırmaz ve yeniden biçimlendirmez; gövde, ilk çapa ve ikinci çapa metni gelen değerlerle aynen işleyiciye geçer.",
+    "Numara, isim, gövde metni, imleç, oturum anahtarı ve ulaşma makbuzu loga ve iş verisine girmez; loglarda kurulum ve kişi iç kimliği, rota kalıbı, sonuç ve gerekçe kodu bulunur."
+  ],
+  "exports": [
+    {
+      "name": "surumAl",
+      "signature": "surumAl(tx: Islem): Promise<bigint>  // modules/esitleme/yaprak.ts [yaprak]",
+      "purpose": "Telefona inen bir tabloya yazan işlem, inen satırlarını yazdıktan sonra işlemin son adımlarından biri olarak çağırır (sıra: satırlar, iş kuyruğu, sayaç; D03-A10). degisiklik_sayaci satırını işlem sonuna kadar kilitleyip bir artırır ve yeni sürümü döner; çağıran bu sürümü aynı işlemde yazdığı inen satırların sürüm sütununa tek UPDATE ile koyar ve sayaçtan sonra yeni satır kilidi almaz. Her çağrı yeni sürüm verir. Başka modül çağırmaz."
+    },
+    {
+      "name": "ogeTuruKaydet",
+      "signature": "ogeTuruKaydet(tur: OgeTuru, isleyici: OgeIsleyici): void; OgeIsleyici = { roller: readonly ('OGRENCI' | 'PERSONEL')[]; oturumGerekli: boolean; govdeEnBuyukBayt: number; ayrintiSemasi?: z.ZodType } & ({ isle(tx: Islem, oge: GelenOge, baglam: PaketBaglami): Promise<OgeSonucu> } | { isleToplu(tx: Islem, ogeler: readonly GelenOge[], baglam: PaketBaglami): Promise<readonly OgeSonucu[]> })",
+      "purpose": "Öğe türünün sahibi eklentisi yüklenirken bir kez kaydolur; aynı tür ikinci kez kaydolursa açılış durur. Sahipler: yoklama_kaydi, makbuz_okutmasi (D05); pencere_suresi, erken_kapatma (D04); kafa_sayisi (D07); elle_ekleme, sorun_bildirimi (D09); gosterim_kaydi (D11); telefon_sayaci (D15). İşleyici ardışık aynı tür öğeleri sıra düzeninde alır (isleToplu bir çağrıda, isle tek tek), aynı uzunlukta ve sırada sonuç döner, beklenen hiçbir durumda fırlatmaz, hızlı yolda öğe başına SAVEPOINT açmaz."
+    },
+    {
+      "name": "indirmeKaynagiKaydet",
+      "signature": "indirmeKaynagiKaydet(ad: string, kaynak: GenelKaynak | KapsamKaynagi | OgrenciKaynagi): void  // tipler packages/contracts/src/esitleme.ts",
+      "purpose": "Telefona inen veri kaynakları kaydolur: genel kaynaklar D02 (dersler, ders saatleri, oturumlar, tatiller, kilit), D03 (liste satırları), D04 (pencereler); kapsam kaynakları D03 (öğrenci) ve D02 (personel); öğrenci kaynakları D05 (kayıtlar ve kararlar), D08 (devam durumu), D09 (düzeltmeler ve sorun bildirimleri). Ad cevaptaki anahtardır, tekildir; çift kayıt açılışı durdurur."
+    },
+    {
+      "name": "ogrenciDurumuDegisti",
+      "signature": "ogrenciDurumuDegisti(tx: Islem, ogrenciId: KisiId): Promise<bigint>  // modules/esitleme/yaprak.ts [yaprak]",
+      "purpose": "Öğrencinin kendi verisini (kayıt, karar, düzeltme, sorun bildirimi, devam durumu) değiştiren her işlem aynı işlemde çağırır. Öğrencinin satırını kilitleyip sürümü bir artırır (satır yoksa 1 ile açar) ve yeni sürümü döner; çağıran bu sürümü kendi satırına yazar ki kaynağı 'şu sürümden beri' sorusunu cevaplayabilsin. Başka modül çağırmaz."
+    },
+    {
+      "name": "gondermeSuresiSonu",
+      "signature": "gondermeSuresiSonu(oturum: { bitisAni: Date }, birimDonemi: { devamsizlikSonGunu: string /* YYYY-MM-DD, İstanbul günü */ }): Date",
+      "purpose": "Oturumun gönderme süresinin dışlayıcı sonu: en erken(dersin bitiş anı + 7 x 86.400.000 ms, devamsızlık işleme son gününden sonraki günün 00:00 Europe/Istanbul anı). Ulaşma anı bu andan küçükse süre içindedir. Hesap packages/core/src/esitleme/gonderme-suresi.ts'te saf; İstanbul gün sonu infra/saat'in istanbulGunSonuAni yardımcısıyla. D04, D07, D09 ve D10 aynı işlevi kullanır."
+    },
+    {
+      "name": "kurulumSonTemasi",
+      "signature": "kurulumSonTemasi(tx: Islem, kisiId: KisiId): Promise<{ sonTemasAni: Date | null; bekleyenOgeSayisi: number }>",
+      "purpose": "Kişinin bütün kurulumları arasında en son doğrulanmış temasın anı ve o temasta bildirilen sonuçlanmamış öğe sayısı; hiç temas yoksa { null, 0 }. KARAR BEKLİYOR hesabı (D08, D10) için; kural onların."
+    },
+    {
+      "name": "kararTeslimAni",
+      "signature": "kararTeslimAni(tx: Islem, kayitAnahtari: { donemId: DonemId; kayitId: KayitId }, kararSurumu: number): Promise<Date | null>",
+      "purpose": "Kaydın verilen karar sürümünün öğrencinin telefonuna ulaştığı an; sunulmamış ya da onaylanmamışsa null. Sorun bildirme süresinin (3 gün) başı (D09)."
+    }
+  ],
+  "files": [
+    "apps/server/src/modules/esitleme/index.ts",
+    "apps/server/src/modules/esitleme/yaprak.ts",
+    "apps/server/src/modules/esitleme/tablolar.ts",
+    "apps/server/src/modules/esitleme/eklenti.ts",
+    "apps/server/src/modules/esitleme/kayitlar.ts",
+    "apps/server/src/modules/esitleme/kimlik-cozumu.ts",
+    "apps/server/src/modules/esitleme/ikinci-capa.ts",
+    "apps/server/src/modules/esitleme/gonderim.ts",
+    "apps/server/src/modules/esitleme/dagitici.ts",
+    "apps/server/src/modules/esitleme/defter.ts",
+    "apps/server/src/modules/esitleme/kurulum.ts",
+    "apps/server/src/modules/esitleme/ulasma-makbuzu.ts",
+    "apps/server/src/modules/esitleme/indirme.ts",
+    "apps/server/src/modules/esitleme/teslim.ts",
+    "apps/server/src/modules/esitleme/saklama.ts",
+    "apps/server/src/modules/esitleme/iz.ts",
+    "apps/server/src/jobs/esitleme/index.ts",
+    "apps/server/src/jobs/esitleme/sira-boslugu-raporu.ts",
+    "packages/contracts/src/esitleme.ts",
+    "packages/core/src/esitleme/index.ts",
+    "packages/core/src/esitleme/imlec.ts",
+    "packages/core/src/esitleme/imlec.test.ts",
+    "packages/core/src/esitleme/su-seviyesi.ts",
+    "packages/core/src/esitleme/su-seviyesi.test.ts",
+    "packages/core/src/esitleme/sayfa.ts",
+    "packages/core/src/esitleme/sayfa.test.ts",
+    "packages/core/src/esitleme/gonderme-suresi.ts",
+    "packages/core/src/esitleme/gonderme-suresi.test.ts",
+    "packages/core/src/esitleme/ikinci-capa-metni.ts",
+    "packages/core/src/esitleme/ikinci-capa-metni.test.ts",
+    "packages/core/src/esitleme/protokol.ts",
+    "packages/core/src/esitleme/protokol.test.ts",
+    "apps/server/test/features/esitleme/gonderim.feature",
+    "apps/server/test/features/esitleme/gonderim-kimlik.feature",
+    "apps/server/test/features/esitleme/ikinci-capa.feature",
+    "apps/server/test/features/esitleme/dagitim-hatalari.feature",
+    "apps/server/test/features/esitleme/indirme.feature",
+    "apps/server/test/features/esitleme/kapsam.feature",
+    "apps/server/test/features/esitleme/sayac-eszamanlilik.feature",
+    "apps/server/test/features/esitleme/ogrenci-durumu.feature",
+    "apps/server/test/features/esitleme/yedekten-donus.feature",
+    "apps/server/test/features/esitleme/son-temas.feature",
+    "apps/server/test/features/esitleme/sira-boslugu-raporu.feature",
+    "apps/server/test/features/esitleme/gonderim-durum-makinesi.feature",
+    "apps/server/test/features/esitleme/sozlesme.feature",
+    "apps/server/test/steps/esitleme/gonderim-adimlari.ts",
+    "apps/server/test/steps/esitleme/indirme-adimlari.ts",
+    "apps/server/test/steps/esitleme/ogrenci-durumu-adimlari.ts",
+    "apps/server/test/steps/esitleme/yedekten-donus-adimlari.ts",
+    "apps/server/test/steps/esitleme/durum-makinesi-adimlari.ts",
+    "apps/server/test/steps/esitleme/sozlesme-adimlari.ts",
+    "apps/server/test/steps/esitleme/is-adimlari.ts",
+    "apps/server/test/support/kurucular/esitleme.ts"
+  ],
+  "tests": [
+    {
+      "name": "200 öğelik paket tek işlemde işlenir",
+      "kind": "behavior",
+      "asserts": "Her öğeye istekteki sırayla tek sonuç döner, (sira, ogeKimligi) birebir; sonSira 200; defterde 200 satır; sahte işleyici öğeleri ardışık aynı tür grupları halinde, sıra düzeninde alır."
+    },
+    {
+      "name": "Aynı paket ardışık iki kez gönderilir",
+      "kind": "behavior",
+      "asserts": "İkinci cevapta KABUL'lerin yerini ZATEN_VAR alır ve ulaşma anı ilk anla aynıdır; defter satırının sonucu ve kabul_ani değişmez, gorulme_sayisi 2; işleyici tablosunda öğe tek."
+    },
+    {
+      "name": "Aynı paket aynı anda iki kez gönderilir",
+      "kind": "behavior",
+      "asserts": "İki istek kurulum satırı kilidinde sıraya girer; her öğe sahibinin tablosunda tam bir kez; öğe başına biri KABUL, öbürü ZATEN_VAR."
+    },
+    {
+      "name": "Bozuk öğe paketi düşürmez",
+      "kind": "behavior",
+      "asserts": "199 geçerli öğe ve UUIDv7 olmayan 1 öğe: HTTP 200, bozuk öğe RET ESITLEME_OGE_GECERSIZ ve defterde, ötekiler KABUL. Zemin kontrolü: 200 geçerli öğenin hepsi KABUL."
+    },
+    {
+      "name": "Bilinmeyen öğe türü atılmaz",
+      "kind": "behavior",
+      "asserts": "TEKRAR_DENE, ESITLEME_TUR_BILINMIYOR, beklemeSaniye 3600; defterde saklanır, sonSira üstünden geçer."
+    },
+    {
+      "name": "Aynı sıra başka öğeyle gelir",
+      "kind": "behavior",
+      "asserts": "RET ESITLEME_SIRA_CAKISMASI; ilk defter satırı ve işleyici tablosu değişmez; çakışan öğe deftere yazılmaz."
+    },
+    {
+      "name": "Gövde sınırı ve öğe sayısı",
+      "kind": "behavior",
+      "asserts": "200 öğelik en büyük gerçekçi paket 200 döner; 1 MiB'ı 1 bayt aşan istek 413; 201 öğe 400; türün govdeEnBuyukBayt sınırını aşan tek öğe yalnız kendisi RET ESITLEME_OGE_GECERSIZ alır."
+    },
+    {
+      "name": "Yerel ret bildirimi su seviyesini ilerletir",
+      "kind": "behavior",
+      "asserts": "yerelRetler ile bildirilen sıra RET ESITLEME_YEREL_RET yazılır, sonSira üstünden geçer; aynı sıradaki KABUL satırına dokunulmaz (kontrol)."
+    },
+    {
+      "name": "Hiçbir uygulama sürümüne kapanmaz",
+      "kind": "behavior",
+      "asserts": "En düşük sürümün altındaki X-Uygulama-Surumu ile ve sürüm başlıklarının hiçbiri yokken gönderim işlenir; geçersiz başlık değerleri kurulum satırına boş yazılır."
+    },
+    {
+      "name": "Oturumsuz ve imzasız gönderim reddedilir",
+      "kind": "behavior",
+      "asserts": "401 ESITLEME_KIMLIK_YOK; kurulumlar ve defterde satır açılmaz. Pozitif kontrol: aynı paket geçerli oturumla 200."
+    },
+    {
+      "name": "Cihaz değişiminden sonra eski telefonun bekleyen kayıtları ulaşır",
+      "kind": "behavior",
+      "asserts": "Oturum kapalı, paket pasif cihaz anahtarıyla imzalı: yoklama_kaydi işleyiciye gider; sorun_bildirimi TEKRAR_DENE ESITLEME_OTURUM_GEREKLI; HTTP 200."
+    },
+    {
+      "name": "Hoca oturumu bitince işler silinmez",
+      "kind": "behavior",
+      "asserts": "Süresi dolmuş oturumla 401 ESITLEME_KIMLIK_YOK, defter değişmez; yeniden girişten sonra aynı öğeler KABUL alır."
+    },
+    {
+      "name": "Rolü uymayan öğe",
+      "kind": "behavior",
+      "asserts": "Öğrenci oturumuyla gelen pencere_suresi RET ESITLEME_YETKI_YOK; aynı paketteki yoklama_kaydi etkilenmez."
+    },
+    {
+      "name": "Kişi uyuşmazlığı",
+      "kind": "behavior",
+      "asserts": "Oturum ile paket imzası farklı kişilere aitse ya da kurulum başka kişinin kurulumuysa 401 ESITLEME_KIMLIK_UYUSMUYOR; hiçbir öğe işlenmez."
+    },
+    {
+      "name": "Kurulum kilidi beklenemezse",
+      "kind": "behavior",
+      "asserts": "Aynı kurulumun satırı 2 saniyeden uzun kilitli tutulunca 503 ESITLEME_KURULUM_MESGUL ve Retry-After 5; hiçbir satır yazılmaz."
+    },
+    {
+      "name": "Kişi başına kurulum sınırı",
+      "kind": "behavior",
+      "asserts": "20 kurulumu olan kişinin 21. kurulum kimliğiyle gönderimi ve indirmesi 403 ESITLEME_KURULUM_SINIRI, satır açılmaz; var olan 20 kurulumu çalışmayı sürdürür (kontrol)."
+    },
+    {
+      "name": "Zaman bütçesi kısmi sonuç verir",
+      "kind": "behavior",
+      "asserts": "Sahte işleyici parça başına 3 saniye beklerken 200 öğelik paket: ilk parçalar işlenir ve kalır, bütçeden sonraki öğeler işleyiciye hiç verilmeden TEKRAR_DENE ESITLEME_ZAMAN_BUTCESI alır; cevap 25 saniyeden önce döner; aynı paket yeniden gönderilince işlenenler ZATEN_VAR, kalanlar ilerler."
+    },
+    {
+      "name": "İkinci çapa bağlamı",
+      "kind": "behavior",
+      "asserts": "Geçerli imza: işleyici bağlamında VAR, belge ve olaydanBelgeyeMs aynen; tek baytı değişmiş metin, başka kurulumun ya da paketin metni ve öğrencide 'o' türü: YOK, yokNedeni paket_imzasiz; listede olmayan öğe: YOK gonderilmedi; ikinciCapa null ve neden esitleme_bozuk: YOK esitleme_bozuk; personel oturumunda 'o': VAR."
+    },
+    {
+      "name": "İşleyicide kısıt hatası yalnız o öğeyi düşürür",
+      "kind": "behavior",
+      "asserts": "Grupta bir öğe kısıt ihlali: o RET ESITLEME_KISIT_IHLALI, gruptaki öbürleri KABUL; hızlı yolda tek SAVEPOINT, yedek yolda öğe başına SAVEPOINT (sorgu günlüğünden sayılır)."
+    },
+    {
+      "name": "Geçici çakışma yalnız grubu bekletir",
+      "kind": "behavior",
+      "asserts": "İşleyicide kilitlenme (40P01) ya da kilit zaman aşımı (55P03): grubun öğeleri TEKRAR_DENE ESITLEME_GECICI_CAKISMA; öbür gruplar KABUL, işlem sürer."
+    },
+    {
+      "name": "İşleyici sonuç sözleşmesi",
+      "kind": "behavior",
+      "asserts": "Sonuç sayısı ya da sırası uymayan işleyicinin grubu geri alınır ve öğeler tek tek denenir; yine uymazsa TEKRAR_DENE ESITLEME_ISLEYICI_HATASI, beklemeSaniye 600."
+    },
+    {
+      "name": "Ulaşma makbuzu başka öğeye geçmez",
+      "kind": "behavior",
+      "asserts": "Gövdesi bir bayt değişmiş, başka sıradaki ya da başka kurulumdaki öğeye takılan makbuz yok sayılır, ulaşma anı paketin anı olur; değişmemiş öğede makbuzdaki an kullanılır."
+    },
+    {
+      "name": "Cevap başlıkları",
+      "kind": "behavior",
+      "asserts": "İki uçta Cache-Control: no-store; eşitleme sağlamken X-Saat-Belgesi var, bozukken yok ve gönderim yine işlenir."
+    },
+    {
+      "name": "Hız sınırı kuruluma bağlı",
+      "kind": "behavior",
+      "asserts": "Aynı kurulumdan dakikada 31. gönderim 429 ve Retry-After; başka kurulumun istekleri etkilenmez."
+    },
+    {
+      "name": "Öğrenciye yalnız kendi verisi iner",
+      "kind": "behavior",
+      "asserts": "İmleçsiz indirmede bastanIndir true; tablolar yalnız öğrencinin şubelerinin ders, ders saati, oturum, pencere, tatil, kilit satırları ve kendi liste satırı; başka öğrencinin numarası ve adı cevabın hiçbir yerinde geçmez. Pozitif kontrol: aynı tohumla hocanın cevabında geçer."
+    },
+    {
+      "name": "Artımlı indirme",
+      "kind": "behavior",
+      "asserts": "İmleçten sonra değişen satır iner, değişmeyen inmez; silinen satır silindi true ve veri null ile iner; sonSira her cevapta döner."
+    },
+    {
+      "name": "Baştan indir nedenleri",
+      "kind": "behavior",
+      "asserts": "Nesil değişti, imleç sayaçtan ileri, en_eski_gecerli_surum altında, bozuk imleç, başka hesabın imleci, yapı sürümü değişti: her birinde 200 ve bastanIndir true; sonSira değişmez."
+    },
+    {
+      "name": "Kapsam değişince baştan indir",
+      "kind": "behavior",
+      "asserts": "Derse sonradan eklenen öğrencinin sonraki indirmesi bastanIndir true ve dersin bütün satırlarını taşır; dersten alınan hocanın sonraki tam indirmesinde o dersin listesi yok."
+    },
+    {
+      "name": "Tam indirme kendi kapsam satırı yüzünden yeniden başlamaz",
+      "kind": "behavior",
+      "asserts": "Öğrencinin liste satırının sürümü ilk sayfanın üst sürümünden büyükken adet 100 ile çok sayfalı tam indirme her sayfada ilerler ve devamiVar false ile biter; ikinci sayfada bastanIndir false. Kontrol: kapsamSurumu'ndan sonra öğrenci yeni şubeye eklenince sonraki istek bastanIndir true."
+    },
+    {
+      "name": "Sayfalar sürüm sınırında kesilir",
+      "kind": "behavior",
+      "asserts": "adet 100 ile çok sayfalı indirmede aynı sürümün satırları iki sayfaya bölünmez; sayfaların birleşimi tek seferde indirilenle aynı; 300 satırlık tek sürüm tek sayfada gelir."
+    },
+    {
+      "name": "Eşzamanlı yazmada değişiklik atlanmaz",
+      "kind": "behavior",
+      "asserts": "Sürüm v'yi alan işlem açıkken v+1 alınamaz; iki yazıcı ve bir okuyucuyla zorlanmış zamanlamada okuyucunun imleci bitmemiş sürümün üstüne geçmez ve her değişiklik bir sayfada görünür."
+    },
+    {
+      "name": "Öğrenci gönderimi sayacı kilitlemez",
+      "kind": "behavior",
+      "asserts": "200 yoklama öğelik gönderim işlemi açıkken başka işlem degisiklik_sayaci satırını beklemeden artırır."
+    },
+    {
+      "name": "Karar teslimi onayla yazılır",
+      "kind": "behavior",
+      "asserts": "Karar değişince öğrenci bölümü iner ve satır SUNULDU olur; sonraki istekteki imleç öğrenci sürümünü taşıyınca telefona_ulasti_ani = son sunum anı; cevap kaybolursa (imleç saklanmadı) yazılmaz, sonraki sunumun anıyla yazılır."
+    },
+    {
+      "name": "Sunulmamış karar sürümünün teslim anı yok",
+      "kind": "behavior",
+      "asserts": "kararTeslimAni sunulmamış ya da onaylanmamış sürüm için null, onaylı sürüm için tek ve değişmeyen an."
+    },
+    {
+      "name": "Son temas ve bekleyen öğe",
+      "kind": "behavior",
+      "asserts": "Gönderim ve indirme son_temas_ani'yi saat arayüzünden yazar; 401 ve 503 ile biten istek yazmaz; kurulumSonTemasi kişinin en son temasını ve o temastaki bekleyen sayısını verir."
+    },
+    {
+      "name": "Yedekten dönüşte makbuzlu kayıt kaybolmaz",
+      "kind": "behavior",
+      "asserts": "Defter, kurulum su seviyesi ve kayıtlar son dakikaların öncesine geri sarılınca sonraki cevapta sonSira düşer; telefon kuralı (packages/core) üstteki ULASTI öğeleri bir kez yeniden gönderir; her makbuzlu kayıt sahibinin tablosunda tam bir kez ve ulaşma anı makbuzdaki ilk an."
+    },
+    {
+      "name": "Hesap silinince D06 satırları silinir",
+      "kind": "behavior",
+      "asserts": "Saklama işleyicisi kişinin kurulumlar, defter, öğrenci sürümü ve karar teslimi satırlarını siler; başka kişinin satırlarına dokunmaz (kontrol)."
+    },
+    {
+      "name": "sira_boslugu_raporu boşlukları bulur ve eskiyi temizler",
+      "kind": "behavior",
+      "asserts": "Boşluklu kurulumda acik_bosluk_sayisi ve ilk_eksik_sira doğru, boşluksuz kurulumda sıfır (kontrol), kapanan boşluk sıfırlanır; su seviyesinin altında ve 401 günlük satır silinir, 399 günlük ve su seviyesinin üstündeki satır kalır (kontrol); aynı gün iki kez çalışınca aynı sonuç; log satırında numara ve isim yok."
+    },
+    {
+      "name": "Teyitsiz öğrencinin kapsam bağlamı",
+      "kind": "behavior",
+      "asserts": "Teyitsiz öğrencinin indirmesinde kapsam kaynağına teyitli false ve numara verilir; sahte liste kaynağı adı bu bayrakla siler ve cevapta ad yok. Kontrol: teyitli öğrencide kendi adı iner."
+    },
+    {
+      "name": "Gönderim durum makinesi",
+      "kind": "property",
+      "asserts": "fast-check, deneme sayısı açıkça 200: rastgele en çok 200'lük paketler, aynı paketin eşzamanlı iki kez gönderimi, paket sırasının bozulması, yarıda kalan gönderim (işlem geri alınır), öğe düzeyinde TEKRAR_DENE ve yedekten dönüş (son satırlar silinir); telefon tarafı packages/core/src/esitleme/protokol.ts ile sürülür. Değişmez: ULASTI olan her öğe sahibinin tablosunda tam bir kez, defterde KABUL ya da ZATEN_VAR (teknik.html#testler-kalite)."
+    },
+    {
+      "name": "Su seviyesi hesabı",
+      "kind": "property",
+      "asserts": "Rastgele varış sırasında kesintisizSonSira en büyük n'dir ve 1..n'nin hepsi vardır; tekrar varış sonucu değiştirmez; geri sarma dışında azalmaz."
+    },
+    {
+      "name": "İmleç kodlaması",
+      "kind": "property",
+      "asserts": "Kodla ve çöz birbirinin tersi; 64 bitlik sistem kimliği kayıpsız; genelSurum'u kapsamSurumu'ndan büyük imleç tanınmaz; rastgele metin hiç fırlatmaz, tanınmaz sonucu verir."
+    },
+    {
+      "name": "Sayfa kesme",
+      "kind": "property",
+      "asserts": "Rastgele sürüm dağılımında sayfa üst sürümü kesilen kaynakların sınırlarının en küçüğü; sayfa birleşimi tam küme; hiçbir sürüm iki sayfaya bölünmez; her sayfa ilerler."
+    },
+    {
+      "name": "Gönderme süresi sonu",
+      "kind": "property",
+      "asserts": "Tablo: 7 gün sınırı ve son gün sınırı, son günün 23:59:59.999'u içeride, ertesi gün 00:00 dışarıda; TZ=UTC ve TZ=Europe/Istanbul altında aynı sonuç; sonuç iki sınırdan büyük olmaz."
+    },
+    {
+      "name": "İkinci çapa metni",
+      "kind": "property",
+      "asserts": "Kur ve çöz birbirinin tersi; imza metnin ASCII baytları üzerinde; metnin tek baytı değişince doğrulama başarısız."
+    },
+    {
+      "name": "Ulaşma makbuzu",
+      "kind": "property",
+      "asserts": "Kurulum, sıra, öğe kimliği, gövde özeti, an ya da kid'den biri değişince doğrulama başarısız; listede duran eski kid ile üretilen makbuz geçer, listeden çıkan geçmez."
+    },
+    {
+      "name": "Telefon protokol kuralları",
+      "kind": "property",
+      "asserts": "yenidenGonderilecekler sonSira'dan büyük ULASTI ve RET öğelerini bir kez seçer, YEREL_RET öğesini hiç seçmez (yerelRetler'e koyar); bekleme 2 saniye ile 10 dakika arasında ve beklemeSaniye'den kısa değil; paket seçimi en çok 200 öğe ve 768 KiB, artan sıra, tek kurulum; bölme sırası önce sol yarı. Rastgele 400 ve 413 dağılımında bölme sonlu sayıda istekle biter."
+    },
+    {
+      "name": "Öğe türleri kayıtlı",
+      "kind": "contract",
+      "asserts": "Bileşik uygulamada OGE_TURLERI'nin her türü tam bir kez kayıtlı; çift kayıt açılışta hata verir; bir tür bilerek kaydedilmeyince test kırmızı."
+    },
+    {
+      "name": "Gönderim ve indirme şemaları",
+      "kind": "contract",
+      "asserts": "OpenAPI belgesinde sonuc ve gerekce alanları x-extensible-enum taşır, enum anahtarı yok; cevap şeması sunucu cevabını doğrular (serializerCompiler); 64 bitlik değerler yalnız opak imleç içinde."
+    },
+    {
+      "name": "İndirme kaynağı sözleşme denetimi",
+      "kind": "contract",
+      "asserts": "support/kurucular/esitleme.ts'teki yardımcı her kayıtlı kaynakta: satırlar sürüm sırasında, silindi satırda veri null, öğrenci rolünde başka öğrencinin verisi yok, aynı girdiyle aynı sonuç. Sahip modüller kendi testlerinde çağırır."
+    },
+    {
+      "name": "Tablo kısıtları sözleşmeyle aynı",
+      "kind": "contract",
+      "asserts": "CHECK değer listeleri OGE_SONUCLARI ve rol sabitlerinden; D12'nin şema testi eşleşmeyi denetler; sabitten bir değer bilerek silinince test kırmızı."
+    },
+    {
+      "name": "Modül sınırı",
+      "kind": "contract",
+      "asserts": "Başka modül yalnız modules/esitleme/index.ts ve yaprak.ts'i içe aktarır; modules/esitleme yalnız D01, D12 ve D13 dış yüzlerini ve infra/saat'i içe aktarır, öğe ve kaynak sahiplerini içe aktarmaz; jobs/esitleme yalnız D14.isTanimla'yı kullanır; yaprak.ts başka modül içe aktarmaz (Biome noPrivateImports ve dependency-cruiser)."
+    },
+    {
+      "name": "Ders çıkışı yük testi",
+      "kind": "load",
+      "asserts": "k6 sabit geliş hızıyla 20.000 telefon 1 dakikada; telefon başına belge, gönderim ve gerekirse indirme; gönderim p95 1 saniye ve p99 3 saniye altında, 503 oranı yüzde 2 altında ve hepsi Retry-After'lı, 503 dışı 5xx sıfır, her makbuzlu kayıt tam bir kez (D15-B15 profili); sayaç kilidi bekleme süresi ölçülür."
+    },
+    {
+      "name": "Yedekten dönüş sonrası yük",
+      "kind": "load",
+      "asserts": "Nesil değişince 20.000 telefonun baştan indirmesi ve sonSira'ya göre yeniden gönderimi aynı eşiklerle; telefonların tam indirme süresi yazılır."
+    },
+    {
+      "name": "Çekirdek kuralların mutasyon testi",
+      "kind": "mutation",
+      "asserts": "Haftalık Stryker işinde packages/core/src/esitleme'nin imleç, su seviyesi, sayfa kesme, gönderme süresi, ikinci çapa metni ve protokol mutantları öldürülür (eşik D15'in); her değişmez testi bir kez bilerek bozulup kırmızıya döndüğü görülür, dosya md5 ile geri yazılır."
+    }
+  ],
+  "resolved_gaps": [
+    {
+      "gap": "D06-B01",
+      "decision": "Tek toplu uç POST /v1/esitleme/gonderim (contracts kararı). D06 yalnız dağıtır: öğeler türüne göre ogeTuruKaydet ile kaydolmuş işleyiciye, aynı işlemde, artan sıra düzeninde ve ardışık aynı tür grupları halinde verilir. Kayıtlı olmayan tür TEKRAR_DENE ve ESITLEME_TUR_BILINMIYOR alır, defterde saklanır.",
+      "why": "Sıra numarası tek alandır, ikinci çapa paket başına imzalanır, gönderim tek bağlantıda tek işlemdir (teknik.html#sunucu-mimari); ayrı uçlar son sıra hesabını ve paket imzasını türlere bölerdi. Kayıt deseni yeni türü ortak dosyaya dokunmadan ekletir."
+    },
+    {
+      "gap": "D06-B02",
+      "decision": "İkinci çapa paketin tek imzalı bölümüdür: metin, UTF-8 JSON'un base64url halidir { tur: 'ikinci_capa', v: 1, kurulum, paket, belge (saat belgesi aynen), istekSuresiMs, ogeler: [{ id, olaydanBelgeyeMs } ya da { id, yokNedeni: 'sonra_yeniden_baslatma' }] }. İmza metnin ASCII baytları üzerinde ECDSA P-256 SHA-256, DER: 'a' Android cihaz anahtarı, 's' iPhone Secure Enclave ikinci anahtarı (D05-B02 kodları); personel paketinde 'o' imzasızdır, geçerli personel oturumuna bağlanır. D06 imzayı D01.cihazAnahtariGetir'in açık anahtarıyla doğrular, tur, v, kurulum ve paket alanlarını karşılaştırır, belgeyi açmaz; belgenin MAC'i ve çapa hesabı işleyicinin çağırdığı D04.saatBelgesiDogrula ve packages/core/src/saat saatSonucu'nundur. Öğeler imzalı bölümün dışında, kendi zarflarıyla gider; işleyiciye öğe başına { durum: 'VAR', imzaTuru, belge, istekSuresiMs, olaydanBelgeyeMs } ya da { durum: 'YOK', yokNedeni } verilir (D04'ün IkinciCapa adlarıyla).",
+      "why": "Kayıt zarfı ilkesiyle aynı: gelen baytlar doğrulanır, yeniden biçimlendirilmez (teknik.html#sunucu-imza-dogrulama); JSON ayrıştırıcıdan bağımsızdır. tur alanı aynı Android anahtarının kayıt imzasıyla karışmasını önler. Bölünen pakette yalnız bu küçük metin yeniden imzalanır. D06 D04'ün sunucu dış yüzünü çağırmaz (contracts notu)."
+    },
+    {
+      "gap": "D06-B03",
+      "decision": "Rota şeması yalnız zarfı denetler: ogeler en çok 200; her öğede tur (64), sira (1 ile 2^53-1), ogeKimligi (64), govde (65536), ilkCapa (nesne ya da null), ulasmaMakbuzu (128). Tür deseni, UUIDv7, ilkCapa şeması ve türün govdeEnBuyukBayt sınırı D06'da öğe başına denetlenir; uymayan öğe RET ESITLEME_OGE_GECERSIZ alır ve deftere yazılır. Gövde sınırı 1 MiB (D13-B11); telefon paketi 200 öğe ve 768 KiB ile sınırlar. 200'ü aşan öğe sayısı şema hatasıdır (400); telefonun tepkisi 413 ile aynıdır (ikiye böler).",
+      "why": "Plan 'bozuk kayıt paketi düşürmez' der (plan.html#kararlar-gonderme); şema öğe içini tiplerse tek bozuk öğe paketi 400 ile düşürür ve telefon 16 kadar istekle böler. Envanterdeki 512 KB önerisinin yerine D13'ün tek gövde sınırı geçerlidir; telefonun 768 KiB payı 413'ü olağan akıştan çıkarır."
+    },
+    {
+      "gap": "D06-B04",
+      "decision": "Öğe sonucu { sira, ogeKimligi, tur, sonuc, gerekce, ulasmaAni, ulasmaMakbuzu, beklemeSaniye, ayrinti }; sonuc KABUL, ZATEN_VAR, RET, TEKRAR_DENE ve gerekce x-extensible-enum. ZATEN_VAR da saklanan ulaşma anını ve sahibin güncel ayrıntısını (yoklamada karar) döner. ayrinti şeması öğe türünün sahibinin sözleşmesindedir. Telefon bilinmeyen sonucu TEKRAR_DENE gibi, en uzun aralıkla işler ve günlük sayaçlara yazar.",
+      "why": "Makbuz ulaşmayı ve kararı ayrı adımlar olarak gösterir (tasarim.html#ph-success); hoca okutmasıyla ulaşmış kaydı yeniden yollayan telefon ZATEN_VAR ile 'Sunucuya ulaştı' olur (plan.html#kararlar-kayit-ve-makbuz). Bilinmeyeni TEKRAR_DENE saymak 'makbuzu olan kayıt kaybolmaz' kuralını (teknik.html#testler-birim) bozmayan tek seçenektir."
+    },
+    {
+      "gap": "D06-B05",
+      "decision": "D06'nın payı karara bağlandı: RET ve TEKRAR_DENE öğe sonuçlarıdır, sunucu kararı (Var, Beklemede, İncelemede, Ret) ayrıntıda ayrı alandır. D06'nın kendi RET kodları yalnız taşıma düzeyindedir: zarf geçersiz, sıra çakışması, rol uymuyor, kısıt ihlali, yerel ret. Doğrulanabilen ama geçersiz bir kaydın KABUL ve Ret kararıyla mı saklanacağı, RET ile mi geri çevrileceği öğrencinin ekranını değiştirdiği için sahibin kararına bırakıldı: açık nokta D06-A01.",
+      "why": "Plan 'ret' sözcüğünü iki anlamda kullanıyor; sözlük ayrımı D06'da kesin olmalı ki telefon makbuzu doğru göstersin. Hangi gerekçenin hangi sınıfta olduğu D05 ve D07'nin işleyici kuralıdır (D05-B05, D07-B03 aynı soruyu taşıyor)."
+    },
+    {
+      "gap": "D06-B06",
+      "decision": "Öğe düzeyinde TEKRAR_DENE: D06'nın gerekçeleri ESITLEME_TUR_BILINMIYOR (beklemeSaniye 3600), ESITLEME_OTURUM_GEREKLI, ESITLEME_GECICI_CAKISMA (kilitlenme, serileştirme, kilit ya da deyim zaman aşımı) ve ESITLEME_ISLEYICI_HATASI (beklemeSaniye 600); sahiplerin geçici gerekçeleri kendi kodlarıyla. Telefon yalnız o öğeye 2 saniyeden 10 dakikaya artan, rastgele kaydırılmış aralığı, en az beklemeSaniye kadar uygular. Saati yalnız ikinci çapayla kurulabilen kayıt da pakete konur: ikinci çapa yoksa işleyici (D05) kaydı saklamadan TEKRAR_DENE döner. plan.html#kararlar-gonderme'deki 'o turda gitmez' böylece kayıt sayılmadan telefonda beklemek olarak karşılanır. TEKRAR_DENE deftere yazılır.",
+      "why": "Tek öğenin geçici sorunu öbür 199 öğeyi bekletmez; aralık plandaki kuralla aynıdır (teknik.html#telefon-gonderme-protokolu). Kaydı telefonda tutmak yerine göndermek kararı tek yerde (sunucuda) bırakır ve defterde boşluk açmaz; boşluk açılsaydı su seviyesi takılır, telefon her eşitlemede üstteki öğeleri yeniden gönderirdi."
+    },
+    {
+      "gap": "D06-B07",
+      "decision": "Kesintisiz son sıra kurulum başınadır: en büyük n ki 1..n her sıranın defterde (sonucu ne olursa olsun) satırı var. Her öğe türü sıra tüketir; sıra kurulumda 1'den başlar, boşluksuz artar, dönemle sıfırlanmaz. Gönderim ve indirme cevaplarının ikisi de sonSira döner. Telefon sonSira'dan büyük sıradaki ULASTI ve RET öğelerini bir kez, ulaşma makbuzlarıyla yeniden gönderir. Tek öğe yine 400 ya da 413 alırsa (yalnız telefon hatasında olur) telefon sonraki pakette yerelRetler ile bildirir, D06 RET ESITLEME_YEREL_RET yazar; böyle öğe yeniden gönderilmez, gerekirse yeniden bildirilir. Bölünen paketin yarıları önce sol yarı sonuçlanarak gider, böylece olağan akışta sonSira'nın üstünde ULASTI öğe kalmaz. teknik.html#kod-veri-modeli'nin Cihazlar maddesindeki 'cihazdan alınan son sıra numarası' cihaz satırında değil kurulumlar tablosunda tutulur; plan.html#hedefler'deki (cihaz, sıra numarası) boşluğu burada (kurulum, sıra) boşluğudur.",
+      "why": "En büyük sıra, sırasız varışta (bölünen paket, öğe düzeyinde TEKRAR_DENE) küçük sıralı öğe ulaşmadan ilerler; WAL'ın en çok 5 dakikalık kaybı (teknik.html#veritabani-yedek) onu silerse telefon yeniden yollamaz ve 'makbuzlu kayıtta kayıp 0' bozulur. TEKRAR_DENE ve yerel retler de deftere yazıldığından su seviyesi olağan akışta takılmaz. Son sıra tek yazar kuralıyla D06'dadır (contracts: kurulumlar)."
+    },
+    {
+      "gap": "D06-B08",
+      "decision": "Kurulum, bir uygulama kopyasında bir hesabın kuyruğudur. Telefon her hesap için ayrı UUIDv7 kurulum kimliği üretip yerel veritabanında saklar, aynı hesap yeniden girince aynı kimliği kullanır; yerel veritabanı ile anahtarlar tutmazsa (yedekten dönüş, başka telefona aktarma) bütün kimlikleri yeniler, eski öğeler eski kimlik ve sıralarıyla, X-Kurulum-Kimligi başlığında eski kimlikle gider. Sunucuda kurulumlar satırı ilk doğrulanmış istekte açılır, kişisi değişmez; başka kişiyle gelen istek 401 ESITLEME_KIMLIK_UYUSMUYOR alır, telefon yeni kimlik üretir. Kayıt giriş güveninde kullanılmaz.",
+      "why": "Planın kurtarma kuralı hoca işlerine de uygulanır ve oturum yenilense de bozulmaz (plan.html#gun-kenar-durumlar). Bir hesabın bekleyen işi başka hesabın su seviyesini takmaz. Yedekten dönen kopya eski kimliği sürdürseydi eski telefonun kullandığı sıraları yeniden kullanır, geçerli yeni kayıtlar SIRA_CAKISMASI alırdı. (kurulum, sıra) bütün sistemde tekil kalır; D04'ün pencere_degisiklikleri (kurulum_id, sira_no) tekil dizini buna dayanır."
+    },
+    {
+      "gap": "D06-B09",
+      "decision": "Öğeler paket içinde artan sıra düzeninde işlenir; ardışık aynı tür öğeler tek grupta işleyiciye verilir. Paketteki bütün öğeler kurulumun hesabınındır; isteğin kişisi kurulumun kişisi değilse istek 401 alır. Böylece personel işi yalnız sahibinin oturumuyla işlenir, başka hesabın işi telefonda o hesabın kurulumunda bekler ve o hesap yeniden girince gider (D01-B14). Aynı ayar için birden çok kaynaktan gelen işlerin sırası ve geç gelen değişiklikte kararların yeniden verilmesi D04'ündür; işlem anının ilk çapası öğe zarfının ilkCapa alanında (şeması D04'ün IlkCapaAlanlari), ikinci çapası bağlamda gelir.",
+      "why": "'Girişten sonra gider' kuralı (plan.html#kararlar-roller) yanlış hesaba gitmeden korunur. D04 spec'indeki 'öğe hesabı oturumun kişisiyle aynı olmalı' şartı paket düzeyinde karşılanır: başka hesabın öğesi işleyiciye hiç ulaşmaz, öğe düzeyinde ayrı TEKRAR_DENE gerekmez."
+    },
+    {
+      "gap": "D06-B10",
+      "decision": "İstek düzeyinde kişi: geçerli oturum ya da kayıtlı bir cihaz anahtarıyla geçerli paket imzası (anahtar etkin, yenilenmiş, cihazı değişmiş ya da hesabı silinmiş olabilir). İkisi de yoksa 401 ESITLEME_KIMLIK_YOK; oturumun, imzanın ve kurulumun kişisi birbirini tutmazsa 401 ESITLEME_KIMLIK_UYUSMUYOR. Geçersiz Bearer kökte 401 değildir; D06 D01.oturumDogrula'nın 401 sınıfı hatasını 'oturum yok' sayar. Öğe düzeyinde tür kaydı roller ve oturumGerekli taşır: yoklama_kaydi öğrenci, oturumsuz (kendi imzası); sorun_bildirimi öğrenci, oturumlu; hoca işleri personel, oturumlu; telefon_sayaci iki rol, oturumsuz. Rol uymazsa RET ESITLEME_YETKI_YOK, oturum yoksa TEKRAR_DENE ESITLEME_OTURUM_GEREKLI. Pasif cihazın kayıtlarının kararı D01 ve D07'nindir.",
+      "why": "Yoklama kayıtları donanım anahtarıyla imzalanır, öbür istekler oturumla gider (plan.html#kararlar-cihaz-dogrulamasi). Oturum şart olsaydı cihaz değişiminden sonra eski telefondaki ve yedekten dönen kayıtlar hiç ulaşamazdı (plan.html#gun-kenar-durumlar); bekleyen kayıtlar hiçbir zaman engellenmez (plan.html#dagitim-guncelleme-ilkesi). Hız sınırı doğrulanmış cihaza bağlıdır (teknik.html#sunucu-guvenlik), burada kurulum kimliğine."
+    },
+    {
+      "gap": "D06-B11",
+      "decision": "Öğrencinin kendi verisi öğrenci başına sürümle (ogrenci_durum_surumleri) GET /v1/esitleme/degisiklikler cevabının ogrenci bölümünde iner; bölümler D05 (kayıtlar ve kararlar), D08 (devam durumu) ve D09 (düzeltmeler ve sorun bildirimleri) kaynaklarından. Kaynak 'şu sürümden beri' farkı ya da tam liste döner (tam bayrağı). Bölüm çok sayfalı indirmenin ilk sayfasında gelir. Telefon sunucunun listesinde bulduğu her yerel kaydı ULASTI yapar.",
+      "why": "Genel sayaç satırında sıcak nokta olmaz, yalnız o öğrencinin satırı kilitlenir; ayrı uç açılmadığı için ders çıkışındaki 2 ile 3 istek bütçesi korunur (plan.html#teknoloji-sunucu-yeri). Karar değişiklikleri push olmadan çekmeyle iner (plan.html#kararlar-supheli-kayit)."
+    },
+    {
+      "gap": "D06-B12",
+      "decision": "Teslim anı telefonun sakladığını kanıtladığı sunumdur: indirme bir karar sürümünü sunduğunda karar_teslimleri satırına sunulan_durum_surumu ve son_sunulma_ani yazılır; telefon sayfayı ve imleci aynı yerel işlemde saklar; sonraki istekte (gönderim ya da indirme) imleçteki öğrenci sürümü sunulan sürüme eşit ya da büyükse telefona_ulasti_ani = son_sunulma_ani tek UPDATE ile yazılır. Cevap kaybolursa onay gelmez, sonraki sunumun anı geçerli olur. Gönderim cevabındaki karar ayrıntısı teslim sayılmaz. Anlar saat arayüzünden yazılır.",
+      "why": "Sunucu cevabın telefona yazıldığını ancak telefonun sonraki isteğinden öğrenir; kaybolan cevapta süre yanlış başlamaz, gecikme öğrencinin lehinedir. Kural taşıyan an SQL now() ile yazılmaz (teknik.html#testler-veritabani-sifirlama). Karar değişince sürenin yeniden başlaması D09'un kuralıdır; D06 her karar sürümü için anı verir."
+    },
+    {
+      "gap": "D06-B13",
+      "decision": "kurulumlar.son_temas_ani her doğrulanmış gönderim ve indirmede saat arayüzünden yazılır, seyreltilmez; bekleyen_oge_sayisi telefonun bildirdiğinden (gönderimde paketin TEKRAR_DENE öğeleri eklenerek). İndirmenin yazımı satır kilitliyse atlanır (aynı anda süren gönderim zaten yazar). kurulumSonTemasi kişinin en son temasını ve o temastaki bekleyen sayısını verir; KARAR BEKLİYOR kuralı D08 ve D10'undur. Ders başına bekleyen listesi tutulmaz: bekleyen öğesi olan son temas bütün dersler için 'bağlanmamış' sayılabilir, bu yön öğrencinin lehinedir.",
+      "why": "Son oturumun kapanışından hemen sonraki temas atlanırsa öğrenci yanlışlıkla KARAR BEKLİYOR görünür (plan.html#devam-donem-sonu). Kurulum hesap başına olduğundan son temas kişiye kesin bağlanır. Bekleyen öğeyle temas seyrektir; ders listesi taşımak sözleşmeyi büyütürdü."
+    },
+    {
+      "gap": "D06-B14",
+      "decision": "GET /v1/esitleme/degisiklikler?imlec&adet&yapiSurumu&bekleyenOgeSayisi. İmleç opak base64url: '1|sistemKimligi|zamanCizelgesi|genelSurum|kapsamSurumu|ogrenciSurumu|yapiSurumu|hesapOzeti' (64 bitlik değer ondalık metin, hesap özeti kişi kimliğinin SHA-256'sının ilk 16 onaltılık hanesi). kapsamSurumu, kapsamın en son hesaplandığı sayaç değeridir; kapsam değişikliği yalnız bundan sonrası için sorulur, yoksa çok sayfalı tam indirmede öğrencinin kendi liste satırı (sürümü ilk sayfanın üst sürümünden büyük) indirmeyi her sayfada baştan başlatırdı. Sayfa sürüm sınırında kesilir (Durumlar ve kurallar, sayfa kesme). İmleç hesap ve yapı sürümüne bağlıdır; telefon her sayfayı tek yerel işlemde uygular, imleci aynı işlemde saklar. Baştan indir hata kodu değil 200 cevabında alandır (D13). Telefon tam indirme bitince gelmeyen satırları siler; önbelleği baştan boşaltmaz, sonuç plan.html#kararlar-indirme'deki 'silip yeniden çeker' ile aynıdır ve arada program boş kalmaz.",
+      "why": "Ders çıkışındaki 'gerekirse değişenler' tek istektir (plan.html#teknoloji-sunucu-yeri); imleç metin olduğu için 64 bit sorun olmaz (D13-B15); hesap özeti başka hesabın imleciyle veri kaçırmayı önler. Sayfa adı adet, D13-B13 sorgu adıyla aynı."
+    },
+    {
+      "gap": "D06-B15",
+      "decision": "Kapsam değişince o kullanıcıya baştan indir. Kapsam kaynağı (öğrencide D03, personelde D02) kapsamı belirleyen satırlarından biri imleçten sonra değiştiyse true döner (yanlış pozitif serbest, yanlış negatif yasak). Kapsam şube, ders ve birim kümesidir; öğrencide numarası ve teyit durumu da bağlamda verilir (D06 D01.ogrenciHesabiGetir ile okur, D03-A09); teyitsiz öğrenciye kendi liste satırının adı inmez, çünkü kapsamı yalnız numara iddiasına dayanır. Silindi işareti satır kullanıcının görme kapsamından çıkınca kullanılır; pasiflik veri alanıdır, pasif öğrencide ders telefonda kalır (D03-B13). Her kaynak satırı ve sütunu role göre süzer: öğrenciye oturumun yalnız ders, derslik, açılış, kapanış, iptal ve tür alanları iner; kafa sayısı ve hoca ayarı inmez.",
+      "why": "'Şu sürümden beri değişenler' süzgeç değişince yanılır: sonradan eklenen öğrencinin dersi eski sürümde kalır. Öğrencinin tam indirmesi birkaç yüz, hocanınki birkaç bin satırdır; kapsam değişikliği seyrek olduğundan baştan indirme ucuz ve kesin doğrudur, kapsam olayı mantığı gerekmez."
+    },
+    {
+      "gap": "D06-B16",
+      "decision": "Dönem durumu D02'nin kilit kaynağıyla (kapsamdaki birimlerin birim ve dönem satırı) genel indirmede iner; son hafta telefonun bildiği son oturumdan ve ders satırıyla inen birim son gününden çıkarılır (D08-B23). Telefon kilitli dönemin yalnız ULASTI öğelerini siler; sonuçlanmamış öğeyi kilitten sonra da saklar ve gönderir.",
+      "why": "Contracts D02'yi kilit kaynağı olarak kaydetti; öğrenciye inen 'yalnız' listesine kişisel veri eklenmez (plan.html#kararlar-indirme). Son günden sonra gelen kayıt yine saklanır (plan.html#kararlar-gonderme-suresi)."
+    },
+    {
+      "gap": "D06-B17",
+      "decision": "Dönemin bütün oturumları üretildikçe iner (öğrenci başına dönemde en çok yaklaşık 170 satır); kayan pencere yok.",
+      "why": "Kayan pencere 'değişenler' mantığıyla ifade edilemez; aynı gün eklenen telafi dersi yeni sürümle hemen internetteki telefona iner (plan.html#kararlar-kafa-sayisi)."
+    },
+    {
+      "gap": "D06-B18",
+      "decision": "Silindi işaretli satırlar temizlenmez (indirilen tablolar küçüktür; D12-B16'ya göre bu satırlar fiziksel silinmez). degisiklik_sayaci.en_eski_gecerli_surum (başta 0) yükseltilirse altındaki imleçler baştan indirir; değeri yalnız D06 göçü değiştirir.",
+      "why": "Bugün ek iş yok; ileride saklama silmesi ya da bir veri düzeltmesi bu değeri yükseltip herkesi güvenle baştan indirtebilir. 'Çok eski imleç' tek değere bağlanır."
+    },
+    {
+      "gap": "D06-B19",
+      "decision": "surumAl(tx) her çağrıda UPDATE degisiklik_sayaci SET surum = surum + 1 WHERE id = 1 RETURNING surum çalıştırır; satır kilidi işlem sonuna kadar kalır. Kural: çağıran inen satırlarını yazdıktan sonra, işlemin son adımlarından biri olarak çağırır (satırlar, iş kuyruğu, sayaç; D03-A10), dönen sürümü o işlemde yazdığı inen satırlara tek UPDATE ile koyar ve sayaçtan sonra yeni satır kilidi almaz. Yalnız telefona inen bir sütun değişince sürüm alınır. Öğrencinin yoklama gönderimi sayaca dokunmaz; gönderim işleminde sayacı alan personel işinden sonraki gruplarda kilitlenme olursa yalnız o grup TEKRAR_DENE alır. Okuyucu sayacı kilitsiz okur ve satırları surum <= okunan değer ile süzer.",
+      "why": "teknik.html#kod-veri-modeli tek sayaç satırını seçti; satır kilidi bitiş sırasıyla sürüm sırasını eşitler, okuyucu v+1'i görüp v'yi atlayamaz (SEQUENCE bunu garanti etmez). Son adımda almak kilidi kısa tutar. Sıcak yol (saniyede 70 ile 330 gönderim) sayaçtan uzak kalır."
+    },
+    {
+      "gap": "D06-B20",
+      "decision": "Nesil D12.nesilOku(tx) ile değişenler sorgusuyla aynı işlemde okunur; okuma yetkisi, terfiden sonraki CHECKPOINT ve zaman çizelgesinin çapraz denetimi D12'nindir (D12-B32). Geri yükleme denemesinde eski imleçle baştan indir alındığı D06 senaryosuyla da denenir.",
+      "why": "Nesil elle tutulmaz (plan.html#kararlar-indirme); veritabanı kurulumu ve dönüş adımları D12'nin kapsamı."
+    },
+    {
+      "gap": "D06-B21",
+      "decision": "Saat belgesi D06 gövdesine girmez: telefon her isteğe X-Saat-Istegi başlığıyla tek kullanımlık değer koyar, kök kanca (D13, D04) iki D06 cevabına da X-Saat-Belgesi ekler, eşitleme bozukken eklemez. Gönderimden hemen önceki belge D04'ün POST /v1/saat/belge ucundan alınır ve ikinci çapaya girer.",
+      "why": "Plan 'sunucunun diğer cevapları da yeni belge taşır' der (plan.html#gun-ikinci-capa); tek mekanizma kökte kalınca her modül ayrı yazmaz (D13-B22). Gönderme cevabındaki belge gönderim öncesi isteğin yerini tutmaz (plan.html#teknoloji-sunucu-yeri)."
+    },
+    {
+      "gap": "D06-B22",
+      "decision": "gondermeSuresiSonu = en erken(dersin bitiş anı + 7 x 86.400.000 ms, devamsızlık işleme son gününden sonraki günün 00:00 Europe/Istanbul anı); dışlayıcı sınır. Saf hesap packages/core/src/esitleme/gonderme-suresi.ts'te UTC milisaniyeyle, İstanbul gün sonu infra/saat'in istanbulGunSonuAni yardımcısıyla; zamanlanmış iş gerekmez, okuma anında hesaplanır.",
+      "why": "Kafa sayısının kesinleştiği an, panel şeridinin kalktığı an (tasarim.html#durumlar) ve geç kaydın 'sonradan değişenler'e düştüğü an aynı sonucu bulmalı; D14-B09'un son gün tanımıyla (ertesi gün 00:00, dışlayıcı) aynı."
+    },
+    {
+      "gap": "D06-B23",
+      "decision": "Sürüm sorgusu D13'ün GET /v1/surum ucu oldu (contracts). D06'nın payı X-Kurulum-Kimligi'dir: rastgele UUIDv7 olduğundan GitHub APK kademeli duyurusunun kovası (özet mod 100) bundan hesaplanabilir; kimlik hesap başına olduğu için aynı telefonda hesap değişince kova da değişebilir.",
+      "why": "Contracts GET /v1/esitleme/surum'u D13'e bağladı; sürüm, kanal ve bağlantı bilgisi tek uçta kalır."
+    },
+    {
+      "gap": "D06-B24",
+      "decision": "Yayın bilgisi dosyası yayin-bilgisi.json: CI yazar (D15), şema ve okuma D13'ün (contracts). D06 bu dosyayı okumaz.",
+      "why": "Contracts kararı: dosya tablo değil, üç öneri tek dosyada birleşti."
+    },
+    {
+      "gap": "D06-B25",
+      "decision": "Kaydı üreten sürüm kayıt metnindedir (D05); D06 istek başlıklarını yalnız gönderen sürümü olarak deftere (gonderen_uygulama_surumu, gonderen_guncelleme_kimligi) ve kurulum satırına yazar.",
+      "why": "İmzalı metindeki sürüm değiştirilemez ve doğru sürümü gösterir; kural ve gerekçe kodu D07'nin (plan.html#dagitim-guncelleme-ilkesi)."
+    },
+    {
+      "gap": "D06-B26",
+      "decision": "Hesap silme kuyruk öğesi değildir (contracts öğe türleri listesi). Telefon D01'in silme ucunu kuyruğunda sonuçlanmamış öğe kalmayınca çağırır; bunu her öğenin sonucundan bilir. Silmeden sonra gelen öğelerin sonucu sahiplerinindir (D12-B18); silinen hesabın oturumu kapalıdır, kişi yalnız imzadan çözülür. Hesap silinince D06 o kişinin kurulumlar, gonderim_defteri, ogrenci_durum_surumleri ve karar_teslimleri satırlarını D12'nin saklama işleyicisiyle siler.",
+      "why": "Sıralama telefonda kesin bilinir (her öğenin sonucu var), çökmeden etkilenmez. Bu satırlar planın 'kalır' listesinde değildir (plan.html#kararlar-hesap-silme); kayıtların kendisi D05'te kalır. D12-B20'nin 'son sıra numarası kalır' önerisi geç gelen kaydın doğrulaması içindi; o doğrulama D05'in (dönem, cihaz, sıra) tekilliğindedir, kurulum su seviyesi gerekmez."
+    },
+    {
+      "gap": "D06-B27",
+      "decision": "Personel telefonu GET /v1/esitleme/degisiklikler'de 401 alırsa çıkış gibi davranır: sınıf listelerini ve o hesabın imlecini siler, kuyruktaki işleri saklar; yeniden girişte imleçsiz istekle hoca verisi baştan iner. Gönderimde 401 yalnız o kurulumun gönderimini durdurur.",
+      "why": "Çıkıştaki gizlilik gerekçesinin aynısı (plan.html#kararlar-indirme); işler girişten sonra gider (plan.html#kararlar-roller). Derste internetsizken 401 görülmez, internetsiz çalışma etkilenmez."
+    },
+    {
+      "gap": "D06-B28",
+      "decision": "Günlük sayaçlar D15'in telefon_sayaci öğesidir; gün sınırı, tekillik ve birikme D15'in. Sıra kuralı kendiliğinden korunur: öğe gün kapanınca kuyruğa girer ve o günün kayıtlarından sonraki sırayı alır. Panel süreleri POST /v1/isletim/ekran-sureleri (D15).",
+      "why": "Contracts kararı; D06 yalnız taşır."
+    },
+    {
+      "gap": "D06-B29",
+      "decision": "Paket düzeyinde 429 ve 503 D13'ündür (Retry-After; 503 SUNUCU_YOGUN 15 ile 45 saniye, D13-B10). D06'nın 503 ESITLEME_KURULUM_MESGUL cevabı Retry-After 5 taşır. Hız sınırı: gönderim X-Kurulum-Kimligi başına dakikada 30, indirme oturum başına dakikada 120 (D13-B09); bir bölme dizisi (yaklaşık 16 istek) sınırın altında kalır. Kesin değerler ders çıkışı yük testiyle yazılır.",
+      "why": "Telefon Retry-After'a en az o kadar, üstüne rastgele payla uyar (teknik.html#telefon-gonderme-protokolu); değerler tek yerde (D13) durur."
+    },
+    {
+      "gap": "D06-B30",
+      "decision": "Gönderim işlemi SET LOCAL statement_timeout '5s' ve lock_timeout '2s' ile açılır; kurulum satırı kilidi beklenemezse 503 ESITLEME_KURULUM_MESGUL. İşleme bütçesi 8 saniyedir: gruplar en çok 50 öğelik parçalarla işleyiciye verilir ve bütçe her parçadan sonra denetlenir; bütçe dolunca kalan öğeler işleyiciye verilmeden TEKRAR_DENE ESITLEME_ZAMAN_BUTCESI (beklemeSaniye 5) alır, işlenenler aynı işlemde kalır ve işlem biter. Fastify isteği 25 saniye (D13-B26), telefon 30 saniye; telefon yeniden göndermeden önce sunucu kesin bitirmiş olur.",
+      "why": "Sunucu telefonun zaman aşımından sonra yazmayı sürdürseydi yeniden gönderimle yük ikiye katlanırdı. Bütçe aşımında bütün işlemi geri alıp 503 vermek, hep yavaş kalan bir paketi sonsuza dek döndürürdü; kısmi sonuç her turda ilerleme sağlar ve sıra düzenini bozmaz (kesilen öğeler hep sondadır). Değerler yük testiyle ayarlanır."
+    },
+    {
+      "gap": "D06-B31",
+      "decision": "İmleç telefonun yerel yapı sürümünü (PRAGMA user_version) taşır; istekteki yapiSurumu imleçtekinden farklıysa baştan indir. Sunucu alan süzmez: eski sürüm bilmediği tablo ve alanı yok sayar.",
+      "why": "Yeni tablo ya da alanın satırları imleçten eski sürümde kalır, baştan indirme onları getirir; karar sunucuda ve test edilebilir (teknik.html#telefon-yerel-veri). İstemciler bilinmeyene dayanıklı yazılır (teknik.html#sunucu-mimari)."
+    }
+  ],
+  "contradictions_resolved": [
+    {
+      "id": "D06-C01",
+      "resolution": "Rota şeması yalnız zarfı denetler; öğe içi doğrulama D06'da öğe başına yapılır ve RET olarak döner (D06-B03). Böylece teknik.html#sunucu-mimari'deki şema doğrulaması ile plan.html#kararlar-gonderme'deki 'bozuk kayıt paketi düşürmez' birlikte tutar; 400 ve 413 yalnız zarf ya da boyut hatasında döner, bölme yolu korunur."
+    },
+    {
+      "id": "D06-C02",
+      "resolution": "kurulumlar giriş güveninde kullanılmayan, hesap başına sıra izidir; tanınan cihaz kaydı değildir, teknik.html#sunucu-kimlik doğru kalır. 'Cihazdan alınan son sıra numarası' (teknik.html#kod-veri-modeli, Cihazlar) cihaz satırından bu tabloya taşınmıştır. teknik.html'e bu iki cümlenin eklenmesi önerilir."
+    },
+    {
+      "id": "D06-C03",
+      "resolution": "Gönderim ucunda kişi oturumdan ya da paket imzasından çözülür (D06-B10); 401 yalnız ikisi de yoksa ya da kişiler tutmuyorsa döner. Yoklama kayıtları oturumsuz işlenir, oturum isteyen öğe yalnız kendisi TEKRAR_DENE alır; eski telefondaki ve yedekten dönen kayıtlar değişim kararına ulaşır (plan.html#gun-kenar-durumlar), teknik.html#telefon-gonderme-protokolu'ndaki '401'de gönderim durur' kuralı da kişi çözülemeyen istek için geçerli kalır."
+    }
+  ],
+  "open_points": [
+    {
+      "id": "D06-A01",
+      "question": "İmzası doğrulanan ama geçersiz bir kayıt (listede olmadığı ders, pencere dışı, ulaşma anını aşan saat) gönderimde RET mi almalı, yoksa KABUL alıp 'Ret' kararıyla mı saklanmalı? Birincisinde makbuz 'Telefonda kayıtlı, gönderilmedi' kalır ve her gün hatırlatılır; ikincisinde 'Sunucuya ulaştı' ve 'Sunucu kararı: Ret' görünür, öğrenci 3 gün içinde sorun bildirebilir.",
+      "recommendation": "İkincisi: gönderim RET'i yalnız saklanamayan öğede (zarf çözülemiyor, imza doğrulanamıyor, kimlik ya da sıra çakışması, rol uymuyor); doğrulanabilen her kayıt KABUL alır ve kararı gerekçesiyle saklanır. Gerekçe: ham kayıt kanıttır, atılmaz (plan.html#kararlar-cihaz-dogrulamasi); 'Kaydım yanlış derse düştü' bildirimi ancak böyle yapılabilir (tasarim.html#sh-d); işaretlenmeden kabul oranı saklanan kararlardan hesaplanır (plan.html#hedefler). D06'nın sözlüğü iki seçeneği de taşır; karar D05 ve D07 işleyicilerinin kuralını belirler (D06-B05; D05-B05 ve D07-B03 aynı soru).",
+      "needs_owner": true
+    }
+  ],
+  "olcum": [
+    "Makbuzlu kayıtta kayıp 0: gönderim durum makinesi testi ve yedekten dönüş senaryosu her değişiklikte; geri yükleme denemesinde sonSira ve baştan indirme (plan.html#hedefler).",
+    "Gönderim ucunda p95 1 saniye, p99 3 saniye altı; 503 oranı yüzde 2 altı (ders çıkışı yük testi, D15-B15).",
+    "Açık sıra boşluğu olan kurulum sayısı ve 24 saatten eski boşluk sayısı: sira_boslugu_raporu'nun gecelik log satırı ve kurulumlar sütunları (plan.html#hedefler, boşluklar hata yakalamak için).",
+    "Gönderim izi: her gönderimde tek log satırı (istek kimliği, kurulum ve kişi iç kimliği, öğe sayısı, sonuçların koda göre sayısı, ikinci çapa durumu, süre, sonSira). İndirme izi: baştan indirme nedeni, satır sayısı, sayfa, süre. Kayıtların yüzde 95'inin 24 saatte ulaşması kayıt satırlarından ölçülür (D15)."
+  ],
+  "dis_yuz_kullanimi": [
+    "D01: oturumDogrula(istek) (gönderimde 401 sınıfı hata 'oturum yok' sayılır), cihazAnahtariGetir(tx, anahtarId) (paket imzası), ogrenciHesabiGetir(tx, { kisiId }) (öğrenci kapsam bağlamındaki numara ve teyit durumu; numara loga girmez)",
+    "D12: islem(fn), nesilOku(tx), saklamaIsleyicisiKaydet(veriSinifi, isleyici), kisitAdi(tablo, sutunlar, tur), testVeritabaniHazirla()",
+    "D13: rotalariKaydet(app, ESITLEME_ROTALARI), uygulamaHatasi(kod, ayrinti), istekKimligi(istek), hizSinifi('esitleme_gonderim')",
+    "infra/saat: istanbulGunSonuAni(tarih) (gönderme süresi sonu); Saat arayüzü ve log bileşim kökünden parametreyle",
+    "packages/core/src/saat: yalnız tipler (IlkCapaAlanlari, IkinciCapa yok nedenleri); D06 belgeyi doğrulamaz",
+    "jobs/esitleme: D14.isTanimla (iş tanımı kurucusu, D14 isteği); modules/esitleme D14'ü içe aktarmaz"
+  ],
+  "kayitlar": [
+    "app.ts: esitlemeEklentisi(app, { saat, log, ulasmaMakbuzu: { etkinKid, anahtarlar } }); anahtarlar D15.gizliAnahtar('ulasma_makbuzu', kid) ile bileşim kökünde okunur",
+    "D13.rotalariKaydet(app, ESITLEME_ROTALARI): gönderim için kimlik ['cihaz-imzasi', 'oturum'], gövde sınırı 1 MiB, hız sınıfı esitleme_gonderim; indirme için kimlik oturum (öğrenci, personel), defter yazan GET işareti",
+    "D12.saklamaIsleyicisiKaydet('hesap_silme', kisininEsitlemeSatirlariniSil); D12.saklamaIsleyicisiKaydet('yoklama_kayitlari', donemTeslimleriniSil): saklama süresi dolan dönemin karar_teslimleri satırları, kayıtlardan önce (sınıf adları D12 listesinden). Defterin 400 günlük teknik temizliği D12'nin saklama işine değil sira_boslugu_raporu'na bağlıdır: saklama işi süreler belirlenene kadar kapalıdır, geçici veriyi her modül kendi işiyle siler (contracts).",
+    "jobs/esitleme/index.ts: export const isler = [isTanimla({ kuyruk: SIRA_BOSLUGU_RAPORU, isleyici, sureAsimiSaniye: 600, zamanlama: { cron: '10 5 * * *' } })]; worker.ts toplar"
+  ],
+  "beklenenler": [
+    "D01: cihazAnahtariGetir dönüşünde { anahtarId, cihazId, kisiId, tur: 'a' | 'i' | 's', acikAnahtarSpki, durum }; oturumDogrula'nın 401 sınıfı hataları ayırt edilebilir (kod alanı).",
+    "D12: nesilOku(tx) dönüşü { sistemKimligi: string (64 bit ondalık), zamanCizelgesi: number }; uygulama rolüne pg_control_system ve pg_control_checkpoint yetkisi; kayıt veri sınıfında D06'nın işleyicisi D05'inkinden önce çalışır; hesap silme sınıfı D01'in yürütücüsünden çağrılır.",
+    "D13: gönderim rotasında geçersiz Bearer kökte 401 değildir (isteğe oturum hatası işareti konur ya da D06 oturumDogrula'yı kendisi çağırır); indirme GET'i defter yazan uç olarak kayıtlı; hız sınıfı anahtarı X-Kurulum-Kimligi; X-Saat-Belgesi kök kancası iki uçta; başlık adları ve PLATFORMLAR, KANALLAR sabitleri sözleşmede.",
+    "D14: contracts.json'da D06 reads_from listesine D14 eklenmeli (yalnız jobs/esitleme'nin isTanimla kullanımı; döngü oluşmaz, D14 D06'yı okumaz).",
+    "D04: infra/saat'in istanbulGunSonuAni(tarih) yardımcısı (D04 spec'inde 'sözleşmeye ek') contracts.json dış yüz listesine girmeli; gondermeSuresiSonu ona dayanır, D06 D04'ün modül dış yüzünü çağırmaz.",
+    "D15: 'ulasma_makbuzu' amaçlı gizli anahtar (kid'li; eski anahtar en az dönem kilidine kadar saklanır, teknik.html#sunucu-ayarlar listesine eklenir); ders çıkışı yük testinde gönderim ve indirme profili; olcum_ görünümleri kurulumlar ve gonderim_defteri'ni okur.",
+    "Öğe sahipleri (D04, D05, D07, D09, D11, D15): ogeTuruKaydet ile kaydolur; işleyici beklenen her sonucu döner, fırlatmaz, hızlı yolda öğe başına SAVEPOINT açmaz; ayrıntı şemasını kendi sözleşmesinde yazar; öğe kimliğini kendi tablosunda hedefli ON CONFLICT ile tekil tutar; GelenOge.ulasmaAni'yi (paket anı ya da makbuz anı) ulaşma anı olarak yazar.",
+    "D05: saati yalnız ikinci çapayla kurulabilen kayıt için ikinci çapa YOK ise kaydı saklamadan TEKRAR_DENE döner; ogrencininKayitlari kaynağı karar sürümlerini kararlar listesinde verir; kayıt metnindeki sıra öğe sırasıyla aynıdır.",
+    "D03: öğrenci kapsamı numaraya dayandığından teyitsiz öğrenciye (Kapsam.teyitli false) kendi liste satırının adı gönderilmez; numarayı başkasının numarasıyla kaydeden kişi o öğrencinin adını öğrenemez (öğrenciye başka öğrencinin adı inmez kuralı, plan.html#kararlar-indirme).",
+    "İndirme kaynakları (D02, D03, D04, D05, D08, D09): telefona inen satırda bigint sürüm sütunu ve silinme işareti; sürüm surumAl ile işlemin son adımında; kapsam ve sürüm süzgecine uygun dizin, ör. (ders_id, surum); öğrenci verisini değiştiren her işlem ogrenciDurumuDegisti çağırır. D04'ün ve D03'ün önerdiği imzalar bu arayüze bağlanır: surumden null tam indirme demektir, sürümler süreç içinde bigint, sayfa sınırı adet."
+  ],
+  "akislar": {
+    "gonderim": [
+      "Kök: hız sınırı (X-Kurulum-Kimligi), gövde sınırı 1 MiB, zarf şeması. Bu uçta geçersiz Bearer kökte 401 değildir.",
+      "ulasmaAni = saat.simdi(): paket başına bir kez okunur.",
+      "İşlem açılır (D12.islem): SET LOCAL statement_timeout '5s', lock_timeout '2s'.",
+      "Kişi çözümü: Bearer varsa D01.oturumDogrula (401 sınıfı hata oturumsuz sayılır); ikinciCapa 'a' ya da 's' ise D01.cihazAnahtariGetir ve imza doğrulaması. İkisi de yoksa 401 ESITLEME_KIMLIK_YOK; kişiler tutmazsa 401 ESITLEME_KIMLIK_UYUSMUYOR.",
+      "Kurulum satırı: yoksa kişi ve rolle açılır (kişinin 20 kurulumu varsa 403 ESITLEME_KURULUM_SINIRI), varsa SELECT ... FOR UPDATE; kişisi farklıysa 401 ESITLEME_KIMLIK_UYUSMUYOR; kilit 2 saniyede alınamazsa 503 ESITLEME_KURULUM_MESGUL.",
+      "İkinci çapa bağlamı: metin çözülür, tur, v, kurulum ve paket denetlenir; her öğe için VAR ya da YOK ve yokNedeni çıkarılır.",
+      "Öğrenci onayı: imlec geçerliyse (nesil ve hesap özeti tutuyor) ve öğrenci sürümü onaylanandan büyükse teslimler yazılır.",
+      "yerelRetler deftere RET ESITLEME_YEREL_RET yazılır (KABUL ve ZATEN_VAR satırına dokunmaz).",
+      "Paketin sıraları için defter tek sorguyla okunur; öğeler artan sırayla ön denetimden geçer: zarf, sıra çakışması, tür kaydı, rol, oturum. Ulaşma makbuzu geçerliyse öğenin ulaşma anı makbuzdaki andır.",
+      "Ardışık aynı tür öğe grupları en çok 50 öğelik parçalarla: SAVEPOINT, işleyici (isleToplu bir kez ya da isle tek tek), sonuç sözleşmesi denetimi, RELEASE. Hata: geri dön; geçici kod (40001, 40P01, 55P03, 57014) ise parça TEKRAR_DENE ESITLEME_GECICI_CAKISMA, değilse öğe başına SAVEPOINT ile yeniden (23 sınıfı RET ESITLEME_KISIT_IHLALI, öbürü TEKRAR_DENE ESITLEME_ISLEYICI_HATASI). Her parçadan sonra 8 saniyelik bütçe denetlenir; dolduysa kalan öğeler TEKRAR_DENE ESITLEME_ZAMAN_BUTCESI alır.",
+      "Defter toplu upsert (KABUL ve ZATEN_VAR satırını değiştirmeyen kural); kesintisiz son sıra ve en büyük sıra hesabı; kurulum satırı (son temas, son gönderim, bekleyen, sürüm başlıkları, son cihaz).",
+      "COMMIT. Cevap: istek sırasıyla sonuçlar ve ulaşma makbuzları, sonSira, degisiklikVar. Tek log satırı."
+    ],
+    "indirme": [
+      "Kök: oturum kancası (öğrenci ya da personel), hız sınırı; X-Kurulum-Kimligi ve sorgu şeması.",
+      "an = saat.simdi(); işlem READ COMMITTED.",
+      "Kurulum satırı: yoksa açılır (kişinin 20 kurulumu varsa 403 ESITLEME_KURULUM_SINIRI); kişisi farklıysa 401 ESITLEME_KIMLIK_UYUSMUYOR. Son temas, son indirme, bekleyen ve yapı sürümü SKIP LOCKED ile yazılır (süren gönderim kilitliyse atlanır).",
+      "nesil = D12.nesilOku(tx); S = degisiklik_sayaci.surum (kilitsiz); öğrencide So = öğrenci sürümü, D01.ogrenciHesabiGetir ile numara ve teyit durumu.",
+      "İmleç çözümü: nesil, hesap özeti, yapı sürümü, S ve en_eski_gecerli_surum aralığı; geçerli ve öğrenciyse onay (teslimler).",
+      "Kapsam: rolün kapsam kaynağı kapsamı şimdiki veriden kurar; imleç geçerliyse degistiMi(kişi, imleçteki kapsamSurumu, S) sorulur, true ise baştan indir. Yeni imlecin kapsamSurumu S olur.",
+      "Genel kaynaklar: degisenler(kapsam, surumden c ya da null, S, adet); sayfa kesme kuralıyla üst sürüm U; U'dan büyük satırlar çıkar; aynı kaynaktan aynı kimlik bir kez.",
+      "Öğrenci bölümü: baştan indirmede ya da So imleçtekinden büyükse her öğrenci kaynağından bolum; dönen karar sürümleri karar_teslimleri'ne sunum olarak yazılır.",
+      "Yeni imleç (nesil, U, S, So, yapı sürümü, hesap özeti); cevap; tek log satırı."
+    ]
+  },
+  "kurallar": [
+    {
+      "ad": "Su seviyesi",
+      "metin": "Gönderim sonunda kesintisiz_son_sira'nın üstündeki sıralar artan okunur (en çok 1000'lik parçalarla) ve 1..n kesintisiz olan en büyük n yazılır; ilerlediyse sira_ilerleme_ani güncellenir. Saf hesap packages/core/src/esitleme/su-seviyesi.ts."
+    },
+    {
+      "ad": "Sayfa kesme",
+      "metin": "Her genel kaynak (surumden, surumeKadar] aralığındaki satırları surum sırasıyla en çok adet kadar döner. adet kadar dönen kaynak kesilmiş sayılır: dönen satırlar tek sürümdense D06 o sürümü sınırsız ister ve kaynağın sınırı o sürüm olur; birden çok sürümse son sürüm bölünmüş olabileceğinden sınır son sürümden bir eksiktir. Sayfanın üst sürümü U kesilen kaynakların sınırlarının en küçüğüdür (kesilen yoksa S); U'dan büyük satırlar sonraki sayfaya kalır. Her sayfa ilerler (U imleçten büyüktür). Saf hesap packages/core/src/esitleme/sayfa.ts."
+    },
+    {
+      "ad": "İmleç biçimi",
+      "metin": "base64url('1|sistemKimligi|zamanCizelgesi|genelSurum|kapsamSurumu|ogrenciSurumu|yapiSurumu|hesapOzeti'), en çok 256 karakter; genelSurum <= kapsamSurumu; personelde ogrenciSurumu 0. kapsamSurumu kapsamın en son hesaplandığı sayaç değeridir: her istekte degistiMi(kapsamSurumu, S) sorulur, false ise yeni imleçte kapsamSurumu = S olur. Baştan indir nedenleri: imleç yok ya da çözülemiyor, biçim sürümü bilinmiyor, nesil farklı, hesap özeti farklı, yapı sürümü farklı, genel ya da kapsam sürümü sayaçtan büyük, genel sürüm en_eski_gecerli_surum'dan küçük, öğrenci sürümü sunucudakinden büyük, kapsam kapsamSurumu'ndan sonra değişti."
+    },
+    {
+      "ad": "İkinci çapa metni",
+      "metin": "base64url(UTF-8 JSON) { tur: 'ikinci_capa', v: 1, kurulum, paket, belge, istekSuresiMs, ogeler: [{ id, olaydanBelgeyeMs } | { id, yokNedeni: 'sonra_yeniden_baslatma' }] }, en çok 200 öğe, kimlikler tekil. İmza metnin ASCII baytları üzerinde ECDSA P-256 SHA-256, DER. Öğe bağlamı: listede süreyle varsa VAR; listede yokNedeniyle varsa YOK ve o neden; listede yoksa YOK gonderilmedi; ikinciCapa null ise YOK esitleme_bozuk (ikinciCapaYokNedeni öyleyse) ya da paket_imzasiz; imza ya da bağlam tutmazsa YOK paket_imzasiz ve log."
+    },
+    {
+      "ad": "Ulaşma makbuzu",
+      "metin": "base64url(biçim 1 bayt (1) | kid 1 bayt | kabulAniMs 8 bayt büyük uçlu | HMAC-SHA256(anahtar[kid], 'esitleme.ulasma.1' | kurulum 16 bayt | sira 8 bayt | ogeKimligi 16 bayt | SHA-256(govde) 32 bayt | kabulAniMs 8 bayt)), 42 bayt, 56 karakter. Doğrulama timingSafeEqual ile; geçerli makbuz öğenin ulaşma anını makbuzdaki an yapar. Anahtar listesinde olmayan kid yok sayılır (ulaşma anı paketin anı olur)."
+    },
+    {
+      "ad": "Defter güncelleme",
+      "metin": "INSERT ... ON CONFLICT (kurulum_id, sira) DO UPDATE: önceki sonuç KABUL ya da ZATEN_VAR ise sonuc, gerekce ve kabul_ani kalır; değilse yeni sonuç yazılır; son_gorulme_ani, gorulme_sayisi, son_paket_kimligi ve gönderen sürüm her gelişte güncellenir; öğe kimliği farklıysa satır değişmez (çakışma ön denetimde RET alır)."
+    },
+    {
+      "ad": "Kilit sırası",
+      "metin": "Gönderimde önce kurulum satırı, sonra öğe sahiplerinin satırları; sayaç (surumAl) yalnız inen satır yazan işlemde ve son adımlardan biri olarak; öğrenci durum satırı (ogrenciDurumuDegisti) öğrencinin verisini yazan adımda. İndirme sayaç ve öğrenci satırını kilitsiz okur, kurulum satırını SKIP LOCKED ile yazar."
+    }
+  ],
+  "telefon_sozlesmesi": [
+    "Her öğe oluşturulduğu yerel işlemde (kurulum, sıra) alır; sıra kurulum başına 1'den boşluksuz artar. Kurulum kimliği hesap başınadır; yerel veritabanı ile anahtarlar tutmazsa telefon bütün kimlikleri yeniler, eski öğeler eski kimlikle gider.",
+    "Paket: bir kurulumun sonuçlanmamış ve bekleme süresi dolmuş öğeleri artan sırayla, en çok 200 öğe ve 768 KiB; varsa bildirilmemiş yerel retler. Bir kurulum için aynı anda tek gönderim (ön plan ve arka plan aynı kilidi paylaşır).",
+    "İkinci çapa: göndermeden hemen önce POST /v1/saat/belge; metin kurulur ve imzalanır; bölünen her yarı yeni paketKimligi alır ve yeniden imzalanır; ilk çapası bozuk kayıt da pakete girer.",
+    "Sonuç: KABUL ve ZATEN_VAR öğeyi ULASTI yapar (ulaşma anı ve makbuzu saklanır); RET makbuzu 'gönderilmedi' bırakır; TEKRAR_DENE ve bilinmeyen sonuç öğeyi beklemeye alır.",
+    "sonSira kuralı: sonSira'dan büyük sıradaki ULASTI ve RET öğeleri bir kez, makbuzlarıyla yeniden gönderilir (plan.html#gun-kenar-durumlar); YEREL_RET öğesi gönderilmez, yerelRetler ile yeniden bildirilir.",
+    "HTTP: ağ hatası, zaman aşımı, 408, 429, 5xx ve beklenmeyen biçim paketi yeniden dener (2 saniyeden 10 dakikaya, rastgele, Retry-After en az); 400 ve 413 ikiye böler, yarılar derinlik öncelikli ve önce sol (küçük sıralı) yarı sonuçlanarak gönderilir; tek öğe yine 400 ya da 413 alırsa YEREL_RET olur ve sonraki pakette bildirilir; 401 ve 403 o kurulumun gönderimini durdurur; öbür 4xx 400 gibi (teknik.html#telefon-gonderme-protokolu).",
+    "ESITLEME_KIMLIK_UYUSMUYOR telefon hatasıdır: telefon o hesap için yeni kurulum kimliği üretir, olay günlük sayaçlara yazılır.",
+    "İndirme: her sayfa ve imleç tek yerel işlemde; bastanIndir ile tam indirme başlar, devamiVar false olunca gelmeyen satırlar silinir; kuyruk etkilenmez. Personel 401 alırsa listeler ve imleç silinir, kuyruk kalır.",
+    "Telefon her isteğe X-Saat-Istegi koyar ve cevaptaki X-Saat-Belgesi'ni saklar; X-Kurulum-Kimligi, X-Uygulama-Surumu, X-Guncelleme-Kimligi, X-Platform ve X-Kanal her istekte gider.",
+    "Saf kurallar (paket seçimi, bekleme aralığı, sonSira kuralı) packages/core/src/esitleme/protokol.ts'tedir; telefonun kuyruğu (apps/mobile) ve sunucunun durum makinesi testi aynı işlevleri kullanır."
+  ],
+  "hata_kodlari": [
+    {
+      "kod": "ESITLEME_KURULUM_KIMLIGI_GECERSIZ",
+      "duzey": "istek",
+      "sonuc": "400",
+      "ne": "X-Kurulum-Kimligi yok ya da UUIDv7 değil."
+    },
+    {
+      "kod": "ESITLEME_KIMLIK_YOK",
+      "duzey": "istek",
+      "sonuc": "401",
+      "ne": "Geçerli oturum da kayıtlı anahtarla geçerli paket imzası da yok; telefon o kurulumun gönderimini durdurur."
+    },
+    {
+      "kod": "ESITLEME_KIMLIK_UYUSMUYOR",
+      "duzey": "istek",
+      "sonuc": "401",
+      "ne": "Oturumun, paket imzasının ya da kurulumun kişisi birbirini tutmuyor; telefon yeni kurulum kimliği üretir."
+    },
+    {
+      "kod": "ESITLEME_KURULUM_MESGUL",
+      "duzey": "istek",
+      "sonuc": "503, Retry-After 5",
+      "ne": "Aynı kurulumun süren gönderiminin kilidi 2 saniyede bırakılmadı; hiçbir satır yazılmadı."
+    },
+    {
+      "kod": "ESITLEME_KURULUM_SINIRI",
+      "duzey": "istek",
+      "sonuc": "403",
+      "ne": "Kişinin 20 kurulum satırı var, yenisi açılmadı; telefon gönderimi durdurur, olay günlük sayaçlara yazılır. Kötüye kullanıma karşı sınır: kurulum kimliğini döndürerek sınırsız satır açmayı ve kuruluma bağlı hız sınırını aşmayı önler."
+    },
+    {
+      "kod": "ESITLEME_OGE_GECERSIZ",
+      "duzey": "öğe",
+      "sonuc": "RET",
+      "ne": "Tür deseni, UUIDv7, ilkCapa şeması ya da türün gövde sınırı tutmuyor; deftere yazılır."
+    },
+    {
+      "kod": "ESITLEME_SIRA_CAKISMASI",
+      "duzey": "öğe",
+      "sonuc": "RET",
+      "ne": "Sıra defterde başka öğe kimliğiyle var; deftere yazılmaz, ilk satır değişmez."
+    },
+    {
+      "kod": "ESITLEME_YETKI_YOK",
+      "duzey": "öğe",
+      "sonuc": "RET",
+      "ne": "Türün rolü isteğin kişisine uymuyor (ör. öğrenci oturumuyla hoca işi)."
+    },
+    {
+      "kod": "ESITLEME_KISIT_IHLALI",
+      "duzey": "öğe",
+      "sonuc": "RET",
+      "ne": "İşleyicide beklenmeyen kısıt hatası; öğe tek başına yeniden denendi, kısıt adı loglanır."
+    },
+    {
+      "kod": "ESITLEME_YEREL_RET",
+      "duzey": "öğe",
+      "sonuc": "RET (yalnız defter)",
+      "ne": "Telefonun tek öğede 400 ya da 413 aldığı öğe, yerelRetler ile bildirildi."
+    },
+    {
+      "kod": "ESITLEME_TUR_BILINMIYOR",
+      "duzey": "öğe",
+      "sonuc": "TEKRAR_DENE, beklemeSaniye 3600",
+      "ne": "Tür bu sunucuda kayıtlı değil (yeni istemci, eski sunucu); atılmaz."
+    },
+    {
+      "kod": "ESITLEME_OTURUM_GEREKLI",
+      "duzey": "öğe",
+      "sonuc": "TEKRAR_DENE",
+      "ne": "Tür oturum ister, istekte geçerli oturum yok (ör. cihaz değişiminden sonra eski telefondaki sorun bildirimi)."
+    },
+    {
+      "kod": "ESITLEME_GECICI_CAKISMA",
+      "duzey": "öğe",
+      "sonuc": "TEKRAR_DENE",
+      "ne": "Grupta kilitlenme, serileştirme, kilit ya da deyim zaman aşımı."
+    },
+    {
+      "kod": "ESITLEME_ISLEYICI_HATASI",
+      "duzey": "öğe",
+      "sonuc": "TEKRAR_DENE, beklemeSaniye 600",
+      "ne": "İşleyici fırlattı ya da sonuç sözleşmesine uymadı; hata loglanır, öğe telefonda kalır."
+    },
+    {
+      "kod": "ESITLEME_ZAMAN_BUTCESI",
+      "duzey": "öğe",
+      "sonuc": "TEKRAR_DENE, beklemeSaniye 5",
+      "ne": "8 saniyelik işleme bütçesi doldu; öğe işleyiciye verilmedi, önceki öğeler işlendi."
+    }
+  ],
+  "tipler": [
+    "// packages/contracts/src/esitleme.ts (tipler ve Zod şemaları), apps/server/src/modules/esitleme/index.ts (dış yüz)",
+    "export const OGE_TURLERI = { yoklama_kaydi: 'D05', makbuz_okutmasi: 'D05', pencere_suresi: 'D04', erken_kapatma: 'D04',",
+    "  kafa_sayisi: 'D07', elle_ekleme: 'D09', sorun_bildirimi: 'D09', gosterim_kaydi: 'D11', telefon_sayaci: 'D15' } as const;",
+    "export type OgeTuru = keyof typeof OGE_TURLERI;",
+    "export const OGE_SONUCLARI = ['KABUL', 'ZATEN_VAR', 'RET', 'TEKRAR_DENE'] as const;  // x-extensible-enum",
+    "export type IkinciCapaBaglami =",
+    "  | { durum: 'VAR'; imzaTuru: 'a' | 's' | 'o'; belge: string; istekSuresiMs: number; olaydanBelgeyeMs: number }",
+    "  | { durum: 'YOK'; yokNedeni: 'sonra_yeniden_baslatma' | 'paket_imzasiz' | 'esitleme_bozuk' | 'gonderilmedi' };",
+    "export interface GelenOge { tur: OgeTuru; sira: number; ogeKimligi: string; govde: string;",
+    "  ilkCapa: IlkCapaAlanlari | null; ulasmaAni: Date; ikinciCapa: IkinciCapaBaglami;",
+    "  onceki: { sonuc: OgeSonucuKodu; gerekce: string | null; kabulAni: Date | null } | null }",
+    "export interface PaketBaglami { kurulumId: string; kisiId: KisiId; rol: 'OGRENCI' | 'PERSONEL';",
+    "  oturum: { oturumId: string; cihazId: CihazId | null } | null; imzalayan: { cihazId: CihazId; anahtarId: string } | null;",
+    "  paketKimligi: string; istekKimligi: string; gonderenSurum: string | null }",
+    "export type OgeSonucu =",
+    "  | { sonuc: 'KABUL' | 'ZATEN_VAR'; ulasmaAni: Date; ayrinti?: Record<string, unknown> }",
+    "  | { sonuc: 'RET'; gerekce: string; ayrinti?: Record<string, unknown> }",
+    "  | { sonuc: 'TEKRAR_DENE'; gerekce: string; beklemeSaniye?: number };",
+    "export interface Kapsam { kisiId: KisiId; rol: 'OGRENCI' | 'PERSONEL'; ogrenciNo: string | null; teyitli: boolean | null;",
+    "  subeler: readonly string[]; dersler: readonly string[]; birimler: readonly string[] }",
+    "export interface IndirilenSatir { id: string; surum: bigint; silindi: boolean; veri: Record<string, unknown> | null }",
+    "export interface GenelKaynak { tur: 'genel'; roller: readonly ('OGRENCI' | 'PERSONEL')[];",
+    "  degisenler(tx: Islem, i: { kapsam: Kapsam; surumden: bigint | null; surumeKadar: bigint; adet: number }): Promise<readonly IndirilenSatir[]> }",
+    "export interface KapsamKaynagi { tur: 'kapsam'; rol: 'OGRENCI' | 'PERSONEL';",
+    "  kapsam(tx: Islem, k: { kisiId: KisiId; ogrenciNo: string | null }): Promise<Pick<Kapsam, 'subeler' | 'dersler' | 'birimler'>>;",
+    "  degistiMi(tx: Islem, k: { kisiId: KisiId; ogrenciNo: string | null }, kapsamSurumu: bigint, surumeKadar: bigint): Promise<boolean> }",
+    "export interface OgrenciKaynagi { tur: 'ogrenci';",
+    "  bolum(tx: Islem, ogrenciId: KisiId, i: { surumden: bigint | null; surumeKadar: bigint }): Promise<{ tam: boolean;",
+    "    satirlar: readonly Omit<IndirilenSatir, 'surum'>[]; kararlar: readonly { donemId: DonemId; kayitId: KayitId; kararSurumu: number }[] }> }"
+  ]
+}

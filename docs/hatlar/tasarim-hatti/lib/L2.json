@@ -1,0 +1,637 @@
+{
+ "id": "L2",
+ "area": "Telefon uygulamasında stil, tema, tasarım değişkenleri, ikon, yazı tipi, SVG ve sistem arayüzü",
+ "summary": "Telefonda stil için ek kütüphane gerekmiyor: React Native'in StyleSheet'i, tipli bir tasarım değişkeni modülü (tokens.ts) ve telefonun açık/koyu ayarını izleyen küçük bir useTheme yardımcısı yeterli; karanlık tema geldiğinde tema geçişi düşük uçlu bir Android'de ölçülür, yavaş kalırsa ikinci seçenek react-native-unistyles 3'tür ve API'si StyleSheet biçiminde olduğu için geçiş mekaniktir. Tasarım değişkenlerinin tek kaynağı DTCG biçimli bir JSON dosyası olur; Style Dictionary 5 bundan telefona TS modülü, web paneline CSS değişkenleri üretir. İkonlarda köşeli tasarıma uyan tek büyük set Material Symbols'ün Sharp stili: @material-symbols/svg-400 paketindeki SVG'ler react-native-svg-transformer ile bileşene çevrilir ve react-native-svg ile çizilir; Lucide ve Phosphor çizim dili gereği yuvarlak, expo-symbols beta ve iOS'ta başka bir set (SF Symbols) çiziyor. Yazı tipleri expo-font yapılandırma eklentisiyle uygulamaya gömülür; Expo belgesine göre değişken yazı tipi desteği SDK 58 ile geldiği için SDK 57'de statik TTF dosyaları kullanılır. Raster görseller için expo-image, güvenli alan için react-native-safe-area-context seçildi. Android'de kenardan kenara düzen Expo SDK 54'ten beri her zaman açık ve React Native'in içinde; react-native-edge-to-edge artık gerekmiyor, kendi belgesi de RN 0.86 ve sonrasında yerleşik ayarı öneriyor. Sistem çubukları için expo-status-bar ve expo-navigation-bar, kök zemin rengi için expo-system-ui kullanılır. Düz ve köşeli tasarımda bulanıklık ve cam efektine gerek yok: expo-blur eski Android'lerde verimsiz bir yola düşüyor, expo-glass-effect yalnız iOS 26 ve üstünde çalışıyor.",
+ "needs": [
+  "Tek kaynaktan gelen tasarım değişkenleri: kırık beyaz ve gri ölçek, gece mavisi alt ton, 0 ile 2 px köşe yarıçapı, boşluk ölçeği, yazı ölçeği, hareket süreleri ve eğrileri; telefonda tipli TS modülü, panelde CSS değişkeni olarak aynı değerler.",
+  "Telefonun açık/koyu ayarını izleyen tema altyapısı: ilk sürümde yalnız açık tema, karanlık tema sonradan bileşen kodu değişmeden eklenebilmeli; bileşenlerde sabit renk yazılmamalı.",
+  "Köşeli tasarıma uyan, Android ve iOS'ta aynı görünen, boş ve dolu (durum gösteren) çeşitleri olan ikon seti; renk ve boyut temadan gelmeli.",
+  "SVG çizimi (ikonlar, İÜ logosu, boş durum çizimleri) ve SVG dosyalarını bileşen olarak içe alma.",
+  "Türkçe karakterleri (ı, İ, ğ, ş, ç, ö, ü) eksiksiz kapsayan, uygulama açılır açılmaz hazır olan, telefonun yazı boyutu ayarıyla büyüyen yazı tipi; saat ve sayılarda eşit genişlikli rakamlar (fontVariant: tabular-nums).",
+  "Android'de kenardan kenara düzen: zemin durum ve gezinme çubuğunun arkasına uzanır, içerik güvenli alan boşluklarıyla korunur; alt sayfa ve klavye ekranları 3 düğmeli ve hareketli gezinmede doğru durur.",
+  "Sistem çubuklarında okunabilir simgeler (kırık beyaz zeminde koyu simgeler) ve kırık beyaz kök zemin, böylece ekran geçişlerinde ve klavye açılırken beyaz ya da siyah parlama olmaz.",
+  "Orta ve düşük segment Android telefonlarda ek çalışma maliyeti getirmeyen, Reanimated 4 animasyonlarıyla aynı gölge ağacında çakışmayan stil katmanı.",
+  "WCAG 2.2 AA: metin kontrastı en az 4.5:1, ikon gibi metin dışı öğelerde en az 3:1; saydam ya da bulanık zeminler kontrast ölçümünü bozmamalı."
+ ],
+ "candidates": [
+  {
+   "id": "L2-C01",
+   "category": "Stil ve tema",
+   "package": "react-native",
+   "repo": "facebook/react-native",
+   "verdict": "gerekmez",
+   "version": "0.86.3 (Expo SDK 57 ile gelen)",
+   "released": "2026-06-11 (0.86 serisi)",
+   "stars": "ölçülmedi (çekirdek paket)",
+   "role": "Ek stil kütüphanesi yerine çekirdek StyleSheet, Style Dictionary'nin ürettiği tipli değişken modülü (tokens.ts) ve yaklaşık 30 satırlık bir useTheme / createStyles yardımcısı. Tema useColorScheme ile telefonun açık/koyu ayarını izler; durum çeşitleri (birincil, ikincil, tehlike düğmesi gibi) düz TS nesneleridir.",
+   "why": "Tasarımın stil katmanından istediği her şey (değişkenler, durum çeşitleri, 0 ile 2 px köşe, Reanimated 4 ile birlikte çalışma) çekirdek StyleSheet ile karşılanıyor. Karanlık tema sonra gelecek; bugün tek tema var, tema değişimini yeniden çizimsiz yapan bir motora şimdi ihtiyaç yok. Bağımsız bir ölçümde StyleSheet karşılaştırma tabanı; Unistyles (yüzde -1,96), NativeWind (yüzde -0,84) ve Tamagui (yüzde -4,34) ondan yüzde 5'ten az sapıyor, yani bu kütüphaneler hız kazandırmıyor (250 görünüm, iPhone 11 simülatörü, Expo SDK 52; eski ve simülatörde yapılmış bir ölçüm, yalnız yön gösterir). Yerel kod, Babel eklentisi ya da Metro dönüştürücüsü eklemediği için Expo SDK yükseltmelerinde kırılacak ek parça yok.",
+   "compat": "Çekirdek bileşen: SDK 57 (RN 0.86.3, React 19.2, yalnız Yeni Mimari) ile doğal uyumlu, Expo Go'da ve Jest testlerinde ek taklit (mock) gerektirmez. SDK 57 ile gelen Reanimated 4.5.1 animasyon stilleri düz stil nesneleriyle çalışır, araya ikinci bir gölge ağacı yazarı girmez.",
+   "modern": "Yeni Mimaride stil nesneleri doğrudan Fabric'e gider. Bu alanda güncel olan kısım bir kütüphane değil: değişkenlerin DTCG kaynağından belirlenimci üretilmesi ve temanın sistem ayarını izlemesi.",
+   "risks": "Karanlık tema gelince tema değiştiğinde useTheme kullanan bileşenler yeniden çizilir (seyrek olay). Önerilen ölçüt: düşük uçlu bir Android'de tema değişimi sonrası ilk kare 100 ms'yi aşarsa Unistyles 3'e geçilir. Yardımcı kanca bizim kodumuz, davranış testiyle gelmeli.",
+   "sources": [
+    {"url": "https://github.com/efstathiosntonas/react-native-style-libraries-benchmark", "title": "React Native style libraries benchmark", "publisher": "GitHub, efstathiosntonas", "date": "Expo SDK 52 dönemi"},
+    {"url": "https://reactnative.dev/blog/2026/06/11/react-native-0.86", "title": "React Native 0.86", "publisher": "React Native", "date": "2026-06-11"},
+    {"url": "https://cdn.jsdelivr.net/npm/expo@57.0.26/bundledNativeModules.json", "title": "expo 57.0.26 bundledNativeModules.json", "publisher": "Expo (jsDelivr üzerinden)", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C02",
+   "category": "Stil ve tema",
+   "package": "react-native-unistyles",
+   "repo": "jpudysz/react-native-unistyles",
+   "verdict": "ikinci",
+   "version": "3.5.0",
+   "released": "2026-10-05",
+   "stars": "2958 (ecosyste.ms)",
+   "role": "StyleSheet.create biçiminde API'si olan, temaları ve çeşitleri (variants) C++ çekirdeğinde işleyen stil motoru; tema değişince React'i yeniden çizmeden gölge ağacını günceller, adaptiveThemes ile telefonun açık/koyu ayarını izler.",
+   "why": "İkinci seçenek: karanlık tema geldiğinde ölçülen tema geçişi yavaş kalırsa geçilecek yer; API StyleSheet biçiminde olduğu için geçiş büyük ölçüde içe aktarma değişikliği. Şimdi seçilmedi: yerel kod (Nitro Modules) ve zorunlu Babel eklentisi getiriyor, Expo Go'da çalışmıyor. 3.4.0 küçük sürümde en düşük RN sürümünü 0.81'e çıkardı (kırıcı değişiklik). 3.5.0 (5 Ekim 2026) 'tema güncellemesinin yeniden çizimden sonra bazı dinamik stillere uygulanmaması' ve donan ekran hatalarını düzeltti; Reanimated 4.3.1 de bir Unistyles düzleştirme gerilemesini düzeltti. Yani iki kütüphane, tasarımın en çok kullanacağı yerde (tema ve animasyon) aynı gölge ağacına yazarken hata çıkarabiliyor.",
+   "compat": "Belgesine göre RN 0.81+, React 19+, Expo SDK 54+, Xcode 16.4+; Yeni Mimari zorunlu ve kapatılamıyor; react-native-nitro-modules zorunlu ve sabit sürümle kurulmalı; react-native-edge-to-edge ve react-native-reanimated isteğe bağlı eş bağımlılık (npm peerDependenciesMeta). SDK 57 (RN 0.86) bu aralıkta; geliştirme derlemesi şart.",
+   "modern": "React Native'deki en yeni stil yaklaşımı: Fabric'e sıkı bağlı, C++ çekirdek. 3.0.0 7 Temmuz 2025'te çıktı; 3.3.0 10 Temmuz 2026, 3.4.0 1 Ekim 2026, 3.5.0 5 Ekim 2026. Haftalık 286.685 indirme, 55 açık konu.",
+   "risks": "Ana geliştiriciye bağımlılık; Nitro sürüm sabitleme; Babel eklentisinin içe aktarmaları yeniden yazması; her RN yükseltmesinde uyumlu Unistyles sürümünü beklemek gerekebilir.",
+   "sources": [
+    {"url": "https://www.unistyl.es/v3/start/getting-started", "title": "Unistyles 3: Getting started", "publisher": "Unistyles", "date": "2026-10-06 okundu"},
+    {"url": "https://github.com/jpudysz/react-native-unistyles/releases", "title": "react-native-unistyles releases", "publisher": "GitHub", "date": "2026-10-05"},
+    {"url": "https://swmansion.com/changelog/reanimated-4-3-1/", "title": "Reanimated 4.3.1 changelog", "publisher": "Software Mansion", "date": "2026"},
+    {"url": "https://registry.npmjs.org/react-native-unistyles", "title": "react-native-unistyles npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C03",
+   "category": "Stil ve tema",
+   "package": "uniwind",
+   "repo": "uni-stack/uniwind",
+   "verdict": "reddedildi",
+   "version": "1.12.2",
+   "released": "2026-10-05",
+   "stars": "1724 (ecosyste.ms)",
+   "role": "Tailwind CSS v4 sınıf adlarını (className) React Native'e bağlayan kütüphane; temalar global.css içindeki CSS değişkenleriyle tanımlanır.",
+   "why": "Reddedildi: tasarımın istediği özelliklerin çoğu ücretli Pro sürümde. C++ motoru, yeniden çizimsiz tema değişimi (ShadowTree güncellemesi), tema geçiş animasyonu ve Tailwind sınıflarından Reanimated 4 animasyonu yalnız Pro'da; Pro'nun fiyatı belgede yazmıyor (uniwind.dev/pricing sayfasına yönlendiriyor). Ücretsiz MIT sürüm Expo Go'da çalışıyor ama bunları vermiyor. Durum çeşitleri sınıf adı dizgilerinde kalıyor, TS tip denetimi zayıf. Değişkenlerin tek kaynağı Style Dictionary olunca ayrıca Tailwind temasına bağlanmak gereksiz bir katman.",
+   "compat": "Tailwind CSS 4 ve Metro yapılandırmasına bağlı (eş bağımlılıklar: tailwindcss >=4, react-native >=0.81, react >=19, metro, metro-cache, metro-transform-worker, @expo/metro-config). Pro geliştirme derlemesi ister, Expo Go'da çalışmaz.",
+   "modern": "En yeni Tailwind tabanlı seçenek: 1.0.0 4 Kasım 2025; haftalık 842.955 indirme ile hızla yayılıyor; belgesi NativeWind'den 2 kat hızlı olduğunu söylüyor (üreticinin iddiası).",
+   "risks": "Metro dönüştürücüsü SDK yükseltmelerinde kırılma noktası; asıl değerli özellikler için Pro lisansına bağımlılık.",
+   "sources": [
+    {"url": "https://docs.uniwind.dev/", "title": "Uniwind documentation", "publisher": "Uniwind", "date": "2026-10-06 okundu"},
+    {"url": "https://docs.uniwind.dev/pro-version.md", "title": "Uniwind Pro", "publisher": "Uniwind", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/uniwind", "title": "uniwind npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C04",
+   "category": "Stil ve tema",
+   "package": "nativewind",
+   "repo": "nativewind/nativewind",
+   "verdict": "reddedildi",
+   "version": "4.2.7 (latest); 5.0.0-rc.0 (rc ve preview etiketi)",
+   "released": "4.2.7: 2026-09-14; 5.0.0-rc.0: 2026-09-13",
+   "stars": "8105 (ecosyste.ms)",
+   "role": "Tailwind sınıf adlarını React Native'e taşıyan en yaygın kütüphane; v5 react-native-css motorunu ve Tailwind 4'ü kullanıyor.",
+   "why": "Reddedildi: kararlı hat v4 Tailwind 3 tabanlı (eş bağımlılık tailwindcss >3.3.0). Tailwind 4 kullanan v5 hâlâ sürüm adayı (5.0.0-rc.0, 13 Eylül 2026; npm latest etiketi v4'te). v5'in motoru react-native-css'in kararlı 3.0.7 sürümü 9 Nisan 2026'dan beri yenilenmedi, 96 açık konu var. Sınıf adı yaklaşımının dezavantajları Uniwind ile aynı.",
+   "compat": "v5 RC Expo 57.0.22, RN 0.86.3, Reanimated 4.5.1 hedefliyor; yalnız Yeni Mimari ve RN 0.81+ destekleniyor. Yığınla uyumlu ama RC; v5 RC eş bağımlılığı tailwindcss >4.1.11 ve react-native-css 3.1.0-rc.0.",
+   "modern": "En çok indirilen seçenek (haftalık 2.225.450) ama yeni nesli henüz kararlı değil.",
+   "risks": "RC'den kararlıya geçişte kırıcı değişiklik; Metro ve Babel yapılandırması.",
+   "sources": [
+    {"url": "https://www.nativewind.dev/v5/guides/migrate-from-v4", "title": "Nativewind v5: Migrate from v4", "publisher": "Nativewind", "date": "2026-03-30"},
+    {"url": "https://newreleases.io/project/npm/nativewind/release/5.0.0-rc.0", "title": "nativewind 5.0.0-rc.0", "publisher": "newreleases.io", "date": "2026-09-13"},
+    {"url": "https://registry.npmjs.org/nativewind", "title": "nativewind npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C05",
+   "category": "Stil ve tema",
+   "package": "tamagui",
+   "repo": "tamagui/tamagui",
+   "verdict": "reddedildi",
+   "version": "2.7.7",
+   "released": "2026-08-15",
+   "stars": "14211 (ecosyste.ms)",
+   "role": "Kendi derleyicisi, değişken ve tema sistemi ve hazır bileşen takımı olan, web ve yerel için tek kod tabanlı arayüz sistemi.",
+   "why": "Reddedildi: asıl artısı tek kod tabanıyla web ve yerel, ama web paneli ayrı bir Vite uygulaması. Derleyici ve yapılandırma yükü büyük (2026 karşılaştırmaları yapılandırmaya gerçek zaman ayırmayı öğütlüyor). Hazır bileşenlerin yuvarlak varsayılanları köşeli tasarımda tek tek ezilecekti. Büyük sürüm hızı yüksek: 2.0.0 23 Mayıs 2026, 3.0.0 beta 5 Ekim 2026; 100 açık konu.",
+   "compat": "React >=19 eş bağımlılığı, Expo ile çalışıyor. npm'de tamagui paketinin lisans alanı boş, @tamagui/core MIT.",
+   "modern": "Güncel ve güçlü ama ağır; v3 betası yolda.",
+   "risks": "Kısa aralıkla ikinci büyük sürüm geçişi; derleyici kaynaklı hatalarda hata ayıklama zor.",
+   "sources": [
+    {"url": "https://motionary.dev/blog/best-react-native-ui-libraries-2026", "title": "Best React Native UI libraries in 2026: an honest map", "publisher": "motionary.dev", "date": "2026"},
+    {"url": "https://registry.npmjs.org/tamagui", "title": "tamagui npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C06",
+   "category": "Stil ve tema",
+   "package": "@shopify/restyle",
+   "repo": "Shopify/restyle",
+   "verdict": "reddedildi",
+   "version": "2.4.5",
+   "released": "2025-03-19",
+   "stars": "3424 (ecosyste.ms)",
+   "role": "Tip güvenli tema ve stil sistemi (Box, Text bileşenleri ve tema nesnesi).",
+   "why": "Reddedildi: son sürüm 19 Mart 2025, ondan önceki 22 Nisan 2024; depoya itme sürüyor (18 Eylül 2026) ama sürüm çıkmıyor, 40 açık konu. Tema değişimi ThemeProvider ile yeniden çizimle olur; yani bizim yazacağımız useTheme yardımcısından fazlasını vermiyor, üstüne bir bağımlılık ekliyor.",
+   "compat": "Eş bağımlılıklar react ve react-native için '*'; yalnız JS, yerel kod yok.",
+   "modern": "Bakımı yavaşlamış; 2.0.0 7 Mart 2022'de çıkmıştı.",
+   "risks": "Terk edilme riski.",
+   "sources": [
+    {"url": "https://registry.npmjs.org/@shopify%2Frestyle", "title": "@shopify/restyle npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"},
+    {"url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/Shopify%2Frestyle", "title": "Shopify/restyle depo bilgisi", "publisher": "ecosyste.ms", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C07",
+   "category": "Tasarım değişkeni üretimi",
+   "package": "style-dictionary",
+   "repo": "style-dictionary/style-dictionary",
+   "verdict": "seçildi",
+   "version": "5.6.0",
+   "released": "2026-10-03",
+   "stars": "4850 (ecosyste.ms)",
+   "role": "Değişkenlerin tek kaynağı olan DTCG biçimli JSON dosyasından telefona TS modülü (tokens.ts), web paneline CSS değişkenleri (tokens.css) üretir; tasarım belgesindeki renk ve ölçü tabloları da aynı dosyadan beslenebilir.",
+   "why": "Seçildi: alanın standart aracı (haftalık 2.725.285 indirme, Apache-2.0, 3 Ekim 2026'da sürüm). Hazır 'react-native' (name/camel, size/object, color/css) ve 'css' dönüşüm grupları var. Üretim belirlenimci bir derleme adımıdır: aynı girdi aynı çıktıyı verir, panel ve telefon aynı değerleri kullanır, renkler color.js ile hesaplanıp onaltılık (hex) olarak yazılır. Açık ve koyu tema ayrı değişken dosyalarıyla üretilebilir.",
+   "compat": "Yalnız derleme zamanında Node ile çalışır, uygulama paketine girmez; Expo ve Vite'tan bağımsız. React Native oklch() okuyamadığı için renk değerleri hex kalmalı.",
+   "modern": "DTCG 2025.10 kararlı belirtimine tam destek henüz yok (belgesi bunu 'v5'te süren iş' diye yazıyor); $value ve $type kullanan önceki DTCG biçimi destekli. Renkleri hex dizgi olarak yazdığımız sürece bu eksik bizi etkilemez.",
+   "risks": "2025.10 renk nesnesine ({colorSpace, components}) geçmek istersek desteği beklemek gerekir; o durumda ikinci seçenek Terrazzo. 238 açık konu.",
+   "sources": [
+    {"url": "https://styledictionary.com/info/dtcg/", "title": "Style Dictionary: DTCG", "publisher": "Style Dictionary", "date": "2026-10-06 okundu"},
+    {"url": "https://styledictionary.com/reference/hooks/transform-groups/predefined/", "title": "Predefined transform groups", "publisher": "Style Dictionary", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/style-dictionary", "title": "style-dictionary npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C08",
+   "category": "Tasarım değişkeni üretimi",
+   "package": "@terrazzo/cli",
+   "repo": "terrazzoapp/terrazzo",
+   "verdict": "ikinci",
+   "version": "2.7.1",
+   "released": "2026-08-11",
+   "stars": "465 (ecosyste.ms)",
+   "role": "DTCG 2025.10 belirtimini çözücüler (resolvers, tema kipleri) dahil tam destekleyen değişken derleyicisi.",
+   "why": "İkinci: belirtime en uygun araç (2.0.0 ile DTCG 2025.10 tam destek). Seçilmedi çünkü telefon için temiz bir çıktı yolu yok: plugin-js belgesine göre hızlı ama ağır ve sunucu tarafına uygun; istemci için önerilen plugin-css-in-js ise CSS değişkeni başvurusu üretiyor ve React Native bunu okuyamaz. Topluluk küçük (465 yıldız, haftalık 115.276 indirme).",
+   "compat": "Derleme zamanı aracı, MIT; panel tarafında plugin-css doğrudan kullanılabilir.",
+   "modern": "Belirtim açısından en güncel araç.",
+   "risks": "Telefon çıktısı için kendi eklentimizi yazmamız gerekebilir; 64 açık konu.",
+   "sources": [
+    {"url": "https://terrazzo.app/docs/guides/dtcg/", "title": "Terrazzo: DTCG Tokens", "publisher": "Terrazzo", "date": "2026-10-06 okundu"},
+    {"url": "https://terrazzo.app/docs/cli/integrations/js", "title": "Terrazzo: JavaScript (and TypeScript)", "publisher": "Terrazzo", "date": "2026-10-06 okundu"},
+    {"url": "https://www.w3.org/community/reports/design-tokens/CG-FINAL-color-20251028/", "title": "Design Tokens Color Module 2025.10", "publisher": "W3C Design Tokens Community Group", "date": "2025-10-28"}
+   ]
+  },
+  {
+   "id": "L2-C09",
+   "category": "İkon seti",
+   "package": "@material-symbols/svg-400",
+   "repo": "marella/material-symbols",
+   "verdict": "seçildi",
+   "version": "0.47.6",
+   "released": "2026-10-02",
+   "stars": "292 (paket deposu, ecosyste.ms); kaynak google/material-design-icons 54046",
+   "role": "Google Material Symbols'ün Sharp (köşeli) stilindeki SVG dosyaları. Kullanılan ikonlar react-native-svg-transformer ile bileşene çevrilir, react-native-svg ile çizilir; renk ve boyut temadan gelir; seçili ya da tamamlanmış durum için '-fill' (dolu) çeşidi kullanılır.",
+   "why": "Seçildi: büyük ikon setleri arasında köşeli stili olan tek set. Sharp SVG'leri çizgi değil dolgu yolu ve köşeleri dik açılı; Lucide (stroke-linecap ve stroke-linejoin round, rx=1) ve Phosphor (16 birimlik yay köşeler) çizim dili gereği yuvarlak. sharp klasöründe 7.854 SVG dosyası var (boş ve dolu çeşitler birlikte); bu araştırma için hazırlanan taslak ihtiyaç listesindeki 43 ikondan (QR, kamera, fener, uyarı, çevrimdışı, eşitleme, makbuz, takvim, çıkış gibi) 42'si mevcut (yalnız expand_more yok, yerine başka bir ok ikonu seçilmeli) ve 42'sinin dolu çeşidi de var. Android ve iOS'ta aynı çizim görünür. Apache-2.0 lisanslı; yalnız içe aktarılan dosyalar uygulama paketine girer.",
+   "compat": "Saf SVG dosyaları, yerel kod yok; SDK 57 ile gelen react-native-svg 15.15.4 ile çizilir. Örnek dosya (sharp/qr_code_scanner.svg) tek bir path, width/height 48 ve viewBox '0 -960 960 960' ile geliyor.",
+   "modern": "Google'ın güncel ikon sistemi; paket 2 Ekim 2026'da güncellendi ve sık sürüm alıyor (haftalık 215.042 indirme).",
+   "risks": "Topluluk paketi (marella), Google'ın resmi paketi değil; gerekirse aynı SVG'ler Google'ın deposundan alınır. Paket açılmış hâlde 12,5 MB ve 23.565 dosya, ama yalnız geliştirme makinesinde durur. 20 ile 24 px'e küçültüldüğünde çizgi kalınlığı ve kontrast (metin dışı öğe için 3:1) gözle ve color.js ile kontrol edilmeli.",
+   "sources": [
+    {"url": "https://data.jsdelivr.com/v1/packages/npm/@material-symbols/svg-400@0.47.6?structure=flat", "title": "@material-symbols/svg-400 0.47.6 dosya listesi", "publisher": "jsDelivr", "date": "2026-10-06 okundu"},
+    {"url": "https://cdn.jsdelivr.net/npm/@material-symbols/svg-400@0.47.6/sharp/qr_code_scanner.svg", "title": "sharp/qr_code_scanner.svg", "publisher": "jsDelivr", "date": "2026-10-06 okundu"},
+    {"url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/google%2Fmaterial-design-icons", "title": "google/material-design-icons depo bilgisi", "publisher": "ecosyste.ms", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/@material-symbols%2Fsvg-400", "title": "@material-symbols/svg-400 npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C10",
+   "category": "İkon seti",
+   "package": "lucide-react-native",
+   "repo": "lucide-icons/lucide",
+   "verdict": "ikinci",
+   "version": "1.52.0",
+   "released": "2026-10-04",
+   "stars": "24797 (ecosyste.ms)",
+   "role": "Çizgi (stroke) tabanlı genel amaçlı ikon seti; size, color, strokeWidth ve absoluteStrokeWidth ile denetlenir, strokeLinecap ve strokeLinejoin gibi SVG özellikleri geçirilebilir.",
+   "why": "İkinci: bakımı en canlı set (neredeyse her gün sürüm; 1.0.0 23 Mart 2026), haftalık 2.925.796 indirme, ISC lisans, çizgi kalınlığı denetimi var. Seçilmedi çünkü çizim dili yuvarlak: SVG'ler stroke-linecap='round' ve stroke-linejoin='round' ile, bazı şekiller rx ile yuvarlatılmış geliyor. 'square' ve 'miter' ile ezmek ikonların tasarlandığı ızgaraya aykırı, dar açılarda sivri uçlar çıkarabilir. 474 açık konu.",
+   "compat": "Eş bağımlılık react-native-svg 12 ile 15 arası ve React 19 dahil; SDK 57 ile uyumlu. Paket boyutu için 'lucide-react-native/icons/...' derin içe aktarma öneriliyor.",
+   "modern": "En popüler güncel ikon seti.",
+   "risks": "Toplu (barrel) içe aktarmada paket boyutu büyür (paket açılmış hâlde 28,4 MB); köşeli tasarımla görsel uyumsuzluk.",
+   "sources": [
+    {"url": "https://lucide.dev/guide/packages/lucide-react-native", "title": "Lucide React Native", "publisher": "Lucide", "date": "2026-10-06 okundu"},
+    {"url": "https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/qr-code.svg", "title": "lucide-static qr-code.svg (v1.52.0)", "publisher": "jsDelivr", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/lucide-react-native", "title": "lucide-react-native npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C11",
+   "category": "İkon seti",
+   "package": "phosphor-react-native",
+   "repo": "duongdev/phosphor-react-native",
+   "verdict": "reddedildi",
+   "version": "3.0.6",
+   "released": "2026-04-23",
+   "stars": "273 (ecosyste.ms)",
+   "role": "Phosphor ikonlarının ağırlık çeşitleriyle (ince, normal, kalın, dolu, iki tonlu gibi) React Native paketi.",
+   "why": "Reddedildi: köşeli stili yok; örnek regular SVG'de köşeler 16 birim yarıçaplı yaylarla (a16,16) çizilmiş. React Native sarmalayıcısı küçük bir topluluk projesi (273 yıldız), son sürüm 23 Nisan 2026.",
+   "compat": "react-native-svg eş bağımlılığı; SDK 57 ile çalışması beklenir.",
+   "modern": "Ağırlık çeşitliliği iyi ama tasarım dili yumuşak.",
+   "risks": "Sarmalayıcının bakım hızı düşük; paket açılmış hâlde 22,4 MB.",
+   "sources": [
+    {"url": "https://cdn.jsdelivr.net/npm/@phosphor-icons/core@latest/assets/regular/qr-code.svg", "title": "@phosphor-icons/core regular/qr-code.svg", "publisher": "jsDelivr", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/phosphor-react-native", "title": "phosphor-react-native npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C12",
+   "category": "İkon seti",
+   "package": "expo-symbols",
+   "repo": "expo/expo",
+   "verdict": "reddedildi",
+   "version": "57.0.3 (SDK 57)",
+   "released": "2026-09-11",
+   "stars": "52544 (expo/expo, ecosyste.ms)",
+   "role": "iOS ve tvOS'ta SF Symbols, Android ve webde Google Fonts'taki Material Symbols çizen Expo bileşeni; ağırlık seçimi ve iOS'ta sembol animasyonu.",
+   "why": "Reddedildi: belgesi 'bu kütüphane beta, kırıcı değişiklik olabilir' diyor. iOS'ta SF Symbols, Android'de Material Symbols çizdiği için ikonun şekli öğrencinin telefonuna göre değişir, tek ve köşeli görünüm bozulur; her ikon için iki ayrı ad (ios ve android) tutmak gerekir.",
+   "compat": "SDK 57 ile gelen sürüm 57.0.3; Expo Go'da var.",
+   "modern": "Platformun yerel sembollerini kullanan en yeni yaklaşım.",
+   "risks": "Beta API.",
+   "sources": [
+    {"url": "https://docs.expo.dev/versions/v57.0.0/sdk/symbols/", "title": "Symbols (expo-symbols), SDK 57", "publisher": "Expo", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C13",
+   "category": "İkon seti",
+   "package": "@expo/vector-icons",
+   "repo": "expo/vector-icons",
+   "verdict": "reddedildi",
+   "version": "15.1.1",
+   "released": "2026-02-23",
+   "stars": "743 (ecosyste.ms)",
+   "role": "react-native-vector-icons üzerine kurulu ikon yazı tipi aileleri (Ionicons, MaterialIcons, Feather gibi); expo-font ile yüklenir.",
+   "why": "Reddedildi: Expo'nun ikon rehberi '@expo/vector-icons kullanımdan kaldırılacak ve önerilmiyor' diyor ve @react-native-vector-icons paketlerine geçişi öneriyor. Material Symbols Sharp ailesi de yok.",
+   "compat": "SDK 57 bundledNativeModules ^15.0.2 aralığını listeliyor; eş bağımlılık expo-font >=14.0.4.",
+   "modern": "Eski yaklaşım (ikon yazı tipi), kaldırılma yolunda.",
+   "risks": "Kaldırıldığında göç zorunlu olur.",
+   "sources": [
+    {"url": "https://docs.expo.dev/guides/icons/", "title": "Icons", "publisher": "Expo", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/@expo%2Fvector-icons", "title": "@expo/vector-icons npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C14",
+   "category": "İkon seti",
+   "package": "@react-native-vector-icons/common",
+   "repo": "oblador/react-native-vector-icons",
+   "verdict": "reddedildi",
+   "version": "13.0.3",
+   "released": "2026-09-07",
+   "stars": "17918 (ecosyste.ms)",
+   "role": "Aile başına ayrı paketlere bölünmüş yeni react-native-vector-icons (ör. @react-native-vector-icons/material-design-icons 13.1.4); Expo'nun önerdiği halef.",
+   "why": "Reddedildi: yine ikon yazı tipi yaklaşımı ve Material Symbols ailesi yok (npm'de @react-native-vector-icons/material-symbols adı 6 Ekim 2026'da 404 döndü); mevcut Material aileleri köşeli değil. Eski react-native-vector-icons paketi npm'de kullanımdan kaldırılmış durumda, bu yeni model onun yerine geçiyor ama bizim ihtiyacımızı karşılamıyor.",
+   "compat": "Eş bağımlılıklar expo-font ve @react-native/assets-registry; Expo ile çalışıyor.",
+   "modern": "Güncel bakım (13.x, 7 Eylül 2026), 19 açık konu.",
+   "risks": "Köşeli set için kendi yazı tipimizi üretmek gerekirdi; SDK 57 değişken yazı tipi desteklemediği için Material Symbols yazı tipi dosyası doğrudan kullanılamaz.",
+   "sources": [
+    {"url": "https://registry.npmjs.org/@react-native-vector-icons%2Fcommon", "title": "@react-native-vector-icons/common npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/react-native-vector-icons", "title": "react-native-vector-icons npm kaydı (kullanımdan kaldırma notu)", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C15",
+   "category": "SVG çizimi",
+   "package": "react-native-svg",
+   "repo": "software-mansion/react-native-svg",
+   "verdict": "seçildi",
+   "version": "15.15.5 (en son); SDK 57 ile 15.15.4",
+   "released": "2026-05-11",
+   "stars": "8003 (ecosyste.ms)",
+   "role": "SVG çizim motoru: Material Symbols Sharp ikonları, İÜ logosu, boş durum çizimleri. Yedek ikon seti Lucide de buna dayanır.",
+   "why": "Seçildi: React Native'de SVG çiziminin fiilî standardı (haftalık 10.117.131 indirme), Software Mansion bakımında ve Expo SDK 57'nin paket listesinde. expo-image de SVG gösterebiliyor ama belgesine göre iOS sistem çözücüsü her geçerli yolu işlemiyor ve geniş kapsam için react-native-svg'yi gösteriyor; ikon rengi ve dolgu denetimi de react-native-svg'de.",
+   "compat": "Expo SDK 57 bundledNativeModules 15.15.4 sürümünü listeliyor; SDK 57 yalnız Yeni Mimari ile çalıştığı için bu eşleşme Fabric uyumunu da gösteriyor. Kurulum npx expo install ile SDK'nın sabitlediği sürüme yapılmalı.",
+   "modern": "Sürekli bakım (son itme 1 Ekim 2026).",
+   "risks": "Aynı ekranda çok sayıda karmaşık SVG düşük uçlu Android'de maliyetli olabilir; Material Symbols ikonları tek yollu olduğu için risk düşük. 270 açık konu.",
+   "sources": [
+    {"url": "https://cdn.jsdelivr.net/npm/expo@57.0.26/bundledNativeModules.json", "title": "expo 57.0.26 bundledNativeModules.json", "publisher": "Expo (jsDelivr üzerinden)", "date": "2026-10-06 okundu"},
+    {"url": "https://docs.expo.dev/versions/v57.0.0/sdk/image/", "title": "Image (expo-image), SDK 57: SVG notu", "publisher": "Expo", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/react-native-svg", "title": "react-native-svg npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C16",
+   "category": "SVG dosyasını bileşene çevirme",
+   "package": "react-native-svg-transformer",
+   "repo": "kristerkari/react-native-svg-transformer",
+   "verdict": "seçildi",
+   "version": "1.5.3",
+   "released": "2026-01-25",
+   "stars": "1738 (ecosyste.ms)",
+   "role": "Metro'da .svg dosyası içe aktarılınca onu SVGR ile react-native-svg bileşenine çevirir; Material Symbols dosyaları ve logo için. Tipli bir Icon bileşeni kullanılan ikonların listesini tutar.",
+   "why": "Seçildi: Expo için belgeli kurulum (expo/metro-config ve 'react-native-svg-transformer/expo'), haftalık 1.602.717 indirme, .svgrrc ile renk denetimi (replaceAttrValues ya da currentColor), basit bir TypeScript bildirimi. Yalnız içe aktarılan SVG'ler pakete girer.",
+   "compat": "Belgesine göre Expo SDK 41 ve üstü; eş bağımlılık react-native >=0.59 ve react-native-svg >=12. SDK 57'ye özel bir uyum notu yok, ilk kurulumda bir deneme derlemesiyle doğrulanmalı.",
+   "modern": "Olgun ve yaygın; son sürüm 25 Ocak 2026, son itme 13 Eylül 2026.",
+   "risks": "Metro yapılandırmasını değiştirir, SDK yükseltmelerinde bakılacak bir nokta; 92 açık konu.",
+   "sources": [
+    {"url": "https://github.com/kristerkari/react-native-svg-transformer", "title": "react-native-svg-transformer README", "publisher": "GitHub", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/react-native-svg-transformer", "title": "react-native-svg-transformer npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C17",
+   "category": "SVG dosyasını bileşene çevirme",
+   "package": "@svgr/cli",
+   "repo": "gregberge/svgr",
+   "verdict": "reddedildi",
+   "version": "8.1.0",
+   "released": "2023-08-15",
+   "stars": "11060 (ecosyste.ms)",
+   "role": "SVG'leri derlemeden önce TSX bileşen dosyalarına çeviren komut satırı aracı (react-native-svg çıktısıyla).",
+   "why": "Reddedildi: son sürüm 15 Ağustos 2023, 151 açık konu. Dönüştürücü aynı SVGR'ı Metro içinde zaten çalıştırıyor; ayrı bir kod üretme adımı ve üretilmiş dosyaların bakımı gereksiz.",
+   "compat": "Node aracı, uygulamaya girmez.",
+   "modern": "Sürüm akışı durmuş.",
+   "risks": "Yok (seçilmedi).",
+   "sources": [
+    {"url": "https://registry.npmjs.org/@svgr%2Fcli", "title": "@svgr/cli npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C18",
+   "category": "Yazı tipi",
+   "package": "expo-font",
+   "repo": "expo/expo",
+   "verdict": "seçildi",
+   "version": "57.0.4 (SDK 57)",
+   "released": "2026-09-11",
+   "stars": "52544 (expo/expo, ecosyste.ms)",
+   "role": "Yazı tiplerini yapılandırma eklentisiyle (config plugin) derleme anında uygulamaya gömer; Android'de fontDefinitions ile tek aile adı altında ağırlık ve stil eşlemesi yapar. Dosyalar depoda assets/fonts altında, ailenin resmi sürümünden alınmış statik TTF'ler ve OFL lisans dosyası.",
+   "why": "Seçildi: gömülü yazı tipleri uygulama açılır açılmaz hazır; yükleme kodu ve açılış ekranında bekleme yok. Android aileyi ağırlık ve stil çiftiyle çözdüğü için fontWeight doğrudan çalışır. Expo belgesi 'Android ve iOS değişken yazı tiplerini SDK 58 ve sonrasında destekler; önceki sürümlerde statik dosyalar kullanın' diyor, bu yüzden SDK 57'de yalnız kullanılan ağırlıkların statik dosyaları gömülür.",
+   "compat": "SDK 57 ile gelen 57.0.4. Yapılandırma eklentisi Expo Go'da çalışmaz, geliştirme derlemesi gerekir. iOS aile adını dosyanın içinden (PostScript adı), Android dosya adından okur; adlar iki platformda aynı sonucu verecek biçimde tutulmalı.",
+   "modern": "SDK 58 ile değişken yazı tipi desteği geliyor (Android 10+ wght ekseni, iOS adlandırılmış örnekler); o sürümde tek değişken dosyaya inmek ayrı bir karar olur.",
+   "risks": "Her ağırlık ayrı dosya, paket boyutunu artırır; kullanılan ağırlık sayısı az tutulmalı.",
+   "sources": [
+    {"url": "https://docs.expo.dev/develop/user-interface/fonts/", "title": "Fonts", "publisher": "Expo", "date": "2026-10-06 okundu"},
+    {"url": "https://cdn.jsdelivr.net/npm/expo@57.0.26/bundledNativeModules.json", "title": "expo 57.0.26 bundledNativeModules.json", "publisher": "Expo (jsDelivr üzerinden)", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C19",
+   "category": "Yazı tipi",
+   "package": "@expo-google-fonts/inter",
+   "repo": "expo/google-fonts",
+   "verdict": "ikinci",
+   "version": "0.4.2",
+   "released": "2025-09-11",
+   "stars": "946 (ecosyste.ms)",
+   "role": "Google Fonts ailelerinin statik TTF dosyalarını npm paketi olarak verir (örnek olarak Inter; her aile ayrı paket); dosyalar node_modules içinden yapılandırma eklentisine gösterilebilir.",
+   "why": "İkinci: kurulumu kolay ve Expo belgesinde örneği var, ama paket sürümleri yazı tipinin kendi sürümünün gerisinde kalabiliyor (inter paketi 11 Eylül 2025'ten beri güncellenmedi) ve hangi dosyanın gömüldüğünü bir katman arkasına saklıyor. Seçilen yol: resmi sürümden alınan statik TTF'ler depoda, lisansıyla birlikte.",
+   "compat": "Expo belgesi yapılandırma eklentisiyle node_modules yolunu kullanmayı gösteriyor; lisans 'MIT AND OFL-1.1'.",
+   "modern": "Pratik ama ek değer katmıyor; haftalık 1.265.026 indirme.",
+   "risks": "Yazı tipi ailesi tipografi bölümünde henüz seçilmedi.",
+   "sources": [
+    {"url": "https://docs.expo.dev/develop/user-interface/fonts/", "title": "Fonts", "publisher": "Expo", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/@expo-google-fonts%2Finter", "title": "@expo-google-fonts/inter npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C20",
+   "category": "Raster görsel",
+   "package": "expo-image",
+   "repo": "expo/expo",
+   "verdict": "seçildi",
+   "version": "57.0.5 (SDK 57)",
+   "released": "2026-09-11",
+   "stars": "52544 (expo/expo, ecosyste.ms)",
+   "role": "Raster görseller (boş durum çizimlerinin PNG/WebP hâli, olası profil görseli, logo yedeği) için önbellekli görsel bileşeni.",
+   "why": "Seçildi: SDK 57'nin parçası; Android'de Glide, iOS'ta SDWebImage üzerine kurulu. Disk ve bellek önbelleği, BlurHash/ThumbHash yer tutucu, yumuşak görünüm için transition (Android'de yalnız cross-dissolve), WebP, AVIF ve SVG desteği, accessibilityLabel ile erişilebilirlik. SDK 57 önbelleği önceden doldurma işlevlerini (writeToCacheAsync, readFromCacheAsync) ekledi. Çekirdek Image bileşeninde geçiş ve yer tutucu yok.",
+   "compat": "SDK 57 ile gelen 57.0.5; Expo Go'da var; haftalık 5.593.721 indirme.",
+   "modern": "Expo'nun güncel görsel bileşeni.",
+   "risks": "Tasarımda raster görsel az, ilk sürümde kullanım yeri sınırlı. Belgesi azaltılmış hareketten söz etmiyor; telefonda hareketi azalt açıkken transition süresi 0 yapılmalı.",
+   "sources": [
+    {"url": "https://docs.expo.dev/versions/v57.0.0/sdk/image/", "title": "Image (expo-image), SDK 57", "publisher": "Expo", "date": "2026-10-06 okundu"},
+    {"url": "https://expo.dev/changelog/sdk-57", "title": "Expo SDK 57", "publisher": "Expo", "date": "2026-06-30"}
+   ]
+  },
+  {
+   "id": "L2-C21",
+   "category": "Kenardan kenara (Android)",
+   "package": "react-native",
+   "repo": "facebook/react-native",
+   "verdict": "gerekmez",
+   "version": "0.86.3 (Expo SDK 57 ile gelen)",
+   "released": "2026-06-11 (0.86 serisi)",
+   "stars": "ölçülmedi (çekirdek paket)",
+   "role": "Android'de zeminin durum ve gezinme çubuğunun arkasına uzanması; React Native ve Expo SDK 57'de yerleşik.",
+   "why": "Kütüphane gerekmez: Expo SDK 54'ten beri Android 16'yı hedefleyen uygulamalarda kenardan kenara düzen her zaman açık ve kapatılamıyor; react-native-edge-to-edge, gerekli işlev React Native'e eklendiği için expo paketinin bağımlılığı olmaktan çıktı. RN 0.86 measureInWindow, KeyboardAvoidingView (Android 15+), Dimensions ve Modal açıkken StatusBar için düzeltmeler getirdi; gezinme çubuğu kontrastı temanın enforceNavigationBarContrast özelliğine uyuyor. SDK 57 de Android kenardan kenara düzeltmelerini öne çıkarıyor.",
+   "compat": "SDK 57 / RN 0.86.3, ek ayar yok.",
+   "modern": "Android 15 ve 16'nın zorunlu kıldığı güncel düzen.",
+   "risks": "Klavye, alt sayfa ve tam ekran QR ekranı gerçek cihazlarda hem 3 düğmeli hem hareketli gezinmeyle denenmeli.",
+   "sources": [
+    {"url": "https://expo.dev/changelog/sdk-54-beta", "title": "Expo SDK 54 beta", "publisher": "Expo", "date": "2025"},
+    {"url": "https://reactnative.dev/blog/2026/06/11/react-native-0.86", "title": "React Native 0.86", "publisher": "React Native", "date": "2026-06-11"},
+    {"url": "https://expo.dev/changelog/sdk-57", "title": "Expo SDK 57", "publisher": "Expo", "date": "2026-06-30"}
+   ]
+  },
+  {
+   "id": "L2-C22",
+   "category": "Kenardan kenara (Android)",
+   "package": "react-native-edge-to-edge",
+   "repo": "zoontek/react-native-edge-to-edge",
+   "verdict": "reddedildi",
+   "version": "1.8.2",
+   "released": "2026-09-14",
+   "stars": "1034 (ecosyste.ms)",
+   "role": "Android'de kenardan kenara düzeni açan ve SystemBars bileşeniyle sistem çubuklarını yöneten kütüphane.",
+   "why": "Reddedildi: kendi README'si 'React Native 0.86 veya sonrasındaysanız kenardan kenarayı yerleşik edgeToEdgeEnabled=true Gradle özelliğiyle açmayı tercih edin' diyor. Expo SDK 57'nin bundledNativeModules listesinde yok. Unistyles onu isteğe bağlı eş bağımlılık olarak tutuyor, StyleSheet seçimimizde hiç gerekmiyor.",
+   "compat": "Bakımı sürüyor (1.8.2, 14 Eylül 2026; 3 açık konu) ama işlevi çekirdeğe geçti.",
+   "modern": "Geçiş döneminin aracı; 1.0.0 23 Ekim 2024.",
+   "risks": "Yok (seçilmedi).",
+   "sources": [
+    {"url": "https://github.com/zoontek/react-native-edge-to-edge", "title": "react-native-edge-to-edge README", "publisher": "GitHub", "date": "2026-10-06 okundu"},
+    {"url": "https://cdn.jsdelivr.net/npm/expo@57.0.26/bundledNativeModules.json", "title": "expo 57.0.26 bundledNativeModules.json", "publisher": "Expo (jsDelivr üzerinden)", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C23",
+   "category": "Güvenli alan",
+   "package": "react-native-safe-area-context",
+   "repo": "AppAndFlow/react-native-safe-area-context",
+   "verdict": "seçildi",
+   "version": "5.10.1 (en son); SDK 57 ile ~5.7.0",
+   "released": "2026-09-29",
+   "stars": "2760 (ecosyste.ms)",
+   "role": "Çentik, durum çubuğu ve gezinme çubuğu boşluklarını verir: kenar seçimli SafeAreaView ve useSafeAreaInsets.",
+   "why": "Seçildi: RN 0.81 çekirdek SafeAreaView'i kullanımdan kaldırdı ve bu kütüphaneye geçmeyi önerdi; kenardan kenara Android düzeninde boşlukların tek doğru kaynağı. Haftalık 12.434.577 indirme, düzenli sürüm.",
+   "compat": "SDK 57 ~5.7.0 aralığını listeliyor; npm'deki en son sürüm 5.10.1. Kurulum npx expo install ile SDK'nın sabitlediği aralıkta yapılmalı.",
+   "modern": "Güncel standart.",
+   "risks": "SDK'nın sabitlediği aralığın dışına çıkılmamalı; 104 açık konu.",
+   "sources": [
+    {"url": "https://reactnative.dev/blog/2025/08/12/react-native-0.81", "title": "React Native 0.81", "publisher": "React Native", "date": "2025-08-12"},
+    {"url": "https://cdn.jsdelivr.net/npm/expo@57.0.26/bundledNativeModules.json", "title": "expo 57.0.26 bundledNativeModules.json", "publisher": "Expo (jsDelivr üzerinden)", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/react-native-safe-area-context", "title": "react-native-safe-area-context npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C24",
+   "category": "Güvenli alan",
+   "package": "react-native",
+   "repo": "facebook/react-native",
+   "verdict": "reddedildi",
+   "version": "0.86.3 (SafeAreaView bileşeni)",
+   "released": "2025-08-12 (0.81'de kullanımdan kaldırıldı)",
+   "stars": "ölçülmedi (çekirdek paket)",
+   "role": "Çekirdek SafeAreaView bileşeni.",
+   "why": "Reddedildi: RN 0.81'de kullanımdan kaldırıldı ve ileride silinecek; yalnız iOS'ta çalışıyor, Android kenardan kenara düzenle uyumsuz ve yalnız padding veriyor.",
+   "compat": "Hâlâ çekirdekte ama geliştirici araçlarında uyarı veriyor.",
+   "modern": "Eskimiş.",
+   "risks": "Yok (seçilmedi).",
+   "sources": [
+    {"url": "https://reactnative.dev/blog/2025/08/12/react-native-0.81", "title": "React Native 0.81", "publisher": "React Native", "date": "2025-08-12"},
+    {"url": "https://reactnative.dev/docs/0.81/safeareaview", "title": "SafeAreaView", "publisher": "React Native", "date": "2025"}
+   ]
+  },
+  {
+   "id": "L2-C25",
+   "category": "Durum çubuğu",
+   "package": "expo-status-bar",
+   "repo": "expo/expo",
+   "verdict": "seçildi",
+   "version": "57.0.1 (SDK 57)",
+   "released": "2026-07-15",
+   "stars": "52544 (expo/expo, ecosyste.ms)",
+   "role": "Durum çubuğu simge rengi (style: auto, light, dark, inverted) ve görünürlüğü; kırık beyaz zeminde koyu simgeler.",
+   "why": "Seçildi: style='auto' etkin renk şemasına göre doğru simge rengini seçiyor, karanlık temaya geçişte ek iş yok. SDK 57 API'si kenardan kenara döneme göre sadeleşmiş (style, hidden, animated, iOS'ta hideTransitionAnimation); haftalık 9.307.220 indirme.",
+   "compat": "SDK 57 ile gelen 57.0.1; Android, iOS, tvOS (webde etkisiz).",
+   "modern": "Expo şablonlarının varsayılanı, güncel API.",
+   "risks": "react-native-edge-to-edge README'si eski API kullanan çubuk kütüphanelerinin kenardan kenara düzende beklenmedik davranabileceğini yazıyor; Modal ve alt sayfa açıkken cihazda denenmeli.",
+   "sources": [
+    {"url": "https://docs.expo.dev/versions/v57.0.0/sdk/status-bar/", "title": "StatusBar (expo-status-bar), SDK 57", "publisher": "Expo", "date": "2026-10-06 okundu"},
+    {"url": "https://github.com/zoontek/react-native-edge-to-edge", "title": "react-native-edge-to-edge README", "publisher": "GitHub", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C26",
+   "category": "Durum çubuğu",
+   "package": "react-native",
+   "repo": "facebook/react-native",
+   "verdict": "ikinci",
+   "version": "0.86.3 (StatusBar bileşeni)",
+   "released": "2026-06-11 (0.86 serisi)",
+   "stars": "ölçülmedi (çekirdek paket)",
+   "role": "Çekirdek StatusBar bileşeni (barStyle, hidden).",
+   "why": "İkinci: RN 0.86 ile Modal açıkken stil ve görünürlük güncellemeyi destekliyor, ek paket gerektirmiyor. 'auto' kipi olmadığı için tema değişince barStyle değerini bizim vermemiz gerekir.",
+   "compat": "Çekirdek, SDK 57 ile doğal uyumlu.",
+   "modern": "RN 0.86 düzeltmeleriyle güncel.",
+   "risks": "Tema ile simge rengi eşlemesi elle yapılır.",
+   "sources": [
+    {"url": "https://reactnative.dev/blog/2026/06/11/react-native-0.86", "title": "React Native 0.86", "publisher": "React Native", "date": "2026-06-11"}
+   ]
+  },
+  {
+   "id": "L2-C27",
+   "category": "Android gezinme çubuğu",
+   "package": "expo-navigation-bar",
+   "repo": "expo/expo",
+   "verdict": "seçildi",
+   "version": "57.0.3 (SDK 57)",
+   "released": "2026-09-29",
+   "stars": "52544 (expo/expo, ecosyste.ms)",
+   "role": "Android gezinme çubuğu simge stili (light, dark), gizleme ve enforceContrast (sistemin karşıtlık katmanı).",
+   "why": "Seçildi: SDK 57 yapılandırma eklentisi enforceContrast (varsayılan true), hidden ve style seçeneklerini veriyor; SDK 57 ile setStyle ve setHidden RN Modal pencerelerine de uygulanıyor. 3 düğmeli gezinmede simgelerin kırık beyaz zeminde okunması için style='dark'.",
+   "compat": "Yalnız Android; Expo Go'da var; SDK 57 ile gelen 57.0.3.",
+   "modern": "Kenardan kenara döneme göre sadeleşmiş API.",
+   "risks": "SDK 57 belgesi yalnız stil ve görünürlük seçeneklerini listeliyor; çubuğa arka plan rengi verilmiyor, zeminimiz arkasına uzanıyor. Haftalık 642.405 indirme, expo-status-bar'a göre daha az kullanılıyor.",
+   "sources": [
+    {"url": "https://docs.expo.dev/versions/v57.0.0/sdk/navigation-bar/", "title": "NavigationBar (expo-navigation-bar), SDK 57", "publisher": "Expo", "date": "2026-10-06 okundu"},
+    {"url": "https://expo.dev/changelog/sdk-57", "title": "Expo SDK 57", "publisher": "Expo", "date": "2026-06-30"}
+   ]
+  },
+  {
+   "id": "L2-C28",
+   "category": "Android gezinme çubuğu",
+   "package": "@zoontek/react-native-navigation-bar",
+   "repo": "zoontek/react-native-navigation-bar",
+   "verdict": "ikinci",
+   "version": "2.0.2",
+   "released": "2026-09-14",
+   "stars": "97 (ecosyste.ms)",
+   "role": "Android gezinme çubuğunu yöneten bileşen (paket açıklaması: 'React Native StatusBar long-lost twin').",
+   "why": "İkinci: react-native-edge-to-edge README'si RN 0.86 ve sonrası için yerleşik Gradle özelliğiyle birlikte bunu öneriyor. Seçilmedi çünkü topluluk küçük (97 yıldız, haftalık 16.982 indirme) ve Expo SDK'nın parçası değil.",
+   "compat": "Eş bağımlılık react ve react-native '*'; ilk sürüm 7 Eylül 2025.",
+   "modern": "Kenardan kenara dönem için yazılmış yeni bileşen.",
+   "risks": "Tek yazara bağlı küçük paket.",
+   "sources": [
+    {"url": "https://github.com/zoontek/react-native-edge-to-edge", "title": "react-native-edge-to-edge README", "publisher": "GitHub", "date": "2026-10-06 okundu"},
+    {"url": "https://registry.npmjs.org/@zoontek%2Freact-native-navigation-bar", "title": "@zoontek/react-native-navigation-bar npm kaydı", "publisher": "npm", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C29",
+   "category": "Kök zemin ve görünüm kipi",
+   "package": "expo-system-ui",
+   "repo": "expo/expo",
+   "verdict": "seçildi",
+   "version": "57.0.4 (SDK 57)",
+   "released": "2026-09-11",
+   "stars": "52544 (expo/expo, ecosyste.ms)",
+   "role": "React ağacının dışındaki kök görünüm zemin rengi (kırık beyaz) ve Android'de arayüz stilinin (userInterfaceStyle) yapılandırma eklentisiyle ayarlanması.",
+   "why": "Seçildi: ekran geçişlerinde ve klavye açılırken görünen kök zemin kırık beyaz olmalı, yoksa beyaz ya da siyah parlama görülür. Karanlık tema geldiğinde setBackgroundColorAsync ile kök zemin temaya göre değişir. SDK 57'nin parçası, haftalık 5.579.252 indirme.",
+   "compat": "SDK 57 ile gelen 57.0.4; Android, iOS, tvOS, web.",
+   "modern": "Expo'nun güncel sistem arayüzü modülü.",
+   "risks": "Düşük; renk değeri değişken modülünden gelmeli, sabit yazılmamalı.",
+   "sources": [
+    {"url": "https://docs.expo.dev/versions/v57.0.0/sdk/system-ui/", "title": "SystemUI (expo-system-ui), SDK 57", "publisher": "Expo", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C30",
+   "category": "Bulanıklık ve cam efekti",
+   "package": "expo-blur",
+   "repo": "expo/expo",
+   "verdict": "gerekmez",
+   "version": "57.0.3 (SDK 57)",
+   "released": "2026-09-11",
+   "stars": "52544 (expo/expo, ecosyste.ms)",
+   "role": "Bulanık arka plan (BlurView).",
+   "why": "Gerekmez: tasarım düz ve köşeli; modal, alt sayfa ve menü arkasında gece mavisi tonlu, yarı opak düz bir örtü yeterli ve kontrastı ölçülebilir. Expo belgesine göre Android'de bulanıklık verimli olarak yalnız Android 12+ (RenderNode) ile yapılabiliyor, daha eski sürümlerde çok daha az verimli RenderScript kullanılıyor; kullanıcıların çoğu orta ve düşük segment Android. Android'de ayrıca içeriğin BlurTargetView ile sarılması gerekiyor.",
+   "compat": "SDK 57'de Android'de kararlı; dimezisBlurViewSdk31Plus ile eski Android'de bulanıklıksız yarı saydam görünüme düşüyor.",
+   "modern": "Cam ve bulanıklık güncel bir akım ama bu tasarımın dili değil.",
+   "risks": "Kullanılırsa: eski cihazlarda kare düşmesi; metnin kontrastı arkadaki içeriğe göre değişir, WCAG ölçümü belirsizleşir.",
+   "sources": [
+    {"url": "https://docs.expo.dev/versions/v57.0.0/sdk/blur-view/", "title": "BlurView (expo-blur), SDK 57", "publisher": "Expo", "date": "2026-10-06 okundu"}
+   ]
+  },
+  {
+   "id": "L2-C31",
+   "category": "Bulanıklık ve cam efekti",
+   "package": "expo-glass-effect",
+   "repo": "expo/expo",
+   "verdict": "reddedildi",
+   "version": "57.0.4 (SDK 57)",
+   "released": "2026-09-24",
+   "stars": "52544 (expo/expo, ecosyste.ms)",
+   "role": "iOS 26 Liquid Glass görünümü (GlassView, GlassContainer).",
+   "why": "Reddedildi: yalnız iOS 26 ve üstünde çalışıyor, diğer platformlarda düz View'a dönüyor; öğrencilerin büyük çoğunluğu Android'de. Yuvarlak ve saydam cam dili köşeli, düz tasarıma aykırı. Ayrıca bazı iOS 26 beta sürümlerinde API eksikliği çökme yaptığı için çalışma anında isGlassEffectAPIAvailable denetimi, saydamlığı azalt ayarı için de AccessibilityInfo.isReduceTransparencyEnabled denetimi gerekiyor.",
+   "compat": "SDK 57 ile gelen 57.0.4.",
+   "modern": "Apple'ın en yeni malzeme dili.",
+   "risks": "Yok (seçilmedi).",
+   "sources": [
+    {"url": "https://docs.expo.dev/versions/v57.0.0/sdk/glass-effect/", "title": "GlassEffect (expo-glass-effect), SDK 57", "publisher": "Expo", "date": "2026-10-06 okundu"}
+   ]
+  }
+ ],
+ "stack": [
+  {"category": "Stil ve tema", "pick": "react-native (StyleSheet) + tokens.ts + useTheme", "second": "react-native-unistyles", "note": "Kütüphane gerekmez. Karanlık tema geldiğinde tema değişimi düşük uçlu Android'de ölçülür; ilk kare 100 ms'yi aşarsa Unistyles 3'e geçilir (önerilen ölçüt)."},
+  {"category": "Tasarım değişkeni üretimi", "pick": "style-dictionary", "second": "@terrazzo/cli", "note": "Tek kaynak DTCG JSON; telefona tokens.ts, panele tokens.css. Renkler color.js ile hesaplanıp hex yazılır."},
+  {"category": "İkon seti", "pick": "@material-symbols/svg-400 (sharp klasörü)", "second": "lucide-react-native", "note": "Köşeli stili olan tek büyük set; boş ve dolu çeşitler durum için kullanılır."},
+  {"category": "SVG çizimi", "pick": "react-native-svg", "second": "", "note": "SDK 57 ile 15.15.4; npx expo install ile kurulur."},
+  {"category": "SVG dosyasını bileşene çevirme", "pick": "react-native-svg-transformer", "second": "", "note": "Expo Metro yapılandırması; ilk kurulumda SDK 57 ile deneme derlemesi."},
+  {"category": "Yazı tipi", "pick": "expo-font (config plugin, statik TTF)", "second": "@expo-google-fonts/<aile>", "note": "SDK 57'de değişken yazı tipi yok; SDK 58 ile geliyor."},
+  {"category": "Raster görsel", "pick": "expo-image", "second": "", "note": "Hareketi azalt açıkken transition 0."},
+  {"category": "Kenardan kenara (Android)", "pick": "react-native (yerleşik)", "second": "", "note": "SDK 54'ten beri her zaman açık; react-native-edge-to-edge gerekmez."},
+  {"category": "Güvenli alan", "pick": "react-native-safe-area-context", "second": "", "note": "Çekirdek SafeAreaView kullanılmaz (RN 0.81'de kaldırıldı)."},
+  {"category": "Durum çubuğu", "pick": "expo-status-bar", "second": "react-native (StatusBar)", "note": "style='auto'."},
+  {"category": "Android gezinme çubuğu", "pick": "expo-navigation-bar", "second": "@zoontek/react-native-navigation-bar", "note": "style='dark', enforceContrast açık kalır."},
+  {"category": "Kök zemin ve görünüm kipi", "pick": "expo-system-ui", "second": "", "note": "Kök zemin kırık beyaz, değeri değişken modülünden."},
+  {"category": "Bulanıklık ve cam efekti", "pick": "yok (düz yarı opak örtü)", "second": "", "note": "expo-blur ve expo-glass-effect kullanılmaz."}
+ ],
+ "open_questions": [
+  "Yazı tipi ailesi tipografi bölümünde seçilecek; seçilen ailenin Türkçe karakter kapsamı (ı, İ, ğ, ş) ve eşit genişlikli rakam (tabular-nums) desteği yazı tipi dosyası üzerinde doğrulanmalı.",
+  "Değişkenlerin tek kaynağının DTCG JSON ve Style Dictionary olması web paneli alanının stil seçimiyle birlikte onaylanmalı; panel Tailwind 4 kullanırsa üretilen CSS değişkenleri onun @theme katmanına bağlanır.",
+  "Karanlık tema için önerilen geçiş ölçütü (düşük uçlu Android'de tema değişimi sonrası ilk kare 100 ms'yi aşarsa Unistyles 3) uygun mu, ölçüm hangi cihazda yapılacak?",
+  "Material Symbols ağırlığı 400 mü kalsın, yoksa daha ince bir ağırlık mı? Seçilen ağırlıkta ikonların kırık beyaz ve gece mavisi zeminlerde 3:1 kontrastı color.js ile ölçülmeli.",
+  "react-native-svg-transformer için SDK 57'ye özel uyum notu yok; ilk kurulumda bir deneme derlemesiyle doğrulanmalı.",
+  "SDK 58 değişken yazı tipini getiriyor; o sürüme geçildiğinde statik dosyalardan tek değişken dosyaya inmek ayrı bir karar olarak ele alınmalı."
+ ]
+}

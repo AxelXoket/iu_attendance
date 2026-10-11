@@ -1,0 +1,43 @@
+==== ENTITIES
+{"name":"yoklama_kayitlari","purpose":"Telefonun imzaladığı ham kayıt (kanıt) ve sunucunun bu kayıt için verdiği karar. Tekiller: (donem_id, id) ve (donem_id, cihaz_id, sira_no); kısmi tekil: sayılan kayıtta (oturum_id, ogrenci_id). Değişmeyen ve değişebilen sütunlar ayrı yetkiyle korunur (D05-B16).","key_fields":["donem_id","id (telefonun UUIDv7'si)","cihaz_id","sira_no","anahtar_id","oturum_id","ogrenci_id","metin (imzalı metin aynen)","imza_turu","imza","hesaplanan_saat","telefon_saati","telefon_saat_dilimi","ulasma_ani","gelis_yolu","okutan_hoca_id","okutma_ani","karar","gerekce_kodu","karar_ani","etiket_* (her etiket ayrı evet/hayır)","sayilan","saat_sayisi","uygulama_surumu","guncelleme_kimligi","degisiklik_surumu"],"proposed_owner":"D05"}
+{"name":"makbuz_okutmalari","purpose":"Hocanın her makbuz okutması: kim, ne zaman, hangi kaydı okuttu, sonuç ne oldu; hoca kuyruğundaki okutma işinin tekrar gönderilmesinde tekillik.","key_fields":["id (hoca kuyruk işinin UUIDv7'si)","hoca_id","hoca_oturum_id","okutma_ani","kayit_donem_id","kayit_id","sonuc","gerekce_kodu","ulasma_ani"],"proposed_owner":"D05"}
+{"name":"kayit_zarfi","purpose":"Kuyrukta, istekte ve makbuz QR'ında aynı kalan tek metinli zarf; packages/contracts içindeki Zod şeması (D05-B02).","key_fields":["onek","metin","imza_turu","imza"],"proposed_owner":"D05"}
+{"name":"kayit_metni","purpose":"İmzalanan kayıt metninin içi; biçim sürümüyle yalnız eklenerek büyür, Aşama 2 ve 3 alanları sonradan eklenir (D05-B01).","key_fields":["tur","v","id","cihaz","anahtar","sira","oturum","ogrenci","belge","belgeIstegiMs","belgedenKayitMs","ilkCapaBozuk","telefonSaati","saatDilimi","uygulamaSurumu","guncellemeKimligi"],"proposed_owner":"D05"}
+{"name":"kayit_sonucu","purpose":"Gönderim ve okutma cevabında kayıt başına sonuç; değerler x-extensible-enum (D05-B06).","key_fields":["id","sonuc (kabul, zaten_var, ret, tekrar_dene)","karar","gerekce_kodu","ulasma_ani","karar_ani"],"proposed_owner":"D05"}
+{"name":"cihaz_anahtarlari","purpose":"D05'in imza doğrulamada okuduğu açık anahtarlar; anahtar kimliğiyle bulunur, hiç silinmez ve değişmez (kanıt, D05-B03).","key_fields":["id (açık anahtarın SHA-256 özeti)","cihaz_id","tur","acik_anahtar","durum","app_attest_son_sayac"],"proposed_owner":"D01"}
+{"name":"duzeltmeler","purpose":"Elle ekleme (\"telefonu yok ya da çalışmıyor\", \"QR okutamadı\") burada düzeltme türü olarak durur; D05 kayıt kaynakları sınıflamasını ve imzalı kayıtla birlikte bulunma kuralını yazar (D05-B11).","key_fields":["id (kuyruk işinin UUIDv7'si)","donem_id","oturum_id","ogrenci_id","sebep_kodu","yapan_hoca_id","islem_ani"],"proposed_owner":"D09"}
+{"name":"denetim_kaydi","purpose":"Kimlik çakışmasında gelen zarf, saklanan kaydın kimliği ve gerekçe koduyla buraya yazılır; D05 yalnız ekler.","key_fields":["olay","gerekce_kodu","kayit_donem_id","kayit_id","gelen_zarf"],"proposed_owner":"D09"}
+==== ENDPOINTS
+{"method":"POST","path":"/v1/yoklama/kayitlar","client":"telefon","purpose":"Öğrenci telefonunun kayıt paketi (en çok 200 zarf, ikinci çapa için paket imzası). Taşıma, paketleme ve yeniden deneme D06'nın; kayıt başına doğrulama, \"zaten var\" ve yazma D05'in dış yüzüyle aynı işlemde yapılır, cevap kayıt başına kayit_sonucu döner.","proposed_owner":"D06"}
+{"method":"POST","path":"/v1/yoklama/makbuz-okutmalari","client":"telefon","purpose":"Hocanın okuttuğu zarflar (kuyruk işi kimliği, okutma anı, zarf), hocanın oturumuyla; sunucu dersin hocası olduğunu ve öğrencinin cihaz imzasını doğrular, kayıt başına kayit_sonucu döner.","proposed_owner":"D05"}
+{"method":"GET","path":"/v1/yoklama/kayitlarim","client":"telefon","purpose":"Öğrencinin kendi kayıtları ve kararları (imleçten beri değişenler), öğrencinin oturum anahtarıyla; makbuz ve \"Kayıtlar\" ekranı için (D05-B07).","proposed_owner":"D05"}
+{"method":"GET","path":"/v1/yoklama/oturumlar/{oturumId}/kayitlar","client":"panel","purpose":"Oturumun ham kayıtları: hesaplanan saat, etiketler, karar ve gerekçe, geliş yolu; yalnız dersin hocası. Son durum sütununu D08 ve D09 ekler. Hoca modunun internet isteyen ekranı da aynı ucu kullanır.","proposed_owner":"D05"}
+{"method":"POST","path":"/v1/duzeltmeler/elle-eklemeler","client":"telefon","purpose":"Elle ekleme (sebep kodu: telefonu yok ya da çalışmıyor, QR okutamadı), hocanın oturumuyla, kuyruk işi kimliğiyle tekrar gönderilebilir; düzeltme türü olarak saklanır (D05-B11).","proposed_owner":"D09"}
+==== JOBS
+{"name":"sira_boslugu_denetimi","schedule":"Her gece, İstanbul saatiyle yoğunluk dışında ve gecelik pg_dump'la çakışmayan bir saatte; işçi kapalıysa açılınca bir kez","purpose":"Gönderme süresini (7 gün) geçmiş (cihaz, sıra numarası) boşluklarını bütün kuyruk işi tablolarında sayar, kayıp oranı ölçüsüne ve uyarıya yazar (plan.html#hedefler); veri değiştirmez, iki kez çalışsa da sonuç aynıdır.","proposed_owner":"D05"}
+==== DEPENDS_ON
+"D01"
+"D02"
+"D03"
+"D04"
+"D06"
+"D07"
+"D09"
+"D11"
+"D12"
+"D13"
+==== TOUCHES
+{"domain":"D01","what":"Cihaz ve anahtar satırları (açık anahtarlar, anahtar türü, yenilenen App Attest anahtarları, cihazın etkinliği, silinen hesap) D01'in; D05 imza doğrulamada okur. Cihaz değişimi onayı eski cihazın bekleyen kayıtlarını karara bağlayan olaydır (D05-B17). Hoca telefonunun kalıcı kimliği okutma işi için D01 ile çözülür (D05-C03)."}
+{"domain":"D02","what":"Kayıt metnindeki oturum kimliği oturumu, dersi, şubeleri ve dönemi bulur; dönem alanı oturumdan türetilir. İptal edilen oturuma kayıt gelebileceği için oturumlar silinmez, işaretlenir. Dönem kilidi makbuzların telefonda tutulma süresinin sonudur."}
+{"domain":"D03","what":"Öğrencinin oturumun ders listesinde olup olmadığı (\"sunucu reddeder\" kuralı) ve elle eklemede öğrencinin listede bulunması D03'ün listesinden okunur."}
+{"domain":"D04","what":"Kayıt metni saat belgesini ve iki olay arası süreleri taşır; belgenin doğrulanması (kid, HMAC), hesaplanan saat, ilk ve ikinci çapa ve \"ulaşma anını aşamaz\" kuralı D04'ün. Okutulan kayıtta ikinci çapa yoktur (D05-B10)."}
+{"domain":"D06","what":"Gönderim ucu, en çok 200 kayıtlık paket, 30 saniye zaman aşımı, yeniden deneme, 400 ve 413'te bölme, 401 ve 403'te durma, paket imzası, son sıra numarası bildirimi ve öğrenci indirmesindeki imleç D06'nın; D05 kayıt başına işlemeyi ve sonuç anlamını verir (D05-B06, D05-B07, D05-B15)."}
+{"domain":"D07","what":"App Attest sayacı kuralları (anahtar başına, sıra numarasına göre, boşluk kabul), etiketlerin hesaplanması, kararlar ve gerekçe kodları, otomatik kabul ve 2'lik sınır, rastgele isimde Ret, 7 günden geç gelen kaydın sayılması D07'nin; D05 aynı işlemde D07'nin dış yüzünü çağırır ve sonucu kayıt satırına yazar. Sayılan kayıt seçimi D07 ile birlikte yazılır (D05-B13). Çakışan derslerde (aynı saatte iki derse kayıt) iki kayıt da saklanır, kararı D07 verir."}
+{"domain":"D08","what":"Sayılan kayıt işareti ve saat sayısı devamsızlık sayımının girdisidir; elle ekleme ile imzalı kayıt birlikte bulunduğunda son durumun önceliği D08 ve D09'la yazılır (D05-B11, D05-B19)."}
+{"domain":"D09","what":"Elle ekleme düzeltme türü olarak D09'un tablosunda durur; kimlik çakışmasında gelen zarf ve karar değişiklikleri D09'un denetim kaydına yazılır; sorun bildiriminin 3 günü kararın öğrencinin telefonuna ulaştığı anda başlar (D05-B07)."}
+{"domain":"D10","what":"Raporlar ve ölçüm sorguları (gönderme süresi, saati doğrulanamayan ve işaretli oranlar) kayıt satırını yalnız okur."}
+{"domain":"D11","what":"Aşama 2 QR içeriğinin ve yedek kodun üretimi ve doğrulanması, QR gösterim kaydı D11'in; D05 bu alanları kayıt metnine ekler ve yedek kodlu kayıt sayısını sınırlar (D05-B12)."}
+{"domain":"D12","what":"Kayıt tablosunun döneme göre bölünmesi, dizinler, metin ve CHECK kuralı, rol ve sütun yetkileri, yedekten dönüşte 5 dakikalık WAL penceresindeki kayıtların telefonlarca yeniden gönderilmesi, saklama süresi ve hesap silmede kalanlar D12'nin kurallarıyla (D05-B16, D05-C01)."}
+{"domain":"D13","what":"Sonuç değerleri x-extensible-enum, hata zarfı ve kodları, doğrulanmış cihaza bağlı istek sınırı, API'nin yalnız eklemeyle değişmesi ve kayıt gönderme ucunun hiçbir sürüme kapanmaması D13'ün kurallarıyla."}
+{"domain":"D14","what":"Gece sıra boşluğu denetimi pg-boss işi olarak D14'ün kuyruğunda çalışır."}
+{"domain":"D15","what":"Davranış senaryoları (aynı kayıt iki kez, başka öğrencinin adına imzalanmış kayıt, listede olmayan ders), gönderme ucunun fast-check durum makinesi testi ve ders çıkışı yük testi D15'in test düzeninde koşar; kayıp ve gönderme ölçüleri uyarıya bağlanır."}

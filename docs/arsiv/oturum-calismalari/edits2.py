@@ -1,0 +1,219 @@
+import json, sys
+P = "plan.html"; T = "teknik.html"
+E = []
+def e(i, f, a, b): E.append({"id": i, "file": f, "from": a, "to": b})
+
+# ---- dagitim
+e("D08", P,
+  "Doğrulama Play Console hesabımdan (kimlik, bir kerelik 25 USD); ayrı Android Developer Console hesabı açmam.",
+  "Doğrulama Play Console hesabımdan: Play'in kimlik doğrulaması yeterli, ücret Play'in bir kerelik 25 USD kayıt ücreti (bkz. <a href=\"#acik-hesap-ucretleri\">Hesap ücretleri</a>); ayrı Android Developer Console hesabı ve onun 25 USD'si yok.")
+e("D30", P,
+  "Paket adı uygulama Play'de açılınca, imza anahtarı Play App Signing ile kaydolur; aynı anahtarla imzalandığı için GitHub APK da kapsanır.",
+  "Google'da kayıt, paket adı ile imza sertifikası parmak izi çiftidir; Play App Signing kullanan uygulama kendiliğinden kaydolur ve Play Console hesabı Play dışında dağıtılan uygulamaları da kapsar. GitHub APK aynı paket adını ve Play'in aynı imza anahtarını taşıdığından aynı kayda girer. Doğrulama Türkiye'ye gelince kayıt durumunu Play Console'da bir kez kontrol ederim.")
+e("D61", P,
+  "Apple yayın hesabım ilk TestFlight derlemesinden önce kesinleşir, sonra değişmez: App Attest anahtarı ve anahtarlık kayıtları Apple ekip kimliğine bağlı; hesap değişirse her iPhone öğrencisi cihaz değişiminden geçer.",
+  "Apple hesabım ilk iPhone geliştirme derlemesinden önce, iş sırasının 6. adımının başında kesinleşir (bkz. <a href=\"#baslangic\">Başlangıç</a>): Mac olmadığından iPhone'a kurulan her EAS derlemesi, geliştirme derlemesi de, ücretli Apple Developer Program hesabıyla imzalanır (App Group ve App Attest ücretsiz hesapta da var; şart imzadan geliyor). Hesap sonra değişmez: App Attest anahtarı, App Group ve anahtarlık kayıtları Apple ekip kimliğine bağlı; hesap öğrenci kurulumundan sonra değişirse her iPhone öğrencisi cihaz değişiminden geçer, ilk TestFlight derlemesinden önce değişirse yalnız benim deneme telefonlarım yeniden kurulur.")
+e("D61", P,
+  "Bireysel hesapla gidip gidemeyeceğimi ilk derlemeden önce Apple'ın birebir App Review görüşmesinde sorarım;",
+  "Bireysel hesapla gidip gidemeyeceğimi hesabı almadan, 6. adımdan önce Apple'ın birebir App Review görüşmesinde sorarım (Apple'ın üyelik karşılaştırmasına göre Meet with Apple etkinlikleri ücretsiz kayıtlı geliştiriciye de açık; randevu üyelik isterse bireysel hesapla başlayıp sorarım);")
+e("D51", P,
+  "Güncelleme günde en çok bir kez, yoklama kaydı gönderildikten sonra sorulur; böylece ders başı yoğunluğunda güncelleme sorgusu ve indirmesi gönderimle yarışmaz.",
+  "Güncelleme günde en çok bir kez, kayıt gönderiminden bağımsız sorulur: arka plan görevinde ya da uygulama ön plandayken son sorgudan 24 saat geçmişse. Açık yoklama penceresi varken ve gönderim sürerken sorulmaz; böylece ders başı yoğunluğunda güncelleme sorgusu ve indirmesi gönderimle yarışmaz, hiç kayıt göndermeyen hoca ve öğrenci de düzeltmeyi alır. İnen güncelleme bir sonraki açılışta devreye girer, uygulama kendini yeniden başlatmaz; indirme yükünü kademeli açma yayar.")
+e("D51", P,
+  "Uygulama günde en çok bir kez sunucuma sorar;",
+  "Uygulama günde en çok bir kez, güncelleme sorgusuyla aynı anda sunucuma sorar;")
+e("D53", P,
+  "<div>Dönem ortasında zorunlu güncelleme yok; öğrenciye zorunlu yeniden giriş de yok (hoca 30 günde bir kodla girer); güncellemeler kademeli açılır. Desteklenmeyen sürüm güncelleme ekranı görür, ama kayıt gönderme ucu eski sürümlere en son kapanır; bekleyen kayıtlar hiçbir zaman engellenmez.</div>",
+  "<div>Dönem ortasında zorunlu güncelleme yok: izin verilen en düşük sürüm yalnız dönem arasında, birimlerin devamsızlık işleme son günü (bkz. <a href=\"#devam-donem-sonu\">Dönem sonu</a>) geçip yeni dönem başlamadan yükseltilir (deneme dönemindeki TestFlight istisnası yukarıdaki Deneme satırında). Dönem içinde bir sürümde kayıtların güvenilirliğini bozan hata çıkarsa en düşük sürüm yine yükseltilmez: hata o sürümün dalından uzaktan güncellemeyle düzeltilir; düzeltilemezse sunucu o sürümün yeni kayıtlarını gerekçe koduyla \"İncelemede\" alır. Öğrenciye zorunlu yeniden giriş de yok (hoca 30 günde bir kodla girer); güncellemeler kademeli açılır. En düşük sürümün altındaki telefon güncelleme ekranı görür ve yeni yoklama kaydı almaz; giriş, makbuzlar ve bekleyen kayıtların gönderimi çalışır. Kayıt gönderme ucu hiçbir sürüme kapanmaz: API yalnız eklemeyle değiştiğinden eski sürümün kaydı her zaman okunur; bekleyen kayıtlar hiçbir zaman engellenmez.</div>")
+e("D25", P,
+  "Türkiye'de Android kullanımının yaklaşık %98'i, iOS kullanımının yaklaşık %97,7'si bu aralıkta (StatCounter sürüm sayfaları, Eylül 2026).",
+  "Türkiye'de Android kullanımının yaklaşık %98'i, iOS kullanımının yaklaşık %97,6'sı bu aralıkta (StatCounter sürüm sayfalarının Eylül 2026 CSV dökümünden topladım). iOS 26'daki Safari sürümü 18.6 diye bildirdiğinden StatCounter'ın iOS 26 ara sürüm dağılımı güvenilir değil (düzeltme 19 Ocak 2026'da başladı); bu yalnız 18.6 üstünü karıştırır, 16.4 sınırının altındaki payı değiştirmez.")
+
+# ---- teknoloji
+e("D55", P,
+  "    <li><strong>Hacim:</strong>",
+  "    <li id=\"teknoloji-sunucu-yeri\"><strong>Sunucu yeri:</strong> Tek Linux sanal makine, yurt içinde. Önceliğim üniversitenin kendi veri merkezi (BİDB); olmazsa Türkiye'de veri merkezi olan, sözleşmesi kurum kontrolünde bir sağlayıcı. Yurt dışı bulut kullanmam: Bilgi ve İletişim Güvenliği Tedbirleri Genelgesi (2019/12) kamu kurumu verisinin kurumun kendi sistemi ya da kurum kontrolündeki yerli sağlayıcı dışında bulut depolamada tutulmasını yasaklıyor; yurt dışındaki sunucu KVKK md.9'a göre ayrıca yeterlilik kararı ya da standart sözleşme ve Kurul'a 5 iş günü içinde bildirim ister. Yedek deposu da yurt içinde. Makine mağaza incelemesi için yurt dışından da erişilebilir olmalı (bkz. <a href=\"#kararlar-inceleme-hesaplari\">İnceleme hesapları</a>). Başlangıç boyutu ve büyüme: bkz. <a href=\"teknik.html#altyapi-sunucu-makinesi\">Sunucu makinesi</a>; BİDB'ye soru: bkz. <a href=\"#acik\">Açık noktalar</a>.</li>\n    <li><strong>Hacim:</strong>")
+
+# ---- baslangic
+e("D61", P,
+  "<li><strong>Telefon uygulaması:</strong> ortak sözleşme ve fetch yardımcısıyla; önce öğrenci, sonra hoca modu.</li>",
+  "<li><strong>Telefon uygulaması:</strong> ilk iPhone geliştirme derlemesinden önce Apple hesabı kararı (bkz. <a href=\"#dagitim-hesap\">Dağıtım, iPhone, Hesap</a>); ortak sözleşme ve fetch yardımcısıyla; önce öğrenci, sonra hoca modu.</li>")
+e("D61", P,
+  "<strong>Dağıtım:</strong> Apple hesabı kararı (ilk TestFlight derlemesinden önce), inceleme hesapları,",
+  "<strong>Dağıtım:</strong> inceleme hesapları (Apple hesabı 6. adımda kesinleşmiş olur),")
+
+# ---- hedefler
+e("D11", P,
+  "%2 ile 5 kaçırma oranı, öğrenci telefonları arası aktarmalı Acadly'den;",
+  "%2 ile 5 kaçırma oranı, öğrenci telefonları arası aktarmalı Acadly'den (uygulama herkeste kuruluyken; %2, ilk derste deneme yapıldığında);")
+
+# ---- acik
+e("D61", P,
+  "kuruluş hesabı mı gerekir? (bkz.",
+  "kuruluş hesabı mı gerekir? Cevap, iş sırasının 6. adımında ilk iPhone geliştirme derlemesinden önce gerekir. (bkz.")
+e("D08", P,
+  "Google Play Console (bir kerelik 25 USD, Android geliştirici doğrulaması dahil)",
+  "Google Play Console (bir kerelik 25 USD kayıt ücreti; Android geliştirici doğrulaması Play Console'dan ek ücretsiz: Play'in kimlik doğrulamasından geçen hesapta yeni bir adım yok; Google'ın yazdığı ayrı 25 USD yalnız Android Developer Console hesabı içindir, o hesabı açmam)")
+e("D04+D03", P,
+  "<li><strong>E-posta gönderici hesabı:</strong> BİDB'den FR-005 formuyla hesap ve Google SMTP rölesi izni alınabilir mi? (bkz.",
+  "<li><strong>E-posta gönderici hesabı:</strong> FR-005 (Kurumsal e-Posta Talep Formu) birimler ve etkinlikler için ve resmî yazıyla gidiyor: yazıyı hangi birim gönderir? Aynı yazıda Google SMTP rölesi izni verilir mi? Aynı resmî yazıda DMARC'ın Google'ın önerdiği sırayla kademeli olarak \"quarantine\" düzeyine çekilmesini öneririm; karar BİDB'nin, plan buna bağlı değil. (bkz.")
+e("D24+D05", P,
+  "<li><strong>AKSİS:</strong> Devamsızlıkları otomasyona işleme son gününden (lisansta dersin bittiği gün) sonra AKSİS'te düzeltmeyi kim, hangi kararla yapar?</li>",
+  "<li><strong>AKSİS:</strong> Devamsızlıkları otomasyona işleme son gününden sonra AKSİS'te düzeltmeyi kim, hangi kararla yapar? 2026-2027'de bu gün genel lisans takviminde de dersin bittiği gün mü, hangi birimlerin ayrı takvimi var? (bkz. <a href=\"#devam-donem-sonu\">Dönem sonu</a>) AKSİS'in devamsızlık ekranı dosyadan (Excel) yükleme alıyor mu? Alıyorsa AKSİS özeti o şablonla da indirilir, dosyayı hoca kendisi yükler, otomatik bağlantı yine olmaz; almıyorsa elle giriş kalır. (Kamuya açık AKSİS kılavuzu yalnız öğrenci ekranlarını anlatıyor.)</li>")
+e("D55", P,
+  "    <li><strong>Sunucu sertifikası:</strong>",
+  "    <li><strong>Sunucu makinesi:</strong> BİDB üniversitenin veri merkezinde Linux sanal makine verebilir mi (4 çekirdek, 8 GB bellek, 100 GB SSD ile başlayıp büyütülebilen), alan adı ve 443 portu internete, mağaza incelemesi için yurt dışına da açılabilir mi, yedek için ayrı bir depo verilebilir mi? Verilemezse Türkiye'de veri merkezi olan bir sağlayıcıyı kurum adına kullanmak uygun mu? (bkz. <a href=\"#teknoloji-sunucu-yeri\">Sunucu yeri</a>)</li>\n    <li><strong>Sunucu sertifikası:</strong>")
+e("D55", P,
+  "Her durumda sunucu dışında ve şifreli",
+  "Her durumda sunucu dışında, yurt içinde ve şifreli")
+e("D54", P,
+  "    <li><strong>Akıllı telefonu olmayan öğrenci</strong> sayısı; hoca bunları elle ekliyor.</li>",
+  "    <li><strong>Akıllı telefonu olmayan öğrenci</strong> sayısı; hoca bunları elle ekliyor.</li>\n    <li id=\"acik-saklama-suresi\"><strong>Saklama süresi:</strong> Hesabı silinen öğrencinin yoklama kayıtları, düzeltmeleri ve denetim kaydı kaç yıl tutulur? İÜ'nün kişisel veri saklama ve imha politikasında yoklama ve devam kayıtları için süre var mı; yoksa KVKK birimi ya da Öğrenci İşleri hangi süreyi verir? Süre gelene kadar kayıtlar silinmez (bkz. <a href=\"#kararlar-hesap-silme\">Hesap silme</a>).</li>")
+
+# ---- kaynaklar: Benzer sistemler
+e("D12", P,
+  ">Uppsala QR yoklama</a>",
+  ">Uppsala QR yoklama (30 sn)</a>")
+e("D12", P,
+  ">Manchester, SEAtS 30 sn kod</a>",
+  ">Manchester, SEAtS 30 sn canlı kod ve sabit ders kodu</a>")
+e("D11", P,
+  ">Acadly (UIC yardım sayfası)</a>",
+  ">Acadly (UIC yardım sayfası, %95 ve %98)</a> · <a href=\"https://pages.acadly.com/uic\">Acadly, Bluetooth ağı yöntemi</a>")
+e("D19", P,
+  ">İstanbul Tıp Fakültesi QR yoklama kılavuzu</a>",
+  ">İstanbul Tıp Fakültesi QR yoklama kılavuzu (24 Temmuz 2018 intörn oryantasyon günü, katılım 377 ve 422)</a>")
+e("D14", P,
+  ">UBYS Mobil</a>",
+  ">UBYS Mobil (sürüm notu, 28 Eylül 2026)</a>")
+e("D15", P,
+  ">Proliz</a>",
+  ">Proliz (Nisan 2026 yorumları)</a>")
+e("D18", P,
+  ">Nişantaşı şikâyeti</a>",
+  ">Nişantaşı öğrenci şikâyeti (5 Ocak 2024)</a>")
+e("D17", P,
+  ">Sözcü, \"fişleme\" eleştirisi (2025)</a>",
+  ">Sözcü, \"fişleme\" eleştirisi (Nisan 2025)</a>")
+e("D17", P,
+  ">BUÜ akıllı yoklama</a>",
+  ">BUÜ akıllı yoklama</a> · <a href=\"https://www.gazetebirlik.com/egitim/buude-akilli-yoklama-sistemi-2026-2027-egitim-ogretim-doneminde-basliyor/1101949\">BUÜ, 28 Eylül 2026 başlangıcı ve web tabanlı oluşu (Yeni Birlik)</a>")
+e("D15", P,
+  ">Aksaray Üniversitesi yoklama yönergesi (2025)</a>",
+  ">Aksaray Üniversitesi yoklama yönergesi (2025, Md.5)</a>")
+e("D17", P,
+  ">D.Ü. Mobil sürüm notları</a></li>",
+  ">D.Ü. Mobil sürüm notları</a></li>\n      <li><a href=\"https://www.dha.com.tr/egitim/bluetooth-tabanli-dijital-yoklama-yesil-cevreye-destek-ve-zaman-tasarrufu-sagliyor-2776335\">İstanbul Atlas, Bluetooth ve numara ile QR yedeği (DHA, Aralık 2025)</a> · <a href=\"https://www.anadolu.edu.tr/duyurular/qr-kodlu-yoklama-sistemine-gecilmistir-1770989551\">Anadolu Üniversitesi QR yoklama duyurusu (Şubat 2026)</a></li>")
+e("D25", P,
+  ">iOS sürümleri</a>",
+  ">iOS sürümleri</a> · <a href=\"https://pxlnv.com/linklog/ios-26-usage-updates/\">StatCounter iOS 26 sayım düzeltmesi (Ocak 2026)</a>")
+
+# ---- kaynaklar: Kurallar
+e("D22", P,
+  "</a>: Md.9/4, Md.14, Md.19, Md.20, Md.35",
+  "</a>: Md.9/4, Md.14, Md.19, Md.20/5, Md.21 (harf notları, FD), Md.23 (DC ve DD tekrarı), Md.28/4, Md.35")
+e("D23+D24", P,
+  ">İÜ Öğrenci Sağlık Raporları Yönergesi</a></li>",
+  ">İÜ Öğrenci Sağlık Raporları Yönergesi: Md.6, Md.7</a> · <a href=\"https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=2025-2026-akademik-takvim-onerisi-eczacilik.pdf\">İÜ Eczacılık Fakültesi 2025-2026 akademik takvimi (devamsızlık son günü)</a> · <a href=\"https://ebs.istanbul.edu.tr/home/universite/?id=takvim\">İÜ akademik takvimler (EBS)</a></li>")
+e("D55", P,
+  "      <li><a href=\"https://zero.rocicorp.dev/docs/offline\">",
+  "      <li><a href=\"https://www.alomaliye.com/2019/07/06/bilgi-ve-iletisim-guvenligi-tedbirleri-2019-12/\">Bilgi ve İletişim Güvenliği Tedbirleri Genelgesi 2019/12 (metin)</a> · <a href=\"https://www.kvkk.gov.tr/Icerik/6649/Personal-Data-Protection-Law\">KVKK (6698), md.4 ve md.9</a></li>\n      <li><a href=\"https://zero.rocicorp.dev/docs/offline\">")
+e("D21", P,
+  ">Android SystemClock</a></li>",
+  ">Android SystemClock</a> · <a href=\"https://android.googlesource.com/platform/system/sepolicy/+/9d9c370f31556c33f62e7889f64ad3a2728f1863\">AOSP, boot_id herkese açık (2017)</a> · <a href=\"https://developer.android.com/reference/android/provider/Settings.Global\">Android BOOT_COUNT</a></li>")
+e("D10", P,
+  ">Android anahtar kanıtı</a>",
+  ">Android anahtar kanıtı</a> · <a href=\"https://developer.android.com/privacy-and-security/keystore\">Android Keystore (sarılı aktarım, StrongBox)</a> · <a href=\"https://developer.apple.com/documentation/security/protecting-keys-with-the-secure-enclave\">Secure Enclave anahtar sınırı</a>")
+e("D09", P,
+  ">Android Bluetooth izinleri</a>",
+  ">Android Bluetooth izinleri</a> · <a href=\"https://source.android.com/docs/core/connect/bluetooth/ble\">Android: konum kapalıyken Bluetooth taraması</a>")
+e("D02", P,
+  ">expo-device</a></li>",
+  ">expo-device</a> · <a href=\"https://developer.apple.com/documentation/security/ksecattraccessibleafterfirstunlockthisdeviceonly\">Apple, ilk kilit açılışından sonra erişim</a> · <a href=\"https://developer.apple.com/documentation/backgroundtasks/bgprocessingtask\">Apple, uzun iş görevi</a></li>")
+
+# ---- kaynaklar: Sunucu ve testler
+e("D32", P,
+  ">fastify-type-provider-zod</a>",
+  ">fastify-type-provider-zod</a> · <a href=\"https://github.com/fastify/fastify-type-provider-zod\">@fastify/type-provider-zod (resmî)</a>")
+e("D04+D03", P,
+  ">@fastify/otel</a></li>",
+  ">@fastify/otel</a></li>\n      <li><a href=\"https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=iu-bidb-tl-008-e-posta-kullanim-talimati.pdf\">İÜ BİDB E-posta Kullanım Talimatı (TL-008; FR-005, FR-006)</a> · <a href=\"https://knowledge.workspace.google.com/admin/gmail/advanced/route-outgoing-smtp-relay-messages-through-google\">Google Workspace SMTP rölesi ve sınırları</a> · <a href=\"https://knowledge.workspace.google.com/admin/security/set-up-dmarc\">Google, DMARC politikaları</a></li>")
+
+# ---- kaynaklar: Dağıtım ve cihazlar
+e("D08+D30", P,
+  ">Google duyurusu (Haziran 2026)</a>",
+  ">Google duyurusu (Haziran 2026)</a> · <a href=\"https://developer.android.com/developer-verification/guides/google-play-console\">Play Console'dan doğrulama</a> · <a href=\"https://android-developers.googleblog.com/2026/03/android-developer-verification-rolling-out-to-all-developers.html\">Google duyurusu (Mart 2026)</a> · <a href=\"https://developer.android.com/developer-verification/guides/check-registration-status\">Kayıt: paket adı ile sertifika parmak izi</a>")
+e("D26", P,
+  ">xprem belgeleri</a>",
+  ">xprem belgeleri</a> · <a href=\"https://github.com/mercuretechnologies/xprem/blob/main/LICENSE.md\">xprem lisansı (MIT çekirdek, ee/ ticari)</a>")
+e("D31", P,
+  ">Expo SDK 57</a>",
+  ">Expo SDK 57</a> · <a href=\"https://expo.dev/changelog/sdk-58-beta\">Expo SDK 58 beta</a> · <a href=\"https://github.com/expo/expo/blob/sdk-58/templates/expo-template-bare-minimum/ios/Podfile\">SDK 58 iOS alt sınırı</a> · <a href=\"https://github.com/facebook/react-native/blob/0.88-stable/packages/react-native/gradle/libs.versions.toml\">React Native 0.88 Android alt sınırı</a>")
+
+# ---- kaynaklar: Web paneli
+e("D28+D29", P,
+  ">Encoding Standard (windows-1254)</a></li>",
+  ">Encoding Standard (windows-1254)</a></li>\n      <li><a href=\"https://support.microsoft.com/en-US/Windows/Experience/power-battery/learn-more-about-energy-recommendations\">Windows enerji önerileri (ekran kapanma süresi)</a> · <a href=\"https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API\">Screen Wake Lock</a> · <a href=\"https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@page\">CSS @page (sayfa kenar kutuları)</a></li>")
+
+# ---- sozluk
+e("D67", P,
+  "<li><strong>Kendi beyanı:</strong> Süre seçilmemiş derste verilen, hoca onayı bekleyen kayıt.</li>",
+  "<li><strong>Kendi beyanı:</strong> Süre seçilmemiş derste verilen, hoca onayına kadar geçici olarak sayılan kayıt.</li>")
+e("D68", P,
+  "<li><strong>Gönderme:</strong> Telefondaki kaydın sunucuya iletilmesi.</li>",
+  "<li><strong>Gönderme:</strong> Telefondaki kaydın sunucuya iletilmesi.</li>\n      <li><strong>İmleç:</strong> Telefonun indirmede sunucuya verdiği, son aldığı değişiklik sürümü ile veritabanı nesli.</li>\n      <li><strong>Veritabanı nesli:</strong> PostgreSQL'in küme kimliği ile zaman çizelgesi; yedekten dönüşte kendiliğinden değişir, telefonlara \"baştan indir\" dedirtir.</li>")
+
+# ---- teknik
+e("D34", T,
+  "Dependabot pnpm 12'nin kilit dosyasını henüz tam okuyamadığından dosya <code>pmOnFail: ignore</code> ile tek parça, kurulumdan sonra GitHub'ın bağımlılık grafiği bir kez denetlenir.",
+  "pnpm 12, <code>packageManager</code>'da sabitlenen sürümü kendisi indirince bu sürümü <code>pnpm-lock.yaml</code>'ın başına ayrı bir YAML belgesi olarak yazar; Dependabot belgesinde desteklenen pnpm sürümleri v7 ile v10 ve iki belgeli kilit dosyasını okuyamıyor. Bu yüzden <code>pnpm-workspace.yaml</code>'da <code>pmOnFail: ignore</code>: pnpm sürüm kaydını yazmaz, kilit dosyası tek belge kalır. Bedeli yerelde sürüm uyuşmazlığının denetlenmemesi; sürüm birliğini CI'da pnpm/setup, Docker'da resmî imaj, EAS'ta <code>eas.json</code> sağlar. Kurulumdan sonra GitHub'ın bağımlılık grafiği bir kez denetlenir; Dependabot belgesi pnpm 12'yi desteklenen sayınca ayar kaldırılır.")
+e("D37", T,
+  "pg-boss (graphile-worker, o da tek kişilik; yalnız kaçış yolu)",
+  "pg-boss (graphile-worker; o da tek bakımcılı: npm'de tek yayımcısı Benjie Gillam, Graphile Ltd üzerinden bağışla sürdürülüyor; yalnız kaçış yolu)")
+e("D39", T,
+  "SheetJS (2024'ten beri yeni sürüm yok; yedek read-excel-file ve write-excel-file);",
+  "SheetJS (son sürüm 0.20.3, 18 Temmuz 2024; Ekim 2026'da SheetJS'in kendi sürüm listesi <code>cdn.sheetjs.com/xlsx.lst</code> ile denetlendi, yenisi yok; yedek read-excel-file ve write-excel-file: ikisi de MIT, tarayıcıda çalışır, 2026'da sürüm çıkardı, ama ikisi de aynı tek geliştiricinin bakımında);")
+e("D36", T,
+  "Ortak altyapı (veritabanı, iş kuyruğu, kimlik, saat, e-posta) kökte bir kez kaydedilir; her modül <code>/v1/&lt;modül&gt;</code> altında kendi eklentisi.",
+  "Ortak altyapı (veritabanı, iş kuyruğu, oturum doğrulama, saat, e-posta) kökte bir kez kaydedilir; her modül <code>/v1/&lt;modül&gt;</code> altında kendi eklentisi. Kökteki oturum doğrulama yalnız bir kancadır: gelen çerezi ya da Bearer anahtarını oturumla eşleştirip isteğe hocanın kimliğini ekler; kimlik modülünün <code>index.ts</code> dış yüzünden gelir, kökte eklendiği için bütün modüllerde geçerlidir. Giriş kodları, oturum tabloları ve beş uç kimlik modülünün kendi eklentisinde (aşağıdaki Kimlik satırı).")
+e("D32", T,
+  "(fastify-type-provider-zod 7, sürüm sabit; Fastify'ın resmî @fastify/type-provider-zod paketi yeni sürüm yayımlayınca ona geçilir, kullanım aynı)",
+  "(fastify-type-provider-zod 7, sürüm sabit; Fastify'ın resmî @fastify/type-provider-zod paketi 19 Nisan 2026'dan beri 1.0.0 ama 7.0.0'daki düzeltmelerin gerisinde, düzeltmeler resmî depoya taşındı, yayımlanmadı; 1.0.0'dan sonraki ilk sürümünde ona geçilir, kullanım aynı, Zod 4.2 ve üstünü ister)")
+e("D52", T,
+  "Durum ve etiket listeleri PostgreSQL enum değil, metin ve CHECK kısıtı.",
+  "Tek değer alan durum ve kod listeleri (sunucu kararı, gerekçe ve sebep kodları, son durum) PostgreSQL enum değil, metin ve CHECK kısıtı: enum'dan değer çıkarılamaz, CHECK göçle değişir. Kayıt etiketleri liste değil, her biri ayrı evet/hayır sütunu (bir kayıtta birden çok olabilir; bkz. <a href=\"plan.html#gun-kayit-etiketleri\">Kayıt etiketleri</a>); yeni etiket varsayılanı false olan yeni sütundur, PostgreSQL bunu tabloyu yeniden yazmadan ekler.")
+e("D01", T,
+  "Oturum anahtarı 256 bit rastgele, veritabanında yalnız SHA-256 özeti.",
+  "Oturum anahtarı 256 bit rastgele, veritabanında yalnız SHA-256 özeti. Kodla giriş başarılı olunca giriş bildirimi e-postası kod e-postasıyla aynı yoldan gider (bkz. <a href=\"plan.html#kararlar-e-posta-gonderimi\">Kararlar, E-posta gönderimi</a>). E-posta gidemezse giriş geri alınmaz, durum denetim kaydına yazılır. Ayrı bir tanınan cihaz kaydı tutulmaz.")
+e("D33", T,
+  "Better Auth bu iş için 17 doğrudan bağımlılık, 2026'da 27 güvenlik duyurusu, IP'yi yalnız başlıktan okuma, oturum anahtarını açık saklama getiriyordu;",
+  "Better Auth bu iş için 17 doğrudan bağımlılık, 2026'da 27 güvenlik duyurusu (6 Ekim 2026'ya kadar, GitHub'daki yayın tarihine göre), istemci IP'sini bağlantıdan değil istek başlığından okuma (varsayılan <code>x-forwarded-for</code>), oturum anahtarını veritabanında özetlemeden aynen saklama getiriyordu;")
+e("D48", T,
+  "bu yüzden sunucu sayacın bir bir artmasını değil yalnız artmasını bekler (aradaki boşluk kabul edilir).",
+  "bu yüzden sunucu sayacın bir bir artmasını değil yalnız artmasını bekler (aradaki boşluk kabul edilir). Açılıştaki deneme onayı sunucuya gönderilmez, yalnız boşluk bırakır. Sayaç anahtar başına tutulur: yenilenen App Attest anahtarının sayacı sıfırdan başlar, eski anahtarla imzalı bekleyen kayıtlar eski anahtarın son sayacıyla denetlenir. Sayacı artmayan kayıt reddedilmez, gerekçe koduyla \"İncelemede\" olur (Apple kuralı: sayaç bir önceki onaydan büyük olmalı).")
+e("D35", T,
+  "Dışarıdan bir erişim denetimi herkese açık bir ucu birkaç dakikada bir çağırır, sunucu cevap vermezse beni uyarır.",
+  "Dışarıdan bir erişim denetimi Caddy üzerinden herkese açık <code>GET /v1/durum</code> ucunu birkaç dakikada bir çağırır, cevap gelmezse beni uyarır. Bu uç <code>/health/live</code> ile aynı işi yapar (veritabanına dokunmaz, gövdesiz 204), girişsizdir ve girişsiz uçların IP sınırı altındadır; böylece alan adı, sertifika, Caddy ve API süreci tek denetimde sınanır, sağlık uçları iç ağda kalır. Panel ana sayfası bu iş için kullanılmaz: onu Caddy tek başına sunar, API düşse de cevap verir.")
+
+base = r"C:\Users\USER\Desktop\iu_attendance" + "\\"
+orig = {f: open(base + f, encoding="utf-8").read() for f in (P, T)}
+cur = dict(orig)
+ok = True
+for x in E:
+    c0 = orig[x["file"]].count(x["from"]); c1 = cur[x["file"]].count(x["from"])
+    bad = [ch for ch in ("\u2014", "\u2013") if ch in x["to"]]
+    if c0 != 1 or c1 != 1 or bad:
+        ok = False; print("FAIL", x["id"], c0, c1, bad, x["from"][:60])
+    cur[x["file"]] = cur[x["file"]].replace(x["from"], x["to"], 1)
+# overlap check: each from must not be inside another edit's region in a way that breaks; sequential sim done
+print("ok" if ok else "errors", len(E))
+json.dump(E, open(sys.argv[1], "w", encoding="utf-8"), ensure_ascii=False)
+import re
+for f in (P, T):
+    ids = re.findall(r'id="([^"]+)"', cur[f])
+    d = [i for i in set(ids) if ids.count(i) > 1]
+    print(f, "dup ids", d)
+    for m in re.findall(r'href="(plan\.html|teknik\.html)?#([^"]+)"', cur[f]):
+        tgt = m[0] or f
+        if f'id="{m[1]}"' not in cur[tgt]:
+            print(f, "missing anchor", tgt, m[1])

@@ -1,0 +1,24 @@
+* D03.tables.0.columns.1.note :: Şube (subeler, D02). Yükleme tek şubeye yapılır.
+
+* D03.tables.0.columns.2.note :: Şubenin dersi; yazılırken D02.subeGetir'den kopyalanır. Derste tek etkin satır dizini için gerekir (kısmi dizin yalnız kendi tablosunu görür).
+
+* D03.tables.1.columns.0.note :: Şube (subeler, D02); birincil anahtar.
+
+* D03.tables.2.columns.1.note :: Yüklemenin şubesi (subeler, D02).
+
+* D03.endpoints.0.auth :: Oturumlu hoca (panel çerezi, kökteki D01 kancası). Yalnız dersin hocası (D02.dersYetkisi); değilse 404, varlık sızdırılmaz.
+
+* D03.endpoints.0.request.subeId (yol) :: uuid; şube D02'de yoksa ya da isteyen dersin hocası değilse 404 LISTELER_SUBE_BULUNAMADI
+
+* D03.state_machines.1.transitions.2.by :: D02 (dönem kilidi, arşiv, şube pasif) ya da deneme dersi
+
+* D03.state_machines.1.transitions.2.when :: Durum saklanmaz; her istekte işlem anına göre D02'den türetilir. Kilitliyken yalnız okuma ve saklama işleyicisi.
+
+* D03.invariants.18 :: liste_satirlari.ders_id ve donem_id satırın şubesinin dersine ve dönemine eşittir (yazılırken D02'den kopyalanır).
+
+* D03.resolved_gaps.8.decision :: gec_kayit_secimi metin ve CHECK (ONCEKI_SAYILMAZ varsayılan, ONCEKI_YOK). Seçim yalnız derse eklenme anı (numaranın o dersteki satırlarının en eski eklenme_ani) ilk yapılan dersten sonra olan satırda gösterilir (gecEklendi). İlk yapılan ders: dersin iptal edilmemiş, 'yapılmadı' denmemiş ve başlangıcı işlem anından önce olan ilk oturumu (onaysız ders sayılır), D02.oturumlariGetir ile. Seçim önizlemede satır başına verilir (panel toplu seçtirebilir), sonra PATCH ile değişir; her değişiklik denetime yazılır ve HESAP dinleyicisi (D08) çağrılır. Ekle-bırak bitişi GET ve önizlemede yalnız ipucudur (D02-B31); varsayılan değişmez.
+
+* D03.resolved_gaps.11.decision :: Dönem kilidi (D02.kilitDurumu'nun verdiği kilit anı işlem anıyla karşılaştırılır), arşivlenmiş ders, pasif şube ve deneme dersi listeyi salt okunur yapar: bütün yazma uçları ve muafIsaretle 409 LISTELER_KILITLI; GET kilit nedenini döner. Kilitten sonra yalnız saklama işleyicisi yazar.
+
+* D03.open_points.4.recommendation :: Yalnız dersin hocası (D02.dersYetkisi; kendi dersi olan yönetici o derste hocadır). Yönetici okuması gerekirse D02-B24 kararıyla birlikte, salt okunur ve denetim kayıtlı açılır; şimdiden açılmaz. Spec bu öneriyle yazıldı.
+

@@ -1,0 +1,72 @@
+# compose.yaml (D15); docker/postgres/compose.yaml D12'nin
+include: [docker/postgres/compose.yaml]
+x-sunucu: &sunucu
+  image: ghcr.io/${IU_DEPO}/iu-yoklama-sunucu@${IU_SUNUCU_OZETI}
+  init: true
+  user: node
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  env_file: ["${IU_AYAR_DOSYASI:-/opt/iu-yoklama/yayin.env}"]
+  environment: { TZ: UTC, NODE_ENV: production }
+  logging: { driver: local, options: { max-size: 50m, max-file: "5" } }
+x-api: &api
+  <<: *sunucu
+  profiles: [prod]
+  command: [node, src/server.ts]
+  restart: unless-stopped
+  mem_limit: 1g
+  stop_grace_period: 30s
+  logging: { driver: local, options: { max-size: 100m, max-file: "10" } }
+  healthcheck:
+    test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health/live').then(r => process.exit(r.status === 204 ? 0 : 1), () => process.exit(1))"]
+    interval: 10s
+    timeout: 3s
+    retries: 3
+    start_period: 60s
+  secrets: [yoklama_api_parolasi, saat_belgesi, qr_anahtar_kaynagi, giris_kodu_ozeti, eposta_ozeti, ulasma_makbuzu, inceleme_sabit_kodu, smtp_parolasi]
+  volumes: [/var/lib/iu-yoklama/durum/saat:/durum/saat:ro, api-durum:/durum/api]
+  networks: [onyuz, veritabani]
+  depends_on: { goc: { condition: service_completed_successfully }, postgres: { condition: service_healthy } }
+services:
+  api-1: { <<: *api, environment: { TZ: UTC, NODE_ENV: production, ISLETIM_KOPYA_ADI: api-1 } }
+  api-2: { <<: *api, environment: { TZ: UTC, NODE_ENV: production, ISLETIM_KOPYA_ADI: api-2 } }
+  isci:
+    <<: *sunucu
+    profiles: [prod]
+    command: [node, src/worker.ts]
+    restart: unless-stopped
+    mem_limit: 512m
+    stop_grace_period: 40s
+    secrets: [yoklama_isci_parolasi, saat_belgesi, qr_anahtar_kaynagi, eposta_ozeti, smtp_parolasi, kalp_atisi]
+    volumes: [/var/lib/iu-yoklama/durum/saat:/durum/saat:ro, /var/lib/iu-yoklama/durum/makine:/durum/makine:ro,
+              /var/lib/iu-yoklama/durum/veritabani:/durum/veritabani:ro, api-durum:/durum/api:ro]
+    networks: [onyuz, veritabani]
+    depends_on: { goc: { condition: service_completed_successfully } }
+  goc:
+    <<: *sunucu
+    profiles: [prod]
+    command: [node, --run, db:migrate]
+    restart: "no"
+    secrets: [postgres_parolasi, yoklama_sahip_parolasi, yoklama_api_parolasi, yoklama_isci_parolasi, xprem_parolasi]
+    networks: [veritabani]
+    depends_on: { postgres: { condition: service_healthy } }
+  caddy:
+    image: ghcr.io/${IU_DEPO}/iu-yoklama-caddy@${IU_CADDY_OZETI}
+    profiles: [prod]
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment: [ALAN_ADI, ACME_EPOSTA, ACME_CA, HSTS_DEGERI, GUVENILEN_AG_GECIDI, ISTEMCI_ADRES_BASLIGI, XPREM_PORT]
+    volumes: [caddy-veri:/data, caddy-ayar:/config]
+    networks: { onyuz: { ipv4_address: 172.30.11.10 } }
+  xprem: { profiles: [prod], restart: unless-stopped, networks: [onyuz, veritabani] }  # imaj ve ayar docker/xprem
+  mailpit: { profiles: [dev], ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"] }
+networks:
+  onyuz: { ipam: { config: [{ subnet: 172.30.11.0/24 }] } }
+volumes: { api-durum: {}, caddy-veri: {}, caddy-ayar: {}, xprem-dosyalari: {} }
+secrets:   # dosyalar ${IU_GIZLI_DIZIN} altında, uid 1000, 0400
+  saat_belgesi: { file: "${IU_GIZLI_DIZIN}/saat_belgesi.json" }
+  # qr_anahtar_kaynagi, giris_kodu_ozeti, eposta_ozeti, ulasma_makbuzu, inceleme_sabit_kodu, smtp_parolasi, kalp_atisi aynı biçimde

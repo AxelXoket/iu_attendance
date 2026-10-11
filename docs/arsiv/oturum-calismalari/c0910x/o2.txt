@@ -1,0 +1,21 @@
+D01.endpoints[0].rate_limit :: izin yoksa kod üretilmez, e-posta gitmez, cevap aynıdır.
+D01.endpoints[6].rate_limit :: izin yoksa kod üretilmez, e-posta gitmez, cevap aynıdır.
+D01.endpoints[24].errors[2] :: KIMLIK_SON_YONETICI
+D01.endpoints[26].idempotency :: Kişi başka bir kapsamla yönetici ise 409 KIMLIK_HESAP_DURUMU_UYGUN_DEGIL: önce DELETE ile rol geri alınır (son yönetici koruması orada), sonra yeniden eklenir;
+D01.endpoints[27].errors[1] :: KIMLIK_SON_YONETICI
+D01.state_machines[0].transitions[8].when :: son tüm kapsamlı yönetici pasif olamaz.
+D01.invariants[8] :: Giriş kodu, başvuru kodu, başvuru silme kodu ve onay bekliyor e-postasından önce, kod üretmeden, işlemin ilk kilidi olarak D14.epostaSiniriDenetle(tx, normalAdres, tur) çağrılır;
+D01.tests[1].asserts :: D14.epostaSiniriDenetle işlemin ilk kilididir ve kod üretiminden önce çağrılır: başvuru, başvuru silme kodu ve onay bekliyor e-postası da aynı sayaca girer.
+D01.tests[19].asserts :: önce DELETE (son yönetici koruması), sonra ekleme işler.
+D01.tests[20].name :: Son tüm kapsamlı yönetici korunur
+D01.tests[20].asserts :: Tek tüm yönetici varken pasif ve rol geri alma KIMLIK_SON_YONETICI (409);
+D01.resolved_gaps[1].decision :: Onay ve ret e-postası D01-A03'te.
+D01.resolved_gaps[29].decision :: Son tüm kapsamlı yönetici pasifleştirilemez ve rolü alınamaz;
+D01.resolved_gaps[30].decision :: Kişi başka kapsamla yönetici ise 409: rol önce DELETE ile geri alınır, son yönetici koruması orada çalışır, uç kapsamı sessizce daraltmaz.
+D01.contradictions_resolved[4].resolution :: Onaylanmamış başvuru ve pasif personel e-posta koduyla oturumsuz silinir (POST /v1/kimlik/basvuru/silme);
+D01.open_points[2].question :: Başvuru onaylanınca ve reddedilince hocaya e-posta gitsin mi? Plan yalnız kod, "onay bekliyor" ve giriş bildirimini sayıyor.
+D01.open_points[2].recommendation :: Onayda kısa, bağlantısız ve kodsuz "hesabın onaylandı, uygulamadan giriş yap" e-postası gitsin (hoca kör deneme yapmasın);
+D01.open_points[2].recommendation :: ret e-postası gitmesin, kod isteği yine aynı cevabı alır.
+D01.open_points[18].question :: Son tüm kapsamlı yönetici kendi hesabını silebilsin mi? Envanter önerisi 409 ile engellemekti.
+D01.open_points[18].recommendation :: Seçilen: pasifleştirme ve rol geri alma engellenir (KIMLIK_SON_YONETICI), kendi hesabını silmesi engellenmez;
+D01.open_points[18].recommendation :: Seçenek (envanter önerisi): son tüm kapsamlı yöneticinin silmesi de 409 alır, önce başka yönetici eklenir;

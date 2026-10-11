@@ -1,0 +1,13 @@
+const fs = require('fs');
+const out = process.argv[2];
+const o = {
+  asama: 1,
+  baslik: "Ortak kurallar, sunucu henüz kapalı",
+  paragraflar: [
+    "Bu adımın sonunda sunucu hiçbir isteğe cevap vermez; öğrenci telefonu, hoca ve panel bağlanamaz. Çalışan şey kuralların kendisidir ve her biri testte örnek veriyle koşar: hak ve oturumun son durumu, düzeltme sebepleri, takvim ve çakışma, ad eşleştirme, hoca e-postası ve toplu teyit. Telefonun indirmede kaldığı yeri tutması ve sayfaların bir değişikliği ikiye bölmemesi (D06-P01), ikinci çapa metni ile ulaşma makbuzunun biçimi (D06-P02) ve her kural anının tek saatten alınıp eski yaz saati yıllarında da doğru İstanbul tarihine çevrilmesi (D04-P01) hazırdır. Yanında proje iskeleti ve Node sürümü denetimi (D15-P01), pgBackRest yedek aracıyla PostgreSQL 18 kurulumu (D12-P03), yazıldıktan sonra değişmeyecek alanları koruyan veritabanı işlevlerinin henüz uygulanmamış göç dosyası (D12-P01), istek, hata ve hız sınırı tanımlarının temeli (D13-P01), yedi e-posta türü ile gönderici (D14-P02) ve rapor testleri için elle hesaplanmış 14 öğrencilik örneği ve 1000 şubelik birimi kuracak veri kurucusu (D10-P07) yazılır.",
+    "Değiştirilebilecek kararlar: hak planın tam sayı formülüyle bulunur, oran varsayılanı teoride yüzde 70, uygulamada yüzde 80'dir; ekle-bırakta eklenmeden önceki oturumlar sayılmaz, Md.9/4 geç kayıtta Yok sayılır, hoca seçmezse ekle-bırak geçerlidir (D08-P01). Düzeltme kaydın önüne geçer; Beklemede ve İncelemede kayıt kilide kadar ne Var ne Yok sayılır, kilitte Yok olur; onaylanmamış Kendi beyanı geçici Var sayılır; belge numarası yalnız Görevli ve Belgeli düzeltmede istenir; sorun bildirimi süresi 3 gündür; gece inceleme partisine önce sonucu değiştirebilecek öğeler, sonra en eski oturumlar girer (D09-P01). Son hafta, devamsızlıkların işlenmesi için son gün dahil 7 gündür, kayıtlar o günün ertesi kilitlenir (D02-P02); ad eşleşmesi Ş ile S'yi ayrı sayar (D03-P02); toplu teyit yalnız adı listeyle eşleşen, telefonu doğrulanmış, numarasında bekleyen başka hesap olmayan öğrenciye yapılır, öbürleri tek tek onaylanır (D01-P02). Telefon paketi en çok 200 öğe ve 768 KiB'tır, hatadan sonra 2 saniye ile 10 dakika bekler (D06-P03). Kanıt: hak formülü tanımla karşılaştırılır ve bilerek bozulunca test kırmızıya döner; takvim ve saat kuralları UTC ve İstanbul saat diliminde aynı sonucu verir. Ders raporunun 400 öğrencilik şubede 2 saniyede açılma bütçesi sonraki yük testinde ölçülür."
+  ]
+};
+fs.writeFileSync(out, JSON.stringify(o, null, 2) + '\n', 'utf8');
+const w = o.paragraflar.map(p => p.split(/\s+/).filter(Boolean).length);
+console.log('words', w, w[0] + w[1]);

@@ -1,0 +1,14 @@
+// Builds packages/D15.json from the plan below and checks coverage of files, tests, exports, jobs, endpoints, tables.
+const fs = require('fs'), path = require('path');
+const B = path.join(__dirname, '..');
+const S = JSON.parse(fs.readFileSync(path.join(B, 'spec', 'D15.json'), 'utf8'));
+const T = S.tests.map(t => t.name);
+const t = (...ix) => ix.map(i => { if (!T[i]) throw new Error('no test ' + i); return T[i]; });
+const A = 'apps/server/src/infra/ayarlar/', I = 'apps/server/src/infra/izleme/', J = 'apps/server/src/jobs/isletim/';
+const F = 'apps/server/test/features/isletim/', ST = 'apps/server/test/steps/isletim/', Y = 'apps/server/test/yuk/', D = 'docker/isletim/';
+const MIG1 = 'apps/server/migrations/20261012090000_isletim_tablolar/';
+const MIG2 = 'apps/server/migrations/20261012090500_isletim_olcum_gorunumleri/';
+const P = [];
+const K = new Map();
+const pk = (o) => { const id = 'D15-P' + String(P.length + 1).padStart(2, '0'); if (K.has(o.key)) throw new Error('dup key ' + o.key); K.set(o.key, id); P.push({ id, title: o.title, files: o.files, tables: o.tables || [], endpoints: o.endpoints || [], jobs: o.jobs || [], exports: o.exports || [], needs: o.needs || [], tests: o.tests, depends_on: (o.dep || []).map(k => { if (!K.has(k)) throw new Error(o.key + ' depends on unknown or later key ' + k); return K.get(k); }), size: o.size, notes: o.notes }); };
+

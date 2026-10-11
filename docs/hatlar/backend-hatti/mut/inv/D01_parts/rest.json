@@ -1,0 +1,590 @@
+{
+ "contradictions": [
+  {
+   "a": "teknik.html#kod-veri-modeli: \"Giriş kodları yalnız hocalarda.\"",
+   "b": "teknik.html#sunucu-ilk-yonetici: \"Şifre ya da kod üretmez; yönetici normal e-posta koduyla girer.\"",
+   "note": "Yönetici de e-posta koduyla giriyor; ya yönetici bir personel hesabının rolüdür ya da kural bütün personeli kapsamalı. Oturum tablosunun \"iki rol\" tutması da yönetici rolüyle birlikte yeniden yazılmalı ({B:personel-modeli})."
+  },
+  {
+   "a": "teknik.html#sunucu-kimlik: \"iki tablo (giriş kodları, oturumlar), beş uç (kod iste, kodla gir, çık, oturumlarım, oturumu kapat)\"",
+   "b": "plan.html#kararlar-roller: \"yönetici bir hesabın bütün oturumlarını kapatabilir\"; plan.html#kararlar-hesap-silme: \"hesabımı sil\" isteği; plan.html#kararlar-roller: hoca başvurusu ve yönetici onayı",
+   "note": "Plandaki kimlik işleri (başvuru ve doğrulaması, yönetici onayı, yöneticinin oturum kapatması, öğrenci kaydı ve cihaz bağlama, cihaz değişimi, silme isteği) iki tabloya ve beş uca sığmıyor; ya bunlar başka modüllerde ya da sayı eksik ({B:modul-yerlesimi})."
+  },
+  {
+   "a": "teknik.html#sunucu-kimlik: \"Ayrı bir tanınan cihaz kaydı tutulmaz.\"",
+   "b": "teknik.html#telefon-kamera-qr: \"anahtar (1 rakam: hocanın cihaz anahtarının sırası; hocanın en çok 3 cihazı var\"; plan.html#asama23-okutma: \"Anahtar cihaza özel\"",
+   "note": "Aşama 2'de hoca telefonunun cihaza özel QR anahtarı ve QR'da taşınan sırası var; bu, kalıcı bir hoca cihazı kimliği ister. Sıra oturuma bağlanabilir ama yenilemede ve en eski oturum kapanınca ne olacağı yazılmalı ({B:hoca-cihaz-sirasi})."
+  },
+  {
+   "a": "teknik.html#veritabani: \"yalnız teyitli öğrencilerde tekil öğrenci numarası\"",
+   "b": "teknik.html#kod-veri-modeli: \"kişi satırı \"silindi\" işaretiyle kalır (öğrencide öğrenci numarasıyla)\"; plan.html#kararlar-hesap-silme: \"yeniden kaydolursa ilk kayıt teyidinden geçer\"",
+   "note": "Silinen ama teyitli kalan satır numarayı tutar; yeniden kaydolup teyit edilen yeni hesap tekil dizine takılır. Dizin koşuluna \"silinmedi\" eklenmeli ya da silmede teyit kaldırılmalı ({B:silinen-satir})."
+  },
+  {
+   "a": "plan.html#kararlar-hesap-silme: \"Hoca o adreste panele e-posta koduyla girip silmeyi başlatır.\"",
+   "b": "plan.html#kararlar-roller: \"Onaydan önce giriş yok.\"",
+   "note": "Onay bekleyen ya da reddedilen başvurunun sahibi panele giremediği için web silme yolunu kullanamaz; oysa başvuruda ad-soyad, bölüm ve e-posta saklanıyor ({B:basvuru-silme})."
+  },
+  {
+   "a": "teknik.html#sunucu: \"gelen çerezi ya da Bearer anahtarını oturumla eşleştirip isteğe hocanın kimliğini ekler\"",
+   "b": "plan.html#kararlar-cihaz-dogrulamasi: \"diğer istekler (kendi kayıtları, sorun bildirimi) kayıtta verilen oturum anahtarıyla gider.\"; teknik.html#kod-veri-modeli: \"Oturum tablosu iki rolü de tutar\"",
+   "note": "Kanca yalnız hocayı anıyor; öğrencinin Bearer anahtarı da aynı kancadan çözülmeli ve yönetici rolü eklenmeli ({B:kanca-ciktisi})."
+  },
+  {
+   "a": "plan.html#kararlar-yeniden-deneme: \"yetki hatasında gönderim durur, cihaz durumu gösterilir\"",
+   "b": "teknik.html#telefon-yerel-veri: \"yedekten dönen imzalı bekleyen kayıtlar bu karara eklenir\"; plan.html#gun-kenar-durumlar: \"Değişim onaylanınca birlikte karara bağlanır.\"",
+   "note": "Değişimden sonra eski anahtarla imzalı kayıtlar kapanmış cihaza ait; kapanmış cihaza yetki hatası dönerse bu kayıtlar hiç ulaşamaz ve karara eklenemez. Hangi kanaldan ve hangi saat sınırıyla kabul edileceği yazılmalı ({B:eski-anahtar-kayitlari})."
+  },
+  {
+   "a": "plan.html#kararlar-roller: \"En fazla 3 cihaz (panel tarayıcıları dahil; bitmiş oturumlar sayılmaz): 4. girişte en eski panel oturumu kapanır\"",
+   "b": "plan.html#kararlar-roller: \"bitmeden 3 gün önce, internet varken yeni kod istenir.\"",
+   "note": "Yenileme yeni giriş sayılırsa bir telefonu ve iki paneli olan hocanın her 30 günlük yenilemesi bir panel oturumunu kapatır ve \"en eski oturum kapandı\" bildirimi gönderir; yenilemenin kendi oturumunun yerine geçtiği yazılmalı ({B:oturum-yenileme})."
+  },
+  {
+   "a": "plan.html#kararlar-hesap-silme: \"cihazların etkinliği ve telefon sayaçları silinir\"",
+   "b": "teknik.html#kod-veri-modeli: \"Silinen hesapta giriş alanları silinir (hocada e-posta, giriş kodları, oturumlar; öğrencide e-posta ve kod olmadığından yalnız oturum)\"",
+   "note": "Öğrenci silindiğinde plan oturuma ek olarak cihaz etkinliğini ve telefon sayaçlarını da siliyor, teknik.html yalnız oturumu sayıyor; silinecek alanların listesi tek yerde yazılmalı ({B:cihaz-etkinligi})."
+  }
+ ],
+ "entities": [
+  {
+   "name": "kisiler",
+   "purpose": "Bütün hesapların ortak satırı: tür (öğrenci ya da personel), durum, ad-soyad, silinme işareti; silinen hesapta satır \"silindi\" işaretiyle kalır.",
+   "key_fields": [
+    "id (uuidv7)",
+    "tur (ogrenci|personel)",
+    "durum (kod_bekliyor|onay_bekliyor|aktif|pasif|reddedildi|silindi)",
+    "ad_soyad",
+    "eposta_normal (personel, silinince NULL, kısmi tekil)",
+    "birim_id, bolum_id (personel)",
+    "inceleme_hesabi",
+    "olusturma",
+    "silinme_zamani"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "personel_rolleri",
+   "purpose": "Personel hesabının rolleri (hoca, yönetici) ve yönetici kapsamı; yetkiler her istekte buradan okunur.",
+   "key_fields": [
+    "kisi_id",
+    "rol (hoca|yonetici)",
+    "kapsam (tum ya da birim_id)",
+    "veren_kisi_id",
+    "verilme_zamani",
+    "geri_alinma_zamani"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "giris_kodlari",
+   "purpose": "Personelin e-posta kodları (giriş, başvuru, başvuru silme); HMAC özetiyle, sınır pencereleri için 24 saat tutulur.",
+   "key_fields": [
+    "id",
+    "eposta_normal",
+    "kisi_id (varsa)",
+    "amac (giris|basvuru|basvuru_silme)",
+    "kod_ozeti (HMAC)",
+    "anahtar_kimligi",
+    "olusturma",
+    "gecerlilik_sonu (5 dakika)",
+    "kullanilma_zamani",
+    "eposta_turu (kod|onay_bekliyor|hesap_yok)"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "eposta_giris_durumu",
+   "purpose": "Adres başına ardışık yanlış deneme sayacı ve uzayan bekleme; kopyalar arası kesin sayaç olduğu için PostgreSQL'de.",
+   "key_fields": [
+    "eposta_normal (birincil)",
+    "ardisik_yanlis",
+    "bekleme_sonu",
+    "son_yanlis_zamani"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "giris_oturumlari",
+   "purpose": "Öğrenci ve personel oturumları: anahtar özeti, istemci, cihaz etiketi, süreler ve kapanma nedeni; 3 cihaz sayımı ve Oturumlarım buradan.",
+   "key_fields": [
+    "id",
+    "kisi_id",
+    "rol (ogrenci|personel)",
+    "istemci (telefon|panel)",
+    "anahtar_ozeti (SHA-256, tekil)",
+    "cihaz_etiketi",
+    "cihaz_id (öğrenci)",
+    "cihaz_sirasi (personel telefonu, Aşama 2)",
+    "olusturma",
+    "son_kullanim",
+    "bitis (öğrencide yok)",
+    "kapanma_zamani",
+    "kapanma_nedeni (cikis|suresi_doldu|yenilendi|en_eski|kendisi_kapatti|yonetici|pasif|silme|cihaz_degisimi)"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "ogrenci_hesaplari",
+   "purpose": "Öğrenciye özgü alanlar: numara, girilen isim, eşleşme ve teyit durumu; teyitli ve silinmemiş numara tekil.",
+   "key_fields": [
+    "kisi_id (birincil)",
+    "ogrenci_no (metin)",
+    "girilen_ad_soyad",
+    "eslesme_durumu (eslesti|isim_uyusmuyor|listede_yok|cakisma)",
+    "teyit_durumu (bekliyor|teyitli|reddedildi)",
+    "teyit_eden_kisi_id",
+    "teyit_zamani",
+    "teyit_yolu (hoca|kayit_kodu|inceleme)"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "cihazlar",
+   "purpose": "Öğrenci telefonunun hesaba bağlanması: durum, platform, ikinci profil, doğrulama sonucu, son sıra numarası; öğrencide tek etkin cihaz (inceleme cihazı hariç).",
+   "key_fields": [
+    "id",
+    "kisi_id",
+    "durum (etkin|degisim_bekliyor|kapandi)",
+    "kapanma_nedeni (degisim|cikis|silme|ret)",
+    "platform",
+    "inceleme_cihazi (hesaptan kopya)",
+    "is_system_user",
+    "dogrulama_duzeyi",
+    "dogrulanmis_acilis",
+    "dogrulama_zamani",
+    "son_sira_no",
+    "olusturma",
+    "kapanma_zamani"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "cihaz_anahtarlari",
+   "purpose": "Cihaza bağlı açık anahtarlar (Android P-256, iPhone App Attest ve Secure Enclave); yenilenen anahtarın eskisi doğrulama için kalır.",
+   "key_fields": [
+    "id",
+    "cihaz_id",
+    "tur (android_p256|app_attest|secure_enclave)",
+    "acik_anahtar",
+    "app_attest_anahtar_kimligi",
+    "olusturma",
+    "yerine_gecen_anahtar_id",
+    "gecersiz_zamani"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "app_attest_sayaclari",
+   "purpose": "App Attest anahtarı başına son onay sayacı; kayıt doğrulamasında güncellenir.",
+   "key_fields": [
+    "anahtar_id",
+    "son_sayac",
+    "guncelleme"
+   ],
+   "proposed_owner": "D07"
+  },
+  {
+   "name": "kayit_sorulari",
+   "purpose": "Kayıt, cihaz değişimi ve App Attest yenilemesinde cihaz kanıtına konan tek kullanımlık sunucu soruları.",
+   "key_fields": [
+    "id",
+    "soru_ozeti",
+    "amac (kayit|cihaz_degisimi|anahtar_yenileme)",
+    "olusturma",
+    "gecerlilik_sonu (5 dakika)",
+    "kullanilma_zamani"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "cihaz_degisim_talepleri",
+   "purpose": "Yeni telefonun açtığı değişim talebi, QR'daki tek kullanımlık değerin özeti ve hocanın yüz yüze onayı ya da reddi.",
+   "key_fields": [
+    "id",
+    "ogrenci_kisi_id",
+    "yeni_cihaz_id",
+    "eski_cihaz_id",
+    "durum (bekliyor|onaylandi|reddedildi|dustu)",
+    "deger_ozeti",
+    "onaylayan_kisi_id",
+    "karar_zamani",
+    "olusturma",
+    "gecerlilik_sonu (15 dakika)"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "kayit_kodlari",
+   "purpose": "Hocanın tek öğrenci numarası için verdiği tek kullanımlık kayıt kodu (açık nokta; tablo baştan tasarlanır).",
+   "key_fields": [
+    "id",
+    "ogrenci_no",
+    "kod_ozeti",
+    "veren_kisi_id",
+    "olusturma",
+    "gecerlilik_sonu (72 saat)",
+    "yanlis_sayisi",
+    "kullanilma_zamani"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "hesap_silme_istekleri",
+   "purpose": "\"Hesabımı sil\" isteğinin kaydı: kaynağı, bekleyen işlerin durumu, yürütülme ya da iptal zamanı.",
+   "key_fields": [
+    "id",
+    "kisi_id",
+    "isteyen_kisi_id (kendisi ya da hoca)",
+    "kaynak (uygulama|panel|web)",
+    "durum (sirada|yapildi|iptal)",
+    "istek_zamani",
+    "kuyruk_bos_bildirimi",
+    "yapilma_zamani"
+   ],
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "denetim_kaydi",
+   "purpose": "Ortak denetim tablosu; kimlik olayları (giriş, onay, teyit, değişim, silme, komut satırı) D01'in olay türleriyle buraya yazılır.",
+   "key_fields": [
+    "id",
+    "olay_turu",
+    "yapan_kisi_id",
+    "hedef_kisi_id",
+    "zaman",
+    "gerekce_kodu",
+    "ayrinti (kimlikler, kod ve e-posta yok)"
+   ],
+   "proposed_owner": "D09"
+  }
+ ],
+ "endpoints": [
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/kod",
+   "client": "telefon|panel",
+   "purpose": "Kod iste: personele 6 haneli giriş kodu (ya da duruma göre onay bekliyor veya hesap yok e-postası); her durumda aynı cevap, aynı süre.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/giris",
+   "client": "telefon|panel",
+   "purpose": "Kodla gir: kodu doğrular, telefona Bearer anahtarı, panele çerez verir; 3 cihaz kuralı, yenileme ve giriş bildirimi.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/cikis",
+   "client": "telefon|panel",
+   "purpose": "Çık: personelde oturumu kapatır; öğrencide cihazı kapatır ve oturumu bitirir (değişim sayılır).",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/kimlik/oturumlar",
+   "client": "telefon|panel",
+   "purpose": "Oturumlarım: etkin oturumlar, cihaz etiketi, oluşturma ve son kullanım, şu anki oturum işaretli.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/kimlik/oturumlar/{oturumId}",
+   "client": "telefon|panel",
+   "purpose": "Oturumu kapat: personel kendi oturumlarından birini kapatır.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/kimlik/ben",
+   "client": "telefon|panel",
+   "purpose": "Hesap durumu: tür, roller, hesap, teyit, cihaz ve silme durumu, oturum bitişi.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/basvuru",
+   "client": "telefon|panel",
+   "purpose": "Hoca başvurusu: ad-soyad, birim ve bölüm, @istanbul.edu.tr e-posta; doğrulama kodu gönderir, her durumda aynı cevap.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/basvuru/dogrula",
+   "client": "telefon|panel",
+   "purpose": "Başvuru kodunu doğrular, hesabı onay bekliyor yapar; oturum açmaz.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/basvuru/silme",
+   "client": "panel",
+   "purpose": "Onay bekleyen ya da reddedilen başvurunun e-posta koduyla oturumsuz silinmesi (karar bekliyor).",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/kimlik/birimler",
+   "client": "telefon|panel",
+   "purpose": "Başvuru formu için birim ve bölüm listesi (girişsiz, yalnız ad ve kimlik).",
+   "proposed_owner": "D02"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/ogrenci/kayit-sorusu",
+   "client": "telefon",
+   "purpose": "Cihaz kanıtına konacak tek kullanımlık sunucu sorusu (kayıt, değişim, anahtar yenileme).",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/ogrenci/kayit",
+   "client": "telefon",
+   "purpose": "Öğrenci kaydı ve cihaz bağlama: numara, isim, kanıt, açık anahtarlar, isSystemUser; oturum anahtarı ve eşleşme durumu döner.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/cihaz/app-attest-yenile",
+   "client": "telefon",
+   "purpose": "Bozulan App Attest anahtarının yenisini Secure Enclave anahtarının imzasıyla aynı hesaba bağlar.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/cihaz-degisimi",
+   "client": "telefon",
+   "purpose": "Yeni telefondan değişim talebi açar; QR'da gösterilecek talep kimliği ve tek kullanımlık değeri döner.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/kimlik/cihaz-degisimi/{talepId}",
+   "client": "telefon",
+   "purpose": "Hocanın okuttuğu talebin özeti: öğrenci numarası, liste ismi, eski cihazın son görülmesi (yalnız yetkili hocaya).",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/cihaz-degisimi/{talepId}/onay",
+   "client": "telefon",
+   "purpose": "Hocanın yüz yüze onayı: eski cihazı ve oturumu kapatır, yeni cihazı etkinleştirir, bekleyen kayıtları birlikte karara bağlatır.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/cihaz-degisimi/{talepId}/ret",
+   "client": "telefon",
+   "purpose": "Hocanın değişim talebini reddetmesi; yeni cihaz kapanır.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/hesap-silme",
+   "client": "telefon|panel",
+   "purpose": "Hesabımı sil: isteği sıraya koyar, bekleyen iş varsa yapılmayı bekletir.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/kimlik/hesap-silme",
+   "client": "telefon|panel",
+   "purpose": "Sıradaki silme isteğini yapılmadan önce iptal eder (karar bekliyor).",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/ogrenciler/{kisiId}/hesap-silme",
+   "client": "telefon|panel",
+   "purpose": "Telefonu olmayan öğrencinin silmesini hocanın kimliği görerek başlatması.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/kimlik/kayit-kodlari",
+   "client": "telefon|panel",
+   "purpose": "Hocanın tek öğrenci numarası için tek kullanımlık kayıt kodu üretmesi (açık nokta kapanırsa).",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/yonetim/basvurular",
+   "client": "panel",
+   "purpose": "Onay bekleyen hoca başvuruları (yöneticinin kapsamına göre süzülür).",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/yonetim/basvurular/{kisiId}/onay",
+   "client": "panel",
+   "purpose": "Yöneticinin başvuruyu tek tek onaylaması.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/yonetim/basvurular/{kisiId}/ret",
+   "client": "panel",
+   "purpose": "Yöneticinin başvuruyu gerekçe koduyla reddetmesi.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/yonetim/hesaplar",
+   "client": "panel",
+   "purpose": "Personel hesapları listesi ve arama (durum, roller, etkin oturum sayısı).",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/yonetim/hesaplar/{kisiId}/oturumlari-kapat",
+   "client": "panel",
+   "purpose": "Yöneticinin bir personel hesabının bütün oturumlarını kapatması.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/yonetim/hesaplar/{kisiId}/pasif",
+   "client": "panel",
+   "purpose": "Hesabı pasifleştirir, oturumları aynı işlemde kapatır.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/yonetim/hesaplar/{kisiId}/etkin",
+   "client": "panel",
+   "purpose": "Pasif hesabı yeniden etkinleştirir.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/yonetim/yoneticiler",
+   "client": "panel",
+   "purpose": "Yönetici ekleme: var olan personele rol verir ya da yeni adres için onaylı hesap açar.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/yonetim/yoneticiler/{kisiId}",
+   "client": "panel",
+   "purpose": "Yönetici rolünü geri alır; son tüm kapsamlı yönetici korunur.",
+   "proposed_owner": "D01"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/onaylar/teyit",
+   "client": "telefon|panel",
+   "purpose": "Hocanın ilk kayıt teyidi listesi: doğrulanamayan telefonlar ve çakışmalar ayrı ve işaretli.",
+   "proposed_owner": "D09"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/onaylar/teyit",
+   "client": "telefon|panel",
+   "purpose": "Toplu ya da tek teyit; kimliğin dış yüzündeki teyit fonksiyonunu çağırır, bekleyen kararlar aynı işlemde.",
+   "proposed_owner": "D09"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/onaylar/teyit/ret",
+   "client": "telefon|panel",
+   "purpose": "Teyidin gerekçe koduyla reddi.",
+   "proposed_owner": "D09"
+  },
+  {
+   "method": "GET",
+   "path": "/hesap-silme",
+   "client": "panel",
+   "purpose": "Google Play için kurulumsuz silme sayfası: ne silinir, ne kalır, neden, ne kadar; hoca giriş yolu ve öğrenciye yol tarifi (girişsiz, durağan).",
+   "proposed_owner": "D01"
+  }
+ ],
+ "jobs": [
+  {
+   "name": "kimlik_temizligi",
+   "schedule": "Saatlik, saat başı olmayan bir dakikada",
+   "purpose": "24 saatten eski giriş kodlarını ve kayıt sorularını, düşen değişim taleplerini, doğrulanmamış başvuruları ve süresi geçen onay bekleyen başvuruları siler; iş yalnız kimlik taşır.",
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "giris_oturumu_temizligi",
+   "schedule": "Gecelik, Europe/Istanbul, yoğunluk dışı ve gecelik pg_dump ile çakışmayan saatte",
+   "purpose": "30 günden eski bitmiş giriş oturumu satırlarını siler; olaylar denetim kaydında kalır.",
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "hesap_silme_yurutucu",
+   "schedule": "Gecelik, Europe/Istanbul, missed: once",
+   "purpose": "Sıradaki silme isteklerini, telefon kuyruğunun boşaldığı bildirilince ya da bekleme süresi dolunca yürütür; neyin silinip neyin kalacağını D12'nin kurallarıyla uygular.",
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "inceleme_hesaplari_kurulumu",
+   "schedule": "Yayın adımında ve gecelik",
+   "purpose": "Deneme hocası ve deneme öğrencisini gizli ayarlardan idempotent kurar, silinmişse yeniden kurar.",
+   "proposed_owner": "D01"
+  },
+  {
+   "name": "bekleyen_kayit_kapatma",
+   "schedule": "Dönem kilidi olayında (D02) ve gecelik denetimle",
+   "purpose": "Hiçbir listeyle eşleşmeden dönem kilidine ulaşan bekleyen öğrenci kayıtlarının cihazını kapatır ve oturumunu bitirir.",
+   "proposed_owner": "D01"
+  }
+ ],
+ "depends_on": [
+  "D02",
+  "D03",
+  "D07",
+  "D09",
+  "D12",
+  "D13",
+  "D14",
+  "D15"
+ ],
+ "touches_other_domains": [
+  {
+   "domain": "D14",
+   "what": "Kod, \"onay bekliyor\", \"hesap yok\" ve giriş bildirimi e-postalarının şablonu ve gönderimi; kod e-postası cevap beklenmeden ve iş kuyruğuna konmadan gider, bildirim hatası denetim kaydına döner; kimlik işleri kuyrukta kod, isim, numara taşımaz."
+  },
+  {
+   "domain": "D07",
+   "what": "Kayıtta Android anahtar kanıtı ve App Attest doğrulaması, kayıt sorusunun tüketilmesi, doğrulama düzeyinin cihaz satırına yazılması, App Attest anahtar yenilemesi ve sayaçları; teyit ve cihaz değişiminde bekleyen kayıtların aynı işlemde yeniden karara bağlanması; isSystemUser ile İkinci profil etiketi."
+  },
+  {
+   "domain": "D03",
+   "what": "Öğrenci eşleştirmesi liste satırlarını okur; liste yüklenince bekleyen kayıtlar kendiliğinden eşleşir (liste içe aktarma kimliğin eşleştirme fonksiyonunu çağırır); silinen öğrenci listede kalır; Türkçe normalleştirme packages/core'da ortak."
+  },
+  {
+   "domain": "D02",
+   "what": "Personelin birim ve bölümü, yönetici kapsamı, \"öğrencinin herhangi bir dersinin hocası\" yetkisi (teyit, değişim onayı), silinen hocanın derslerinin arşivi, inceleme hesaplarının her an açık deneme dersi, dönem kilidi olayı."
+  },
+  {
+   "domain": "D09",
+   "what": "İlk kayıt teyidi onay listesinde (toplu, doğrulanamayanlar ayrı); kimlik olaylarının ortak denetim kaydına yazılması; ret ve onay gerekçe kodları."
+  },
+  {
+   "domain": "D12",
+   "what": "Hesap silmenin mekaniği ve saklama süresi; kısmi tekil dizinler (teyitli ve silinmemiş numara, silinmemiş e-posta, öğrencide tek etkin cihaz); UUIDv7 kimlikler; C.UTF-8 yereli nedeniyle Türkçe küçük harf işi uygulamada."
+  },
+  {
+   "domain": "D13",
+   "what": "Oturum doğrulama kancası (çerez ve Bearer), rota tablosunda zorunlu yetki alanı, Origin denetimi, girişsiz uçlarda IP sınırı ve girişli uçlarda oturum ya da cihaz sınırı, 401 ve 403 hata kodları, giriş uçlarının en düşük sürüm denetimine takılmaması."
+  },
+  {
+   "domain": "D06",
+   "what": "Hoca çıkışında indirilen listelerin telefondan silinmesi, oturum bitince kuyruktaki hoca işlerinin girişten sonra ve aynı kişinin oturumuyla gitmesi, indirmenin role göre süzülmesi, yetki hatasında gönderimin durması."
+  },
+  {
+   "domain": "D05",
+   "what": "Cihaz değişiminden sonra eski anahtarla imzalı kayıtların kabul sınırı ve gerekçe kodu; silme isteğinden sonra yeni kayıtların alınmaması."
+  },
+  {
+   "domain": "D11",
+   "what": "Hoca telefonunun Aşama 2 cihaz anahtarı sırası (en çok 3) giriş oturumuna bağlanır; projeksiyon sayfasında hocanın hesabı açılmaz, kürsü bağlaması ayrı."
+  },
+  {
+   "domain": "D15",
+   "what": "Giriş kodu özet anahtarı ve inceleme sabit kodunun gizli ayarları (yedeklenmez, yoksa sunucu açılmaz), kodların adres satırına ve loga hiç yazılmaması, tek etkenli girişin tehdit modeli, kimlik senaryolarının davranış testleri."
+  }
+ ]
+}

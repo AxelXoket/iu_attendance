@@ -1,0 +1,116 @@
+const state_machines = [
+  {
+    name: 'liste_satiri',
+    states: ['YOK', 'ETKIN', 'PASIF', 'ANONIM'],
+    transitions: [
+      { from: 'YOK', to: 'ETKIN', by: "POST /v1/listeler/subeler/{subeId}/uygula", when: "Numara dosyada var (şube sütunu uyuyor), bu şubede satırı yok: eklenme_ani işlem anı, kaynak DOSYA, sıra dosya sırası; dersin başka satırı varsa muaf ve seçim ondan kopyalanır, yoksa geç eklenense seçim istekten. Olay yalnız listeler.yukleme_uygulandi." },
+      { from: 'YOK', to: 'ETKIN', by: "POST /v1/listeler/subeler/{subeId}/satirlar", when: "Hoca numarayı elle ekler: kaynak ELLE, sıra en büyük artı 1; olay listeler.satir_eklendi (ELLE)." },
+      { from: 'YOK', to: 'ETKIN', by: "denemeListesiniKur (D01'in inceleme_hesaplari_kurulumu işi)", when: "Deneme dersinin şubesine inceleme öğrencisi: kaynak SISTEM, sıra 1; olay listeler.satir_eklendi (SISTEM)." },
+      { from: 'ETKIN', to: 'PASIF', by: "POST /v1/listeler/subeler/{subeId}/uygula", when: "Numara yeni dosyada yok ya da SUBE_UYUSMUYOR ile dışarıda kaldı: pasif_ani işlem anı; satır, muaf ve seçim kalır; olay listeler.satir_pasif (DOSYA, yuklemeId)." },
+      { from: 'ETKIN', to: 'PASIF', by: "PATCH /v1/listeler/satirlar/{satirId}", when: "pasif: true; olay listeler.satir_pasif (ELLE)." },
+      { from: 'ETKIN', to: 'PASIF', by: "uygula ya da satirlar (aynı dersin başka şubesi)", when: "Öğrenci aynı dersin başka şubesine eklenir (şube değişimi, onaylı): eski satır aynı işlemde pasif, olay listeler.satir_pasif (SUBE_DEGISIMI); hedef satır dersin muaf ve seçim değerini taşır." },
+      { from: 'ETKIN', to: 'PASIF', by: "denemeListesiniKur", when: "İnceleme numarası değişti: deneme şubesindeki eski numaranın satırı pasif, olay listeler.satir_pasif (SISTEM)." },
+      { from: 'PASIF', to: 'ETKIN', by: "uygula, satirlar, PATCH (pasif: false), şube değişiminin hedefi ya da denemeListesiniKur", when: "Numara yeniden listede: aynı satır canlanır, eklenme_ani korunur, pasif_ani boşalır; PATCH ve elle eklemede sıra en büyük artı 1, kaynak ELLE; aynı (ders, numara) için bu aralıkla kesişen öbür satırlar kırpılır; olay listeler.satir_canlandi (DOSYA, ELLE, SUBE_DEGISIMI ya da SISTEM); KARAR dinleyicisi gecikmeli yeniden değerlendirme işi koyar (D03-A04)." },
+      { from: 'PASIF', to: 'PASIF', by: "aynı dersteki başka satırın canlanması", when: "Kırpma: aralığı canlananın [eklenme_ani, sonsuz) aralığıyla kesişen pasif satırda, eklenme_ani canlananınkinden önceyse pasif_ani = canlananın eklenme_ani, değilse pasif_ani = eklenme_ani (sıfır uzunluk). Olay listeler.satir_kirpildi (CANLANMA); satır ListeDegisikligi'ne KIRPILDI türüyle girer (KARAR, HESAP)." },
+      { from: 'ETKIN', to: 'ETKIN', by: "uygula, PATCH ya da D08 muafIsaretle", when: "Ad, sıra, kaynak, geç kayıt seçimi ya da muaf değişir; üyelik aralığı aynı kalır." },
+      { from: 'ETKIN', to: 'ANONIM', by: "D12 saklama_suresi_isi (D03 saklama işleyicisi 'listeler.liste_satirlari')", when: "Satırın birim döneminin kilit anı saklama sınırından (sinirAni) eski: numara ve ad silinir, silinme_ani yazılır, hocaya silindi iner." },
+      { from: 'PASIF', to: 'ANONIM', by: "D12 saklama_suresi_isi (D03 saklama işleyicisi 'listeler.liste_satirlari')", when: "Aynı kural." }
+    ]
+  },
+  {
+    name: 'sube_listesi',
+    states: ['YOK', 'ACIK', 'KILITLI'],
+    transitions: [
+      { from: 'YOK', to: 'ACIK', by: "ilk yazma (uygula, satirlar ya da denemeListesiniKur)", when: "sube_listeleri satırı açılır, liste_surumu 1 olur. Bir yazma dersin bütün şubelerinin satırlarını açar (INSERT ... ON CONFLICT DO NOTHING) ve kilitler; yalnız yazılanınki artar." },
+      { from: 'ACIK', to: 'ACIK', by: "uygula, satirlar, PATCH ya da denemeListesiniKur", when: "Her yazma yazılan her şubenin liste_surumu'nu tam 1 artırır (şube değişiminde iki şube); muafIsaretle artırmaz." },
+      { from: 'ACIK', to: 'KILITLI', by: "D02 (dönem kilidi, arşiv, şube pasif) ya da deneme dersi", when: "Durum saklanmaz; her istekte işlem anına göre D02'den türetilir (şube ve ders satırı paylaşımlı kilitle okunur). Kilitliyken yalnız okuma, saklama işleyicisi ve denemeListesiniKur." },
+      { from: 'YOK', to: 'KILITLI', by: "D02 (dönem kilidi, arşiv, şube pasif) ya da deneme dersi", when: "Aynı kural; hiç yazılmamış liste kilitten sonra da açılmaz." }
+    ]
+  }
+];
+
+const invariants = [
+  "Bir şubede bir numaranın en çok bir satırı vardır, etkin ya da pasif (liste_satirlari_sube_id_ogrenci_no_uq).",
+  "Bir derste bir numaranın en çok bir etkin satırı vardır (liste_satirlari_ders_id_ogrenci_no_uq, pasif_ani IS NULL).",
+  "Bir derste bir numaranın üyelik aralıkları [eklenme_ani, pasif_ani) kesişmez: canlanma pasif aralığını silerken aynı (ders_id, ogrenci_no) için kesişen öbür satırları aynı işlemde kırpar (D03-A04). D08'in satır birleşimi (D08-B12) ve uyelikDenetle bu yüzden iki şubede aynı anda üye demez.",
+  "Liste satırı fiziksel silinmez; çıkan pasif olur, numara ve adı yalnız saklama işleyicisi siler (silinme_ani).",
+  "pasif_ani boş ya da eklenme_ani'den küçük değildir; pasif yazılırken GREATEST(işlem anı, eklenme_ani) kullanılır; kırpılmış satırda eşit olabilir (sıfır uzunluk).",
+  "Satır [eklenme_ani, pasif_ani) yarı açık aralığında üyedir; canlanma kendi pasif aralığını üyelikten siler (D03-A04).",
+  "muaf ve gec_kayit_secimi (ders, numara) başına tek değerdir: aynı (ders_id, ogrenci_no) satırlarında eşittir. Yazan her yol (muafIsaretle, PATCH, satirlar, uygula'da yeni numara) numaranın o dersteki bütün satırlarına aynı işlemde yazar; şube değişimi değeri hedef satıra kopyalar; bunun dışında yükleme bu iki sütunu yazmaz.",
+  "D03'ün her yazması yazdığı her şubenin liste_surumu değerini tam 1 artırır; önizleme ve iki GET hiçbir tabloya yazmaz; muafIsaretle liste_surumu'nu artırmaz.",
+  "Telefona inen bir sütunu (numara, ad, sıra, eklenme, pasif, silinme) değişen her satır işlemin tek sürümünü D06.surumAl ile işlemin son adımında alır; üyeliği (eklenme, pasif, silinme ya da yeni satır) değişen satır aynı değeri uyelik_surumu'na da yazar; değişmeyen satırın sürümü değişmez; yalnız muaf ya da geç kayıt seçimi değişen işlem sayaç kilidi almaz.",
+  "Uygula ya tamamen uygulanır ya hiç: satırlar, yükleme özeti, denetim olayları, dinleyiciler (iş kuyruğu dahil) ve sürüm tek işlemde; dinleyici hatası bütün işlemi geri alır.",
+  "HATA bulgulu dosya uygulanamaz; UYARI, büyük değişiklik ve şube değişikliği açık onaysız uygulanamaz; uygulanan fark önizlemede gösterilen farkla aynıdır (farkOzeti).",
+  "Kilitli şubede (dönem kilidi, arşiv, pasif şube, deneme dersi) hiçbir D03 ucu ve muafIsaretle yazmaz; kilit, kilitler alındıktan sonra saat arayüzünden bir kez okunan işlem anına (muafIsaretle'de çağıranın anına) göre denetlenir, şube ve ders satırı D02'den paylaşımlı kilitle (FOR SHARE) okunur (D03-A07). Fark boşsa kilitli şubede de ZATEN_UYGULANMIS döner (yazma yok). Deneme dersine yalnız denemeListesiniKur yazar.",
+  "Öğrenci kova kilidi: kova = SHA-256(numaranın ASCII baytları)'nın ilk baytı, 0 ile 255 (packages/core/src/listeler/kova.ts kovaNo). Anahtar iki tam sayılı pg_advisory_xact_lock(3, kova); D12.danismaKilidi'nin tek bigint anahtar uzayıyla çakışmaz, numara anahtara girmez. D03 yazması üyeliği ya da adı değişen numaraların (eklenen, pasif olan, canlanan, kırpılan, adı değişen) kovalarını artan sırayla dışlayıcı alır (en çok 256); numaraIleEslestir ve uyelikDenetle'nin ret yolu paylaşımlı alır. Yalnız seçim ya da muaf yazan işlem kova kilidi almaz.",
+  "numaraIleEslestir her çağıranın işleminde ilk kilittir (D01 kayıt işlemi, bekleyen_kayit_kapatma). Birden çok numarayı tek işlemde işleyen çağıran kovaları artan kovaNo sırasıyla alır ya da her numarayı ayrı işlemde işler. Bir D03 yazmasının içinde (ESLESTIRME dinleyicisi) yalnız o yazmanın kova kümesindeki numarayla çağrılabilir; değilse iç hata atar (kilitlenme döngüsünü önler).",
+  "Kilit ve adım sırası (her D03 yazması): SET LOCAL lock_timeout = '3s'; dersin bütün şubelerinin sube_listeleri satırları kimlik sırasıyla FOR UPDATE; D02 şube ve ders satırları FOR SHARE; işlem anı ve kilit denetimi; fark; kova kilitleri artan sırayla; liste_satirlari yazımları; denetim; dinleyiciler (iş kuyruğu dahil); en son sayaç sürümü. 55P03 503 LISTELER_MESGUL olur, işlem geri alınır.",
+  "Şube başına en çok 2.000 etkin satır; pasif satırlar sınıra girmez ve toplam sınır yoktur. GET bolum=ETKIN etkinleri hiç kesmez (D13-B13 sınırının içinde), bolum=PASIF pasifleri imleçle sayfalar.",
+  "Etkin satırlarda sira 1'den başlar ve son yüklemenin dosya sırasını izler; elle eklenen ve PATCH ile canlanan en büyük artı 1; sıralama (sira, id) ile kararlıdır.",
+  "Dış yüzlerdeki 'etkin satır' tanımı tektir: pasif_ani IS NULL (an verilen işlevde eklenme_ani <= an < pasif_ani), silinme_ani IS NULL, ders arşivde değil ve satırın birim dönemi an itibarıyla kilitli değil (D02.kilitDurumu, satırdaki birim_id ve donem_id ile); birimsiz deneme dersi hiç kilitlenmez. Geçmiş dönemin satırları eşleşmeye, teyit ve cihaz değişimi yetkisine girmez.",
+  "Ad karşılaştırması yalnız packages/core/src/listeler/isim.ts ile yapılır; SQL lower() ve Intl kullanılmaz.",
+  "kaynak, gec_kayit_secimi, dosya_turu, kodlama ve ayirici CHECK listeleri packages/contracts/src/listeler.ts'teki sabitlerle aynıdır; şema testi sabitleri içe aktarır, yeniden yazmaz.",
+  "Numara ve ad adres satırına, loga, iş verisine, danışma kilidi anahtarına ve denetim ayrıntısına girmez; yükleme özeti numara ve ad taşımaz.",
+  "liste_satirlari.ders_id, donem_id ve birim_id satırın şubesinin dersine, dönemine ve birimine eşittir (yazılırken D02'den kopyalanır).",
+  "Bir yüklemenin sayıları o yüklemenin yazdığı satır değişikliklerine birebir eşittir."
+];
+
+const LS = "ListeSatiri = { satirId: SatirId; subeId: SubeId; dersId: DersId; donemId: DonemId; birimId: BirimId | null; ogrenciNo: OgrenciNo; adSoyad: string; sira: number; kaynak: 'DOSYA' | 'ELLE' | 'SISTEM'; eklenmeAni: Date; pasifAni: Date | null; gecKayitSecimi: 'ONCEKI_SAYILMAZ' | 'ONCEKI_YOK'; muaf: boolean; degisiklikSurumu: bigint; uyelikSurumu: bigint }. Tipler: Islem D12'nin işlem tipi; kimlikler packages/contracts/src/ortak kimlikSemasi ile markalı (SubeId, DersId, DonemId, BirimId ve KisiId sahiplerinin markası; SatirId 'ListeSatiri', YuklemeId 'ListeYuklemesi'), OgrenciNo ortak ogrenciNoSemasi'nin tipi. Modül kendi takma adını (Tx, Uuid) yazmaz.";
+
+const exports_ = [
+  {
+    name: 'listeSatirlari',
+    signature: "listeSatirlari(tx: Islem, subeId: SubeId): Promise<readonly ListeSatiri[]>",
+    purpose: `Şubenin anonimleştirilmemiş bütün satırları (dönem kilidinden sonra da): etkinler sira ve satirId sırasıyla, sonra pasifler. ${LS} D08 (T, muaf, seçim; devam_hesapla işi) ve D09 okur; kilit almaz.`
+  },
+  {
+    name: 'satirGetir',
+    signature: "satirGetir(tx: Islem, satirId: SatirId): Promise<ListeSatiri | null>",
+    purpose: "Tek satır; yoksa ya da anonimleştirilmişse null. D08 muaf ucunda satırı ve dersini doğrular, D09 düzeltmede okur, D07'nin liste işi numarayı çözer."
+  },
+  {
+    name: 'uyelikDenetle',
+    signature: "uyelikDenetle(tx: Islem, ogrenciNo: OgrenciNo, subeId: SubeId | readonly SubeId[], an: Date): Promise<{ uye: true; satirId: SatirId; subeId: SubeId } | { uye: false; neden: 'SATIR_YOK' | 'HENUZ_EKLENMEMISTI' | 'PASIFTI' }>",
+    purpose: "Öğrenci verilen şubelerden birinde an anında listede miydi: eklenme_ani <= an < pasif_ani (pasif boşsa sınırsız; kırpılmış satır aralığıyla). Birlikte işlenen şubeler için oturumun şube dizisi verilir, biri yeter. Anı kararın sahibi D07 seçer (öneri: kaydın hesaplanan saati; ulaşma anı hiç). Olumlu yol kilitsiz okur. Olumsuz cevap vermeden önce numaranın kovasında pg_advisory_xact_lock_shared(3, kova) alır ve satırları yeniden okur: süren bir liste yazması taahhüt edilene kadar bekler, böylece eşzamanlı ekleme ya da canlanma ret kaydına dönüşmez; yazma kilidi almadan önce taahhüt edilen ret ise o yazmanın KARAR işiyle yeniden değerlendirilir. Kilit çağıranın işlemi bitene kadar kalır, bekleme rolün lock_timeout'uyla sınırlıdır. Birden çok numarayı tek işlemde değerlendiren çağıran (D07 işleri) numaraları kovaNo sırasıyla işler; çağıran iş kuyruğu adımından önce çağırır (D03-A10)."
+  },
+  {
+    name: 'numaraIleEslestir',
+    signature: "numaraIleEslestir(tx: Islem, numara: OgrenciNo, isim: string): Promise<{ durum: 'ESLESTI' | 'ISIM_UYUSMUYOR' | 'LISTEDE_YOK'; isimlerTutarsiz: boolean; satirlar: readonly { satirId: SatirId; subeId: SubeId; dersId: DersId }[] }>",
+    purpose: "Kayıttaki numara ve ad, numaranın etkin satırlarıyla (değişmezlerdeki tanım: pasif değil, anonim değil, ders arşivde değil, birim dönemi işlem anında kilitli değil; an D03'ün saat arayüzünden) core isimlerEslesir işleviyle karşılaştırılır: etkin satır yoksa LISTEDE_YOK; hepsinin adı eşleşiyorsa ESLESTI; değilse ISIM_UYUSMUYOR (satırların adları kendi aralarında farklıysa isimlerTutarsiz true). Kural tektir: açık dönemlerdeki bütün etkin satırlar eşleşmeli; geçmiş dönemde farklı yazılmış ad sonucu bozmaz (D01-B19'daki 'herhangi bir etkin satır' bu kurala göre düzelir, D03-A07). İlk adımda pg_advisory_xact_lock_shared(3, kovaNo(numara)) alır ve çağıranın işlemi bitene kadar tutar; her çağıranın işleminde ilk kilittir. D01 kanıtı (D07 zinciri, CBOR) ilk veritabanı adımından önce ayrıştırıp doğrular ki kilit kısa kalsın. Bekleme rolün lock_timeout'uyla (yoklama_api 2 s) sınırlıdır; 55P03 çağırana VeritabaniHatasi olarak çıkar, D01 kayıt işlemini bir kez yeniden dener. Bir D03 yazmasının içinde yalnız o yazmanın kova kümesindeki numarayla çağrılabilir, değilse iç hata (kilitler.ts işlem başına tutulan kova kümesine bakar)."
+  },
+  {
+    name: 'ogrencininEtkinSatirlari',
+    signature: "ogrencininEtkinSatirlari(tx: Islem, ogrenciNo: OgrenciNo, an: Date): Promise<readonly ListeSatiri[]>",
+    purpose: "Numaranın an anında etkin satırları (değişmezlerdeki tanım; açık dönemlerde çift anadal ve yandal listeleri dahil), dersId sırasıyla. Açık dönem satırdaki birim_id ve donem_id ile D02.kilitDurumu'ndan, arşiv D02.dersGetir'den süzülür (ayrık çiftler bir kez sorulur). D01 (teyit ve cihaz değişimi yetkisi), D04 ve D09 (teyit kapsamı) kullanır: kilitli dönemdeki dersin hocası bu yetkileri almaz. Kilit almaz."
+  },
+  {
+    name: 'ogrencininSatirlari',
+    signature: "ogrencininSatirlari(tx: Islem, ogrenciNo: OgrenciNo, s?: { donemIdler?: readonly DonemId[] }): Promise<readonly ListeSatiri[]>",
+    purpose: "Sözleşme eki (D03-A07): numaranın anonimleştirilmemiş bütün satırları, etkin ve pasif, şube değişimleri ve kilitli dönemler dahil; dersId, sonra eklenmeAni sırasıyla; donemIdler verilirse yalnız o dönemler. D09 öğrencinin düzeltmelerini şube değişimleri boyunca bulmak için okur; kilit almaz."
+  },
+  {
+    name: 'muafIsaretle',
+    signature: "muafIsaretle(tx: Islem, satirId: SatirId, muaf: boolean, b: { an: Date; yapan: { kisiId: KisiId } | null }): Promise<{ sonuc: 'YAZILDI' | 'DEGISMEDI'; satir: ListeSatiri; onceki: boolean; degisti: boolean } | { sonuc: 'KILITLI'; neden: 'DONEM_KILIDI' | 'DERS_ARSIVDE' | 'SUBE_PASIF' | 'DENEME_DERSI' } | { sonuc: 'SATIR_YOK' }>",
+    purpose: "Muaf işaretini yazan tek yol; yalnız D08'in PUT /v1/devam/dersler/{dersId}/ogrenciler/{satirId}/muaf ucu çağırır. Beklenen durumlarda fırlatmaz: satır yoksa ya da anonimse SATIR_YOK, kilitliyse KILITLI ve nedeni döner; D08 sonucu kendi beyanlı DEVAM_ kodlarına çevirir (D13-B02'de beyan dışı kod test kipinde 500 olur). an çağıranın işlem anıdır, kilit bununla denetlenir; şube ve ders satırı D02'den paylaşımlı kilitle okunur. Numaranın o dersteki bütün satırlarını FOR UPDATE kilitler ve önceki değeri kilit altında okur: değer aynıysa DEGISMEDI, degisti false ve yazma yok (eşzamanlı aynı değerli iki çağrıda ikincisi DEGISMEDI alır; D08 denetim olayını ve işi yalnız degisti true iken yazar, onceki doğrudur); değişince değer bütün satırlara yazılır. Liste sürümünü artırmaz, dinleyici çağırmaz, sayaç sürümü ve kova kilidi almaz; denetim olayını D08 yazar. Çağıran işlemde iş kuyruğu adımından önce çağrılır."
+  },
+  {
+    name: 'listeDegisikligiDinleyicisiKaydet',
+    signature: "listeDegisikligiDinleyicisiKaydet(dinleyici: { ad: string; basamak: 'ESLESTIRME' | 'KARAR' | 'HESAP'; isle(tx: Islem, degisiklik: ListeDegisikligi): Promise<void> }): void",
+    purpose: "Eklentiler yüklenirken kaydolunur. Defter modül düzeyinde değil, listelerEklentisi'nin Fastify örneğine bağlıdır (decorate): app.ts, worker.ts ve test dünyası uygulamayı her kurduğunda boş başlar; aynı örnekte aynı ad iki kez kaydolursa açılış hata verir. Uyarlayıcılar her modülün kendi eklenti.ts'indedir (D03-A11): D01 ESLESTIRME, değişikliğin satırlarındaki numaralar için bekleyen hesapları eşleştirir (bekleyenKayitlariEslestir değişikliğin ayrık subeId'leri için çağrılır ve yalnız değişikliğin numaralarını işler); D07 KARAR, kayıtları işlem içinde değerlendirmez, aynı işlemde yeniden değerlendirme işi koyar (iş verisi { dersId, satirIdleri } en çok 2.000, numara yok; iş satirGetir ile numarayı çözer ve D07.yenidenDegerlendir(tx, { dersId, subeIdleri, ogrenciNolari }, 'LISTE_DEGISTI') çağırır); D08 HESAP, devamHesaplaIsiKoy(tx, dersId, null, 'LISTE', { tur: 'LISTE_SATIRI', id: yuklemeId ya da satirId, donemId }). D03 bir yazma işleminde satırlar ve denetim yazıldıktan sonra, sürümden önce basamak sırasıyla, basamak içinde kayıt sırasıyla çağırır. ListeDegisikligi = { dersId: DersId; donemId: DonemId; an: Date; neden: 'YUKLEME' | 'ELLE_EKLEME' | 'SATIR_DUZENLEME' | 'DENEME_KURULUMU'; yuklemeId: YuklemeId | null; yapanKisiId: KisiId | null; satirlar: readonly { satirId: SatirId; subeId: SubeId; ogrenciNo: OgrenciNo; turler: ReadonlySet<'EKLENDI' | 'PASIF_OLDU' | 'CANLANDI' | 'KIRPILDI' | 'ISIM_DEGISTI' | 'GEC_KAYIT_SECIMI_DEGISTI'>; eklenmeAni: Date; oncekiPasifAni: Date | null; pasifAni: Date | null }[] }: her satır bir kez gelir, hem canlanan hem adı değişen satır tek kayıtta iki türle. Olay işlem içi olduğu için numara taşır; dinleyici numarayı iş verisine ve loga koymaz, genel sayaç sürümü almaz; hata atarsa bütün işlem geri alınır."
+  },
+  {
+    name: 'denemeListesiniKur',
+    signature: "denemeListesiniKur(tx: Islem, subeId: SubeId, ogrenciNo: OgrenciNo, adSoyad: string): Promise<ListeSatiri>",
+    purpose: "Sözleşme eki (D02-A13, D03-A07): D01'in inceleme_hesaplari_kurulumu işi D02.denemeDersiniKur'un döndürdüğü şubeyle çağırır. Şubenin dersi deneme dersi değilse iç hata (LISTELER_ kodu değil, uca çıkmaz). Öbür yazmalarla aynı kilit sırası (şube satırları, kova). (şube, numara) ile eş güçlü: satır aynı adla etkinse yazmaz; farklı adla etkinse adı günceller; pasifse canlandırır; şubede başka etkin numara varsa (inceleme numarası değişti) o satır pasif olur. Kaynak SISTEM, sira 1; olay listeler.satir_eklendi ya da satir_canlandi (SISTEM); dinleyiciler neden DENEME_KURULUMU ile; son adımda surumAl. DENEME_DERSI kilidi yalnız uçları bağlar, bu işlevi bağlamaz."
+  }
+];
+
+const kayitlar = [
+  "D02.listeKaynagiKaydet({ etkinSatirlar, pasiflesenSatirlar }) (sözleşme eki D02-A12; liste-kaynagi.ts): etkinSatirlar(tx, { subeIdleri?, ogrenciNolari? }) pasif_ani IS NULL AND silinme_ani IS NULL satırlarını sube_id = ANY($1) ve/veya ogrenci_no = ANY($2) süzgeciyle döner (ikisi de boşsa iç hata), öğe { satirId, subeId, ogrenciNo, surum: degisiklik_surumu }. pasiflesenSatirlar(tx, ogrenciNo, surumden) ogrenci_no = $1 AND pasif_ani IS NOT NULL AND uyelik_surumu > $2 satırlarını { subeId, surum: uyelik_surumu } olarak döner (D02 ile D06 öğrenci kapsamını D03'e bırakırsa bu işlev kalkar, D03-A09). D02'nin şube pasifleştirme denetimi (DERSLER_SUBEDE_OGRENCI_VAR) ve çakışma ucu bunu kullanır; kayıt yoksa D02'nin eklentisi açılmaz.",
+  "D06.indirmeKaynagiKaydet('liste_satirlari', { tur: 'genel', roller: ['OGRENCI', 'PERSONEL'], degisenler }) (indirme-kaynagi.ts; ayrıntı D03-B27).",
+  "D06.indirmeKaynagiKaydet('ogrenci_liste_kapsami', { tur: 'kapsam', rol: 'OGRENCI', kapsam, degistiMi }) (kapsam-kaynagi.ts; ayrıntı D03-B27, sahiplik D03-A09).",
+  "D12.saklamaIsleyicisiKaydet('listeler.liste_satirlari', { islem: 'anonimlestirme', partiIsle }) (saklama.ts; ayrıntı İşler bölümünde).",
+  "D13.rotalariKaydet(app, LISTELER_ROTALARI): altı uç; LISTELER_GIZLI_ALANLAR server.ts'ten D15'in log biçimlendiricisine (ekGizliAdlar) verilir.",
+  "Liste değişikliği defteri listelerEklentisi'nin Fastify örneğine bağlanır; app.ts (API) ve worker.ts (D14: işçi aynı uygulamayı kurar) aynı kurucuyla kaydeder. Açılış testi iki girişi de kurup dört kaydın varlığını denetler."
+];
+

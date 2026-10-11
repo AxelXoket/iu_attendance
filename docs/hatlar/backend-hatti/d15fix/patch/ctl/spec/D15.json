@@ -1,0 +1,2834 @@
+{
+ "id": "D15",
+ "module": "isletim",
+ "summary": "İşletim modülü (D15) sunucunun ayakta, güvenli ve ölçülebilir kalmasını sağlar: doğrulanmış ortam ayarları ve gizli anahtar dosyaları, pino logları, sağlık ve durum uçları, makinedeki saat eşitleme ve makine denetimi, uyarılar, Compose, Caddy, imaj ve yayın adımları, CI kapıları, yük testi ve ortak test dünyası onundur. Üç tablosu telefonların günlük sayaçlarını, hocaların ekran sürelerini ve işletim uyarılarını tutar; sayaç paketi ortak kuyruktan telefon_sayaci öğesiyle, panelin ekran süreleri POST /v1/isletim/ekran-sureleri ile gelir. Uyarılar tek defterde açılır ve kapanır; sahibe e-postayla ve SMTP'den bağımsız bir dış kalp atışı hizmetiyle ulaşır, dışarıdan GET /v1/durum denetimi alan adını, sertifikayı, Caddy'yi ve API'yi birlikte sınar. Hedefler'deki sayılar olcum_ önekli görünümlerden tek sorguyla çıkar; haftalık özet e-postası ve olcum-raporu komutu bunları yazar, ayrı ham olay tablosu yoktur. Alan modüllerini içe aktarmaz: D06, D12, D13 ve D14'ün dış yüzleri bileşim köklerinden parametreyle gelir; kendi dış yüzü (ayarlar, gizli anahtar, log, uyarı, saat eşitleme durumu, sayaç işleyicisi, test dünyası) öbür modüllere verilir.",
+ "tables": [
+  {
+   "name": "telefon_sayaclari",
+   "purpose": "Telefonların günlük sayaç paketi: kurulum ve İstanbul günü başına tek satır, sunucunun göremediği sayılar (gönderilmemiş kayıt, başarısız deneme, bildirim izni, yerel modül çökmesi, iç sayaç okuma hatası, bilinmeyen öğe sonucu, ekran hataları, tek başına da reddedilen kaydın HTTP ve sunucu kodu). Aynı gün için daha büyük sıralı öğe satırı baştan yazar, küçük sıralı öğe yok sayılır; bu yüzden varış sırası sonucu değiştirmez. Ham olay tablosu değildir (plan.html#kararlar-olcum); hata metni, öğrenci numarası, isim yoktur; kisi_id yalnız hesap silinince satırları bulmak için durur. 13 ayda silinir.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar."
+    },
+    {
+     "name": "kurulum_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Paketi gönderen kurulum (D06 PaketBaglami.kurulumId). Yabancı anahtar yok: altyapı modülü alan tablosuna bağlanmaz (Durumlar ve kurallar, Bağımlılık yönü)."
+    },
+    {
+     "name": "gun",
+     "type": "date",
+     "null": false,
+     "default": "",
+     "note": "Sayıların ait olduğu İstanbul günü, telefonun gün sınırı. Ulaşma gününden en çok 395 gün eski, en çok 1 gün ileri olabilir."
+    },
+    {
+     "name": "kisi_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Paketin kişisi (PaketBaglami.kisiId). Yalnız hesap silinince satırları silmek için; ölçüm görünümleri çıktıya koymaz."
+    },
+    {
+     "name": "rol",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "OGRENCI ya da PERSONEL (PaketBaglami.rol)."
+    },
+    {
+     "name": "platform",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "android ya da ios; CHECK listesi packages/contracts/src/api.ts PLATFORMLAR ile aynı (D13)."
+    },
+    {
+     "name": "uygulama_surumu",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "Günün sonundaki uygulama sürümü, en çok 32 karakter (paketteki uygulamaSurumu)."
+    },
+    {
+     "name": "runtime_surumu",
+     "type": "text",
+     "null": true,
+     "default": "",
+     "note": "expo-updates runtimeVersion; bildirilmezse boş."
+    },
+    {
+     "name": "guncelleme_kimligi",
+     "type": "uuid",
+     "null": true,
+     "default": "",
+     "note": "Çalışan uzaktan güncellemenin kimliği (updateId); gömülü pakette boş."
+    },
+    {
+     "name": "sira",
+     "type": "bigint",
+     "null": false,
+     "default": "",
+     "note": "Öğenin kurulumdaki sıra numarası (GelenOge.sira, 1 ve üstü); aynı gün için büyük sıra kazanır."
+    },
+    {
+     "name": "oge_kimligi",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Satırı son yazan öğenin UUIDv7 kimliği; aynı öğe yeniden gelirse ZATEN_VAR döner."
+    },
+    {
+     "name": "gonderilmemis_kayit",
+     "type": "integer",
+     "null": false,
+     "default": "0",
+     "note": "Gün sonunda telefonda bekleyen, sunucuya ulaşmamış yoklama kaydı sayısı."
+    },
+    {
+     "name": "basarisiz_deneme",
+     "type": "integer",
+     "null": false,
+     "default": "0",
+     "note": "Gün içindeki başarısız gönderim denemesi (ağ hatası, zaman aşımı, 408, 429, 5xx, öğe düzeyinde TEKRAR_DENE; D06-B06)."
+    },
+    {
+     "name": "bildirim_izni",
+     "type": "boolean",
+     "null": true,
+     "default": "",
+     "note": "Gün sonunda bildirim izni var mı; telefon bildirmezse boş (ölçümde paydaya girmez)."
+    },
+    {
+     "name": "yerel_modul_cokmesi",
+     "type": "integer",
+     "null": false,
+     "default": "0",
+     "note": "Açılışta okunan yerel modül çökmeleri (Android 11 ve üstünde süreç çıkış nedenleri, iPhone MetricKit; teknik.html#telefon-arka-plan)."
+    },
+    {
+     "name": "ic_sayac_okuma_hatasi",
+     "type": "integer",
+     "null": false,
+     "default": "0",
+     "note": "İç sayaç ve yeniden başlatma değerlerinin okuma hatası (teknik.html#telefon-ic-sayac)."
+    },
+    {
+     "name": "bilinmeyen_sonuc",
+     "type": "integer",
+     "null": false,
+     "default": "0",
+     "note": "Telefonun tanımadığı öğe sonucu sayısı; telefon bunu tekrar dene sayar (D06-B04)."
+    },
+    {
+     "name": "ekran_hatalari",
+     "type": "jsonb",
+     "null": false,
+     "default": "'[]'::jsonb",
+     "note": "[{tur: HATA_SINIRI | GENEL, ekran: ^[a-z][a-z0-9_]{0,47}$, sayi: 1..1000000}], en çok 100 öğe; hata metni yok (teknik.html#telefon-arka-plan)."
+    },
+    {
+     "name": "retler",
+     "type": "jsonb",
+     "null": false,
+     "default": "'[]'::jsonb",
+     "note": "[{http: 400..599, kod: BÜYÜK_HARF sunucu kodu ya da null, sayi: 1..1000000}], en çok 50 öğe; tek başına da reddedilen kaydın sorunu (plan.html#kararlar-yeniden-deneme)."
+    },
+    {
+     "name": "bilinmeyen_ad_sayisi",
+     "type": "integer",
+     "null": false,
+     "default": "0",
+     "note": "Pakette olup bu sunucunun tanımadığı sayaç adı sayısı; değerleri saklanmaz (eski ve yeni sürümler birlikte yaşar)."
+    },
+    {
+     "name": "ilk_alinma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Bu (kurulum, gün) için ilk öğenin ulaşma anı (GelenOge.ulasmaAni)."
+    },
+    {
+     "name": "son_alinma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Satırı son yazan öğenin ulaşma anı; yeni ret kodu denetimi son 15 dakikayı buradan seçer."
+    }
+   ],
+   "indexes": [
+    "telefon_sayaclari_id_pk: PRIMARY KEY (id)",
+    "telefon_sayaclari_kurulum_id_gun_uq: UNIQUE (kurulum_id, gun); ON CONFLICT hedefi",
+    "telefon_sayaclari_gun_idx: (gun); ölçüm görünümleri ve 13 aylık silme",
+    "telefon_sayaclari_kisi_id_idx: (kisi_id); hesap silme dinleyicisi",
+    "telefon_sayaclari_son_alinma_ani_idx: (son_alinma_ani); yeni ret kodu denetimi"
+   ],
+   "constraints": [
+    "telefon_sayaclari_rol_ck: rol IN ('OGRENCI','PERSONEL')",
+    "telefon_sayaclari_platform_ck: platform IN (PLATFORMLAR)",
+    "telefon_sayaclari_sayilar_ck: gonderilmemis_kayit, basarisiz_deneme, yerel_modul_cokmesi, ic_sayac_okuma_hatasi, bilinmeyen_sonuc ve bilinmeyen_ad_sayisi BETWEEN 0 AND 1000000",
+    "telefon_sayaclari_listeler_ck: jsonb_typeof(ekran_hatalari) = 'array' AND jsonb_array_length(ekran_hatalari) <= 100 AND jsonb_typeof(retler) = 'array' AND jsonb_array_length(retler) <= 50",
+    "telefon_sayaclari_surum_ck: char_length(uygulama_surumu) BETWEEN 1 AND 32 AND (runtime_surumu IS NULL OR char_length(runtime_surumu) BETWEEN 1 AND 32)",
+    "telefon_sayaclari_sira_ck: sira >= 1",
+    "telefon_sayaclari_alinma_ck: ilk_alinma_ani <= son_alinma_ani"
+   ]
+  },
+  {
+   "name": "hoca_ekran_sureleri",
+   "purpose": "Hocanın kafa sayısı ve onay ekranlarında geçirdiği sürenin oturum, gün, ekran türü ve kaynak (telefon kurulumu ya da panel tarayıcısı) başına birikmiş toplamı; 'ders başına en çok 2 dakika' hedefinin kaynağı (plan.html#hedefler). Değer aynı anahtarda hiç azalmaz, en büyüğü kalır: yeniden gönderim ve sıra bozulması sonucu değiştirmez. Ölçüm yalnız dersin sahibine ait satırları sayar. 13 ayda ve hesap silinince silinir.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar."
+    },
+    {
+     "name": "kisi_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Süreyi gönderen personel: panelde oturumun kişisi, telefonda paketin kişisi."
+    },
+    {
+     "name": "oturum_id",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "Ekranın ait olduğu ders oturumu (oturumlar.id, D02). Yabancı anahtar yok; ölçüm görünümü eşleşmeyen ya da başkasının dersine ait satırı dışarıda bırakır."
+    },
+    {
+     "name": "gun",
+     "type": "date",
+     "null": false,
+     "default": "",
+     "note": "İstemcinin İstanbul günü."
+    },
+    {
+     "name": "ekran_turu",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "KAFA_SAYISI, DERS_YAPILDI_MI, KENDI_BEYANI_ONAYI, TEYIT_ONAYI, INCELEME, SORUN_BILDIRIMI (EKRAN_TURLERI, packages/contracts/src/isletim.ts)."
+    },
+    {
+     "name": "kaynak",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "TELEFON ya da PANEL."
+    },
+    {
+     "name": "kaynak_kimligi",
+     "type": "uuid",
+     "null": false,
+     "default": "",
+     "note": "TELEFON: kurulum kimliği; PANEL: tarayıcının ilk açılışta ürettiği istemci kimliği. İki tarayıcı ya da iki telefon ayrı satır yazar, ölçüm toplar."
+    },
+    {
+     "name": "saniye",
+     "type": "integer",
+     "null": false,
+     "default": "",
+     "note": "Ekranın önde ve son 60 saniyede dokunularak açık kaldığı süre; 1..86400."
+    },
+    {
+     "name": "ilk_alinma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Satırın ilk yazıldığı an (saat arayüzü ya da GelenOge.ulasmaAni)."
+    },
+    {
+     "name": "son_alinma_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Değerin son arttığı an."
+    }
+   ],
+   "indexes": [
+    "hoca_ekran_sureleri_id_pk: PRIMARY KEY (id)",
+    "UNIQUE (kisi_id, oturum_id, gun, ekran_turu, kaynak, kaynak_kimligi); adı D12.kisitAdi verir (63 baytı aştığından özetli kısaltma); ON CONFLICT hedefi",
+    "hoca_ekran_sureleri_oturum_id_idx: (oturum_id); hocanın işi görünümü",
+    "hoca_ekran_sureleri_gun_idx: (gun); 13 aylık silme",
+    "hoca_ekran_sureleri_kisi_id_idx: (kisi_id); hesap silme dinleyicisi"
+   ],
+   "constraints": [
+    "hoca_ekran_sureleri_ekran_turu_ck: ekran_turu IN (EKRAN_TURLERI)",
+    "hoca_ekran_sureleri_kaynak_ck: kaynak IN ('TELEFON','PANEL')",
+    "hoca_ekran_sureleri_saniye_ck: saniye BETWEEN 1 AND 86400",
+    "hoca_ekran_sureleri_alinma_ck: ilk_alinma_ani <= son_alinma_ani"
+   ]
+  },
+  {
+   "name": "isletim_uyarilari",
+   "purpose": "İşletim uyarılarının tek defteri: tür ve anahtar başına en çok bir açık satır, tekrar görülme, bildirim ve kapanış anları. İşletim denetimi bildirimi buradan yapar, aynı uyarıyı hatırlatma süresi dolmadan yinelemez, düzelince tek 'düzeldi' iletisi gönderir; açık KRITIK uyarı kalp atışını sorun adresine çevirir. Kişisel veri taşımaz; kapanmış satırlar 13 ay sonra silinir.",
+   "columns": [
+    {
+     "name": "id",
+     "type": "uuid",
+     "null": false,
+     "default": "uuidv7()",
+     "note": "Birincil anahtar; e-postada uyarının kısa kimliği olarak ilk 8 karakteri yazılır."
+    },
+    {
+     "name": "tur",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "<modül>.<olay> (ör. isletim.disk_doluluk, dogrulama.iptal_listesi_eski); modül adı contracts.json listesinden."
+    },
+    {
+     "name": "anahtar",
+     "type": "text",
+     "null": false,
+     "default": "''",
+     "note": "Aynı türün ayrı örnekleri: kuyruk adı, servis adı, bağlama noktası ya da '<http>:<kod>'. Kişi kimliği ve kişisel veri değildir."
+    },
+    {
+     "name": "seviye",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "KRITIK ya da UYARI. isletim.* türlerinde UYARI_TURLERI kataloğundan, başka modülün türünde çağıranın verdiği değer (varsayılan UYARI)."
+    },
+    {
+     "name": "kapanma_kurali",
+     "type": "text",
+     "null": false,
+     "default": "",
+     "note": "KOSUL: D15 denetimi koşul düzelince kapatır. SESSIZLIK: 26 saat yeniden açılmazsa kapanır (olay türü uyarılar ve başka modüllerin açtıkları)."
+    },
+    {
+     "name": "durum",
+     "type": "text",
+     "null": false,
+     "default": "'ACIK'",
+     "note": "ACIK ya da KAPANDI."
+    },
+    {
+     "name": "ilk_gorulme_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Uyarının açıldığı an (çağıranın saati: uyariAc ayrinti.an)."
+    },
+    {
+     "name": "son_gorulme_ani",
+     "type": "timestamptz",
+     "null": false,
+     "default": "",
+     "note": "Koşulun son görüldüğü an."
+    },
+    {
+     "name": "tekrar_sayisi",
+     "type": "integer",
+     "null": false,
+     "default": "1",
+     "note": "Açık kaldığı sürece kaç kez görüldüğü."
+    },
+    {
+     "name": "son_deger",
+     "type": "text",
+     "null": true,
+     "default": "",
+     "note": "Son ölçülen değerin kısa metni (ör. 'yüzde 87', '3 iş'), en çok 120 karakter."
+    },
+    {
+     "name": "satirlar",
+     "type": "text[]",
+     "null": false,
+     "default": "'{}'",
+     "note": "E-postaya giren ayrıntı satırları: en çok 10, her biri en çok 200 karakter; 9 ile 11 haneli rakam dizisi yazılmadan önce [gizli] olur."
+    },
+    {
+     "name": "son_bildirim_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "Son başarılı e-posta bildiriminin anı; boşsa henüz bildirilmedi."
+    },
+    {
+     "name": "bildirim_sayisi",
+     "type": "integer",
+     "null": false,
+     "default": "0",
+     "note": "Başarılı bildirim (ilk ileti ve hatırlatmalar) sayısı."
+    },
+    {
+     "name": "bildirim_hatasi",
+     "type": "boolean",
+     "null": false,
+     "default": "false",
+     "note": "Son bildirim denemesi gitmedi (SMTP düşük ya da kapasite); kalp atışı sorun adresine döner."
+    },
+    {
+     "name": "kapanma_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "KAPANDI anı."
+    },
+    {
+     "name": "kapanis_bildirimi_ani",
+     "type": "timestamptz",
+     "null": true,
+     "default": "",
+     "note": "'Düzeldi' iletisinin anı; hiç bildirilmemiş uyarının kapanışı bildirilmez."
+    }
+   ],
+   "indexes": [
+    "isletim_uyarilari_id_pk: PRIMARY KEY (id)",
+    "isletim_uyarilari_tur_anahtar_uq: UNIQUE (tur, anahtar) WHERE durum = 'ACIK'; uyariAc ON CONFLICT hedefi",
+    "isletim_uyarilari_durum_seviye_idx: (durum, seviye); kalp atışı ve bildirim seçimi",
+    "isletim_uyarilari_kapanma_ani_idx: (kapanma_ani) WHERE durum = 'KAPANDI'; 13 aylık silme ve düzeldi iletisi"
+   ],
+   "constraints": [
+    "isletim_uyarilari_tur_ck: tur ~ '^(kimlik|dersler|listeler|saat|yoklama|esitleme|dogrulama|devam|duzeltmeler|raporlar|projeksiyon|veritabani|api|is-kuyrugu|isletim)[.][a-z][a-z0-9_]{1,62}$' (D09 denetim türüyle aynı modül listesi)",
+    "isletim_uyarilari_anahtar_ck: anahtar ~ '^[A-Za-z0-9_.:/-]{0,100}$'",
+    "isletim_uyarilari_seviye_ck: seviye IN ('KRITIK','UYARI')",
+    "isletim_uyarilari_kapanma_kurali_ck: kapanma_kurali IN ('KOSUL','SESSIZLIK')",
+    "isletim_uyarilari_durum_ck: durum IN ('ACIK','KAPANDI') AND (durum = 'KAPANDI') = (kapanma_ani IS NOT NULL)",
+    "isletim_uyarilari_kapanis_bildirimi_ck: kapanis_bildirimi_ani IS NULL OR kapanma_ani IS NOT NULL",
+    "isletim_uyarilari_sayilar_ck: tekrar_sayisi >= 1 AND bildirim_sayisi >= 0",
+    "isletim_uyarilari_metin_ck: (son_deger IS NULL OR char_length(son_deger) <= 120) AND cardinality(satirlar) <= 10",
+    "isletim_uyarilari_anlar_ck: ilk_gorulme_ani <= son_gorulme_ani"
+   ]
+  }
+ ],
+ "endpoints": [
+  {
+   "method": "GET",
+   "path": "/health/live",
+   "client": "sunucu",
+   "auth": "Girişsiz; yalnız iç ağdan: Compose sağlık denetimi kabın içinden 127.0.0.1'e, Caddy'nin etkin sağlık denetimi iç ağdan gelir. API portu yayımlanmaz; Caddy /health/* yolunu dışarıdan 404 ile keser (CI Caddy senaryosu sınar). API'de vekil başlığına bakan ikinci bir bekçi yoktur: Caddy'nin kendi sağlık isteklerini yanlışlıkla kesip iki kopyayı birden devreden çıkarabilirdi. Rota beyanı (packages/contracts/src/isletim.ts, rotaTanimla): kimlik [girissiz], hiz girissiz, baskiDisi true, saatBelgesi false, cevap 204 ve şema null.",
+   "request": {
+    "(yok)": "Gövde, sorgu ve özel başlık yok; gelen gövde yok sayılır."
+   },
+   "response": {
+    "204": "Gövdesiz: süreç canlı ve kapanışta değil. Caddy etkin sağlık denetimi ve Compose sağlık denetimi bu ucu kullanır."
+   },
+   "errors": [
+    "503 ISLETIM_KAPANIYOR: kapanış başladı (kapanisiBaslat); Caddy kopyayı en geç 4 saniyede devreden çıkarır",
+    "429 API_HIZ_SINIRI: girissiz IP sınıfı (pratikte oluşmaz)"
+   ],
+   "idempotency": "Salt okur; veritabanına, dosyaya ve dış hizmete dokunmaz; aşırı yük denetimi dışında (D13 rota düzeyi pressureHandler null döner).",
+   "rate_limit": "D13.hizSinifi('girissiz'): IP başına dakikada 3000. Sağlık denetimleri kopya başına dakikada en çok 36 istek üretir."
+  },
+  {
+   "method": "GET",
+   "path": "/health/ready",
+   "client": "sunucu",
+   "auth": "Girişsiz; yalnız iç ağdan: Compose sağlık denetimi kabın içinden 127.0.0.1'e, Caddy'nin etkin sağlık denetimi iç ağdan gelir. API portu yayımlanmaz; Caddy /health/* yolunu dışarıdan 404 ile keser (CI Caddy senaryosu sınar). API'de vekil başlığına bakan ikinci bir bekçi yoktur: Caddy'nin kendi sağlık isteklerini yanlışlıkla kesip iki kopyayı birden devreden çıkarabilirdi. Rota beyanı: kimlik [girissiz], hiz girissiz, baskiDisi false (D13 kuralı: aşırı yükte API_SUNUCU_YOGUN alır), cevap 204. Çağıranlar: yayın betiği (her kopyadan sonra), haftalık CI işi, geri yükleme ve terfi betiği (D12-B32).",
+   "request": {
+    "(yok)": "Gövde, sorgu ve özel başlık yok."
+   },
+   "response": {
+    "204": "Gövdesiz: kapanışta değil ve D12.semaDurumu() 2 saniye içinde hazir=true döndü (veritabanına ulaşılıyor, imajdaki son göçün özeti göç defterinde var, nesil tutarlı)."
+   },
+   "errors": [
+    "503 ISLETIM_KAPANIYOR: kapanış başladı",
+    "503 ISLETIM_HAZIR_DEGIL_VERITABANI: semaDurumu neden ulasilamiyor ya da 2 saniyede cevap gelmedi",
+    "503 ISLETIM_HAZIR_DEGIL_SEMA: semaDurumu neden geride ya da nesil_belirsiz",
+    "503 API_SUNUCU_YOGUN: aşırı yük (D13 under-pressure)",
+    "429 API_HIZ_SINIRI"
+   ],
+   "idempotency": "Salt okur: D12.semaDurumu tek kısa sorgu (göç defterinde özet ve nesil); iş, dosya ve uyarı yazmaz.",
+   "rate_limit": "D13.hizSinifi('girissiz')."
+  },
+  {
+   "method": "GET",
+   "path": "/v1/durum",
+   "client": "sunucu",
+   "auth": "Girişsiz ve herkese açık; Caddy üzerinden gelir, dış izleme hizmeti 5 dakikada bir çağırır (teknik.html#sunucu-ayarlar). Rota beyanı: kimlik [girissiz], hiz girissiz, baskiDisi true, saatBelgesi false, cevap 204. Modülsüz kök uç istisnasıdır (contracts.json, Uç yolu öneki).",
+   "request": {
+    "(yok)": "Gövde, sorgu ve özel başlık yok."
+   },
+   "response": {
+    "204": "Gövdesiz; /health/live ile aynı iş: veritabanına dokunmaz. Alan adı, sertifika, Caddy ve API süreci tek denetimde sınanır."
+   },
+   "errors": [
+    "503 ISLETIM_KAPANIYOR: kapanan kopyaya denk geldi (art arda iki başarısızlık gerektiğinden yanlış alarm üretmez)",
+    "429 API_HIZ_SINIRI: girissiz IP sınıfı"
+   ],
+   "idempotency": "Salt okur, yan etkisiz; aşırı yük denetimi dışında.",
+   "rate_limit": "D13.hizSinifi('girissiz'): IP başına dakikada 3000."
+  },
+  {
+   "method": "POST",
+   "path": "/v1/isletim/ekran-sureleri",
+   "client": "panel",
+   "auth": "Panel oturum çerezi (D01 oturum kancası, D13): kimlik [oturum], roller [personel]; çerezli yazma isteği olduğundan Origin panel adresine birebir eşit olmalı (D13 köken kancası). Telefon aynı bilgiyi telefon_sayaci öğesinin ekranSureleri alanında taşır, bu uca gelmez. Rota beyanı: hiz oturum, govdeSiniri 16384, baskiDisi false, saatBelgesi false, cevap 200 ekranSureleriCevabi.",
+   "request": {
+    "istemciKimligi": "metin; D13 istemciKimligiSemasi: tarayıcının ilk açılışta ürettiği UUIDv7, yerel depoda kalır",
+    "gun": "metin; YYYY-AA-GG İstanbul günü (D13 gunSemasi); sunucunun İstanbul gününden ileri olamaz, en çok 14 gün eski olabilir",
+    "sureler": "dizi, 1 ile 200 öğe: { oturumId: UUID (D13 kimlikSemasi('oturum')), ekranTuru: KAFA_SAYISI | DERS_YAPILDI_MI | KENDI_BEYANI_ONAYI | TEYIT_ONAYI | INCELEME | SORUN_BILDIRIMI (kapalı enum), saniye: tam sayı 1..86400 }; (oturumId, ekranTuru) çifti tekil; saniyelerin toplamı en çok 86400",
+    "(fazla alan)": "Zod strip ile atılır."
+   },
+   "response": {
+    "kaydedilen": "tam sayı; eklenen ya da değeri artan satır sayısı (eşit ya da küçük değer satırı değiştirmez, sayılmaz)"
+   },
+   "errors": [
+    "400 API_ISTEK_GECERSIZ: şemaya uymuyor (D13 zarfı, alanlar yolu)",
+    "400 ISLETIM_GUN_ARALIK_DISI: gun ileri tarihli ya da 14 günden eski",
+    "400 ISLETIM_SURE_GECERSIZ: (oturumId, ekranTuru) çifti tekrar ediyor ya da saniyelerin toplamı 86400 üstü",
+    "401 API_KIMLIK_GEREKLI",
+    "403 API_ROL_YETKISIZ",
+    "403 API_KOKEN_GECERSIZ",
+    "413 API_GOVDE_COK_BUYUK: 16 KiB üstü",
+    "415 API_ICERIK_TURU",
+    "429 API_HIZ_SINIRI",
+    "503 API_SUNUCU_YOGUN"
+   ],
+   "idempotency": "Her değer o günün birikmiş toplamıdır: tek işlemde INSERT ... ON CONFLICT (kisi_id, oturum_id, gun, ekran_turu, kaynak, kaynak_kimligi) DO UPDATE SET saniye = EXCLUDED.saniye, son_alinma_ani = EXCLUDED.son_alinma_ani WHERE hoca_ekran_sureleri.saniye < EXCLUDED.saniye. Aynı istek iki kez gelirse ya da eski toplam yenisinden sonra ulaşırsa sonuç değişmez; kaynak PANEL, kaynak_kimligi istemciKimligi.",
+   "rate_limit": "D13.hizSinifi('oturum'): oturum başına dakikada 120. Sözleşme kuralı: panel en çok 5 dakikada bir, sayfa gizlenirken (visibilitychange) bir kez daha gönderir."
+  }
+ ],
+ "jobs": [
+  {
+   "name": "isletim_denetimi",
+   "schedule": "10 dakikada bir, :00, :10, ... (cron '*/10 * * * *', tz Europe/Istanbul); pg-boss, işçide; exclusive kuyruk, kaçırılan çalışma atlanır (missed: skip), sureAsimiSaniye 300, 2 deneme. D14 çizelgesindeki yeri aynen.",
+   "idempotency": "Ölçer ve açık uyarı defterini koşula göre günceller: aynı durumda ikinci çalışma yeni satır açmaz (tür ve anahtar başına tek açık satır), hatırlatma süresi dolmadan aynı uyarıyı yeniden bildirmez; bildirim yalnız D14.epostaGonder GONDERILDI dönünce işaretlenir.",
+   "does": "(1) Girdileri okur: D14.isSagligi (kuyruk ve zamanlama sağlığı, e-posta özeti, şema sürümü, iş çıktıları), PostgreSQL sistem görünümleri (pg_stat_archiver, pg_stat_activity, max_connections; işçi rolü pg_monitor üyesi, D12), durum dosyaları (/durum/saat/chrony.json, /durum/makine/makine.json, /durum/veritabani/<iş>.json, /durum/api/<kopya>.json), son 15 dakikada yazılan telefon_sayaclari satırlarındaki ret kodları ve olcum_kayit_kaybi'ndan son 24 saatte makbuzla yeniden gelen öğe sayısı. (2) infra/izleme/kurallar.ts'teki saf kurallar girdileri ISLETIM_ESIKLERI ile karşılaştırır, her biri { tur, anahtar, seviye, deger, satirlar } kararı üretir (tablo: Durumlar ve kurallar, Uyarı kuralları); kararlar aynı işlemde uyariAc ile açılır ya da güncellenir, bu çalışmada gözlenmeyen KOSUL uyarıları kapanır, 26 saattir yeniden açılmayan SESSIZLIK uyarıları kapanır. (3) Bildirim: bildirilmemiş ya da hatırlatma süresi (KRITIK 6, UYARI 24 saat) dolmuş açık uyarılar ve bildirilmiş ama kapanmış uyarılar düz metin satırlarla D14.epostaGonder('isletim_uyarisi', { adres }, { konu, satirlar }) ile ISLETIM_UYARI_ALICILARI'ndaki her adrese gider; gönderilemezse bildirim_hatasi işaretlenir ve kalp atışı sorun adresine döner. Tek log satırı: { olay: isletim.denetim, acilan, kapanan, bildirilen, bildirilemeyen, sureMs }."
+  },
+  {
+   "name": "dis_erisim_denetimi",
+   "schedule": "5 dakikada bir, sunucu dışındaki izleme hizmetinden ve Türkiye dışındaki bir denetim noktasından; hizmetin ayarıdır, depoda kodu yoktur (hizmet seçimi D15-A05).",
+   "idempotency": "Salt okunur GET; tekrarı yan etkisiz.",
+   "does": "https://<ALAN_ADI>/v1/durum adresine 10 saniye zaman aşımıyla istek atar, 204 bekler. Art arda 2 başarısızlıkta sahibe anlık bildirim ve e-posta gider, düzelince tek düzeldi iletisi; ikinci alıcı D15-A10'a bağlı. Aynı hizmet sertifika bitişini de izler (14 gün kala; sertifika_bitis_denetimi'nin ikinci katmanı). Yurt dışından denetim, mağaza incelemesi için gereken yurt dışı erişimi de sınar (plan.html#kararlar-inceleme-hesaplari). Hizmete kişisel veri gitmez, bu yüzden üçüncü taraf analitik yasağına (plan.html#kararlar-olcum) girmez."
+  },
+  {
+   "name": "isletim_kalp_atisi",
+   "schedule": "10 dakikada bir, :05, :15, ... (cron '5-59/10 * * * *', tz Europe/Istanbul); pg-boss, işçide; exclusive, missed: skip, sureAsimiSaniye 30, deneme yok (sonraki çalışma zaten 10 dakika sonra).",
+   "idempotency": "Dış hizmete tek GET; aynı pencerede iki istek hizmet için tek kalp atışıdır.",
+   "does": "Açık KRITIK uyarı ve bildirim_hatasi işaretli açık uyarı yoksa kalp_atisi sırrındaki normalAdres'e, varsa sorunAdres'e 10 saniye zaman aşımıyla GET yapar; sorunAdres tanımlı değilse hiç istek atmaz (sessizlik sorun demektir). Hizmet 25 dakika kalp atışı görmezse ya da sorun isteği alırsa sahibe SMTP'den bağımsız bildirim gönderir: işçi, PostgreSQL, pg-boss zamanlaması, dışarı çıkış ya da SMTP düşünce de haber gider. Adres yoksa (gelistirme, test) istek atmaz, debug log yazar; uretim ve hazirlik ortamında sır yoksa işçi açılmaz (ayar şeması). İstek gövdesiz, sorgu dizesiz; kişisel veri yok."
+  },
+  {
+   "name": "sertifika_bitis_denetimi",
+   "schedule": "Her gün 06:35 (cron '35 6 * * *', tz Europe/Istanbul); pg-boss, işçide; exclusive, missed: once, sureAsimiSaniye 60, 3 deneme (30 saniyeden üstel). D14 çizelgesine ek; 06:35'te başka günlük iş yok (en az 5 dakika aralık kuralı).",
+   "idempotency": "Salt okur; uyarı defterine tür ve anahtar başına tek açık satır yazar, aynı gün ikinci çalışma aynı sonucu verir.",
+   "does": "ISLETIM_CADDY_ADRESI'ne (varsayılan caddy:443) SNI olarak ALAN_ADI ile TLS bağlantısı açar; zincir ve adı doğrular, bitiş anını ve düzenleyeni okur. Doğrulanamazsa KRITIK isletim.sertifika_gecersiz. Kalan süre ISLETIM_SERTIFIKA_TURU acme ise 14, elle ise 30 günün altına inince UYARI, 7 günün altına inince KRITIK isletim.sertifika_bitiyor (teknik.html#altyapi-caddy). Caddy ömrün üçte biri kala yenilediğinden acme uyarısı yalnız yenileme kaçınca gelir. Üniversite ağ geçidi TLS'i önde bitirirse ağ geçidinin sertifikasını dış izleme hizmeti denetler."
+  },
+  {
+   "name": "saat_esitleme_izleme",
+   "schedule": "30 saniyede bir, ana makinede systemd zamanlayıcısı (iu-yoklama-saat-esitleme.timer: OnBootSec=10s, OnUnitActiveSec=30s, AccuracySec=1s); pg-boss dışında, API ve işçi düşükken de çalışır.",
+   "idempotency": "Durumu her seferinde baştan okur; dosyayı aynı dizinde geçici dosyaya yazıp rename ile değiştirir, okuyan hiçbir zaman yarım dosya görmez; iki çalışma çakışırsa son yazan geçerlidir.",
+   "does": "chronyc -c tracking çıktısından: senkron (Leap status 'Not synchronised' değil ve katman 1..15), sapmaMs (|sistem saati farkı| + kök dağılımı + kök gecikmesinin yarısı; chrony belgesindeki hata üst sınırı, milisaniyeye yukarı yuvarlanır), katman, kaynak (referans adı) ve olcumAni (UTC). Senkron değilse ya da sapma SAAT_ESITLEME_ESIK_MS'den büyükse sonBozukAni bu an olur, değilse önceki dosyadan taşınır. /var/lib/iu-yoklama/durum/saat/chrony.json olarak yazılır; API ve işçi kaplarına /durum/saat salt okunur bağlıdır. D04 her API sürecinde 5 saniyede bir saatEsitlemeDurumu() ile okur ve belge kuralını uygular; D15 işletim denetiminde uyarır. chrony ayarı (makine/chrony.conf): önce BİDB'nin NTP sunucusu (iburst prefer), yedek tr.pool.ntp.org, makestep 1.0 3, rtcsync."
+  },
+  {
+   "name": "makine_denetimi",
+   "schedule": "10 dakikada bir, :08, :18, ... (iu-yoklama-makine-denetimi.timer: OnCalendar=*:08/10, Persistent=false), ana makinede; işletim denetimi :10, :20 ... okuduğunda dosya 2 dakikalıktır.",
+   "idempotency": "Ölçer ve tek dosyayı bütün olarak yazar (geçici dosya ve rename); yeniden başlama artışı /var/lib/iu-yoklama/makine-onceki.json ile hesaplanır, aynı artış iki kez bildirilmez.",
+   "does": "df ile kök dosya sisteminin ve Docker veri dizininin doluluğunu, /proc/meminfo ile kullanılabilir belleği, docker inspect ile Compose servislerinin (caddy, api-1, api-2, isci, postgres, xprem) durumunu, sağlık sonucunu, yeniden başlama sayısını, OOMKilled işaretini ve başlama anını okur; önceki çalışmaya göre yeniden başlama artışını hesaplar; /var/lib/iu-yoklama/durum/makine/makine.json olarak yazar. Eşik uygulamaz: işletim denetimi okur ve uyarır (disk yüzde 80 UYARI, 90 KRITIK; bellek yüzde 10'un altı UYARI; kap yeniden başladı UYARI; OOMKilled ya da çalışmayan servis KRITIK; dosya 25 dakikadan eski UYARI)."
+  },
+  {
+   "name": "gunluk_log_arsivi",
+   "schedule": "Her gün 03:15 Europe/Istanbul, ana makinede (iu-yoklama-log-arsivi.timer, Persistent=true); pg-boss dışında. 02:15 gece dökümü (D12) ile ve 03:00-05:00 pg-boss boşluğuyla çakışmaz; D14 çizelgesindeki 03:30 önerisinin yerine.",
+   "idempotency": "Servis ve gün başına tek dosya: hedef var ve gzip -t geçiyorsa atlanır; yazım geçici dosya ve rename ile; 30 günden eski dosyalar silinir, ikinci çalışma aynı dosya kümesini bırakır.",
+   "does": "Önceki İstanbul gününün (00:00-24:00) loglarını docker compose logs --no-color --no-log-prefix --timestamps --since --until ile api-1, api-2, isci, caddy, xprem ve postgres servislerinden alır; gzip ile /var/log/iu-yoklama/<servis>/<YYYY-AA-GG>.log.gz (root:adm, 0640) yazar. local log sürücüsünün döndürmesinden önce kaybı önler. Loglar numara, isim, kod ve jeton taşımadığından arşiv de taşımaz. makine/log-bul.sh bir istek kimliğinin (UUID biçimi denetlenir) güncel ve arşivdeki bütün satırlarını getirir (D15-B18)."
+  },
+  {
+   "name": "ota_yayin_denetimi",
+   "schedule": "Her gece 04:23 Europe/Istanbul (cron '23 1 * * *' UTC), GitHub Actions'ta guvenlik.yml'nin ikinci işi; elle de başlatılır. D14 çizelgesindeki pg-boss 06:15 yeri boşalır.",
+   "idempotency": "Salt okur: güncelleme bildirimini sorar ve depo etiketleriyle karşılaştırır; tekrarı yan etkisiz.",
+   "does": "yayin-bilgisi kaynağındaki desteklenen her uygulama sürümünün runtimeVersion'ı ve her platform için güncelleme bildirimini Expo Updates protokolüyle (expo-protocol-version 1, expo-platform, expo-runtime-version, expo-channel-name) 40 farklı rastgele istemci kimliğiyle sorar ve dönen güncelleme kimliklerini toplar. Her kimlik için depoda ota/<runtimeVersion>/<güncelleme kimliği> etiketi olmalıdır; etiketi yalnız onaylı yayin-ota.yml koşusu açar. Etiketsiz güncelleme görülürse iş kırmızı biter: GitHub sahibe e-posta gönderir, CI kalp atışı gönderilmez. xprem'in yönetim paneline, yayın anahtarına ve veritabanına dokunmaz (D15-B31)."
+  },
+  {
+   "name": "haftalik_olcum_ozeti",
+   "schedule": "Pazartesi 07:10 (cron '10 7 * * 1', tz Europe/Istanbul); pg-boss, işçide; exclusive, missed: once, sureAsimiSaniye 900, 2 deneme. Ders başı yoğunluğundan önce; D14 çizelgesindeki 08:00 önerisinin yerine.",
+   "idempotency": "Aynı hafta için aynı sayıları üretir; yeniden denemede e-posta bir kez daha gidebilir (yalnız sahibe, zararsız). Silme adımı tarih sınırından eski satırları siler; ikinci çalışma 0 satır siler.",
+   "does": "Önceki pazartesi 00:00 ile bu pazartesi 00:00 (İstanbul) arası ve içinde bulunulan dönem için olcum_ görünümlerinden Hedefler'deki sayıları (gönderme, saati doğrulanamayan Android ve iPhone ayrı, işaretlenmeden kabul ve üç ayrı etiket oranı, kafa sayısı aşımı olmayan oturum oranı, hocanın işi ortancası), kayıt kaybı göstergelerini, telefon sayaçlarının özetini (gönderilmemiş kayıt, başarısız deneme, bildirim izni oranı, en sık beş ekran hatası, çökmeler, yeni ret kodları), benimseme sayılarını ve açık uyarıları hesaplar; hedefle birlikte düz metin satırlar olarak D14.epostaGonder ile ISLETIM_UYARI_ALICILARI'na yollar (tür isletim_ozeti, D14'e ekleme isteği; eklenene kadar isletim_uyarisi, konu 'Haftalık ölçüm özeti'). Ardından telefon_sayaclari ve hoca_ekran_sureleri'nde gun < bugün - 395 gün, isletim_uyarilari'nda kapanma_ani 395 günden eski satırları 5.000'lik kısa işlemlerle siler, sayıları loglar."
+  },
+  {
+   "name": "ci_kalite_kapilari",
+   "schedule": "Her çekme isteğinde, ana dala her gönderimde ve birleştirme kuyruğunda (merge_group); GitHub Actions kalite.yml; aynı dal için yeni koşu eskisini iptal eder (concurrency).",
+   "idempotency": "Aynı commit için aynı sonucu verir: kilit dosyası değişmeden kurulum (pnpm install --frozen-lockfile), test veritabanı her koşuda tmpfs'te sıfırdan.",
+   "does": "Sırayla: Biome ci (biçim, kurallar, modül sınırları); tsc tip denetimi; D12'nin göç denetimleri (yeniden üretme farkı, sahiplik haritası, Squawk) ve docker/postgres/surum-denetimi.sh; packages/core'da Vitest ve fast-check, satır ve dal kapsamı en az yüzde 90 (@vitest/coverage-v8), TZ=UTC ve TZ=Europe/Istanbul ile iki koşu; apps/server Vitest testleri; docker compose --profile test up --wait postgres-test ve Cucumber senaryoları (paralel koşu os.availableParallelism(): açık depoda 4, özel depoda 2); docker compose config ile Compose doğrulaması ve servis sırları matrisi; Caddyfile doğrulaması ve Caddy başlık senaryosu; yayin-bilgisi kaynağının D13 şemasıyla denetimi. oasdiff kırılma kapısı D13'ün sozlesme.yml dosyasındadır. permissions: contents: read; her dış eylem tam commit özetiyle; eylemlerin çalışma ortamı Node 24 (teknik.html#altyapi-imaj)."
+  },
+  {
+   "name": "ci_gecelik_guvenlik_denetimi",
+   "schedule": "Her gece 04:23 Europe/Istanbul (cron '23 1 * * *' UTC, saat başı değil); GitHub Actions guvenlik.yml; elle de başlatılır.",
+   "idempotency": "Salt okur; aynı kilit dosyasıyla aynı sonuç.",
+   "does": "pnpm audit --prod --audit-level high: yüksek ve kritik duyuru kırmızıdır, orta düzey iş özetine yazılır (teknik.html#altyapi-guncellemeler). SheetJS npm dışında olduğundan bu denetime girmez, elle izlenir. Bu iş ve ota_yayin_denetimi yeşil biterse CI kalp atışı adresine (depo sırrı ISLETIM_CI_KALP_ATISI_ADRESI) istek atılır; hizmet 26 saatte görmezse sahibi uyarır, böylece GitHub'ın 60 günlük hareketsizlikte zamanlanmış işleri kapatması da fark edilir."
+  },
+  {
+   "name": "ci_haftalik_is",
+   "schedule": "Pazar 06:41 Europe/Istanbul (cron '41 3 * * 0' UTC); GitHub Actions haftalik.yml; elle de başlatılır ve her sunucu yayınından önce bir kez elle koşar (teknik.html#testler-kalite).",
+   "idempotency": "Aynı commit için aynı sonucu verir; Stryker artımsız koşar (önceki sonuca dayanmaz).",
+   "does": "(1) Stryker packages/core üzerinde komut çalıştırıcısıyla (testRunner command, komut paketin vitest run'ı; teknik.html#testler-kalite); stryker-esik-denetimi.ts JSON raporundaki mutasyon puanını klasör başına stryker-esikler.json ile karşılaştırır (varsayılan kırma eşiği 80, saat 90; eşik yalnız yükselir) ve yaşayan mutantları özete yazar. (2) Sunucu imajının sunucu ve caddy hedefleri derlenir; postgres, göç ve bir API kopyasıyla açılır, iç ağdan /health/ready 204 beklenir. (3) tohum.ts --kucuk ile tek ders, öğrenci ve cihaz kurulur; k6 tek seferlik deneme (bir sanal kullanıcı, bir yineleme) aynı sunucuya: saat belgesi, gönderim, değişenler. (4) İki imaj Trivy ile taranır; düzeltmesi olan yüksek ve kritik bulgu kırmızıdır. Kırmızı haftalık iş bir sonraki sunucu yayınını durdurur (yayin-sunucu.yml son koşunun sonucuna bakar)."
+  },
+  {
+   "name": "dependabot_guncellemeleri",
+   "schedule": "Haftalık, pazartesi 06:00 Europe/Istanbul; güvenlik güncellemeleri beklemeden (.github/dependabot.yml).",
+   "idempotency": "Dependabot aynı güncelleme için açık istek varken ikincisini açmaz.",
+   "does": "Ekosistemler: npm (kök; gruplar: üretim küçük ve geliştirme küçük güncellemeleri), github-actions, docker (apps/server/Dockerfile, docker/postgres/Dockerfile) ve docker-compose (compose.yaml, docker/postgres/compose.yaml). 3 günlük bekleme varsayılandır, yazılmaz (teknik.html#altyapi-guncellemeler). Dışarıda kalanlar: Expo'nun belirlediği paketler (expo, expo-*, react, react-native; SDK yükseltmesinde topluca), xprem imajı (eoas aracıyla aynı sürümde elle, teknik.html#dagitim-ayrinti-xprem-guvenligi), pgBackRest paket sürümü (elle), SheetJS (npm dışında). Büyük sürüm ayrı istek açar; elle ve testler yeşilken birleştirilir."
+  },
+  {
+   "name": "yayin_oncesi_yuk_testi",
+   "schedule": "Elle, tetik tablosuna göre (Durumlar ve kurallar, Yük testi): ilk yayından, her dönem başından, gönderim, saat belgesi, kimlik ya da yoklama şemasına dokunan sunucu yayınından ve Fastify, PostgreSQL, Node ya da Drizzle büyük sürüm geçişinden önce; hazırlık makinesinde (D15-A04).",
+   "idempotency": "Hazırlık veritabanı her koşudan önce tohum betiğiyle aynı tohumdan sıfırdan kurulur; aynı tohum aynı veriyi üretir.",
+   "does": "apps/server/test/yuk/ altındaki k6 senaryoları üretim boyutundaki (4 çekirdek, 8 GB, 100 GB SSD) hazırlık makinesinde, sınırlar açık, binlerce ayrı cihaz kimliğiyle, sabit geliş hızıyla koşar: ders başı, ders çıkışı (en kötü durum 20.000 telefon 1 dakikada), gece ve giriş yığılması profilleri; ders çıkışı sürerken 50 hoca rapor ve AKSİS özeti ister. Veritabanı bir dönemlik veriyle (yaklaşık 4,2 milyon kayıt) doludur. Geçme ölçütleri k6 thresholds ve koşu sonrası denetim betiğiyle otomatik verilir; ölçülen makine boyutu, eşikler, havuz ve 100.000 kayıt başına tablo boyutu teknik.html'e yazılmak üzere raporlanır (teknik.html#altyapi-sunucu-makinesi)."
+  }
+ ],
+ "state_machines": [
+  {
+   "name": "İşletim uyarısı (isletim_uyarilari satırı)",
+   "states": [
+    "YOK",
+    "ACIK_BILDIRILMEDI",
+    "ACIK_BILDIRILDI",
+    "KAPANDI_BILDIRILMEDI",
+    "KAPANDI"
+   ],
+   "transitions": [
+    {
+     "from": "YOK",
+     "to": "ACIK_BILDIRILMEDI",
+     "by": "uyariAc (D15 denetimi ya da başka modül)",
+     "when": "(tur, anahtar) için açık satır yok: yeni satır, durum ACIK, son_bildirim_ani boş."
+    },
+    {
+     "from": "ACIK_BILDIRILMEDI",
+     "to": "ACIK_BILDIRILMEDI",
+     "by": "uyariAc",
+     "when": "Koşul yeniden görüldü: son_gorulme_ani, tekrar_sayisi, son_deger ve satirlar yenilenir."
+    },
+    {
+     "from": "ACIK_BILDIRILMEDI",
+     "to": "ACIK_BILDIRILDI",
+     "by": "isletim_denetimi",
+     "when": "E-posta en az bir alıcıya GONDERILDI: son_bildirim_ani yazılır, bildirim_hatasi false."
+    },
+    {
+     "from": "ACIK_BILDIRILMEDI",
+     "to": "ACIK_BILDIRILMEDI",
+     "by": "isletim_denetimi",
+     "when": "E-posta gitmedi: bildirim_hatasi true; kalp atışı sorun adresine döner, sonraki çalışma yeniden dener."
+    },
+    {
+     "from": "ACIK_BILDIRILDI",
+     "to": "ACIK_BILDIRILDI",
+     "by": "isletim_denetimi",
+     "when": "Hatırlatma: son bildirimden bu yana KRITIK 6, UYARI 24 saat geçti; yeni e-posta, bildirim_sayisi artar."
+    },
+    {
+     "from": "ACIK_BILDIRILMEDI",
+     "to": "KAPANDI",
+     "by": "isletim_denetimi",
+     "when": "KOSUL uyarısı bu çalışmada gözlenmedi ya da SESSIZLIK uyarısı 26 saattir yeniden açılmadı ve hiç bildirilmemişti: kapanma_ani yazılır, düzeldi iletisi gitmez."
+    },
+    {
+     "from": "ACIK_BILDIRILDI",
+     "to": "KAPANDI_BILDIRILMEDI",
+     "by": "isletim_denetimi",
+     "when": "Aynı kapanma koşulu, uyarı daha önce bildirilmişti."
+    },
+    {
+     "from": "KAPANDI_BILDIRILMEDI",
+     "to": "KAPANDI",
+     "by": "isletim_denetimi",
+     "when": "Düzeldi e-postası gitti: kapanis_bildirimi_ani yazılır."
+    },
+    {
+     "from": "KAPANDI",
+     "to": "ACIK_BILDIRILMEDI",
+     "by": "uyariAc",
+     "when": "Aynı tür ve anahtar yeniden görüldü: eski satır kanıt olarak kalır, yeni satır açılır (kısmi tekil dizin yalnız açık satırı sayar)."
+    },
+    {
+     "from": "KAPANDI",
+     "to": "YOK",
+     "by": "haftalik_olcum_ozeti",
+     "when": "kapanma_ani 395 günden eski: satır silinir."
+    }
+   ]
+  },
+  {
+   "name": "API kopyası (server.ts süreci)",
+   "states": [
+    "ACILIYOR",
+    "VERITABANI_BEKLENIYOR",
+    "HAZIR",
+    "HAZIR_DEGIL",
+    "KAPANIYOR",
+    "KAPANDI"
+   ],
+   "transitions": [
+    {
+     "from": "ACILIYOR",
+     "to": "KAPANDI",
+     "by": "server.ts",
+     "when": "ayarlariYukle hata verdi (eksik ayar ya da sır, TZ UTC değil, bellek eşiği kap sınırından büyük): çıkış kodu 78, Docker yeniden başlatır."
+    },
+    {
+     "from": "ACILIYOR",
+     "to": "VERITABANI_BEKLENIYOR",
+     "by": "server.ts",
+     "when": "Ayarlar ve log hazır, veritabanı havuzu kuruldu."
+    },
+    {
+     "from": "VERITABANI_BEKLENIYOR",
+     "to": "HAZIR",
+     "by": "server.ts",
+     "when": "semaDurumu hazir döndü; iş kuyruğu (D14, rol api) ve e-posta kuruldu, app.ts uygulamayı kurdu, listen başladı. /health/live 204."
+    },
+    {
+     "from": "VERITABANI_BEKLENIYOR",
+     "to": "KAPANDI",
+     "by": "server.ts",
+     "when": "semaDurumu geride: imajın beklediği göç uygulanmamış; ISLETIM_SEMA_GERIDE loglanır, çıkış kodu 1. Yeni şemayı bekleyen kod trafiğe çıkmaz; yayın betiği göçü API'den önce çalıştırır."
+    },
+    {
+     "from": "VERITABANI_BEKLENIYOR",
+     "to": "KAPANDI",
+     "by": "server.ts",
+     "when": "120 saniye içinde semaDurumu ulasilamiyor ya da nesil_belirsiz durumundan çıkmadı (1, 2, 4, 8, 10 saniye aralıkla denendi): çıkış kodu 1, Docker yeniden başlatır."
+    },
+    {
+     "from": "HAZIR",
+     "to": "HAZIR_DEGIL",
+     "by": "GET /health/ready",
+     "when": "semaDurumu hazır değil ya da 2 saniyede cevap yok; /health/live yine 204 (Caddy trafiği kesmez, istekler D13 zarfıyla 503 alır)."
+    },
+    {
+     "from": "HAZIR_DEGIL",
+     "to": "HAZIR",
+     "by": "GET /health/ready",
+     "when": "semaDurumu yeniden hazır."
+    },
+    {
+     "from": "HAZIR",
+     "to": "KAPANIYOR",
+     "by": "SIGTERM ya da SIGINT",
+     "when": "kapanisiBaslat: /health/live, /health/ready ve /v1/durum 503 ISLETIM_KAPANIYOR; Caddy kopyayı en geç 4 saniyede devreden çıkarır."
+    },
+    {
+     "from": "HAZIR_DEGIL",
+     "to": "KAPANIYOR",
+     "by": "SIGTERM ya da SIGINT",
+     "when": "Aynı."
+    },
+    {
+     "from": "KAPANIYOR",
+     "to": "KAPANDI",
+     "by": "server.ts",
+     "when": "KAPANIS_ONCESI_BEKLEME_MS (6 saniye) sonra sırayla app.close (eldeki istekler biter), eposta.kapat(10 sn), iş kuyruğu durdur, havuz kapat, log flush; 25 saniyeyi aşarsa ya da ikinci sinyal gelirse çıkış kodu 1 (Compose stop_grace_period 30 saniye)."
+    }
+   ]
+  },
+  {
+   "name": "Telefon sayacı satırı ((kurulum_id, gun) anahtarı)",
+   "states": [
+    "YOK",
+    "KAYITLI",
+    "SILINDI"
+   ],
+   "transitions": [
+    {
+     "from": "YOK",
+     "to": "KAYITLI",
+     "by": "telefon_sayaci öğesi",
+     "when": "Gövde geçerli, gün aralıkta: satır eklenir; sonuç KABUL { uygulandi: true }."
+    },
+    {
+     "from": "KAYITLI",
+     "to": "KAYITLI",
+     "by": "telefon_sayaci öğesi",
+     "when": "Aynı gün için daha büyük sıralı öğe: bütün sayaçlar yeni değerlerle yazılır; KABUL { uygulandi: true }."
+    },
+    {
+     "from": "KAYITLI",
+     "to": "KAYITLI",
+     "by": "telefon_sayaci öğesi",
+     "when": "Aynı oge_kimligi: değişiklik yok, ZATEN_VAR. Daha küçük ya da eşit sıralı başka öğe: değişiklik yok, KABUL { uygulandi: false }."
+    },
+    {
+     "from": "YOK",
+     "to": "YOK",
+     "by": "telefon_sayaci öğesi",
+     "when": "Bozuk gövde, aralık dışı gün ya da öğrenci paketinde ekran süresi: RET ve gerekçe kodu; satır yazılmaz."
+    },
+    {
+     "from": "KAYITLI",
+     "to": "SILINDI",
+     "by": "haftalik_olcum_ozeti ya da kimlikOlayiDinleyicisi",
+     "when": "gun 395 günden eski ya da kişinin hesabı silindi (hesap_silindi olayı, aynı işlemde)."
+    }
+   ]
+  },
+  {
+   "name": "Gizli anahtar (amaç başına kid)",
+   "states": [
+    "URETILDI",
+    "ETKIN",
+    "YALNIZ_DOGRULAMA",
+    "ELE_GECIRILDI",
+    "SILINDI"
+   ],
+   "transitions": [
+    {
+     "from": "URETILDI",
+     "to": "ETKIN",
+     "by": "anahtar-uret uret ya da dondur",
+     "when": "İlk kurulum ya da dönem arası döndürme: 32 rastgele bayt, kid deseni ^[a-z0-9-]{1,8}$ (ör. sb27b), etkinKid bu kid olur."
+    },
+    {
+     "from": "ETKIN",
+     "to": "YALNIZ_DOGRULAMA",
+     "by": "anahtar-uret dondur",
+     "when": "Yeni kid etkin oldu: eski anahtar yalnız doğrulamada kalır, emeklilikAni yazılır."
+    },
+    {
+     "from": "YALNIZ_DOGRULAMA",
+     "to": "SILINDI",
+     "by": "anahtar-uret dondur",
+     "when": "Bir sonraki döndürmede (bir dönem sonra): önceki döndürmede emekliye ayrılan anahtar silinir; böylece eski anahtar en az dönem kilidine kadar ve bir dönem daha durur."
+    },
+    {
+     "from": "ETKIN",
+     "to": "ELE_GECIRILDI",
+     "by": "anahtar-uret ele-gecirildi",
+     "when": "Sızıntı şüphesi: kid işaretlenir, aynı komut yeni kid'i etkin yapar; bu kid'le doğrulanan belge anahtarEleGecirildi true döner (D04), kayıt İncelemede alınır (D07)."
+    },
+    {
+     "from": "YALNIZ_DOGRULAMA",
+     "to": "ELE_GECIRILDI",
+     "by": "anahtar-uret ele-gecirildi",
+     "when": "Emekli anahtar için şüphe."
+    },
+    {
+     "from": "ELE_GECIRILDI",
+     "to": "SILINDI",
+     "by": "anahtar-uret dondur",
+     "when": "Bir sonraki dönem arası döndürmesinde."
+    }
+   ]
+  },
+  {
+   "name": "Sunucu yayını (makine/yayinla.sh)",
+   "states": [
+    "HAZIRLIK",
+    "IMAJ_DOGRULANDI",
+    "YEDEK_DENETLENDI",
+    "GOC_TAMAM",
+    "ISCI_YENI",
+    "API_1_YENI",
+    "API_2_YENI",
+    "CADDY_YENI",
+    "TAMAM",
+    "GERI_DONULDU"
+   ],
+   "transitions": [
+    {
+     "from": "HAZIRLIK",
+     "to": "IMAJ_DOGRULANDI",
+     "by": "yayinla.sh",
+     "when": "Sürüm etiketi çekildi; sunucu, caddy ve (değiştiyse) xprem imajları özetle indirildi ve cosign verify geçti; imaj etiketindeki revizyon depo etiketinin commit'iyle aynı; anahtar-uret denetle geçti."
+    },
+    {
+     "from": "HAZIRLIK",
+     "to": "GERI_DONULDU",
+     "by": "yayinla.sh",
+     "when": "İmza, revizyon ya da anahtar denetimi tutmadı: hiçbir servis değişmez, betik durur."
+    },
+    {
+     "from": "IMAJ_DOGRULANDI",
+     "to": "YEDEK_DENETLENDI",
+     "by": "yayinla.sh",
+     "when": "D12 docker/postgres/yedek/pgbackrest.sh denetle başarılı."
+    },
+    {
+     "from": "YEDEK_DENETLENDI",
+     "to": "GOC_TAMAM",
+     "by": "yayinla.sh",
+     "when": "docker compose run --rm goc (node --run db:migrate: D12 göç adımı, pg-boss migrate, D14 kur) 0 ile bitti."
+    },
+    {
+     "from": "GOC_TAMAM",
+     "to": "ISCI_YENI",
+     "by": "yayinla.sh",
+     "when": "isci yeni imajla yeniden kuruldu (eski işçi 40 saniyede pg-boss'u düzgün durdurur)."
+    },
+    {
+     "from": "ISCI_YENI",
+     "to": "API_1_YENI",
+     "by": "yayinla.sh",
+     "when": "api-1 yeniden kuruldu; eski kopya kapanışta devreden çıktı; yeni kopyada Compose sağlığı healthy ve /health/ready 204 (120 saniye içinde)."
+    },
+    {
+     "from": "API_1_YENI",
+     "to": "API_2_YENI",
+     "by": "yayinla.sh",
+     "when": "api-2 için aynı adım."
+    },
+    {
+     "from": "API_2_YENI",
+     "to": "CADDY_YENI",
+     "by": "yayinla.sh",
+     "when": "caddy imajı değiştiyse yeniden kuruldu (panel dosyaları API'den sonra; D13-B31 sırası), değişmediyse atlandı."
+    },
+    {
+     "from": "CADDY_YENI",
+     "to": "TAMAM",
+     "by": "yayinla.sh",
+     "when": "Duman denemesi: ana makineden https://<ALAN_ADI>/v1/durum 204, iki kopyada /health/ready 204; /var/log/iu-yoklama/yayinlar.log'a satır."
+    },
+    {
+     "from": "API_1_YENI",
+     "to": "GERI_DONULDU",
+     "by": "yayinla.sh --geri",
+     "when": "Bir adım tutmadı: surum.env.onceki geri yazılır, işçi ve API kopyaları önceki özetle aynı sırayla yeniden kurulur; göç geri alınmaz (önce genişlet, sonra daralt kuralıyla eski imaj yeni şemada çalışır, teknik.html#sunucu-mimari)."
+    }
+   ]
+  }
+ ],
+ "invariants": [
+  "telefon_sayaclari, hoca_ekran_sureleri ve isletim_uyarilari tablolarına yalnız D15 kodu yazar; başka modül uyarıyı yalnız uyariAc ile açar, sayaçlar yalnız telefon_sayaci öğesiyle ve ekran-sureleri ucuyla gelir.",
+  "D15 tabloları alan tablolarına yabancı anahtar kurmaz ve infra/izleme ile jobs/isletim hiçbir alan modülünü (D01 ile D11) içe aktarmaz; D06, D12, D13 ve D14 dış yüzleri bileşim köklerinden parametreyle gelir. D01, D03 ve D04'e yalnız bileşim kökleri (app.ts eklenti seçenekleriyle, server.ts, anahtar-uret komutu) ve test dünyası dokunur.",
+  "(kurulum_id, gun) başına en çok bir telefon sayacı satırı vardır ve satır o gün için gelmiş en büyük sıralı geçerli öğenin değerlerini taşır; aynı öğeler hangi sırayla ulaşırsa ulaşsın sonuç aynıdır.",
+  "hoca_ekran_sureleri.saniye aynı (kişi, oturum, gün, ekran, kaynak, kaynak kimliği) anahtarında hiç azalmaz ve 86400'ü aşmaz.",
+  "isletim_uyarilari'nda (tur, anahtar) başına en çok bir ACIK satır vardır; bir uyarı hatırlatma süresi dolmadan ikinci kez bildirilmez, hiç bildirilmemiş uyarının kapanışı bildirilmez.",
+  "Açık KRITIK uyarı ya da gönderilemeyen bildirim varken kalp atışı normal adrese gitmez: sahibe SMTP'den bağımsız en az bir yol her zaman açıktır.",
+  "D15 tablolarında, loglarında, uyarı metinlerinde, iş verisinde ve durum dosyalarında öğrenci numarası, isim, e-posta adresi, kod, jeton ve gizli anahtar bulunmaz; yalnız iç kimlik (UUID) ve rota kalıbı bulunur.",
+  "/health/live ve /v1/durum veritabanına dokunmaz, aşırı yük denetimi dışındadır ve yalnız kapanışta 503 döner; /health/* dışarıdan Caddy üzerinden hiçbir zaman API'ye ulaşmaz.",
+  "Hiçbir süreç gizli anahtarı açılışta üretmez; sürecin zorunlu sırrı yoksa ya da geçersizse süreç açılmaz. Her amaçta tam bir ETKIN anahtar vardır, kid amaç içinde tekildir, anahtar 32 bayttır.",
+  "API, işçi ve göç kapları TZ=UTC ile çalışır; süreç saat farkı 0 değilse ayarlariYukle açılışı durdurur. İstanbul günü yalnız açık zaman dilimiyle hesaplanır.",
+  "Ana makinede yazılan her durum dosyası geçici dosya ve rename ile bütün olarak yazılır ve ölçüm anı taşır; okuyan taraf eskimiş ya da okunamayan dosyayı hata sayar, hiçbir zaman sağlıklı saymaz.",
+  "Bütün havuzların ve ayrılmış bağlantıların toplamı 80'i geçmez (D12 bütçesi: iki API kopyası 40, işçi 5, xprem 10, göç 2, pgBackRest 2, gece dökümü 1, süper kullanıcı 3).",
+  "Üretimde imaj yalnız özetle çekilir ve cosign verify geçmeden kurulmaz; CI sunucuya erişmez, yayını sahibin SSH ile başlattığı betik yapar.",
+  "Her CI iş akışı varsayılan olarak yalnız okuma yetkilidir (permissions: contents: read); yazma yetkisi yalnız yayın işlerinde ve iş düzeyinde verilir; her dış eylem tam commit özetiyle sabittir.",
+  "Kırmızı kalite kapısı birleştirmeyi, kırmızı haftalık iş sunucu yayınını durdurur."
+ ],
+ "exports": [
+  {
+   "name": "ayarlariYukle",
+   "signature": "function ayarlariYukle(s: { surec: 'api' | 'isci' | 'goc' | 'cli'; ortam?: Readonly<Record<string, string | undefined>>; gizliDizin?: string }): Ayarlar  // apps/server/src/infra/ayarlar/index.ts",
+   "purpose": "Bileşim kökleri (server.ts, worker.ts, göç ve komut girişleri) ve test dünyası açılışta bir kez çağırır. Ortam değişkenlerini AYAR_SEMASI (Zod) ile, gizli dosyaları GIZLI_DIZIN altında sürece göre zorunlu listeyle doğrular; dondurulmuş nesne döner ve gizliAnahtar için süreç içi kümeyi kurar. Eksik ya da hatalı değerde AyarHatasi (ISLETIM_AYAR_GECERSIZ) fırlatır; ileti yalnız ayar ve dosya adlarını sayar, değer yazmaz. Süreç saat farkı 0 değilse ISLETIM_SAAT_DILIMI; API'de BASKI_BELLEK_BAYT kabın bellek sınırından (cgroup memory.max) küçük değilse ISLETIM_BASKI_BELLEK_SINIRI. İkinci çağrı aynı nesneyi döner, farklı girdiyle ISLETIM_AYARLAR_ZATEN_YUKLU."
+  },
+  {
+   "name": "ayarlar ve Ayarlar (tip)",
+   "signature": "function ayarlar(): Ayarlar; type Ayarlar = Readonly<{ genel: GenelAyarlar; api: ApiAyarlari; veritabani: VeritabaniAyarlari; eposta: EpostaAyarlari; kimlik: KimlikAyarlari; saat: SaatAyarlari; dogrulama: DogrulamaAyarlari; devam: DevamAyarlari; duzeltmeler: DuzeltmeAyarlari; isletim: IsletimAyarlari }>  // tipler z.infer<typeof AYAR_SEMASI>",
+   "purpose": "Yüklenmiş ayarlar; yüklenmeden çağrılırsa ISLETIM_AYARLAR_YUKLENMEDI. Alan modülleri ayarı bileşim kökünden parametreyle alır (D08, D13 gibi); bu işlev komutlar, işler ve test dünyası içindir. Gizli değerler GizliDeger sarmalayıcısındadır. Alanların tam listesi: Durumlar ve kurallar, Ayar şeması."
+  },
+  {
+   "name": "GizliDeger",
+   "signature": "class GizliDeger { ac(): string; toJSON(): '[gizli]'; toString(): '[gizli]'; [Symbol.for('nodejs.util.inspect.custom')](): '[gizli]' }",
+   "purpose": "Veritabanı ve SMTP parolası, inceleme sabit kodu ve kalp atışı adresleri bu sarmalayıcıda durur; JSON'a, loga ya da hata iletisine yanlışlıkla girerse '[gizli]' yazar. Değeri yalnız ac() verir."
+  },
+  {
+   "name": "gizliAnahtar",
+   "signature": "function gizliAnahtar(amac: GizliAmac): GizliAnahtar; function gizliAnahtar(amac: GizliAmac, kid: string): GizliAnahtar | null; type GizliAmac = 'saat_belgesi' | 'qr_anahtar_kaynagi' | 'giris_kodu_ozeti' | 'eposta_ozeti' | 'ulasma_makbuzu'; type GizliAnahtar = Readonly<{ amac: GizliAmac; kid: string; deger: Uint8Array; durum: 'ETKIN' | 'YALNIZ_DOGRULAMA' | 'ELE_GECIRILDI' }>",
+   "purpose": "kid'siz çağrı amacın tek etkin anahtarını, kid'li çağrı o anahtarı (emekli ya da ele geçirilmiş dahil) verir, yoksa null. deger 32 baytın kopyasıdır. Amaç bu sürece yüklenmemişse ISLETIM_GIZLI_ANAHTAR_YOK (programlama hatası). Kullananlar: D04 saat belgesi, D11 QR anahtar kaynağı, D01 giriş kodu özeti, D14 e-posta özeti (bileşim kökünden epostaKur'a), D06 ulaşma makbuzu. Her amaç tek iş içindir, anahtar paylaşılmaz (teknik.html#sunucu-ayarlar)."
+  },
+  {
+   "name": "gizliAnahtarSeti (ek)",
+   "signature": "function gizliAnahtarSeti(amac: GizliAmac): Readonly<{ etkinKid: string; anahtarlar: readonly GizliAnahtar[] }>",
+   "purpose": "Bir amacın bütün anahtarları; D06'nın bileşim kökündeki ulaşma makbuzu kurulumu gibi bütün kid'leri birden isteyenler için."
+  },
+  {
+   "name": "log ve logOlustur",
+   "signature": "const log: Logger; function logOlustur(s: { ayarlar: Ayarlar; ekGizliAdlar?: readonly string[]; hedef?: DestinationStream }): Logger  // pino; apps/server/src/infra/izleme/index.ts",
+   "purpose": "logOlustur süreç başına bir kez kökteki pino kaydedicisini kurar ve log'u ona bağlar; Fastify (loggerInstance, D13 app.ts), D14, D12 ve modüller alt kaydedici açar. JSON satır, zaman UTC ISO, düzey LOG_DUZEYI'nden, taban alanlar { surec, kopya } (pid ve hostname yok). İkinci güvence (teknik.html#sunucu-ayarlar): redact yolları (*.authorization, *.cookie, *['set-cookie'], *.parola) ve her derinlikte ISLETIM_GIZLI_ALANLAR ile ekGizliAdlar'daki anahtar adlarını '[gizli]' yapan biçimlendirici (ör. D03'ün LISTELER_GIZLI_ALANLAR'ı server.ts'ten verilir). Hata nesnesi yalnız sınıf, kod, SQLSTATE, kısıt adı ve yığınla yazılır, ileti metni değerle yazılmaz. logOlustur çağrılmadan log stderr'e info düzeyinde yazar."
+  },
+  {
+   "name": "uyariAc",
+   "signature": "function uyariAc(tx: Islem, tur: UyariTuru, ayrinti: { an: Date; anahtar?: string; seviye?: 'KRITIK' | 'UYARI'; deger?: string; satirlar?: readonly string[] }): Promise<{ uyariId: string; yeni: boolean }>; type UyariTuru = `${ModulAdi}.${string}`",
+   "purpose": "Çağıranın işleminde uyarıyı açar ya da günceller: (tur, anahtar) için açık satır varsa son_gorulme_ani, tekrar_sayisi, son_deger ve satirlar yenilenir, yoksa satır açılır (INSERT ... ON CONFLICT (tur, anahtar) WHERE durum = 'ACIK' DO UPDATE). Bildirim göndermez, işletim denetimi en geç 10 dakikada bildirir. isletim.* türlerinin seviyesi ve kapanma kuralı UYARI_TURLERI kataloğundan gelir; başka modülün türü verilen seviyeyle (varsayılan UYARI) ve SESSIZLIK kuralıyla açılır. Satırlarda ve değerde 9 ile 11 haneli rakam dizisi '[gizli]' olur; tür deseni, anahtar deseni ya da uzunluk tutmazsa ISLETIM_UYARI_GECERSIZ (programlama hatası). Çağıranlar: D01 (inceleme hesabı ayarı eksik), D07 (iptal listesi 7 günden eski, App Attest yenileme sıklığı) ve D15'in kendi işleri."
+  },
+  {
+   "name": "saatEsitlemeDurumu",
+   "signature": "function saatEsitlemeDurumu(): Promise<SaatEsitlemeOkumasi>; type SaatEsitlemeOkumasi = { durum: 'OKUNDU'; senkron: boolean; sapmaMs: number; katman: number | null; kaynak: string | null; olcumAni: Date; sonBozukAni: Date | null } | { durum: 'OKUNAMADI'; neden: 'DOSYA_YOK' | 'BICIM_BOZUK' | 'ERISIM_YOK' }",
+   "purpose": "<DURUM_DIZINI>/saat/chrony.json dosyasını (en çok 4 KiB) her çağrıda okur ve chronyDurumuSemasi ile doğrular; fırlatmaz, önbellek tutmaz. Eşik ve yaş kuralını uygulamaz: D04 belge kuralını SAAT_ESITLEME_ESIK_MS ve SAAT_ESITLEME_DOSYA_YASI_MS ayarlarıyla (contracts.json, Saat eşitlemesinin tek kaynağı), D15 işletim denetiminde uyarıyı aynı ayarlarla uygular."
+  },
+  {
+   "name": "telefonSayaciOgesi",
+   "signature": "const telefonSayaciOgesi: OgeIsleyici;  // { roller: ['OGRENCI', 'PERSONEL'], oturumGerekli: false, govdeEnBuyukBayt: 16384, ayrintiSemasi: z.object({ uygulandi: z.boolean() }), isle(tx: Islem, oge: GelenOge, baglam: PaketBaglami): Promise<OgeSonucu> }  // tipler packages/contracts/src/esitleme.ts (D06)",
+   "purpose": "telefon_sayaci öğesinin işleyicisi (contracts.json telefonSayaciOgesi). Gövdeyi JSON olarak ayrıştırıp telefonSayaciGovdesiSemasi ile doğrular; (kurulum, gün) satırını tek INSERT ... ON CONFLICT (kurulum_id, gun) DO UPDATE ... WHERE telefon_sayaclari.sira < EXCLUDED.sira RETURNING ile yazar; personel paketindeki ekran sürelerini aynı işlemde hoca_ekran_sureleri'ne en büyük değer kuralıyla ekler. Sonuç: yeni ya da daha büyük sıra KABUL { uygulandi: true }; aynı oge_kimligi ZATEN_VAR; aynı gün için daha küçük ya da eşit sıralı başka öğe KABUL { uygulandi: false }; bozuk gövde RET ISLETIM_SAYAC_GOVDE_GECERSIZ; gün aralık dışı RET ISLETIM_SAYAC_GUN_GECERSIZ; öğrenci paketinde ekran süresi RET ISLETIM_SAYAC_ROL_GECERSIZ. Ulaşma anı GelenOge.ulasmaAni; beklenen hiçbir durumda fırlatmaz, SAVEPOINT açmaz (D06 beklentisi). Kaydı isletimEklentisi yapar, D06.ogeTuruKaydet işlevi app.ts'ten seçenekle gelir."
+  },
+  {
+   "name": "kimlikOlayiDinleyicisi (ek)",
+   "signature": "function kimlikOlayiDinleyicisi(tx: Islem, olay: KimlikOlayi): Promise<void>  // KimlikOlayi D01 tipidir",
+   "purpose": "D01'in kimlik olayına bağlanır (D01-A14 kimlikOlayiDinleyicisiKaydet; bağlama isletimEklentisi seçeneğiyle app.ts'ten). Yalnız hesap_silindi olayında aynı işlemde telefon_sayaclari ve hoca_ekran_sureleri'nde kisi_id = olay.kisiId satırlarını siler; öbür olaylarda bir şey yapmaz (D01-B34)."
+  },
+  {
+   "name": "isletimEklentisi (ek)",
+   "signature": "const isletimEklentisi: FastifyPluginAsync<{ veritabani: Pick<Veritabani, 'islem' | 'semaDurumu'>; saat: Saat; rotalariKaydet: (app: FastifyInstance, rotalar: readonly RotaUygulamasi[]) => void; ogeTuruKaydet: (tur: 'telefon_sayaci', isleyici: OgeIsleyici) => void; kimlikOlayiDinleyicisiKaydet: (d: typeof kimlikOlayiDinleyicisi) => void; surec: 'api' | 'isci' }>",
+   "purpose": "app.ts'in modül eklentileri adımında kaydedilir (D13, 'D15'inki dahil'). ISLETIM_ROTALARI'nı verilen rotalariKaydet ile kaydeder; telefon_sayaci işleyicisini ve kimlik dinleyicisini verilen kayıt işlevleriyle bağlar; surec api ise yanıt sayaçlarını tutan onResponse kancasını (fastify-plugin ile kökte) ekler ve dakikalık ölçü dosyası yazıcısını onReady'de başlatıp onClose'da durdurur. Kayıt sırasında veritabanına dokunmaz; infra/api'yi ve alan modüllerini içe aktarmaz, hatayı packages/contracts/src/ortak/hata.ts'teki UygulamaHatasi ile kurar."
+  },
+  {
+   "name": "kapanisiBaslat ve kapanisDurumu",
+   "signature": "function kapanisiBaslat(): void; function kapanisDurumu(): 'CALISIYOR' | 'KAPANIYOR'",
+   "purpose": "server.ts SIGTERM ya da SIGINT'te çağırır; sonra /health/live, /health/ready ve /v1/durum 503 ISLETIM_KAPANIYOR döner, Caddy kopyayı en geç 4 saniyede devreden çıkarır. Test dünyası kapanış senaryosunda çağırır."
+  },
+  {
+   "name": "isletimIsleri (ek)",
+   "signature": "function isletimIsleri(bag: { veritabani: Pick<Veritabani, 'islem'>; isSagligi: (tx: Islem) => Promise<IsSagligi>; epostaGonder: typeof epostaGonder; saat: Saat; ayarlar: Ayarlar; log: Logger }): readonly IsletimIsTanimi[]; type IsletimIsTanimi = { ad: 'isletim_denetimi' | 'isletim_kalp_atisi' | 'sertifika_bitis_denetimi' | 'haftalik_olcum_ozeti'; veri: z.ZodType<Record<string, never>>; politika: 'exclusive'; cron: string; saatDilimi: 'Europe/Istanbul'; kacirilan: 'skip' | 'once'; sureAsimiSaniye: number; deneme: { sayi: number; beklemeSaniye: number }; isle(b: { isKimligi: string; tetiklemeAni: Date; iptal: AbortSignal; log: Logger }): Promise<void> }  // apps/server/src/jobs/isletim/index.ts",
+   "purpose": "worker.ts (D14) bag'i kurar ve tanımları D14.isTanimla'ya uyarlar; D12'nin veritabaniIsleri'yle aynı desen, böylece jobs/isletim infra/is-kuyrugu'nu içe aktarmaz. Dört pg-boss işi; makine ve CI işleri burada değildir."
+  },
+  {
+   "name": "ISLETIM sözleşmesi (packages/contracts/src/isletim.ts)",
+   "signature": "export const ISLETIM_ROTALARI: readonly [RotaTanimi, RotaTanimi, RotaTanimi, RotaTanimi]; export const ISLETIM_HATALARI; export const ISLETIM_OGE_GEREKCELERI; export const ISLETIM_ISLETIM_KODLARI; export const ekranSureleriIstegi, ekranSureleriCevabi, telefonSayaciGovdesiSemasi, chronyDurumuSemasi, makineDurumuSemasi, apiOlcumDosyasiSemasi, gizliAnahtarDosyasiSemasi, kalpAtisiSirriSemasi: z.ZodType; export const EKRAN_TURLERI, SAYAC_ADLARI, UYARI_TURLERI, ISLETIM_ESIKLERI, ISLETIM_GIZLI_ALANLAR",
+   "purpose": "Dört rotanın tanımı (rotaTanimla, D13 birleştirir), HTTP hata kodları (hataKodlariTanimla), öğe gerekçe kodları, süreç düzeyi işletim kodları (HTTP'ye çıkmaz), gövde ve dosya şemaları, ekran türleri, sayaç adları, uyarı türü kataloğu (seviye, kapanma kuralı), eşikler ve log gizleme adları. Testler eşikleri ve listeleri buradan içe aktarır, yeniden yazmaz."
+  },
+  {
+   "name": "TestDunyasi, KurucuHaritasi, kurucuTanimla (test desteği)",
+   "signature": "class TestDunyasi extends World { readonly uygulama: FastifyInstance; readonly saat: SahteSaat; readonly posta: SahtePostaKutusu; bag: Map<string, string>; sonCevap: TestCevabi | null; istekGonder<R extends RotaTanimi>(rota: R, girdi: RotaGirdisi<R>, s?: { kimlik?: TestKimligi; istemciAdresi?: string; basliklar?: Readonly<Record<string, string>> }): Promise<TestCevabi<R>>; kurucu<K extends keyof KurucuHaritasi>(ad: K): KurucuHaritasi[K]; gizliDegerKaydet(...degerler: string[]): void; logSatirlari(): readonly Readonly<Record<string, unknown>>[] }; interface KurucuHaritasi {}; function kurucuTanimla<K extends string, T>(ad: K, kur: (d: TestDunyasi) => T): void  // apps/server/test/support/dunya.ts",
+   "purpose": "Her senaryo bir dünya; uygulama (app.ts, D04 sahte saat, D14 sahte posta, D12 test veritabanı, D14 test kuyruğu) işçi süreci başına bir kez kurulur (kayıt defterleri süreç başına tek). istekGonder isteği Fastify inject ile ağ açmadan yollar; kimliği telefonda Bearer, panelde çerez ve Origin olarak ekler; her simüle kullanıcıya ayrı istemci adresi verir (teknik.html#testler-veritabani-sifirlama); cevabı 2xx'te rotanın cevap şemasıyla, 4xx ve 5xx'te hataZarfiSemasi ile ve kodun rotanın hatalar listesinde ya da API_ kodlarında olmasıyla denetler (D13 isteği). Modüllerin veri kurucuları support/kurucular/<modül>.ts'te kurucuTanimla ile kaydolur ve KurucuHaritasi'nı declare module ile genişletir; dünya dosyası değişmez. gizliDegerKaydet ile kaydedilen numara ve isimler After kancasında senaryonun loglarında aranır."
+  },
+  {
+   "name": "Test kancaları (apps/server/test/support/kancalar.ts)",
+   "signature": "BeforeAll({ target: HookTarget.COORDINATOR }) -> D12.testVeritabaniHazirla; BeforeAll -> işçi kaynakları; Before -> sıfırlama sırası; After -> log taraması; AfterAll -> kapatma",
+   "purpose": "Koordinatör kancası D12.testVeritabaniHazirla'yı bir kez çağırır. İşçi başına: TZ=UTC denetimi, FSTDEP uyarısını kırmızıya çeviren process.on('warning') (teknik.html#sunucu), test ayarlarıyla ayarlariYukle, bellek hedefli logOlustur, uygulamanın kurulması. Her senaryodan önce sabit sırayla: D12.senaryoOncesiSifirla, D14'ün test kuyruğunda deleteAllJobs, sahte saatin varsayılan ana (2026-10-05 09:00 İstanbul) kurulması, dünya durumunun boşaltılması. Her senaryodan sonra yakalanan log satırlarında kaydedilmiş gizli değerler aranır, bulunursa senaryo kırmızı olur. Başka modüllerin kanca dosyaları genel sıfırlama yapmaz, yalnız kendi etiketli kurulumlarını yapar."
+  }
+ ],
+ "files": [
+  "packages/contracts/src/isletim.ts",
+  "apps/server/src/infra/ayarlar/index.ts",
+  "apps/server/src/infra/ayarlar/sema.ts",
+  "apps/server/src/infra/ayarlar/gizli-dosyalar.ts",
+  "apps/server/src/infra/ayarlar/gizli-deger.ts",
+  "apps/server/src/infra/ayarlar/cgroup.ts",
+  "apps/server/src/infra/ayarlar/yayin-bilgisi.kaynak.json",
+  "apps/server/src/infra/ayarlar/yayin-bilgisi-uret.ts",
+  "apps/server/src/infra/ayarlar/sema.test.ts",
+  "apps/server/src/infra/ayarlar/gizli-dosyalar.test.ts",
+  "apps/server/src/infra/ayarlar/gizli-deger.test.ts",
+  "apps/server/src/infra/ayarlar/yayin-bilgisi-uret.test.ts",
+  "apps/server/src/infra/izleme/index.ts",
+  "apps/server/src/infra/izleme/tablolar.ts",
+  "apps/server/src/infra/izleme/log.ts",
+  "apps/server/src/infra/izleme/log.test.ts",
+  "apps/server/src/infra/izleme/eklenti.ts",
+  "apps/server/src/infra/izleme/saglik.ts",
+  "apps/server/src/infra/izleme/kapanis.ts",
+  "apps/server/src/infra/izleme/ekran-sureleri.ts",
+  "apps/server/src/infra/izleme/telefon-sayaci.ts",
+  "apps/server/src/infra/izleme/telefon-sayaci.test.ts",
+  "apps/server/src/infra/izleme/kimlik-dinleyicisi.ts",
+  "apps/server/src/infra/izleme/uyarilar.ts",
+  "apps/server/src/infra/izleme/kurallar.ts",
+  "apps/server/src/infra/izleme/kurallar.test.ts",
+  "apps/server/src/infra/izleme/durum-dosyalari.ts",
+  "apps/server/src/infra/izleme/durum-dosyalari.test.ts",
+  "apps/server/src/infra/izleme/api-olcum.ts",
+  "apps/server/src/infra/izleme/api-olcum.test.ts",
+  "apps/server/src/infra/izleme/istanbul-gunu.ts",
+  "apps/server/src/infra/izleme/sertifika.ts",
+  "apps/server/src/infra/izleme/kalp-atisi.ts",
+  "apps/server/src/infra/izleme/olcumler.ts",
+  "apps/server/src/infra/izleme/olcum-ozeti.ts",
+  "apps/server/src/infra/izleme/olcum-ozeti.test.ts",
+  "apps/server/src/infra/izleme/compose-denetimi.test.ts",
+  "apps/server/src/infra/izleme/asvs.test.ts",
+  "apps/server/src/infra/izleme/makine/ortak.sh",
+  "apps/server/src/infra/izleme/makine/saat-esitleme-izleme.sh",
+  "apps/server/src/infra/izleme/makine/makine-denetimi.sh",
+  "apps/server/src/infra/izleme/makine/log-arsivi.sh",
+  "apps/server/src/infra/izleme/makine/log-bul.sh",
+  "apps/server/src/infra/izleme/makine/yayinla.sh",
+  "apps/server/src/infra/izleme/makine/kur.sh",
+  "apps/server/src/infra/izleme/makine/chrony.conf",
+  "apps/server/src/infra/izleme/makine/iu-yoklama-saat-esitleme.service",
+  "apps/server/src/infra/izleme/makine/iu-yoklama-saat-esitleme.timer",
+  "apps/server/src/infra/izleme/makine/iu-yoklama-makine-denetimi.service",
+  "apps/server/src/infra/izleme/makine/iu-yoklama-makine-denetimi.timer",
+  "apps/server/src/infra/izleme/makine/iu-yoklama-log-arsivi.service",
+  "apps/server/src/infra/izleme/makine/iu-yoklama-log-arsivi.timer",
+  "apps/server/src/infra/izleme/makine/makine.test.ts",
+  "apps/server/src/jobs/isletim/index.ts",
+  "apps/server/src/jobs/isletim/isletim-denetimi.ts",
+  "apps/server/src/jobs/isletim/isletim-kalp-atisi.ts",
+  "apps/server/src/jobs/isletim/sertifika-bitis-denetimi.ts",
+  "apps/server/src/jobs/isletim/haftalik-olcum-ozeti.ts",
+  "apps/server/src/server.ts",
+  "apps/server/src/cli/anahtar-uret.ts",
+  "apps/server/src/cli/olcum-raporu.ts",
+  "apps/server/test/features/isletim/saglik-uclari.feature",
+  "apps/server/test/features/isletim/sunucu-kapanisi.feature",
+  "apps/server/test/features/isletim/ekran-sureleri.feature",
+  "apps/server/test/features/isletim/telefon-sayaci.feature",
+  "apps/server/test/features/isletim/hesap-silme.feature",
+  "apps/server/test/features/isletim/uyarilar.feature",
+  "apps/server/test/features/isletim/isletim-denetimi.feature",
+  "apps/server/test/features/isletim/kalp-atisi.feature",
+  "apps/server/test/features/isletim/sertifika.feature",
+  "apps/server/test/features/isletim/haftalik-olcum-ozeti.feature",
+  "apps/server/test/features/isletim/olcum-gorunumleri.feature",
+  "apps/server/test/features/isletim/log-gizliligi.feature",
+  "apps/server/test/features/isletim/eski-surum-istekleri.feature",
+  "apps/server/test/features/isletim/asvs-eslemesi.json",
+  "apps/server/test/features/isletim/ornekler/surumler/.gitkeep",
+  "apps/server/test/steps/isletim/saglik-adimlari.ts",
+  "apps/server/test/steps/isletim/sayac-adimlari.ts",
+  "apps/server/test/steps/isletim/uyari-adimlari.ts",
+  "apps/server/test/steps/isletim/denetim-adimlari.ts",
+  "apps/server/test/steps/isletim/olcum-adimlari.ts",
+  "apps/server/test/steps/isletim/surum-ornekleri-adimlari.ts",
+  "apps/server/test/support/dunya.ts",
+  "apps/server/test/support/kancalar.ts",
+  "apps/server/test/yuk/esikler.ts",
+  "apps/server/test/yuk/ortak/imza.ts",
+  "apps/server/test/yuk/ortak/telefon.ts",
+  "apps/server/test/yuk/ders-basi.ts",
+  "apps/server/test/yuk/ders-cikisi.ts",
+  "apps/server/test/yuk/gece.ts",
+  "apps/server/test/yuk/giris-yiginlasmasi.ts",
+  "apps/server/test/yuk/panel-raporlari.ts",
+  "apps/server/test/yuk/tohum.ts",
+  "apps/server/test/yuk/sonrasi-denetim.ts",
+  "apps/server/package.json",
+  "apps/server/tsconfig.json",
+  "apps/server/cucumber.js",
+  "apps/server/Dockerfile",
+  "apps/server/Dockerfile.dockerignore",
+  "packages/core/package.json",
+  "packages/core/tsconfig.json",
+  "packages/core/stryker.config.json",
+  "packages/core/stryker-esikler.json",
+  "packages/core/stryker-esik-denetimi.ts",
+  "package.json",
+  "pnpm-workspace.yaml",
+  "pnpm-lock.yaml",
+  "biome.json",
+  "tsconfig.base.json",
+  ".env.example",
+  "compose.yaml",
+  "docker/caddy/Caddyfile",
+  "docker/caddy/sayfalar/gizlilik.html",
+  "docker/xprem/surum.env",
+  "docker/xprem/xprem.env.ornek",
+  "docker/xprem/cosign.pub",
+  ".github/workflows/kalite.yml",
+  ".github/workflows/guvenlik.yml",
+  ".github/workflows/haftalik.yml",
+  ".github/workflows/yayin-sunucu.yml",
+  ".github/workflows/yayin-ota.yml",
+  ".github/dependabot.yml"
+ ],
+ "tests": [
+  {
+   "name": "Canlılık ucu veritabanı olmadan cevap verir",
+   "kind": "behavior",
+   "asserts": "Eklenti, semaDurumu ulasilamiyor döndüren ve her islem çağrısında hata fırlatan sahte veritabanı nesnesiyle kurulur: GET /health/live 204 ve gövdesiz, sahte nesneye hiç çağrı yok; /health/ready 503 ISLETIM_HAZIR_DEGIL_VERITABANI (zemin: gerçek test veritabanıyla ikisi de 204)."
+  },
+  {
+   "name": "Hazırlık ucu şema geride iken hazır değil der",
+   "kind": "behavior",
+   "asserts": "D12 semaDurumu geride (imajdaki son göç özeti defterde yok) iken /health/ready 503 ISLETIM_HAZIR_DEGIL_SEMA; nesil_belirsiz için de aynı kod; defterde özetten sonra göç varken 204 (genişletme göçü)."
+  },
+  {
+   "name": "Hazırlık ucu 2 saniyede cevap gelmezse hazır değil der",
+   "kind": "behavior",
+   "asserts": "semaDurumu 2.500 ms bekleyen sahteyle /health/ready 503 ISLETIM_HAZIR_DEGIL_VERITABANI ve süre 2.100 ms altında; 1.900 ms bekleyende 204 (sınır yer kontrolü)."
+  },
+  {
+   "name": "Durum ucu gövdesiz 204 döner ve veritabanına dokunmaz",
+   "kind": "behavior",
+   "asserts": "GET /v1/durum 204, gövde boş, Cache-Control: no-store ve X-Istek-Kimligi var (D13); senaryo süresince pg_stat_statements bu rotadan sorgu göstermez (zemin: ekran-sureleri isteği sorgu gösterir)."
+  },
+  {
+   "name": "Aşırı yükte canlılık ve durum uçları cevap verir",
+   "kind": "behavior",
+   "asserts": "D13 deneme seçeneğiyle baskı açıkken /health/live ve /v1/durum 204; /health/ready ve POST /v1/isletim/ekran-sureleri 503 API_SUNUCU_YOGUN ve Retry-After (D13 aralığı)."
+  },
+  {
+   "name": "Kapanış başlayınca sağlık uçları 503 döner, süren istek biter",
+   "kind": "behavior",
+   "asserts": "Uzun süren deneme isteği açıkken kapanisiBaslat: yeni /health/live, /health/ready ve /v1/durum 503 ISLETIM_KAPANIYOR; açık istek 200 ile tamamlanır; KAPANIS_ONCESI_BEKLEME_MS (test 0) sonra app.close; kapanış sırası app.close, eposta.kapat, iş kuyruğu durdur, havuz kapat çağrı kaydından okunur."
+  },
+  {
+   "name": "Eksik zorunlu ayar süreci açmaz ve değer sızdırmaz",
+   "kind": "behavior",
+   "asserts": "PANEL_ADRESI eksik ve EPOSTA_SMTP_PORT 'abc' iken ayarlariYukle ISLETIM_AYAR_GECERSIZ fırlatır; ileti iki adı sayar, ortamdaki herhangi bir değeri (ör. veritabanı adresi) içermez (yer kontrolü: değerler ortamda vardı)."
+  },
+  {
+   "name": "Gizli anahtar dosyası kuralları",
+   "kind": "property",
+   "asserts": "fast-check numRuns 2000: rastgele anahtar kümelerinde ayarlariYukle yalnız şu durumda kabul eder: tam bir ETKIN, etkinKid ona eşit, kid'ler tekil ve ^[a-z0-9-]{1,8}$, değer base64 32 bayt, en çok 4 anahtar. Kabul edilen kümede gizliAnahtar(amac) etkin anahtarı, gizliAnahtar(amac, kid) aynı baytları verir, bilinmeyen kid null."
+  },
+  {
+   "name": "Süreç türüne göre zorunlu sırlar",
+   "kind": "behavior",
+   "asserts": "surec api iken saat_belgesi, qr_anahtar_kaynagi, giris_kodu_ozeti, eposta_ozeti, ulasma_makbuzu, inceleme_sabit_kodu ve yoklama_api_parolasi zorunlu; isci iken giris_kodu_ozeti ve ulasma_makbuzu aranmaz, istenirse ISLETIM_GIZLI_ANAHTAR_YOK fırlar. Liste ve beklenen tablo sözleşmedeki matristen içe aktarılır."
+  },
+  {
+   "name": "Saat dilimi UTC değilse süreç açılmaz",
+   "kind": "behavior",
+   "asserts": "TZ=Europe/Istanbul ile çocuk süreçte ayarlariYukle ISLETIM_SAAT_DILIMI; TZ=UTC ile açılır (pozitif kontrol)."
+  },
+  {
+   "name": "Bellek eşiği kap sınırının altında olmalı",
+   "kind": "behavior",
+   "asserts": "Sahte cgroup memory.max 1073741824 iken BASKI_BELLEK_BAYT 1073741824 ISLETIM_BASKI_BELLEK_SINIRI, 912680550 kabul; memory.max max (sınırsız, geliştirme) iken varsayılan 2 GiB."
+  },
+  {
+   "name": "GizliDeger hiçbir çıktıda görünmez",
+   "kind": "behavior",
+   "asserts": "JSON.stringify, String(), util.inspect ve pino log satırı '[gizli]' yazar, ac() değeri verir; değerin kendisi hiçbir çıktıda geçmez (yer kontrolü: ac() sonucu doğru)."
+  },
+  {
+   "name": "Log gizleme her derinlikte çalışır",
+   "kind": "property",
+   "asserts": "fast-check numRuns 1000: rastgele iç içe nesnelerde ISLETIM_GIZLI_ALANLAR ve ekGizliAdlar'daki her anahtarın değeri log satırında '[gizli]', öbür anahtarlar aynen (pozitif kontrol: gizli olmayan alan değişmeden çıkar)."
+  },
+  {
+   "name": "Senaryo loglarında numara ve isim bulunmaz",
+   "kind": "behavior",
+   "asserts": "After kancası, kurucuların gizliDegerKaydet ile kaydettiği numara ve isimleri senaryonun log satırlarında arar. Kendi testi: bir deneme adımı numarayı bilerek ham olarak log hedefine yazar ve kanca senaryoyu kırmızı yapar; aynı numara gizli alan adıyla loglanınca yeşil kalır."
+  },
+  {
+   "name": "Veritabanı hatası logda değer taşımaz",
+   "kind": "behavior",
+   "asserts": "Bilerek tekil kısıt ihlali yaptıran deneme isteğinde log satırında SQLSTATE 23505 ve kısıt adı var, ihlal eden değer ve sorgu parametresi yok (teknik.html#sunucu-ayarlar; D12 senaryosuyla aynı ilke, D15 biçimlendiricisi üzerinden)."
+  },
+  {
+   "name": "Ekran süreleri birikmiş toplamla yazılır",
+   "kind": "behavior",
+   "asserts": "Hoca panelden 2026-10-05 için oturum A KAFA_SAYISI 40 gönderir: 200 { kaydedilen: 1 }; ardından 25 gönderir: 200 { kaydedilen: 0 }, satır 40 kalır; 70 gönderir: satır 70; aynı istek iki kez: değişiklik yok."
+  },
+  {
+   "name": "İki tarayıcı ayrı satır yazar",
+   "kind": "behavior",
+   "asserts": "Aynı hoca iki istemciKimligi ile aynı oturum ve ekran için 30 ve 50 gönderir: iki satır; olcum_hoca_isi oturumu 80 saniye sayar."
+  },
+  {
+   "name": "Ekran süresi gün ve süre sınırları",
+   "kind": "behavior",
+   "asserts": "Sahte saat 2026-10-20 10:00 İstanbul: gun 2026-10-06 (14 gün) kabul, 2026-10-05 400 ISLETIM_GUN_ARALIK_DISI, 2026-10-21 400 ISLETIM_GUN_ARALIK_DISI; toplamı 86401 olan istek 400 ISLETIM_SURE_GECERSIZ; aynı (oturumId, ekranTuru) iki kez 400 ISLETIM_SURE_GECERSIZ."
+  },
+  {
+   "name": "Ekran süresi yetki ve köken kuralları",
+   "kind": "behavior",
+   "asserts": "Oturumsuz 401 API_KIMLIK_GEREKLI; öğrenci oturumu 403 API_ROL_YETKISIZ; yanlış Origin ile çerezli istek 403 API_KOKEN_GECERSIZ; 16 KiB üstü gövde 413 API_GOVDE_COK_BUYUK (D13 kancaları; senaryo rota beyanını sınar)."
+  },
+  {
+   "name": "Sayaç paketi kabul edilir ve yinelenince ZATEN_VAR alır",
+   "kind": "behavior",
+   "asserts": "Öğrenci telefonundan gönderimde telefon_sayaci öğesi: KABUL { uygulandi: true }, satır değerleri gövdeyle aynı; aynı öğe yeniden gönderilince ZATEN_VAR ve satır değişmez."
+  },
+  {
+   "name": "Aynı gün için büyük sıra kazanır, varış sırası sonucu değiştirmez",
+   "kind": "property",
+   "asserts": "fast-check numRuns 500: bir (kurulum, gün) için rastgele sıralarla üretilmiş 1 ile 6 öğe rastgele sırada işlenir; son satır her zaman en büyük sıralı öğenin değerlerini taşır, küçük sıralı öğeler KABUL { uygulandi: false } alır."
+  },
+  {
+   "name": "Bilinmeyen sayaç adı saklanmaz, sayılır",
+   "kind": "behavior",
+   "asserts": "Gövdede sayaclar.yeniSayac 5 ve gonderilmemisKayit 2: satırda gonderilmemis_kayit 2, bilinmeyen_ad_sayisi 1, yeniSayac hiçbir sütunda yok; sonuç KABUL."
+  },
+  {
+   "name": "Bozuk sayaç paketi öğe düzeyinde reddedilir",
+   "kind": "behavior",
+   "asserts": "JSON olmayan gövde RET ISLETIM_SAYAC_GOVDE_GECERSIZ; gün ulaşma gününden 2 gün ileri RET ISLETIM_SAYAC_GUN_GECERSIZ; öğrenci paketinde ekranSureleri RET ISLETIM_SAYAC_ROL_GECERSIZ; aynı paketteki yoklama kaydı KABUL alır (paket düşmez, D06 kuralı)."
+  },
+  {
+   "name": "Hoca telefonunun ekran süreleri tabloya girer",
+   "kind": "behavior",
+   "asserts": "Personel paketinde ekranSureleri [{oturumId: A, ekranTuru: INCELEME, saniye: 45}]: hoca_ekran_sureleri satırı kaynak TELEFON, kaynak_kimligi kurulum kimliği, saniye 45."
+  },
+  {
+   "name": "Hesap silinince sayaçlar ve ekran süreleri silinir",
+   "kind": "behavior",
+   "asserts": "D01'in hesap_silindi olayı (kurucu ile tetiklenir) aynı işlemde kişinin telefon_sayaclari ve hoca_ekran_sureleri satırlarını siler; başka kişinin satırları kalır (zemin); olay işlemi geri alınınca satırlar da kalır."
+  },
+  {
+   "name": "Aynı uyarı tek açık satırda birikir",
+   "kind": "behavior",
+   "asserts": "uyariAc aynı (tur, anahtar) ile üç kez: tek ACIK satır, tekrar_sayisi 3, yeni ilk çağrıda true sonra false; farklı anahtar ayrı satır."
+  },
+  {
+   "name": "Uyarı satırında numara maskelenir",
+   "kind": "behavior",
+   "asserts": "satirlar ['Öğrenci 2024000123 için'] ile uyariAc: satırda '[gizli]', rakam dizisi yok; 8 haneli sayı (ör. 12345678 bayt) aynen kalır (sınır kontrolü)."
+  },
+  {
+   "name": "Bildirim, hatırlatma ve düzeldi iletisi",
+   "kind": "behavior",
+   "asserts": "KRITIK uyarı açılır, isletim_denetimi çalışır: her alıcıya tek e-posta (D14 sahte posta, konu isletim uyarısı); 5 saat 59 dakika sonra çalışma yeni e-posta göndermez, 6 saat sonra hatırlatma gider; koşul düzelince KAPANDI ve tek düzeldi iletisi; hiç bildirilmemiş uyarı kapanınca ileti yok."
+  },
+  {
+   "name": "SMTP düşükken bildirim hatası kalp atışını çevirir",
+   "kind": "behavior",
+   "asserts": "Sahte posta kutusu her gönderimde bağlantı hatası verir: uyarı bildirim_hatasi true kalır, isletim_kalp_atisi sorunAdres'e istek atar; sorunAdres yoksa hiç istek atmaz; posta düzelince sonraki denetim bildirir ve kalp atışı normale döner."
+  },
+  {
+   "name": "Sessizlik kuralı başka modülün uyarısını kapatır",
+   "kind": "behavior",
+   "asserts": "dogrulama.iptal_listesi_eski uyarısı açılır: 25 saat 59 dakika sonra açık, 26 saat sonra isletim_denetimi kapatır (SESSIZLIK)."
+  },
+  {
+   "name": "Uyarı kuralları sınırlarda doğru karar verir",
+   "kind": "property",
+   "asserts": "kurallar.ts saf işlevleri tablo testiyle her eşiğin bir altı, eşiti ve bir üstüyle: disk 79/80/90, bağlantı 79/80/90, 5xx 19/20, 503 oranı binde 49/50, gönderim p95 1999/2000 ms, yedek yaşı 25 saat 59 dakika/26 saat, makine dosyası 24/25 dakika, iş sessizliği 2 x aralık + 600 saniye; eşikler ISLETIM_ESIKLERI'nden içe aktarılır."
+  },
+  {
+   "name": "İşletim denetimi D14 sağlık ölçüsünden uyarı açar",
+   "kind": "behavior",
+   "asserts": "D14'ün test kuyruğunda ölü mektuba düşen iş, son başarısı aralığın iki katından eski zamanlanmış iş ve art arda 3 başarısız e-posta varken isletim_denetimi çalışır: isletim.olu_mektup (anahtar kuyruk), isletim.is_sessiz ve KRITIK isletim.eposta_basarisiz açılır; durum düzelince sonraki çalışmada üçü de KAPANDI."
+  },
+  {
+   "name": "Durum dosyalarından uyarı",
+   "kind": "behavior",
+   "asserts": "Sahte durum dizininde: chrony.json senkron false ise KRITIK isletim.saat_esitleme; makine.json disk yüzde 85 UYARI, 91 KRITIK; 26 saat önce biten gecelik_pg_dump dosyası KRITIK isletim.yedek_eski; sonuc basarisiz KRITIK isletim.yedek_basarisiz; 30 dakikalık makine dosyası isletim.makine_denetimi_sessiz; okunamayan dosya sağlıklı sayılmaz."
+  },
+  {
+   "name": "API ölçü dosyalarından uyarı",
+   "kind": "behavior",
+   "asserts": "İki kopyanın son 10 dakikalık dosyalarında toplam 503 dışı 5xx 20: isletim.api_5xx; 503 oranı yüzde 5 ve toplam 200 üstü: isletim.api_503; gönderim kovalarından p95 2000 ms: isletim.gonderim_yavas; 5 dakikadan eski dosya sayılmaz."
+  },
+  {
+   "name": "Yeni ret kodu aynı gün uyarı açar",
+   "kind": "behavior",
+   "asserts": "Son 28 günde görülmemiş (400, YOKLAMA_X) ret kodu taşıyan sayaç paketi gelir: sonraki denetimde isletim.yeni_ret_kodu, anahtar '400:YOKLAMA_X'; aynı kod 28 gün içinde görülmüşse uyarı yok."
+  },
+  {
+   "name": "Devam tutarlılık farkı uyarıya döner",
+   "kind": "behavior",
+   "asserts": "D14 isSagligi devam_tutarlilik_denetimi için son çıktıda farkSayisi 3 verirken isletim.devam_tutarlilik_farki açılır; sonraki çıktı 0 olunca kapanır (D08-A08)."
+  },
+  {
+   "name": "WAL arşivi ve bağlantı sayısı",
+   "kind": "behavior",
+   "asserts": "pg_stat_archiver sahte görünümünde last_failed_time last_archived_time'dan yeni ise KRITIK isletim.wal_arsivi; bağlantı 80 UYARI, 90 KRITIK isletim.baglanti_sayisi (sistem görünümü okuması bir sorgu katmanından verilir, kural saf)."
+  },
+  {
+   "name": "Kalp atışı adres seçimi",
+   "kind": "behavior",
+   "asserts": "Sahte HTTP sunucusu: açık KRITIK yokken normalAdres'e tek GET, gövdesiz ve sorgusuz; açık KRITIK varken sorunAdres'e; uretim ortamında kalp_atisi sırrı yoksa işçinin ayarlariYukle'si ISLETIM_AYAR_GECERSIZ verir."
+  },
+  {
+   "name": "Sertifika bitiş eşikleri",
+   "kind": "behavior",
+   "asserts": "Testte üretilen kendinden imzalı kök ve sertifikalarla yerel TLS sunucusu: acme türünde 15 gün kala uyarı yok, 13 gün kala UYARI, 6 gün kala KRITIK isletim.sertifika_bitiyor; elle türünde 29 gün kala UYARI; adı tutmayan sertifika KRITIK isletim.sertifika_gecersiz."
+  },
+  {
+   "name": "Ölçüm görünümleri hedef tanımlarını uygular",
+   "kind": "behavior",
+   "asserts": "Kurucularla tohumlanmış verilerde: 24 saatte ulaşan oran, saati doğrulanamayan oranı (Android ve iPhone ayrı), işaretlenmeden kabul (payda ilk kesin kararı VAR ya da INCELEMEDE olanlar, pay VAR ve etiketsiz ve kafa sayısı işaretsiz oturumda), kafa sayısı aşımı olmayan oturum oranı ve hocanın işi ortancası elle hesaplanan beklenen tabloyla birebir aynı; BEKLEMEDE ve RET kayıtları paydaya girmez (plan.html#hedefler)."
+  },
+  {
+   "name": "Hocanın işi yalnız dersin sahibini sayar",
+   "kind": "behavior",
+   "asserts": "Başka personelin aynı oturum için gönderdiği 300 saniye olcum_hoca_isi'ne girmez; dersin sahibinin 90 saniyesi girer; kafa sayısı girilmemiş oturum ortancaya girmez."
+  },
+  {
+   "name": "Ölçüm görünümleri kişisel veri çıkarmaz",
+   "kind": "contract",
+   "asserts": "Her olcum_ görünümünün sütun listesi katalogdan okunur: kisi_id, ogrenci_id, ogrenci_no, ad_soyad, eposta adlı sütun yoktur; görünümler security_invoker true (pg_class.reloptions)."
+  },
+  {
+   "name": "Haftalık özet ve 13 aylık silme",
+   "kind": "behavior",
+   "asserts": "haftalik_olcum_ozeti çalışınca sahibe tek e-posta gider, satırlar hedefi ve değeri yazar; 396 günlük sayaç ve ekran süresi satırları ve 396 gün önce kapanmış uyarı silinir, 394 günlükler kalır; aynı veriyle iki kez çalışınca ikinci çalışma 0 satır siler (D14 adımı)."
+  },
+  {
+   "name": "Rota tanımları D13 kurallarına uyar",
+   "kind": "contract",
+   "asserts": "ISLETIM_ROTALARI: dört yol, yalnız /health/live ve /v1/durum baskiDisi, /health/* ve /v1/durum kök istisna, /v1/isletim/ekran-sureleri personel rolü, govdeSiniri 16384 ve 2 MiB altında, hatalar listesindeki her kod TUM_HATALAR'da; D13'ün rota tablosu sözleşme testi bu modülde de yeşil."
+  },
+  {
+   "name": "Compose dosyası kuralları",
+   "kind": "contract",
+   "asserts": "docker compose config çıktısı (JSON) üzerinde: api-1, api-2, isci ve goc'ta TZ=UTC, init true, user node, read_only, cap_drop ALL; restart unless-stopped (goc hariç); logging local; isci stop_grace_period 40s, API 30s; her servisin sırları sözleşmedeki matrisle birebir aynı (fazla sır kırmızı); yalnız caddy 80 ve 443 yayımlar; caddy onyuz ağında 172.30.11.10."
+  },
+  {
+   "name": "Caddy yolları ve başlıkları",
+   "kind": "behavior",
+   "asserts": "CI'da Caddy, test ayarıyla (yerel sertifika) ve sahte API ile açılır: /health/live 404; /v1/olmayan API'den JSON 404 (index.html değil); /v1 tek başına API'ye gider; /olmayan-sayfa index.html 200 ve CSP; /assets/olmayan.js 404; /assets dosyası uzun önbellekli; index.html Cache-Control no-cache; panel cevabında Content-Security-Policy ve Permissions-Policy var, API cevabında Caddy CSP'si yok; 4 MB üstü gövde 413."
+  },
+  {
+   "name": "Yayın bilgisi üretimi",
+   "kind": "behavior",
+   "asserts": "yayin-bilgisi-uret kaynağa bicim 1, sira (kaynak dosyasına dokunan commit sayısı) ve olusturmaAni (son commit anı) ekler; çıktı D13 yayinBilgisiSemasi'na uyar; aynı commit iki kez aynı baytları üretir; en düşük sürümü en son sürümden büyük kaynak kırmızı."
+  },
+  {
+   "name": "Eski sürüm istekleri hâlâ kabul edilir",
+   "kind": "behavior",
+   "asserts": "ornekler/surumler/<sürüm>/ altındaki her örnek istek (D13'ün destek listesindeki sürümler), sahte saat örneğin geçerli penceresine kurularak oynatılır; beklenen durum ve öğe sonuçları aynen döner (plan.html#dagitim-guncelleme-ilkesi). Klasör boşken senaryo örnek sayısının sıfır olmadığını yazar ve kırmızıdır (ilk uygulama yayınından sonra)."
+  },
+  {
+   "name": "ASVS eşlemesi eksiksiz",
+   "kind": "contract",
+   "asserts": "asvs-eslemesi.json'daki her uygulanan madde var olan bir senaryo adına ya da ayar denetimine bağlı (feature dosyaları ayrıştırılarak), uygulanmayan her maddenin gerekçesi dolu; madde numaraları tekil."
+  },
+  {
+   "name": "Saat eşitleme betiği chronyc çıktısını doğru çevirir",
+   "kind": "behavior",
+   "asserts": "PATH'e konan sahte chronyc ile: Leap status Normal ve katman 2 senkron true, sapmaMs = tavan(1000 x (|sistem farkı| + kök dağılımı + kök gecikmesi / 2)); 'Not synchronised' senkron false ve sonBozukAni yazılır; sonraki sağlıklı okumada sonBozukAni korunur; dosya chronyDurumuSemasi'na uyar ve yazım sırasında okuyan yarım dosya görmez (1000 eşzamanlı okuma)."
+  },
+  {
+   "name": "Makine betiği yeniden başlamayı bir kez sayar",
+   "kind": "behavior",
+   "asserts": "Sahte docker ile RestartCount 2 iken ilk çalışma artış 0, 3 olunca artış 1, değişmeyince yine 0; makine.json makineDurumuSemasi'na uyar."
+  },
+  {
+   "name": "Yayın betiği imza tutmazsa hiçbir şey değiştirmez",
+   "kind": "behavior",
+   "asserts": "Sahte docker ve cosign ile: cosign verify hata verirse betik çıkış kodu 1, docker compose up hiç çağrılmaz; revizyon etiketi depo commit'inden farklıysa aynı; hafta içi 08:00-20:00 arasında --simdi olmadan çalıştırma uyarıyla durur."
+  },
+  {
+   "name": "Ders çıkışı yük testi geçme ölçütleri",
+   "kind": "load",
+   "asserts": "k6 thresholds (esikler.ts): gönderim p95 < 1000 ms, p99 < 3000 ms; saat belgesi p95 < 100 ms, p99 < 300 ms (D04); 503 dışı 5xx 0; 503 oranı < yüzde 2 ve her 503 Retry-After'lı; 429 oranı 0 (D13); koşu sonrası denetim: makbuzlu her kayıt sunucuda tam bir kez, pg_stat_activity en çok 80 bağlantı, havuz bekleme p99 < 2 s (D12), devam_hesapla gecikmesi p95 en çok 5 dakika (D08); ders çıkışı sürerken AKSİS özeti p95 en çok 2 s ve gönderim p95 raporsuz ölçümden en çok yüzde 10 kötü (D10)."
+  },
+  {
+   "name": "Ders başı, gece ve giriş yığılması profilleri",
+   "kind": "load",
+   "asserts": "Ders başı: 20.000 telefon 60 saniyeye yayılmış belge ve tek kayıtlık gönderim, aynı eşikler. Gece: 5.000 iPhone gönderimi 30 dakikaya yayılmış, gece işleri aynı anda elle tetiklenir; iş süreleri ve gönderim p95 yazılır. Giriş yığılması: 300 hocanın 2 dakika içinde kod istemesi, ölçütler D14'ün 'Ders başı giriş yığılması' testinden."
+  },
+  {
+   "name": "Uyarı kurallarının mutasyonu",
+   "kind": "mutation",
+   "asserts": "kurallar.ts'te disk eşiği karşılaştırması >= yerine > yapılınca 'Uyarı kuralları sınırlarda doğru karar verir' testi kırmızı olur; KOSUL kapanışı devre dışı bırakılınca bildirim senaryosu kırmızı olur; dosyalar md5 ile karşılaştırılarak geri yazılır, git kullanılmaz."
+  },
+  {
+   "name": "Sayaç sıra kuralının mutasyonu",
+   "kind": "mutation",
+   "asserts": "telefon-sayaci.ts'te WHERE telefon_sayaclari.sira < EXCLUDED.sira koşulu kaldırılınca varış sırası özellik testi kırmızı olur; geri yazılıp md5 eşleşir."
+  },
+  {
+   "name": "Ortak kurallar paketinin haftalık mutasyon testi",
+   "kind": "mutation",
+   "asserts": "Stryker komut çalıştırıcısıyla; klasör başına puan stryker-esikler.json eşiğinin altına düşerse iş kırmızı; eşik denetim betiğinin kendisi bir kez bilerek düşük puanlı sahte raporla kırmızı, yüksekle yeşil denenir."
+  }
+ ],
+ "resolved_gaps": [
+  {
+   "gap": "D15-B01",
+   "decision": "Sahibe açık nokta D15-A01. Tasarım o güne kadar planın sırasını varsayar (önce BİDB) ve makineden yalnız şunu bekler: tek Linux sanal makine, 4 çekirdek, 8 GB, 100 GB SSD başlangıç boyutu, sabit genel IPv4 ve ters DNS, 80 ve 443 girişi, yazılı çıkış izin listesi (D15-B10), yurt dışından erişim, ayrı yedek deposu.",
+   "why": "Makine ve ağ koşulları kurum kararıdır (plan.html#acik-sunucu-makinesi); sertifika (B03, B04), güvenlik duvarı (B10), yük testi makinesi (B13) ve hipervizör riski (B27) bu cevaba bağlı."
+  },
+  {
+   "gap": "D15-B02",
+   "decision": "Sahibe açık nokta D15-A02. Tasarım tek ana makine adı varsayar: ALAN_ADI ayarı; panel kökte, API /v1 altında, güncelleme yolu /guncelleme, gizlilik /gizlilik, hesap silme /hesap-silme aynı adda (teknik.html#panel-sunulma, teknik.html#altyapi-caddy). Ad değişirse yalnız ayar ve DNS değişir, kod değişmez.",
+   "why": "Uygulama API ve güncelleme adresini derlemeye gömer; seçim ilk Android ve iPhone derlemesinden önce sahibin kararıdır (plan.html#dagitim-guncelleme, plan.html#dagitim-gizlilik-politikasi)."
+  },
+  {
+   "gap": "D15-B03",
+   "decision": "Sahibe açık nokta D15-A03. Tasarım önerilen yolu varsayar: Caddy ACME ile Let's Encrypt sertifikası, uygulamada ISRG Root X1 ek güvenilen kök (teknik.html#altyapi-caddy). Elle yenilenen üniversite sertifikası da desteklenir: ISLETIM_SERTIFIKA_TURU elle, Caddy tls dosya yolu, uyarı 30 gün kala.",
+   "why": "Seçim uygulama dosyasına girer ve desteklenen Android sürümünü değiştirebilir (plan.html#dagitim-desteklenen-surumler, plan.html#acik-sunucu-sertifikasi)."
+  },
+  {
+   "gap": "D15-B04",
+   "decision": "80 ve 443 açık; Caddy'nin varsayılan HTTP-01 ve TLS-ALPN-01 doğrulaması; 80 yalnız ACME ve HTTPS'e yönlendirme. Üniversite ağ geçidi verilirse ağ geçidi ile Caddy arası da TLS olur, ağ geçidi istemci adresini tek bir başlıkta yazar, Caddy yalnız ona güvenir (GUVENILEN_AG_GECIDI, ISTEMCI_ADRES_BASLIGI). Caddy'nin /data ve /config dizinleri adlı birimlerde (caddy-veri, caddy-ayar) durur, yedeklenmez. Hazırlık ortamında ACME_CA deneme (staging) adresidir. Üniversite adı seçilirse (A02) CAA kaydı önce denetlenir.",
+   "why": "plan.html#acik-sunucu-makinesi yalnız 443'ü istiyor; HTTP-01 80'i, TLS-ALPN-01 TLS'in Caddy'ye kadar gelmesini ister; ikisini açık tutmak tek yolun kapanmasında yenilemeyi sürdürür. Ağ geçidi ile Caddy arası düz HTTP oturum anahtarlarını kampüs ağında açık taşırdı."
+  },
+  {
+   "gap": "D15-B05",
+   "decision": "Panel başlıkları yalnız Caddy'de, API başlıkları yalnız helmet'te (D13 apiKur: nosniff, frame-ancestors 'none', HSTS). Panel: Content-Security-Policy \"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'\"; Strict-Transport-Security HSTS_DEGERI (max-age=31536000, includeSubDomains yalnız ad sahibin alanındaysa); X-Content-Type-Options nosniff; Referrer-Policy no-referrer; Permissions-Policy camera=(), microphone=(), geolocation=(), screen-wake-lock=(self). CSP önce Report-Only ile en eski hedef tarayıcıda denenir (teknik.html#panel-cati), sonra zorunlu yapılır. Caddy başlıklarını CI'daki Caddy senaryosu, API başlıklarını D13 senaryosu sınar.",
+   "why": "İki katman aynı başlığı yazarsa tarayıcı ikisini birden uygular; tek sahip tek değer demek. Projeksiyon sayfası ekranı açık tutar, bu yüzden screen-wake-lock yalnız kendi kökenine açıktır."
+  },
+  {
+   "gap": "D15-B06",
+   "decision": "Anahtarlar cli/anahtar-uret ile üretilir: amaç başına 32 bayt crypto.randomBytes, base64. Sunucuda amaç başına bir sır dosyası (gizliAnahtarDosyasiSemasi: { bicim: 1, amac, etkinKid, anahtarlar: [{ kid, deger, durum, olusturmaAni, emeklilikAni }] }), en çok 4 anahtar, kid deseni ^[a-z0-9-]{1,8}$ (D04-B20 kuralı; ad amaç kısaltması, yıl ve dönem harfi, ör. sb27b). Dosyalar /opt/iu-yoklama/gizli altında uid 1000 sahipli 0400; Compose dosya sırrı olarak yalnız matristeki servise bağlanır; ayarlariYukle /run/secrets/<ad> dosyasını aynı Zod şemasıyla doğrular. Döndürme: saat_belgesi, qr_anahtar_kaynagi ve ulasma_makbuzu her dönem arasında, en düşük sürümün yükseltildiği pencerede; giris_kodu_ozeti ve eposta_ozeti her an (yalnız 5 dakikalık kodlar ve e-posta sayaçları düşer). Döndürme komutu yeni kid'i etkin yapar, eskiyi yalnız doğrulamaya alır, API kopyaları yayinla.sh --yeniden-baslat ile sırayla yeniden başlar. Çevrimdışı yedek: anahtar-uret yedekle saat_belgesi, qr_anahtar_kaynagi ve ulasma_makbuzu kümelerini ve özet listesini tek arşive koyar (giriş kodu özeti, e-posta özeti ve inceleme kodu yedeklenmez, kaybolunca yenisi üretilir; ulaşma makbuzu anahtarı yedekten dönen makbuzlu kaydı doğrulamak için gerekir, D12-B31); sahip arşivi kendi bilgisayarında gpg --symmetric --cipher-algo AES256 ile şifreleyip iki ayrı fiziksel ortama yazar, biri D15-A10'daki kişide durur; her döndürmede bir önceki yedek açılıp özet listesi karşılaştırılır.",
+   "why": "teknik.html#sunucu-ayarlar ve teknik.html#dagitim-ayrinti-korunacak-anahtarlar üretim yöntemini, dosya biçimini ve döndürme takvimini yazmıyordu. GnuPG simetrik şifreleme her yerde kurulu ve bakımlı; yeni araç gerektirmez."
+  },
+  {
+   "gap": "D15-B07",
+   "decision": "Emekli anahtar tam bir dönem daha yalnız doğrulamada kalır: her döndürme önceki döndürmede emekliye ayrılanı siler, böylece her an en çok bir etkin ve bir emekli (ve şüpheli ise ele geçirilmiş) anahtar vardır. Silinmiş kid'le gelen belge D04'te KID_BILINMIYOR sonucunu alır; kayıt D05'te ham kanıt olarak saklanır, kararını D07 verir ('anahtar emekli' gerekçesi D07 kataloğuna istek, D15-A12).",
+   "why": "Dönem kilidinden sonra gelen kayıt sayımı değiştirmez (plan.html#kararlar-gonderme-suresi); bir dönem yeter, gizli anahtarı yıllarca tutmak sızıntı yüzeyini büyütür. Kural takvime bakmadan, döndürme sırasından çıkar; D15 D02'yi okumaz."
+  },
+  {
+   "gap": "D15-B08",
+   "decision": "Olay müdahalesi bu belgede (Durumlar ve kurallar, Olay müdahalesi) ve komutlarda: anahtar-uret ele-gecirildi (kid işaretlenir, yeni kid etkin, kopyalar sırayla yeniden başlar; o kid'le doğrulanan belgede D04 anahtarEleGecirildi true döner, D07 kaydı İncelemede alır), anahtar-uret oturumlari-kapat (D01.oturumlariKapat, bütün personel oturumları), xprem yayın anahtarının değiştirilmesi ve etiketsiz güncellemenin geri alınması (ota_yayin_denetimi), makinenin temiz imajla yeniden kurulup şüpheden önceki âna PITR ile dönülmesi (D12). Her adımın sorumlusu sahiptir (D15-A10).",
+   "why": "Belgelerde olay müdahalesi yoktu; kid vardı ama sızıntıdan değişime kadarki adımlar yazılı değildi. Komutlar olay anında el yordamını kaldırır."
+  },
+  {
+   "gap": "D15-B09",
+   "decision": "Parola ve kök girişi kapalı (PasswordAuthentication no, PermitRootLogin no), yalnız ed25519-sk (donanım anahtarlı) SSH anahtarı, sudo için ayrı parola, MaxAuthTries 3. SSH portu internete açılmaz: BİDB VPN'i ya da izinli adres listesi; ikisi de yoksa internete açık SSH ve sshd PerSourcePenalties. Hipervizör ve konsol erişimi tehdit modelinde kabul edilen risk. Yol seçimi BİDB yazısına girer (D15-A01).",
+   "why": "İlk yönetici komutu ve xprem yönetim paneli yalnız SSH'la kullanılıyor (teknik.html#sunucu-ilk-yonetici, teknik.html#dagitim-ayrinti-xprem-guvenligi); SSH'ı ele geçiren her şeyi ele geçirir."
+  },
+  {
+   "gap": "D15-B10",
+   "decision": "BİDB'ye yazılı liste. Giriş: 443 (TCP ve UDP), 80, SSH yalnız B09 yolundan. Çıkış: ACME sağlayıcısı, Google anahtar kanıtı iptal listesi (IPTAL_LISTESI_ADRESI, D07), SMTP rölesi (D14), NTP (önce BİDB), ghcr.io ve Docker imaj depoları, apt.postgresql.org (D12 imaj derlemesi), yedek deposu (D12), dış izleme hizmetinin kalp atışı adresi. Ayrı erişim yoklaması yazılmaz: her hedef onu kullanan işin başarısıyla izlenir (iptal listesi işi ve e-posta sayıları D14.isSagligi'nda, sertifika yaşı, chrony dosyası, yedek durum dosyaları, kalp atışı sessizliği). Kod incelemesi kuralı: uygulama kullanıcıdan gelen bir adrese istek atmaz.",
+   "why": "Kapalı bir çıkış ilgili işi sessizce bozar; ama her çıkışın zaten bir iş başarısı ya da durum dosyası var, ikinci bir yoklama aynı şeyi iki yerden ölçer."
+  },
+  {
+   "gap": "D15-B11",
+   "decision": "CI tek Dockerfile'dan (apps/server/Dockerfile) iki hedef derler: sunucu (API, işçi ve göç) ve caddy (Caddyfile, panelin derlenmiş dosyaları, gizlilik ve hesap silme sayfaları). İkisi anahtarlı cosign ile imzalanır (sunucu doğrularken dışarı çıkmasın diye anahtarsız imza yok), GHCR'ye yüklenir. Sunucu salt okunur jetonla özetle çeker, Compose'ta imajlar özetle sabittir, kurulumdan önce cosign verify koşar (xprem kuralının aynısı). CI sunucuya erişmez; yayını sahibin SSH ile başlattığı yayinla.sh yapar. PostgreSQL imajı mevcut kararla sunucuda derlenir (teknik.html#veritabani-yedek). Depo özel kalır ve GHCR kotası yetmezse yedek yol sunucuda etiketten derlemedir (D15-A08).",
+   "why": "Sunucuda derlemek ders saatinde makineye yük getirir ve CI'da sınanan imajla aynı olmayabilir; CI'ya SSH anahtarı vermek CI'yı ele geçireni sunucuya taşır."
+  },
+  {
+   "gap": "D15-B12",
+   "decision": "Yayın tek betik: makine/yayinla.sh <sürüm>: imajları özetle çek ve doğrula, anahtar-uret denetle, D12'nin pgbackrest.sh denetle adımı, göç servisi (node --run db:migrate: D12 göç adımı, pg-boss migrate, D14 kur), işçiyi, sonra api-1 ve api-2'yi birer birer yeniden kur (eski kopya kapanışta 503 verir, Caddy en geç 4 saniyede devreden çıkarır, yeni kopya healthy ve /health/ready 204 olmadan sıradakine geçilmez), değiştiyse caddy, duman denemesi. İki API kopyası (api-1, api-2) aynı makinede ayrı Compose servisi; amaç kesintisiz yayındır, ölçek değil: teknik.html'deki 'kopyalar çoğalınca' (@fastify/otel, xprem için S3 deposu) çok makineli büyümeyi anlatır ve bu tasarımla tetiklenmez. Yayın penceresi hafta içi 20:00 sonrası ya da hafta sonu; betik hafta içi 08:00-20:00 arasında --simdi olmadan durur. Dönemin ilk haftasında ve birimin son günü haftasında yalnız güvenlik düzeltmesi yayımlanır (yazılı kural; betik takvimi okumaz, D15 D02'yi okumaz). Geri dönüş: yayinla.sh --geri önceki özetlere döner; göç geri alınmaz. Makine yeniden açılınca API veritabanını 120 saniye bekler (1, 2, 4, 8, 10 saniye), gelmezse çıkar ve Docker yeniden başlatır.",
+   "why": "teknik.html#altyapi-imaj ve teknik.html#sunucu-mimari adımları veriyordu, sırayı, pencereyi ve geri dönüşü vermiyordu. Benzer ürünlerde kesintiler dönemin ilk haftasında yaşanmış (plan.html#benzer)."
+  },
+  {
+   "gap": "D15-B13",
+   "decision": "Sahibe açık nokta D15-A04. O güne kadar: yük testi ve hazırlık ortamı üretimden ayrı, üretim boyutunda, yalnız sahte veri taşıyan makinede; üretim makinesinde yük testi reddedilir (aynı disk ve çekirdekleri paylaşan ölçüm hem yanlış hem tehlikeli).",
+   "why": "Makine ve maliyet sahibin onayını ister; teknik.html#testler-kalite gerçek sunucu boyutunu istiyor."
+  },
+  {
+   "gap": "D15-B14",
+   "decision": "Tetik tablosu: ders çıkışı yük testi ilk yayından, her dönem başından, gönderim, saat belgesi, kimlik ya da yoklama tablosu şemasına dokunan sunucu yayınından ve Fastify, PostgreSQL, Node ya da Drizzle büyük sürüm geçişinden önce; haftalık işin elle koşusu her sunucu yayınından önce; Android 7.0 emülatörü ve güncel Android denemesi her mağaza ve APK sürümünde ve sertifika sağlayıcısı değişince; xprem denemesi ilk derlemede ve her Expo SDK yükseltmesinde (teknik.html#testler-kalite).",
+   "why": "Her yayında tam yük testi pahalıdır; hiç koşmamak kapasite gerilemesini gözden kaçırır. Tetikler riski taşıyan değişikliklere bağlı."
+  },
+  {
+   "gap": "D15-B15",
+   "decision": "Üç profil ve giriş yığılması, dolu veritabanıyla (yaklaşık 4,2 milyon kayıt): ders başı (20.000 telefon 60 saniyeye yayılmış belge ve tek kayıtlık gönderim), ders çıkışı (aynı sayı 1 dakikada, paket başına 1 ile 6 kayıt, yüzde 5'i 200 kayıtlık, yüzde 30'u değişenler ister), gece (5.000 iPhone 30 dakikada, gece işleriyle çakışık); ders çıkışı sürerken 50 hoca rapor ve AKSİS özeti ister. Geçme ölçütleri modüllerin ölçütleriyle birleşik tabloda (Durumlar ve kurallar, Yük testi): gönderim p95 1 s, p99 3 s altı; saat belgesi p95 100 ms, p99 300 ms altı; 503 dışı 5xx 0; 503 yüzde 2 altı ve hepsi Retry-After'lı; 429 0; makbuzlu her kayıt tam bir kez; bağlantı en çok 80; havuz bekleme p99 2 s altı; AKSİS özeti p95 2 s altı; devam_hesapla gecikmesi p95 5 dakika. Telefon başına en çok 3 istek: açılış, ağ değişimi ve gönderim öncesi belge istekleri telefonda tek isteğe birleşir (istemci kuralı, sözleşmede yazılı).",
+   "why": "teknik.html#testler-kalite en kötü durumu veriyor, geçme ölçütü vermiyordu; ölçütler D04, D06, D10, D12, D13 ve D08 tasarımlarındaki sayılarla aynı tutuldu."
+  },
+  {
+   "gap": "D15-B16",
+   "decision": "Tohum betiği apps/server/test/yuk/tohum.ts uretim dışındaki ortamlarda çalışır (gelistirme, test, hazirlik); ISLETIM_ORTAM uretim ise ISLETIM_YUK_TOHUMU_YASAK ile çıkar. --kucuk kipi (tek ders, tek öğrenci, tek cihaz) haftalık işin k6 denemesi içindir. Modüllerin veri kurucularıyla (support/kurucular) bir dönem, birimler, dersler, listeler ve 50.000 öğrenci kurar; her sanal telefon için P-256 anahtar çifti üretir, açık anahtarı kanıtsız cihaz yolundan (Cihaz doğrulanmadı; plan.html#kararlar-cihaz-dogrulamasi) bağlar, özel anahtarları yalnız yük üretecindeki yerel dosyaya yazar. k6 kayıt metnini packages/core'daki aynı saf işlevlerle (k6'nın TypeScript ve ES modülü desteği) üretir, ECDSA P-256 imzayı k6 WebCrypto ile, paket imzasını taze saat belgesiyle çalışma anında atar.",
+   "why": "Binlerce cihaz için gerçek App Attest ya da anahtar kanıtı üretilemez; kanıtsız yol üretimde zaten var ve aynı imza doğrulamasından geçer, sunucu ayarı değişmez. Komut dosyası test/yuk altında: D15'in komut glob'larında yük cihazı komutu yok."
+  },
+  {
+   "gap": "D15-B17",
+   "decision": "Başlangıç değerleri (D12, D13, D14 ile aynı): API iki kopya, kopya başına havuz 20, havuz bekleme 2 s sonra 503; işçi 5 bağlantı (pg-boss 2, Drizzle 3); xprem 10; göç 2; pgBackRest 2; gece dökümü 1; süper kullanıcı 3: toplam 63, üst sınır 80. Fastify requestTimeout 20 s (D13-B26); deyim süresi API 5 s, işçi 5 dk (D12, envanterdeki 10 s yerine). Bellek: API kabı 1 GiB, işçi 512 MiB; under-pressure: olay döngüsü gecikmesi 1000 ms, kullanım binde 980, bellek 912680550 bayt (kap sınırının yüzde 85'i); Retry-After 15 ile 45 s rastgele (D13-B10). Gövde: genel 64 KiB (D13), gönderim 1 MiB, liste 2 MiB, ekran süreleri 16 KiB; Caddy istek sınırı 4 MB. Caddy üst akış boşta bağlantısı 60 s (Node keepAliveTimeout 72 s'den kısa). Yük testinden sonra ölçülenler teknik.html'e yazılır.",
+   "why": "İlk kod ve ilk yük testi başlangıç değeri ister; telefon 30 saniyede vazgeçtiğinden (teknik.html#telefon-gonderme-protokolu) sunucu daha önce vazgeçmeli. Değerler komşu modüllerin kararlarıyla birleştirildi."
+  },
+  {
+   "gap": "D15-B18",
+   "decision": "İstek logunu D13 rota kalıbıyla yazar (disableRequestLogging, onResponse); alanlar istekKimligi, rota kalıbı, yöntem, durum, süre, istemci türü, uygulama sürümü, runtimeVersion, updateId, iç kişi ya da cihaz kimliği, hata kodu; IP yalnız hız sınırı olayında. D15 kaydediciyi verir: JSON, UTC ISO, düzey üretimde info, geliştirmede debug; gizleme ikinci güvencedir (logOlustur). Docker local sürücüsü: API kopyalarında max-size 100m, max-file 10; öbür servislerde 50m ve 5. Her gece gunluk_log_arsivi önceki günü sıkıştırıp 30 gün tutar; Caddy erişim logu kapalı, yalnız hata logu. makine/log-bul.sh bir istek kimliğinin bütün satırlarını getirir; kimlik hata ekranında gösterilenle aynıdır (D13, tasarim.html#tipografi).",
+   "why": "teknik.html#sunucu-ayarlar neyin yazılmayacağını söylüyor; alan listesi, saklama ve arama yolu yoktu. local sürücü yoğun günde sorun anının logunu silebilirdi."
+  },
+  {
+   "gap": "D15-B19",
+   "decision": "Sahibe açık nokta D15-A05 (hizmet ve hesap). Tasarım hizmetten bağımsız: dış izleme hizmeti yurt dışından 5 dakikada bir /v1/durum ister, art arda 2 başarısızlıkta anlık bildirim ve e-posta; aynı hizmette iki kalp atışı denetimi (işçi: 25 dakika, CI: 26 saat) ve sertifika bitişi denetimi. İşletim uyarıları e-postayla (D14 isletim_uyarisi) ISLETIM_UYARI_ALICILARI'na; açık KRITIK uyarı ya da gönderilemeyen bildirim kalp atışını sorun adresine çevirir. Açık uyarı KRITIK'te 6, UYARI'da 24 saatte bir hatırlatılır, kapanınca tek düzeldi iletisi.",
+   "why": "Yalnız sunucunun e-postasıyla giden uyarı, sunucu ya da SMTP düşünce gidemez (D14-B11); GitHub zamanlanmış işleri gecikebilir ve kapanabilir (teknik.html#altyapi-imaj)."
+  },
+  {
+   "gap": "D15-B20",
+   "decision": "İşletim denetimi (D15, 10 dakika) ve makine betiği (10 dakika) eşiklerle: disk yüzde 80 UYARI, 90 KRITIK; kullanılabilir bellek yüzde 10 altı UYARI; WAL arşivi son denemesi başarısız KRITIK, son başarılı arşiv 60 dakikadan eski UYARI (archive_timeout 300, checkpoint_timeout 15 dk; teknik.html#veritabani-yedek); gece dökümü, pgBackRest ve xprem birimi yedeğinin son başarısı 26 saatten eski ya da son sonuç başarısız KRITIK, doğrulama 8 günden, geri yükleme denemesi 35 günden eski UYARI (D12 durum dosyaları); bağlantı 80 UYARI, 90 KRITIK; son 10 dakikada 503 dışı 5xx 20 ve üstü UYARI; 503 oranı yüzde 5 ve üstü (en az 200 istekte) UYARI; gönderim p95 2000 ms ve üstü (en az 100 gönderimde) UYARI; kap yeniden başladı UYARI, OOMKilled ya da çalışmayan servis KRITIK; chrony bozuk KRITIK (B21); sertifika eşikleri sertifika_bitis_denetimi işinde; D14 sağlığından ölü mektup, iş sessizliği, kuyruk birikmesi ve e-posta sorunları. Disk, kap ve chrony makinedeki dosyadan; veritabanı ve API ölçüleri işçiden okunur. Eşikler ISLETIM_ESIKLERI'nde koddadır, ortam değişkeniyle değişmez.",
+   "why": "İlk sürümde OpenTelemetry yok kararıyla (teknik.html#sunucu-ayarlar) uyumlu: ayrı ölçüm sunucusu yerine birkaç sayı ve dosya. WAL birikmesi 100 GB diski doldurup hizmeti yedekten önce düşürür."
+  },
+  {
+   "gap": "D15-B21",
+   "decision": "Makinede chrony; saat_esitleme_izleme 30 saniyede bir chrony.json yazar (alanlar senkron, sapmaMs, katman, kaynak, olcumAni, sonBozukAni), dosya kaplara salt okunur bağlıdır. Bozuk: dosya okunamıyor, senkron değil, sapma SAAT_ESITLEME_ESIK_MS (100) üstü ya da dosya SAAT_ESITLEME_DOSYA_YASI_MS (120.000) eski; belge kuralını D04 uygular, D15 KRITIK isletim.saat_esitleme uyarısı açar ve düzelince kapatır. NTP kaynağı önce BİDB, yedek tr.pool.ntp.org; makestep yalnız açılışta.",
+   "why": "Kap makinenin saat servisini göremez; bağlayıcı karar tek kaynağı chrony dosyası yaptı (contracts.json, Saat eşitlemesinin tek kaynağı). Sapma için chrony'nin hata üst sınırı kullanıldı, yarım saniyelik sıçrama iki çapayı ayrıştırabilir (plan.html#gun-ikinci-capa)."
+  },
+  {
+   "gap": "D15-B22",
+   "decision": "Sayaçlar telefon_sayaci kuyruk öğesiyle (contracts.json kararı), panelin ekran süreleri POST /v1/isletim/ekran-sureleri ile gelir; iki tablo: telefon_sayaclari ve hoca_ekran_sureleri. Satır anahtarı (kurulum, İstanbul günü), cihaz değil: kurulum hem öğrenci hem hoca telefonunda vardır ve D06 bağlamından doğrulanmış gelir. Aynı gün için büyük sıra kazanır, toplanmaz. Sayaç adları SAYAC_ADLARI'nda sabit, değerler 0..1.000.000 tam sayı; liste dışı ad reddedilmez, saklanmaz, bilinmeyen_ad_sayisi artar. Her satırda platform, uygulama sürümü, runtimeVersion ve updateId. Kişisel veri, hata metni, öğrenci numarası yok. Saklama 13 ay: haftalik_olcum_ozeti siler (D12-B24'teki 13 ay önerisi); D12'nin saklama işine bağlanmaz.",
+   "why": "plan.html#kararlar-olcum içeriği veriyordu, uç, gün sınırı ve tekrar gönderim kuralı yoktu. Silme D15'in geçici işletim verisidir (contracts.json, Temizlik ve saklama: her modül kendi geçici verisini kendi işiyle siler); ürünün saklama süresi kararı (plan.html#acik-saklama-suresi) bu veriyi bekletmez."
+  },
+  {
+   "gap": "D15-B23",
+   "decision": "Sayılan ekranlar: KAFA_SAYISI, DERS_YAPILDI_MI, KENDI_BEYANI_ONAYI, TEYIT_ONAYI, INCELEME, SORUN_BILDIRIMI. Süre ekranın önde açık kaldığı süredir; 60 saniye dokunma ya da kaydırma olmazsa durur. Çok oturumlu ekranda süre ekrandaki oturumlara eşit bölünür (istemci kuralı, sözleşmede). Ortanca, kafa sayısı girilmiş oturumlar üzerinden, yalnız dersin sahibinin süreleri toplanarak birim ve dönem başına alınır; hoca başına ortanca görünümde yoktur.",
+   "why": "Hedef ders başına ortanca istiyor (plan.html#hedefler); günlük tek toplam bunu veremezdi (D15-C01). Hoca başına sıralama ölçümün amacı değil, sistemin hocaya getirdiği işi ölçmektir."
+  },
+  {
+   "gap": "D15-B24",
+   "decision": "Her hedef için olcum_ önekli görünüm (Durumlar ve kurallar, Ölçüm görünümleri); cli/olcum-raporu tarih aralığı ve birim için Hedefler tablosunu yazar; haftalik_olcum_ozeti aynı tabloyu sahibe e-postayla yollar; yeni ret kodu aynı gün uyarı açar. Panelde işletim sayfası yok: yeni ekran ürün ve tasarım kararıdır, bu tasarım eklemez. Haksız devamsız ve elle hesap uyuşmazlığı D10'un dönem sonu raporunda ve D08'in tutarlılık işinin çıktısında (D15 uyarısı) görünür.",
+   "why": "plan.html#kararlar-olcum ayrı ham olay tablosu istemiyor; görünümler kayıtlardan tek sorgu. Tasarım envanterinde panel ekranı yok."
+  },
+  {
+   "gap": "D15-B25",
+   "decision": "Sahibe açık nokta D15-A06 (hedef değerleri). Ölçüler tanımlı ve haftalık özette hedefsiz yazılır: derste kayıt veren öğrenci oranı, kayıt alan oturum oranı, kafa sayısı girilen oturum oranı, haftalık etkin hoca sayısı (olcum_benimseme).",
+   "why": "plan.html#benzer benimsemenin baştan ölçülmesini istiyor; hedef deneme kapsamıyla birlikte sahibin kararı (plan.html#acik-asama1)."
+  },
+  {
+   "gap": "D15-B26",
+   "decision": "Kaynak dosya apps/server/src/infra/ayarlar/yayin-bilgisi.kaynak.json (kanallar, hatalı sürümler, iOS paket sürümleri; sahip çekme isteğiyle değiştirir). CI yayın işinde yayin-bilgisi-uret.ts bicim 1, sira (kaynağa dokunan commit sayısı) ve olusturmaAni (son değişikliğin commit anı) ekler, D13'ün yayinBilgisiSemasi ile doğrular ve dosya sunucu imajına /app/yayin-bilgisi.json olarak girer (YAYIN_BILGISI_YOLU). İmaj imzalı olduğundan dosya da imzalıdır. Her çekme isteğinde kalite işi kaynağı aynı şemayla doğrular. Okuma, en düşük sürüm koruması ve tarihçe D13'ün (D13-B18).",
+   "why": "CI'nın sunucuya yazması istenmiyor (B11). Bir uygulama yayını küçük bir sunucu yayınıdır; geri dönüşte eski imajın daha küçük sıralı dosyası kayıtlı kararı geri çeviremez (D13 tablosu)."
+  },
+  {
+   "gap": "D15-B27",
+   "decision": "Tehdit modeli bu belgede (Durumlar ve kurallar, Tehdit modeli): varlıklar, saldırganlar, güven sınırları, önlemler (belge çapalarıyla) ve kabul edilen riskler. ASVS 5.0 seviye 2 eşlemesi apps/server/test/features/isletim/asvs-eslemesi.json'da: uygulanan her madde bir senaryoya ya da ayar denetimine, uygulanmayan her madde gerekçeye bağlı; eşlemenin eksiksizliğini bir test denetler.",
+   "why": "Önlemler dağınıktı ve kabul edilen riskler tek yerde değildi; ASVS doğrulaması modele bağlanmadan yapılamaz (teknik.html#sunucu-guvenlik)."
+  },
+  {
+   "gap": "D15-B28",
+   "decision": "Haftalık iş sunucu ve caddy imajlarını Trivy ile tarar (düzeltmesi olan yüksek ve kritik bulgu kırmızı); depo açıksa CodeQL (D15-A08). D15'in ek senaryoları: sağlık uçlarının vekil üzerinden ulaşmaması, loglarda numara ve isim bulunmaması (bilerek ham yazılan değerle kendi testi), gövde sınırı (D13 ile). Başka hocanın oturumunu kapatma ve yanlış Origin senaryoları D01 ve D13'ündür. İlk gerçek dönemden önce dış güvenlik incelemesi sahibe açık nokta D15-A07.",
+   "why": "Bağımlılık denetimi vardı; imaj taraması ve kod taraması yoktu. Dış inceleme bütçe ister."
+  },
+  {
+   "gap": "D15-B29",
+   "decision": "Kapsam @vitest/coverage-v8 ile satır ve dal için ayrı ayrı yüzde 90, eşik packages/core'un test betiğinde. Stryker kırma eşiği klasör başına stryker-esikler.json'da: varsayılan 80, saat 90 (D04), eşik ölçülen değerin altına inmez, yalnız yükselir. Yaşayan mutantlar haftalık iş özetinde listelenir; eşdeğer mutant kaynakta gerekçeli yorumla işaretlenir. Kırmızı haftalık iş bir sonraki sunucu yayınını durdurur.",
+   "why": "teknik.html#testler-kalite 'kırma eşiğiyle' diyor, değer ve kapsam ölçüsü yoktu; kırmızı haftalık işin sonucu yazılmamıştı."
+  },
+  {
+   "gap": "D15-B30",
+   "decision": "Sahibe açık nokta D15-A08 (plan.html#acik, Depo görünürlüğü). Tasarım açık depoyu varsayar (zorunlu denetimli korumalı dal, onaylı ortam, CodeQL, 4 çekirdekli makine). Özel kalırsa: pre-push kancası Biome, tip denetimi ve Vitest koşar (teknik.html#altyapi-imaj), paralel senaryo 2, onaylı yayın ortamı ve GHCR kotası için ücretli plan ya da B11 ve B31'deki yedek yollar.",
+   "why": "CI'ın gücü depo görünürlüğüne bağlı; karar sahibin."
+  },
+  {
+   "gap": "D15-B31",
+   "decision": "Güncelleme yalnız yayin-ota.yml'den yayımlanır: iş 'ota-yayin' GitHub ortamında, sahibin elle onayıyla; yayın anahtarı yalnız bu ortamın sırrı; sahibin GitHub hesabında donanım anahtarlı iki etken. Her yayın ota/<runtimeVersion>/<güncelleme kimliği> etiketini açar (iş düzeyinde contents: write) ve iş özetine güncelleme kimliği, runtimeVersion, yüzde ve commit yazılır. Gece denetimi (ota_yayin_denetimi) GitHub Actions'ta, xprem'in herkese açık güncelleme bildirimini sorup etiketsiz güncellemeyi yakalar; sunucuda GitHub'a soran ya da yayın kaydı tutan iş yok.",
+   "why": "İmza sunucuda atılıyor ve yayın anahtarına erişene karşı korumuyor (teknik.html#dagitim-ayrinti-xprem-guvenligi); xprem'in denetim kaydı ticari kısımda. Denetimin CI'da olması kaydı (etiketler) ve uyarıyı (GitHub bildirimi) sunucudan ve SMTP'den bağımsız tutar; D14 çizelgesindeki pg-boss yeri boşalır."
+  },
+  {
+   "gap": "D15-B32",
+   "decision": "Örnekler apps/server/test/features/isletim/ornekler/surumler/<uygulama sürümü>/ altında, her istek türünden sahte veriyle imzalı istek, saat ve beklenen sonuç; her uygulama yayınında telefon uygulamasının kendi test aracıyla üretilip depoya eklenir. eski-surum-istekleri.feature D13'ün destek listesindeki (packages/contracts/openapi/destek.json) her sürümün örneklerini sahte saatle geçerli pencerede oynatır ve aynı sonucu bekler.",
+   "why": "oasdiff belge düzeyinde kırılmayı yakalar, eski istemcinin gerçek baytlarının kabulünü sınamaz; bekleyen kayıtlar hiçbir zaman engellenmez (plan.html#dagitim-guncelleme-ilkesi)."
+  },
+  {
+   "gap": "D15-B33",
+   "decision": "İkisi birlikte, yalnız hazırlık ortamında ve deneme telefonlarıyla: yanlış anahtarla imzalayan ikinci xprem (yanlış anahtar) ve güncelleme cevabının imza başlığını değiştiren deneme vekili (aktarımda değişme). Sonuç yayın kayıt dosyasına (/var/log/iu-yoklama/yayinlar.log) ve sürümün yayın özetine yazılır.",
+   "why": "xprem bozuk imzalı güncelleme yayımlamaz; iki yol iki ayrı saldırıyı sınar (teknik.html#testler-kalite)."
+  },
+  {
+   "gap": "D15-B34",
+   "decision": "D05 kayıt satırına ilk_kesin_karar ve ilk_kesin_karar_ani sütunlarını ekledi (bir kez yazılır, Beklemede dışındaki ilk karar). olcum_isaretsiz_kabul payda ve payı bu sütunlardan alır; ayrıca D07'nin kayit_karar_gecmisi.ilk_kesin satırı çapraz denetim içindir.",
+   "why": "Pay ilk karara göre tanımlı (plan.html#hedefler); alanların sahibi D05 ve D07, ölçü tek sorguda kalır (plan.html#kararlar-olcum)."
+  },
+  {
+   "gap": "D15-B35",
+   "decision": "Sıra kurulum başına tek ve bütün öğe türlerini sayar (D06); boşluk D06'nın gonderim_defteri ve kurulumlar sütunları üzerinden sira_boslugu_raporu ile bulunur. olcum_kayit_kaybi kurulumlardaki açık ve 24 saatten eski boşlukları ve gonderim_defteri'nde makbuzla yeniden gelen öğeleri (kabul_ani < ilk_gorulme_ani: sunucunun kaybedip telefonun yeniden yolladığı) sayar; makbuzla yeniden gelen öğe son 24 saatte varsa işletim denetimi isletim.makbuzlu_kayit_yeniden_geldi uyarısı açar.",
+   "why": "Yalnız yoklama tablosunda bakılırsa öbür öğe türleri boşluk gibi görünürdü (D15-C02). 'Sunucuya ulaştı' makbuzlu kayıp hedefi 0 (plan.html#hedefler); sunucunun kaybettiği makbuzlu kayıt, yeniden geldiğinde makbuz anıyla görünür."
+  },
+  {
+   "gap": "D15-B36",
+   "decision": "Taban o oturumda sonunda kabul edilen kayıt sayısı, başlangıç QR gösterim kaydındaki ilk zaman dilimi, ortanca oturumlar üzerinden, yalnız 60 ve üstü kayıtlı oturumlar. Görünüm (olcum_yoklama_hizi) Aşama 2'nin sunucu parçasıyla (D11 tabloları) aynı yayında eklenir; bugün yazılmaz.",
+   "why": "Kafa sayısı yaklaşık bir sayıdır (plan.html#kararlar-kafa-sayisi), kabul edilen kayıtlar kesindir; gösterim kaydı ânı taşır (plan.html#asama23-degisme-ve-kabul)."
+  },
+  {
+   "gap": "D15-B37",
+   "decision": "Sahibe açık nokta D15-A09. Sistem tarafı hazır: hak ve yüzde tanımla karşılaştırılarak sınanıyor (teknik.html#testler-birim), D08'in tutarlılık işi farkı sayıyor ve D15 uyarısına döner.",
+   "why": "Elle karşılaştırma hocaya iş getirir ve deneme kapsamına bağlıdır (plan.html#acik-asama1)."
+  },
+  {
+   "gap": "D15-B38",
+   "decision": "Sahibe açık nokta D15-A10. Tasarım ikinci alıcıyı destekler: ISLETIM_UYARI_ALICILARI birden çok adres alır, dış hizmet ikinci kişiye de bildirir; çevrimdışı yedeğin ikinci kopyası için yer ayrılmıştır (B06).",
+   "why": "Kim olacağı sahibin kararı; anahtarlar, SSH ve uyarılar bugün yalnız sahipte (plan.html#kararlar-roller)."
+  },
+  {
+   "gap": "D15-B39",
+   "decision": "Sahibe açık nokta D15-A11. O güne kadar tasarım önerilen hedefe göre: ders döneminde aylık yüzde 99,5; geri dönüş normal günde 4 saat, son gün haftasında ve dönemin ilk haftasında 1 saat. D12'nin geri yükleme denemesi süreyi ölçer, haftalık özet son ölçümü yazar.",
+   "why": "WAL arşivi kaybı 5 dakikayla sınırlıyor (teknik.html#veritabani-yedek), geri dönüş süresi hedefi yoktu; hedef kurumun beklentisidir."
+  },
+  {
+   "gap": "D15-B40",
+   "decision": "API, işçi, göç ve komut kaplarında TZ=UTC (compose.yaml), PostgreSQL ve rollerde timezone UTC (D12); ayarlariYukle süreç saat farkı 0 değilse açılmaz. pino zamanı UTC ISO. İstanbul günü yalnız açık zaman dilimiyle: SQL'de AT TIME ZONE 'Europe/Istanbul', kodda Intl.DateTimeFormat timeZone 'Europe/Istanbul' (yalnız ölçüm ve gün kovası için; kural taşıyan dönüşüm D04'ün). İşlerin İstanbul saatiyle zamanlanması D14'ün kuralı.",
+   "why": "Test komutları TZ=UTC'yi sabitliyor (teknik.html#testler-veritabani-sifirlama); üretim farklı olursa bir kod yolu test ile üretimde farklı davranır."
+  },
+  {
+   "gap": "D15-B41",
+   "decision": "/health/ready D12.semaDurumu ile karar verir: imajdaki son göçün özeti göç defterinde var (sonrası olabilir) ve nesil tutarlı ise hazır (D12-B10). /v1/durum aşırı yük denetiminden muaf (baskiDisi, D13-B10). Compose sağlık denetimi /health/live; Caddy'nin etkin sağlık denetimi de /health/live (2 saniyede bir, 2 başarısızlıkta devreden çıkar, 2 başarıda döner): canlılık kapanışta 503 döndüğünden boşaltma için yeter, veritabanı kesintisinde ise kopyalar devrede kalır ve istekler D13'ün Retry-After'lı 503'ünü alır. /health/ready yayın betiği, haftalık CI ve geri yükleme betiği içindir.",
+   "why": "Envanter Caddy için /health/ready öneriyordu; ama ready aşırı yükte 503 verir (D13 kuralı) ve iki kopya birden devreden çıkınca Caddy Retry-After'sız 503 döner, yük dalgası büyür. İki kopya aynı veritabanını kullandığından ready'ye göre ayıklamak bir şey kazandırmaz."
+  },
+  {
+   "gap": "D15-B42",
+   "decision": "Caddy lb_policy header X-Kurulum-Kimligi (D13 aynı başlığı hız anahtarı yapar); başlık yoksa (panel, girişsiz) rastgele. Kopya düşünce o kopyanın istekleri öbürüne geçer, bellek sayaçları sıfırdan başlar: kaba sınır kararıyla uyumlu (plan.html#teknoloji-sunucu-yeri). Sınır değerleri D13'ün.",
+   "why": "Sırayla dağıtım bir cihazın isteklerini bütün kopyalara yayar ve etkin sınırı kopya sayısı katına çıkarır; IP'ye göre dağıtım kampüs NAT'ının yüzlerce telefonunu tek kopyaya yığar (teknik.html#sunucu-guvenlik)."
+  }
+ ],
+ "contradictions_resolved": [
+  {
+   "id": "D15-C01",
+   "resolution": "İkisi birlikte sağlanır: telefon ve panel günlük toplam gönderir ama toplam oturum ve ekran başınadır (hoca_ekran_sureleri anahtarında oturum_id var). Böylece 'günlük toplam' (plan.html#kararlar-olcum) ve 'ders başına ortanca' (plan.html#hedefler) aynı veriden çıkar; ham olay tablosu yine yoktur. plan.html#kararlar-olcum cümlesine 'oturum başına' eki sahibe önerildi (D15-A13)."
+  },
+  {
+   "id": "D15-C02",
+   "resolution": "Sıra numarası kurulum başına bütün öğe türlerini sayar (D06-B07); boşluk yoklama tablosunda değil D06'nın gonderim_defteri ve kurulumlar sütunlarında, bütün türlerin birleşimi üzerinden hesaplanır (sira_boslugu_raporu). D15'in olcum_kayit_kaybi aynı sütunları okur; yoklama kaydı ayrı sıra taşımaz. teknik.html#veritabani'daki (dönem, cihaz, sıra numarası) tekilliği yalnız yoklama kayıtlarının çakışma kuralıdır, boşluk ölçüsü değildir."
+  }
+ ],
+ "open_points": [
+  {
+   "id": "D15-A01",
+   "question": "BİDB sunucu makinesi verebilecek mi, verilemezse hangi yerli sağlayıcı kullanılacak; makinenin ağ ve erişim koşulları ne olacak (D15-B01, B09, B10)?",
+   "recommendation": "Planın sırası korunsun: önce BİDB (plan.html#acik-sunucu-makinesi). Resmî yazıya plandaki sorulara ek olarak: sabit genel IPv4 ve ters DNS; 443 (TCP ve UDP) ile birlikte 80 (yalnız ACME ve yönlendirme); D15-B10'daki çıkış listesi (Netleştirilenler); SSH için VPN ya da izinli adres; sanal disk şifreli mi ve hipervizöre kim erişiyor; anlık görüntü politikası; aynı boyutta ikinci, geçici makine (A04). Başlangıç boyutu 4 çekirdek, 8 GB, 100 GB SSD (teknik.html#altyapi-sunucu-makinesi).",
+   "needs_owner": true
+  },
+  {
+   "id": "D15-A02",
+   "question": "API, panel, güncelleme, gizlilik ve hesap silme hangi alan adında yayımlanacak: sahibin alan adı mı, istanbul.edu.tr altında bir ad mı (D15-B02)?",
+   "recommendation": "Tek ad sahibin alan adında (ör. yoklama.<alan adı>): panel kökte, API /v1, güncelleme /guncelleme. DNS sahibin elinde kalınca ACME ve makine değişikliği BİDB'ye bağlanmaz, HSTS includeSubDomains açılabilir. Kurumsal görünüş istenirse üniversite adı yalnız panel için sonra eklenir (panel adresi uygulamaya gömülmez). Karar ilk Android ve iPhone derlemesinden önce.",
+   "needs_owner": true
+  },
+  {
+   "id": "D15-A03",
+   "question": "Sertifika: Caddy'nin ACME ile aldığı (Let's Encrypt ve uygulamada ek ISRG Root X1, ya da Android 7.1.1 alt sınırı, ya da kökü Android 7.0'da bulunan başka sağlayıcı) mı, üniversitenin elle yenilenen sertifikası mı (D15-B03, plan.html#acik-sunucu-sertifikasi)?",
+   "recommendation": "Caddy, Let's Encrypt ve uygulamada ek ISRG Root X1 (teknik.html#altyapi-caddy): kendiliğinden yenileme elle yenilemenin unutulma riskini kaldırır (plan.html#benzer); ek kök sabitleme değildir. Let's Encrypt'in duyurduğu yeni kökler bir sonraki mağaza sürümünde ek kök listesine girer; Android 7.0 emülatöründe kayıt gönderme her uygulama sürümünde ve sağlayıcı değişince koşar (D15-B14).",
+   "needs_owner": true
+  },
+  {
+   "id": "D15-A04",
+   "question": "Yayından önceki gerçek boyutlu yük testi ve hazırlık ortamı hangi makinede koşacak (D15-B13)?",
+   "recommendation": "BİDB'den aynı boyutta ikinci sanal makine (hazırlık ve yük testi); olmazsa yalnız yük testi için, sahte veriyle, yerli sağlayıcıda saatlik kiralanan geçici makine (gerçek veri taşımadığından barındırma ölçütüne girmez; maliyet sahibin onayına bağlı). Üretim makinesinde yük testi reddedilir. Hazırlık ortamı aynı compose.yaml'ın prod profiliyle, ayrı alan adıyla ve sahte veriyle kurulur; xprem denemesi ve yayın betiği önce burada koşar.",
+   "needs_owner": true
+  },
+  {
+   "id": "D15-A05",
+   "question": "Uyarılar sahibe hangi kanaldan gidecek; dış erişim denetimi ve kalp atışı için hangi hizmet ve hesap kullanılacak (D15-B19)?",
+   "recommendation": "Hizmetten istenenler: yurt dışından 5 dakikalık HTTPS denetimi, sertifika bitişi uyarısı, iki kalp atışı denetimi (25 dakika ve 26 saat aralıklı, açık sorun isteği kabul eden), telefona anlık bildirim ve e-posta, ikinci alıcı. Hizmete yalnız /v1/durum'un 204'ü ve gövdesiz kalp atışı gider, kişisel veri gitmez. Seçim ve hesap sahibin; adresler kalp_atisi sırrına ve CI sırrına yazılır.",
+   "needs_owner": true
+  },
+  {
+   "id": "D15-A06",
+   "question": "Benimseme hedefleri ne olacak (D15-B25)?",
+   "recommendation": "Ölçüler hazır ve haftalık özette hedefsiz yazılıyor: derste kayıt veren öğrenci oranı, kayıt alan oturum oranı, kafa sayısı girilen oturum oranı, haftalık etkin hoca sayısı. Hedef değerleri deneme dönemi kapsamı ve App Store'a geçiş ölçütüyle birlikte konsun (plan.html#acik-asama1).",
+   "needs_owner": true
+  },
+  {
+   "id": "D15-A07",
+   "question": "İlk gerçek dönemden önce dış güvenlik incelemesi (sızma testi) yapılacak mı (D15-B28)?",
+   "recommendation": "Evet, ilk gerçek dönemden önce hazırlık ortamında, ASVS 5.0 seviye 2 eşlemesi ve tehdit modeli girdi olarak verilerek. Bütçe yoksa en az: hazırlık ortamına ZAP taban taraması ve eşlemedeki maddelerin sahip tarafından tek tek denetimi.",
+   "needs_owner": true
+  },
+  {
+   "id": "D15-A08",
+   "question": "Kod deposu açık mı, özel mi olacak (D15-B30, plan.html#acik Depo görünürlüğü)?",
+   "recommendation": "Güvenlik ve test açısından açık depo: gizli bilgi depoda hiç durmuyor (teknik.html#sunucu-ayarlar), korumalı dal, onaylı ortam (ota-yayin), CodeQL ve 4 çekirdekli makine ücretsiz geliyor. Özel kalırsa: pre-push kancası, ücretli plan ya da güncelleme yayınını sahibin bilgisayarından yapma ve GHCR yerine sunucuda derleme yedek yolları.",
+   "needs_owner": true
+  },
+  {
+   "id": "D15-A09",
+   "question": "Sistem hesabının elle hesapla karşılaştırması kimin tarafından, hangi derslerde, ne zaman yapılacak (D15-B37)?",
+   "recommendation": "İkisi birlikte: deneme döneminde seçilen birkaç derste hoca kâğıt yoklamayı paralel tutar ve dönem sonunda karşılaştırılır; sahip rastgele seçilen derslerde kayıtlardan elle hesaplar. Hangi dersler deneme kapsamıyla birlikte.",
+   "needs_owner": true
+  },
+  {
+   "id": "D15-A10",
+   "question": "Sahip ulaşılamazken sunucuyu kim işletecek; çevrimdışı anahtar yedeği, mağaza hesapları ve SSH erişimi kime emanet edilecek (D15-B38)?",
+   "recommendation": "En az: şifreli çevrimdışı anahtar yedeğinin ikinci kopyası ve bu belgenin olay müdahalesi bölümü mühürlü olarak üniversitede güvenilen bir kişiye emanet edilsin; uyarılar ikinci alıcıya da gitsin (ISLETIM_UYARI_ALICILARI ve dış hizmet).",
+   "needs_owner": true
+  },
+  {
+   "id": "D15-A11",
+   "question": "Sunucunun hedef erişilebilirliği ve kesintide en geç dönüş süresi ne olacak (D15-B39)?",
+   "recommendation": "Ders döneminde aylık yüzde 99,5; geri dönüş normal günde 4 saat, son gün haftasında ve dönemin ilk haftasında 1 saat. 1 saatlik hedef hazır imaj, yazılı geri yükleme betiği (D12) ve ikinci makine (A04) ister; geri yükleme denemesi süreyi her ay ölçer.",
+   "needs_owner": true
+  },
+  {
+   "id": "D15-A12",
+   "question": "contracts.json ve dosya haritasına hangi eklemeler gerekiyor (mimari kararı)?",
+   "recommendation": "Hepsi yalnız ekleme: (1) D15 dış yüzüne gizliAnahtarSeti, logOlustur, ayarlariYukle, isletimEklentisi, isletimIsleri, kimlikOlayiDinleyicisi, kapanisiBaslat, TestDunyasi ve kurucuTanimla; telefonSayaciOgesi D06'nın üç bağımsız değişkenli işleyici biçiminde. (2) D15'in okuduklarına bileşim kökü yoluyla D01 (kimlikOlayiDinleyicisiKaydet, oturumlariKapat; D01-A14), D03 (LISTELER_GIZLI_ALANLAR, sözleşme sabiti) ve D04 (saat arayüzü simdi ve test saati) eklensin; infra/izleme bunları içe aktarmaz. (3) D14: IsSagligi zamanlama girdisine sonCikti (son tamamlanan işin küçük çıktısı; D08 tutarlılık kuralı için), isletim_ozeti e-posta türü, deleteAllJobs test yardımcısı, worker.ts'in isletimIsleri(bag)'i isTanimla'ya uyarlaması, çizelgede ota_yayin_denetimi'nin çıkması, haftalik_olcum_ozeti 07:10, sertifika_bitis_denetimi 06:35, gunluk_log_arsivi makinede 03:15. (4) D06: PaketBaglami'na hesapSilinmis alanı (silinmiş hesabın gecikmiş sayaç paketi saklanmasın). (5) D07: KID_BILINMIYOR için 'anahtar emekli' gerekçesi. (6) D12: olcum_ önekli görünüm göçleri D15'indir ve başka tabloları okuyabilir (göç sahiplik denetimi istisnası), durum dosyası dizini /var/lib/iu-yoklama/durum/veritabani işçiye /durum/veritabani salt okunur bağlanır. (7) Dosya haritası: .node-version ve kök .gitignore D15'e; makine tarafı betikler için docker/isletim/* (bugün infra/izleme/makine altında); olay komutları için apps/server/src/cli/olay* (bugün anahtar-uret alt komutu).",
+   "needs_owner": false
+  },
+  {
+   "id": "D15-A13",
+   "question": "plan.html ve teknik.html'e hangi netleştirmeler işlensin?",
+   "recommendation": "Öneriler: plan.html#kararlar-olcum 'onay ekranlarındaki süreyi telefon ve panel oturum başına ölçüp günlük toplam olarak gönderir'; teknik.html#sunucu-ayarlar gizli anahtar listesine e-posta özeti ve ulaşma makbuzu anahtarları, emekli anahtarın bir dönem daha tutulması; teknik.html#altyapi-caddy Caddy'nin etkin sağlık denetimi /health/live ve kapanışta 503; teknik.html#altyapi-imaj CI imajı GHCR'ye cosign imzalı yükler, sunucu özetle çeker, iki API kopyası sırayla yeniden başlar, gece işine OTA yayın denetimi eklendi; teknik.html#testler-kalite tetik tablosu, yük testi geçme ölçütleri, Stryker eşikleri ve imaj taraması; teknik.html#altyapi-guncellemeler xprem imajı Dependabot dışında; teknik.html#dagitim-ayrinti-korunacak-anahtarlar çevrimdışı yedek listesine ulaşma makbuzu anahtarı; teknik.html#altyapi-servisler aynı makinede iki API kopyası (kesintisiz yayın için) ve API imajının kayıt deposundan (GHCR) özetle çekilmesi.",
+   "needs_owner": true
+  }
+ ],
+ "queue_items": [
+  {
+   "tur": "telefon_sayaci",
+   "gelis": "POST /v1/esitleme/gonderim (D06) içinde öğe; gün kapanınca kuyruğa o günün kayıtlarından sonra girer (D06-B28). Bütün sayaçları sıfır olan gün gönderilmez; bildirim izni ve sürüm için telefon en az haftada bir paket gönderir (istemci kuralı, sözleşmede).",
+   "kimlik": "İki rol, oturumsuz (D06-B10): kişi D06'nın doğruladığı oturumdan ya da paket imzasından gelir (PaketBaglami.kisiId, rol, kurulumId).",
+   "govde": {
+    "bicim": "1",
+    "gun": "YYYY-AA-GG; sayıların ait olduğu İstanbul günü",
+    "platform": "android | ios",
+    "uygulamaSurumu": "x.y.z, en çok 32 karakter",
+    "runtimeSurumu": "metin, en çok 32 karakter, ya da null",
+    "guncellemeKimligi": "UUID ya da null",
+    "sayaclar": "{ gonderilmemisKayit?, basarisizDeneme?, yerelModulCokmesi?, icSayacOkumaHatasi?, bilinmeyenSonuc?: 0..1000000; bildirimIzni?: boolean }; bilinmeyen ad atılır ve sayılır",
+    "ekranHatalari": "[{ tur: 'HATA_SINIRI' | 'GENEL', ekran: ^[a-z][a-z0-9_]{0,47}$, sayi: 1..1000000 }] en çok 100",
+    "retler": "[{ http: 400..599, kod: ^[A-Z][A-Z0-9_]{0,63}$ ya da null, sayi: 1..1000000 }] en çok 50",
+    "ekranSureleri": "[{ oturumId: UUID, ekranTuru: EKRAN_TURLERI ya da bilinmeyen (atılır), saniye: 1..86400 }] en çok 200; yalnız PERSONEL"
+   },
+   "sonuclar": "KABUL { uygulandi: true | false }, ZATEN_VAR, RET ISLETIM_SAYAC_GOVDE_GECERSIZ | ISLETIM_SAYAC_GUN_GECERSIZ | ISLETIM_SAYAC_ROL_GECERSIZ. TEKRAR_DENE dönmez (geçici veritabanı hatasında D06'nın geri dönüş noktası kuralı geçer).",
+   "sinir": "govdeEnBuyukBayt 16384 (D06 bu sınırı öğe düzeyinde uygular)."
+  }
+ ],
+ "registrations": [
+  "D06.ogeTuruKaydet('telefon_sayaci', telefonSayaciOgesi): isletimEklentisi içinde, işlev app.ts'ten seçenekle (altyapı alan modülünü içe aktarmaz).",
+  "D01.kimlikOlayiDinleyicisiKaydet(kimlikOlayiDinleyicisi): aynı yol (D01-A14).",
+  "D13.rotalariKaydet(app, [canlılık, hazırlık, durum, ekran süreleri]): işlev app.ts'ten seçenekle; rota tanımları packages/contracts/src/isletim.ts ISLETIM_ROTALARI.",
+  "D14.isTanimla: worker.ts isletimIsleri(bag) tanımlarını uyarlar (dört pg-boss işi).",
+  "D12.saklamaIsleyicisiKaydet: kayıt yok; D15'in 13 aylık silmesi geçici işletim verisidir ve haftalık işte yapılır (D15-B22).",
+  "Fastify onReady ve onClose (yalnız surec api): dakikalık API ölçü dosyası yazıcısı."
+ ],
+ "dis_yuz_kullanimi": [
+  "D06 (contracts.json): ogeTuruKaydet (app.ts'ten seçenekle); OgeIsleyici, GelenOge, PaketBaglami, OgeSonucu, OGE_SONUCLARI tipleri (packages/contracts/src/esitleme.ts).",
+  "D12 (contracts.json): veritabaniKur (server.ts), Veritabani.islem ve semaDurumu (eklenti ve işler, parametreyle), tabloYardimcilari ve kisitAdi (tablolar.ts), testVeritabaniHazirla, senaryoOncesiSifirla ve testVeritabaniAdi (kancalar), YedekIsDurumu şeması (packages/contracts/src/veritabani.ts).",
+  "D13 (contracts.json): rotalariKaydet (app.ts'ten), rotaTanimla, hataKodlariTanimla, UygulamaHatasi, hataZarfiSemasi, genisleyenEnum ve ortak şemalar (packages/contracts/src/ortak/), PLATFORMLAR ve yayinBilgisiSemasi (packages/contracts/src/api.ts), TUM_ROTALAR (test dünyası), app.ts kurucusu (server.ts, test dünyası).",
+  "D14 (contracts.json): isSagligi ve epostaGonder (işlere bag ile), isKuyruguKur, epostaKur ve smtpTasiyicisi (server.ts), sahtePostaKutusu ve test kuyruğu yardımcıları (test dünyası), EPOSTA_TURLERI.",
+  "D01 (bileşim kökü yoluyla, D15-A12): kimlikOlayiDinleyicisiKaydet (app.ts'ten eklentiye), oturumlariKapat (anahtar-uret oturumlari-kapat).",
+  "D03 (sözleşme sabiti, D15-A12): LISTELER_GIZLI_ALANLAR, server.ts'te logOlustur'a ekGizliAdlar.",
+  "D04 (bileşim kökü yoluyla, D15-A12): Saat arayüzü simdi() (parametreyle), sistemSaati (server.ts), pgBossSaati (test dünyası).",
+  "Bütün modüllerin veri kurucuları: KurucuHaritasi ile (test dünyası); olcum_ görünümleri D01, D02, D03, D05, D06 ve D07 tablolarını yalnız okur (contracts.json istisnası)."
+ ],
+ "ayar_semasi": [
+  {
+   "env": "ISLETIM_ORTAM",
+   "alan": "genel.ortam",
+   "kural": "gelistirme | test | hazirlik | uretim",
+   "varsayilan": "yok (zorunlu)",
+   "surecler": "hepsi",
+   "isteyen": "D15"
+  },
+  {
+   "env": "ISLETIM_KOPYA_ADI",
+   "alan": "genel.kopyaAdi",
+   "kural": "^[a-z0-9-]{1,32}$; süreç türü ortamdan değil ayarlariYukle({ surec }) bağımsız değişkeninden gelir",
+   "varsayilan": "süreç türünün adı",
+   "surecler": "api (uretim ve hazirlik zorunlu)",
+   "isteyen": "D15"
+  },
+  {
+   "env": "LOG_DUZEYI",
+   "alan": "genel.logDuzeyi",
+   "kural": "debug | info | warn | error",
+   "varsayilan": "info; gelistirme debug",
+   "surecler": "hepsi",
+   "isteyen": "D15"
+  },
+  {
+   "env": "GIZLI_DIZIN",
+   "alan": "genel.gizliDizin",
+   "kural": "mutlak yol",
+   "varsayilan": "/run/secrets; gelistirme ./.gizli",
+   "surecler": "hepsi",
+   "isteyen": "D15"
+  },
+  {
+   "env": "DURUM_DIZINI",
+   "alan": "genel.durumDizini",
+   "kural": "mutlak yol",
+   "varsayilan": "/durum",
+   "surecler": "api, isci",
+   "isteyen": "D15"
+  },
+  {
+   "env": "ALAN_ADI",
+   "alan": "genel.alanAdi",
+   "kural": "küçük harf ana makine adı",
+   "varsayilan": "yok",
+   "surecler": "isci (sertifika denetimi ve uyarı metni; Caddy kendi ortamından okur)",
+   "isteyen": "D15"
+  },
+  {
+   "env": "PANEL_ADRESI",
+   "alan": "genel.panelAdresi",
+   "kural": "https kökeni (yol yok); http yalnız gelistirme",
+   "varsayilan": "yok",
+   "surecler": "api",
+   "isteyen": "D13 (Origin), D01 (çerez)"
+  },
+  {
+   "env": "API_PORT",
+   "alan": "api.port",
+   "kural": "1..65535",
+   "varsayilan": "3000",
+   "surecler": "api",
+   "isteyen": "D13"
+  },
+  {
+   "env": "API_DINLEME_ADRESI",
+   "alan": "api.dinlemeAdresi",
+   "kural": "IPv4",
+   "varsayilan": "0.0.0.0",
+   "surecler": "api",
+   "isteyen": "D13"
+  },
+  {
+   "env": "GUVENILEN_VEKIL_ADRESI",
+   "alan": "api.guvenilenVekilAdresi",
+   "kural": "IPv4; trustProxy yalnız bu adres",
+   "varsayilan": "yok; gelistirme ve test boş (trustProxy kapalı)",
+   "surecler": "api (uretim ve hazirlik zorunlu)",
+   "isteyen": "D13"
+  },
+  {
+   "env": "YAYIN_BILGISI_YOLU",
+   "alan": "api.yayinBilgisiYolu",
+   "kural": "mutlak yol",
+   "varsayilan": "/app/yayin-bilgisi.json",
+   "surecler": "api, isci",
+   "isteyen": "D13, D07"
+  },
+  {
+   "env": "BASKI_OLAY_DONGUSU_GECIKMESI_MS",
+   "alan": "api.baski.olayDongusuGecikmesiMs",
+   "kural": "10..10000",
+   "varsayilan": "1000",
+   "surecler": "api",
+   "isteyen": "D13"
+  },
+  {
+   "env": "BASKI_OLAY_DONGUSU_KULLANIMI_BINDE",
+   "alan": "api.baski.kullanimBinde",
+   "kural": "1..1000 (app.ts 1000'e böler)",
+   "varsayilan": "980",
+   "surecler": "api",
+   "isteyen": "D13"
+  },
+  {
+   "env": "BASKI_BELLEK_BAYT",
+   "alan": "api.baski.bellekBayt",
+   "kural": "kap bellek sınırından küçük",
+   "varsayilan": "sınırın yüzde 85'i; sınır yoksa 2147483648",
+   "surecler": "api",
+   "isteyen": "D13"
+  },
+  {
+   "env": "KAPANIS_ONCESI_BEKLEME_MS",
+   "alan": "api.kapanisOncesiBeklemeMs",
+   "kural": "0..20000",
+   "varsayilan": "6000; test 0",
+   "surecler": "api",
+   "isteyen": "D15"
+  },
+  {
+   "env": "VERITABANI_SUNUCU",
+   "alan": "veritabani.sunucu",
+   "kural": "ana makine adı",
+   "varsayilan": "postgres",
+   "surecler": "hepsi",
+   "isteyen": "D12"
+  },
+  {
+   "env": "VERITABANI_PORT",
+   "alan": "veritabani.port",
+   "kural": "1..65535",
+   "varsayilan": "5432",
+   "surecler": "hepsi",
+   "isteyen": "D12"
+  },
+  {
+   "env": "VERITABANI_ADI",
+   "alan": "veritabani.ad",
+   "kural": "metin",
+   "varsayilan": "yoklama",
+   "surecler": "hepsi",
+   "isteyen": "D12"
+  },
+  {
+   "env": "VERITABANI_HAVUZ_BOYUTU",
+   "alan": "veritabani.havuzBoyutu",
+   "kural": "1..50",
+   "varsayilan": "api 20, isci 3, goc 2, cli 1",
+   "surecler": "hepsi",
+   "isteyen": "D12"
+  },
+  {
+   "env": "VERITABANI_HAVUZ_BEKLEME_MS",
+   "alan": "veritabani.havuzBeklemeMs",
+   "kural": "100..60000",
+   "varsayilan": "api 2000, isci 30000",
+   "surecler": "hepsi",
+   "isteyen": "D12"
+  },
+  {
+   "env": "EPOSTA_SMTP_SUNUCU",
+   "alan": "eposta.smtpSunucu",
+   "kural": "ana makine adı",
+   "varsayilan": "yok",
+   "surecler": "api, isci",
+   "isteyen": "D14"
+  },
+  {
+   "env": "EPOSTA_SMTP_PORT",
+   "alan": "eposta.smtpPort",
+   "kural": "1..65535",
+   "varsayilan": "587",
+   "surecler": "api, isci",
+   "isteyen": "D14"
+  },
+  {
+   "env": "EPOSTA_SMTP_GUVENLIK",
+   "alan": "eposta.smtpGuvenlik",
+   "kural": "tls | starttls | yok ('yok' yalnız gelistirme ve test)",
+   "varsayilan": "starttls",
+   "surecler": "api, isci",
+   "isteyen": "D14"
+  },
+  {
+   "env": "EPOSTA_SMTP_KULLANICI",
+   "alan": "eposta.smtpKullanici",
+   "kural": "metin; varsa smtp_parolasi sırrı zorunlu",
+   "varsayilan": "boş",
+   "surecler": "api, isci",
+   "isteyen": "D14"
+  },
+  {
+   "env": "EPOSTA_GONDEREN_ADRES",
+   "alan": "eposta.gonderenAdres",
+   "kural": "e-posta adresi",
+   "varsayilan": "yok",
+   "surecler": "api, isci",
+   "isteyen": "D14"
+  },
+  {
+   "env": "EPOSTA_GONDEREN_AD",
+   "alan": "eposta.gonderenAd",
+   "kural": "1..80 karakter",
+   "varsayilan": "yok",
+   "surecler": "api, isci",
+   "isteyen": "D14"
+  },
+  {
+   "env": "EPOSTA_URUN_ADI",
+   "alan": "eposta.urunAdi",
+   "kural": "1..40 karakter",
+   "varsayilan": "yok",
+   "surecler": "api, isci",
+   "isteyen": "D14"
+  },
+  {
+   "env": "EPOSTA_GUNLUK_SINIR",
+   "alan": "eposta.gunlukSinir",
+   "kural": "1..100000",
+   "varsayilan": "boş (sınırsız)",
+   "surecler": "api, isci",
+   "isteyen": "D14"
+  },
+  {
+   "env": "INCELEME_HOCA_ADRESI",
+   "alan": "kimlik.incelemeHocaAdresi",
+   "kural": "e-posta adresi (alan kuralı D01)",
+   "varsayilan": "yok",
+   "surecler": "api, isci",
+   "isteyen": "D01"
+  },
+  {
+   "env": "INCELEME_HOCA_ADI",
+   "alan": "kimlik.incelemeHocaAdi",
+   "kural": "1..80 karakter",
+   "varsayilan": "yok",
+   "surecler": "api, isci",
+   "isteyen": "D01"
+  },
+  {
+   "env": "INCELEME_OGRENCI_NO",
+   "alan": "kimlik.incelemeOgrenciNo",
+   "kural": "^[0-9]{9,10}$; loga girmez",
+   "varsayilan": "yok",
+   "surecler": "api, isci",
+   "isteyen": "D01"
+  },
+  {
+   "env": "INCELEME_OGRENCI_ADI",
+   "alan": "kimlik.incelemeOgrenciAdi",
+   "kural": "1..80 karakter; loga girmez",
+   "varsayilan": "yok",
+   "surecler": "api, isci",
+   "isteyen": "D01"
+  },
+  {
+   "env": "SAAT_ESITLEME_ESIK_MS",
+   "alan": "saat.esitlemeEsikMs",
+   "kural": "1..5000",
+   "varsayilan": "100",
+   "surecler": "api, isci",
+   "isteyen": "D04"
+  },
+  {
+   "env": "SAAT_ESITLEME_DOSYA_YASI_MS",
+   "alan": "saat.esitlemeDosyaYasiMs",
+   "kural": "30000..600000",
+   "varsayilan": "120000",
+   "surecler": "api, isci",
+   "isteyen": "D04"
+  },
+  {
+   "env": "SAAT_ESITLEME_DENETIM_ARALIGI_MS",
+   "alan": "saat.esitlemeDenetimAraligiMs",
+   "kural": "1000..60000",
+   "varsayilan": "5000",
+   "surecler": "api",
+   "isteyen": "D04"
+  },
+  {
+   "env": "ANDROID_PAKET_ADI",
+   "alan": "dogrulama.androidPaketAdi",
+   "kural": "Java paket adı",
+   "varsayilan": "yok",
+   "surecler": "api, isci",
+   "isteyen": "D07"
+  },
+  {
+   "env": "ANDROID_IMZA_OZETLERI",
+   "alan": "dogrulama.androidImzaOzetleri",
+   "kural": "virgülle ayrılmış 64 onaltılık karakter",
+   "varsayilan": "yok",
+   "surecler": "api, isci",
+   "isteyen": "D07"
+  },
+  {
+   "env": "APP_ATTEST_UYGULAMA_KIMLIGI",
+   "alan": "dogrulama.appAttestUygulamaKimligi",
+   "kural": "^[A-Z0-9]{10}[.][A-Za-z0-9.-]+$",
+   "varsayilan": "yok",
+   "surecler": "api, isci",
+   "isteyen": "D07"
+  },
+  {
+   "env": "IPTAL_LISTESI_ADRESI",
+   "alan": "dogrulama.iptalListesiAdresi",
+   "kural": "https adresi",
+   "varsayilan": "https://android.googleapis.com/attestation/status",
+   "surecler": "isci",
+   "isteyen": "D07"
+  },
+  {
+   "env": "DEVAM_SAYIM_TABANI",
+   "alan": "devam.sayimTabani",
+   "kural": "YAPILAN (ilk sürümde tek değer; PLANLANAN plan.html#acik-sayim-tabani kararına bağlı)",
+   "varsayilan": "YAPILAN",
+   "surecler": "api, isci",
+   "isteyen": "D08"
+  },
+  {
+   "env": "DUZELTMELER_PARTI_BOYU",
+   "alan": "duzeltmeler.partiBoyu",
+   "kural": "1..200",
+   "varsayilan": "20",
+   "surecler": "isci",
+   "isteyen": "D09"
+  },
+  {
+   "env": "ISLETIM_UYARI_ALICILARI",
+   "alan": "isletim.uyariAlicilari",
+   "kural": "virgülle ayrılmış e-posta adresleri, 1..5",
+   "varsayilan": "yok (uretim ve hazirlik zorunlu)",
+   "surecler": "isci",
+   "isteyen": "D15"
+  },
+  {
+   "env": "ISLETIM_SERTIFIKA_TURU",
+   "alan": "isletim.sertifikaTuru",
+   "kural": "acme | elle",
+   "varsayilan": "acme",
+   "surecler": "isci",
+   "isteyen": "D15"
+  },
+  {
+   "env": "ISLETIM_CADDY_ADRESI",
+   "alan": "isletim.caddyAdresi",
+   "kural": "ana makine:port",
+   "varsayilan": "caddy:443",
+   "surecler": "isci",
+   "isteyen": "D15"
+  }
+ ],
+ "sirlar": [
+  {
+   "ad": "saat_belgesi",
+   "tur": "anahtar kümesi (gizliAnahtarDosyasiSemasi)",
+   "servisler": "api-1, api-2, isci",
+   "kullanan": "D04 (üretme ve doğrulama; işçide yeniden değerlendirme)"
+  },
+  {
+   "ad": "qr_anahtar_kaynagi",
+   "tur": "anahtar kümesi",
+   "servisler": "api-1, api-2, isci",
+   "kullanan": "D11"
+  },
+  {
+   "ad": "giris_kodu_ozeti",
+   "tur": "anahtar kümesi",
+   "servisler": "api-1, api-2",
+   "kullanan": "D01"
+  },
+  {
+   "ad": "eposta_ozeti",
+   "tur": "anahtar kümesi",
+   "servisler": "api-1, api-2, isci",
+   "kullanan": "D14 (bileşim kökünde epostaKur)"
+  },
+  {
+   "ad": "ulasma_makbuzu",
+   "tur": "anahtar kümesi",
+   "servisler": "api-1, api-2",
+   "kullanan": "D06"
+  },
+  {
+   "ad": "inceleme_sabit_kodu",
+   "tur": "tek değer",
+   "servisler": "api-1, api-2",
+   "kullanan": "D01"
+  },
+  {
+   "ad": "smtp_parolasi",
+   "tur": "tek değer (EPOSTA_SMTP_KULLANICI varsa)",
+   "servisler": "api-1, api-2, isci",
+   "kullanan": "D14"
+  },
+  {
+   "ad": "kalp_atisi",
+   "tur": "JSON { normalAdres, sorunAdres | null } (kalpAtisiSirriSemasi)",
+   "servisler": "isci",
+   "kullanan": "D15"
+  },
+  {
+   "ad": "yoklama_api_parolasi",
+   "tur": "tek değer (D12 Compose parçası)",
+   "servisler": "api-1, api-2, goc (kurulum adımı parolayı yeniler)",
+   "kullanan": "D12"
+  },
+  {
+   "ad": "yoklama_isci_parolasi",
+   "tur": "tek değer (D12)",
+   "servisler": "isci, goc",
+   "kullanan": "D12"
+  },
+  {
+   "ad": "yoklama_sahip_parolasi, postgres_parolasi",
+   "tur": "tek değer (D12)",
+   "servisler": "goc",
+   "kullanan": "D12 (kurulum adımı rolleri ve parolaları yeniler)"
+  },
+  {
+   "ad": "xprem_parolasi",
+   "tur": "tek değer (D12)",
+   "servisler": "goc, xprem",
+   "kullanan": "D12 (rol), D15 (xprem işletimi)"
+  },
+  {
+   "ad": "xprem ana anahtarı",
+   "tur": "tek değer; xprem dosyadan okuyabiliyorsa sır, okuyamıyorsa 0600 env_file (teknik.html#dagitim-ayrinti-korunacak-anahtarlar)",
+   "servisler": "xprem",
+   "kullanan": "D15 (işletim), D12 (yedek)"
+  }
+ ],
+ "olcum_gorunumleri": [
+  {
+   "ad": "olcum_gonderme_suresi",
+   "okur": "yoklama_kayitlari (D05), cihazlar (D01)",
+   "sutunlar": "gun (hesaplanan_ani İstanbul günü), platform, kayit_sayisi, gun_icinde_ulasan, oran_binde",
+   "kural": "Gönderme hedefi: ulasma_ani - hesaplanan_ani <= 24 saat; hedef oran_binde >= 950."
+  },
+  {
+   "ad": "olcum_saat_dogrulanamayan",
+   "okur": "yoklama_kayitlari, cihazlar",
+   "sutunlar": "gun, platform, saat_sebebi, kayit_sayisi, dogrulanamayan, oran_binde",
+   "kural": "etiket_saat_dogrulanamadi; Android ve iPhone ayrı, sebep dağılımı (plan.html#gun-zayif-nokta); hedef oran_binde <= 20."
+  },
+  {
+   "ad": "olcum_isaretsiz_kabul",
+   "okur": "yoklama_kayitlari, oturum_isaretleri (D07)",
+   "sutunlar": "donem_id, gun, payda, pay, oran_binde, cihaz_dogrulanmadi, ikinci_profil, qrsiz",
+   "kural": "Payda ilk_kesin_karar VAR ya da INCELEMEDE; pay ilk_kesin_karar VAR, etiket_saat_dogrulanamadi false ve oturumda KAFA_SAYISI_ASIMI satırı yok; üç etiket ayrı sayı; hedef oran_binde >= 980."
+  },
+  {
+   "ad": "olcum_kafa_sayisi_asimi",
+   "okur": "oturumlar (D02), oturum_isaretleri",
+   "sutunlar": "donem_id, gun (oturumlar.tarih), kafa_sayisi_girilen, asim_isaretli, asimsiz_oran_binde",
+   "kural": "Kafa sayısı girilmiş ve yapıldı oturumlardan işaretsizlerin oranı; hedef >= 950."
+  },
+  {
+   "ad": "olcum_hoca_isi",
+   "okur": "hoca_ekran_sureleri (D15), oturumlar, dersler (D02)",
+   "sutunlar": "donem_id, birim_id, hafta, oturum_sayisi, ortanca_saniye, p90_saniye",
+   "kural": "Kafa sayısı girilmiş oturumlarda yalnız dersin sahibinin (dersler.sahip_kisi_id) satırları toplanır; percentile_disc ile tam sayı; hoca başına sütun yok; hedef ortanca <= 120."
+  },
+  {
+   "ad": "olcum_kayit_kaybi",
+   "okur": "gonderim_defteri, kurulumlar (D06)",
+   "sutunlar": "gun, makbuzla_yeniden_gelen, acik_boslukli_kurulum, bosluk_ilerleme_saati (saat kovası), eksik_sira_toplam",
+   "kural": "Makbuzla yeniden gelen: kabul_ani < ilk_gorulme_ani; 24 saatten eski boşluk sorguda saat kovasından seçilir (görünüm now() kullanmaz)."
+  },
+  {
+   "ad": "olcum_telefon_sayaclari",
+   "okur": "telefon_sayaclari (D15)",
+   "sutunlar": "gun, platform, uygulama_surumu, kurulum_sayisi, gonderilmemis_kayit_toplam, gonderilmemis_kayitli_kurulum, basarisiz_deneme_toplam, bildirim_izni_var, bildirim_izni_bildiren, yerel_modul_cokmesi_toplam, ic_sayac_okuma_hatasi_toplam, bilinmeyen_sonuc_toplam",
+   "kural": "Telefonun gördüğü sayılar (plan.html#kararlar-olcum); kişi ve kurulum kimliği çıktıda yok."
+  },
+  {
+   "ad": "olcum_ekran_hatalari",
+   "okur": "telefon_sayaclari",
+   "sutunlar": "gun, platform, uygulama_surumu, tur, ekran, toplam, kurulum_sayisi",
+   "kural": "ekran_hatalari dizisinin açılmış hali."
+  },
+  {
+   "ad": "olcum_ret_kodlari",
+   "okur": "telefon_sayaclari",
+   "sutunlar": "gun, platform, uygulama_surumu, http, kod, toplam, kurulum_sayisi",
+   "kural": "Tek başına da reddedilen kayıtların kodları (plan.html#kararlar-yeniden-deneme); yeni kod uyarısı bunun üstünde."
+  },
+  {
+   "ad": "olcum_benimseme",
+   "okur": "liste_satirlari (D03), yoklama_kayitlari, oturumlar, dersler",
+   "sutunlar": "donem_id, ders_id, hafta, liste_ogrenci, kayit_veren_ogrenci, yapilan_oturum, kayit_alan_oturum, kafa_sayisi_girilen_oturum, etkin_hoca (hafta toplamı)",
+   "kural": "Liste ile hesap eşleştirilmez (numara birleşimi yok): kayıt veren öğrenci kayıtlardaki ayrık ogrenci_id sayısıdır; hedef değerleri D15-A06."
+  }
+ ],
+ "uyari_kurallari": [
+  {
+   "tur": "isletim.disk_doluluk",
+   "anahtar": "bağlama noktası",
+   "seviye": "UYARI >= yüzde 80; KRITIK >= yüzde 90",
+   "kapanma": "KOSUL",
+   "kosul": "makine.json diskler",
+   "kaynak": "makine_denetimi"
+  },
+  {
+   "tur": "isletim.bellek_az",
+   "anahtar": "",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "kullanılabilir bellek yüzde 10 altı",
+   "kaynak": "makine_denetimi"
+  },
+  {
+   "tur": "isletim.kap_yeniden_basladi",
+   "anahtar": "servis",
+   "seviye": "UYARI",
+   "kapanma": "SESSIZLIK",
+   "kosul": "yeniden başlama artışı > 0",
+   "kaynak": "makine_denetimi"
+  },
+  {
+   "tur": "isletim.kap_bellek_tasti",
+   "anahtar": "servis",
+   "seviye": "KRITIK",
+   "kapanma": "SESSIZLIK",
+   "kosul": "OOMKilled",
+   "kaynak": "makine_denetimi"
+  },
+  {
+   "tur": "isletim.kap_calismiyor",
+   "anahtar": "servis",
+   "seviye": "KRITIK",
+   "kapanma": "KOSUL",
+   "kosul": "durum running değil (goc ve yedek hariç)",
+   "kaynak": "makine_denetimi"
+  },
+  {
+   "tur": "isletim.makine_denetimi_sessiz",
+   "anahtar": "",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "makine.json 25 dakikadan eski ya da okunamıyor",
+   "kaynak": "isletim_denetimi"
+  },
+  {
+   "tur": "isletim.saat_esitleme",
+   "anahtar": "",
+   "seviye": "KRITIK",
+   "kapanma": "KOSUL",
+   "kosul": "chrony.json okunamıyor, senkron değil, sapma eşik üstü, dosya eski ya da sonBozukAni son 10 dakikada",
+   "kaynak": "saat_esitleme_izleme"
+  },
+  {
+   "tur": "isletim.wal_arsivi",
+   "anahtar": "",
+   "seviye": "KRITIK (son deneme başarısız); UYARI (son başarı 60 dk eski)",
+   "kapanma": "KOSUL",
+   "kosul": "pg_stat_archiver",
+   "kaynak": "isletim_denetimi"
+  },
+  {
+   "tur": "isletim.baglanti_sayisi",
+   "anahtar": "",
+   "seviye": "UYARI >= 80; KRITIK >= 90",
+   "kapanma": "KOSUL",
+   "kosul": "pg_stat_activity istemci bağlantıları",
+   "kaynak": "isletim_denetimi"
+  },
+  {
+   "tur": "isletim.yedek_basarisiz",
+   "anahtar": "iş",
+   "seviye": "KRITIK",
+   "kapanma": "KOSUL",
+   "kosul": "D12 durum dosyasında son sonuç başarısız",
+   "kaynak": "D12 makine işleri"
+  },
+  {
+   "tur": "isletim.yedek_eski",
+   "anahtar": "iş",
+   "seviye": "KRITIK (döküm, pgBackRest, xprem birimi > 26 saat); UYARI (doğrulama > 8 gün, geri yükleme denemesi > 35 gün)",
+   "kapanma": "KOSUL",
+   "kosul": "D12 durum dosyası son başarı anı",
+   "kaynak": "D12 makine işleri"
+  },
+  {
+   "tur": "isletim.yedek_durumu_okunamadi",
+   "anahtar": "iş",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "durum dosyası yok ya da YedekIsDurumu şemasına uymuyor",
+   "kaynak": "isletim_denetimi"
+  },
+  {
+   "tur": "isletim.pgboss_sema",
+   "anahtar": "",
+   "seviye": "KRITIK",
+   "kapanma": "KOSUL",
+   "kosul": "isSagligi.semaSurumu beklenen ile bulunan farklı",
+   "kaynak": "D14.isSagligi"
+  },
+  {
+   "tur": "isletim.olu_mektup",
+   "anahtar": "kuyruk",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "oluMektup > 0",
+   "kaynak": "D14.isSagligi"
+  },
+  {
+   "tur": "isletim.is_sessiz",
+   "anahtar": "kuyruk",
+   "seviye": "KRITIK (aralık <= 900 sn); UYARI (daha seyrek)",
+   "kapanma": "KOSUL",
+   "kosul": "zamanlamalı işte sonBasariAni, 2 x beklenenAralikSaniye + 600 saniyeden eski",
+   "kaynak": "D14.isSagligi"
+  },
+  {
+   "tur": "isletim.kuyruk_birikti",
+   "anahtar": "kuyruk",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "enEskiBekleyenSaniye > 900",
+   "kaynak": "D14.isSagligi"
+  },
+  {
+   "tur": "isletim.eposta_basarisiz",
+   "anahtar": "",
+   "seviye": "KRITIK",
+   "kapanma": "KOSUL",
+   "kosul": "ardisikBasarisiz >= 3",
+   "kaynak": "D14.isSagligi"
+  },
+  {
+   "tur": "isletim.eposta_yarim",
+   "anahtar": "",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "yarimKalan > 0",
+   "kaynak": "D14.isSagligi"
+  },
+  {
+   "tur": "isletim.eposta_gunluk_sinir",
+   "anahtar": "",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "son24SaatGonderilen >= gunlukSinir x 0,8",
+   "kaynak": "D14.isSagligi"
+  },
+  {
+   "tur": "isletim.devam_tutarlilik_farki",
+   "anahtar": "",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "devam_tutarlilik_denetimi son çıktısında farkSayisi > 0 (D08-A08)",
+   "kaynak": "D14.isSagligi sonCikti"
+  },
+  {
+   "tur": "isletim.api_5xx",
+   "anahtar": "",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "son 10 dakikada 503 dışı 5xx >= 20",
+   "kaynak": "API ölçü dosyaları"
+  },
+  {
+   "tur": "isletim.api_503",
+   "anahtar": "",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "503 oranı >= yüzde 5 ve toplam >= 200",
+   "kaynak": "API ölçü dosyaları"
+  },
+  {
+   "tur": "isletim.gonderim_yavas",
+   "anahtar": "",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "gönderim p95 >= 2000 ms ve adet >= 100",
+   "kaynak": "API ölçü dosyaları"
+  },
+  {
+   "tur": "isletim.api_olcum_yok",
+   "anahtar": "",
+   "seviye": "UYARI",
+   "kapanma": "KOSUL",
+   "kosul": "5 dakikadan yeni API ölçü dosyası yok",
+   "kaynak": "API ölçü dosyaları"
+  },
+  {
+   "tur": "isletim.sertifika_bitiyor",
+   "anahtar": "",
+   "seviye": "UYARI (acme 14, elle 30 gün); KRITIK (7 gün)",
+   "kapanma": "KOSUL",
+   "kosul": "kalan gün",
+   "kaynak": "sertifika_bitis_denetimi"
+  },
+  {
+   "tur": "isletim.sertifika_gecersiz",
+   "anahtar": "",
+   "seviye": "KRITIK",
+   "kapanma": "KOSUL",
+   "kosul": "zincir ya da ad doğrulanamadı",
+   "kaynak": "sertifika_bitis_denetimi"
+  },
+  {
+   "tur": "isletim.yeni_ret_kodu",
+   "anahtar": "'<http>:<kod>'",
+   "seviye": "UYARI",
+   "kapanma": "SESSIZLIK",
+   "kosul": "son 15 dakikadaki sayaçlarda son 28 günde görülmemiş kod",
+   "kaynak": "telefon_sayaclari"
+  },
+  {
+   "tur": "isletim.makbuzlu_kayit_yeniden_geldi",
+   "anahtar": "",
+   "seviye": "UYARI",
+   "kapanma": "SESSIZLIK",
+   "kosul": "son 24 saatte olcum_kayit_kaybi.makbuzla_yeniden_gelen > 0",
+   "kaynak": "olcum_kayit_kaybi"
+  },
+  {
+   "tur": "<başka modül>.<olay>",
+   "anahtar": "çağıranın",
+   "seviye": "çağıranın (varsayılan UYARI)",
+   "kapanma": "SESSIZLIK",
+   "kosul": "uyariAc çağrısı (ör. dogrulama.iptal_listesi_eski, kimlik.inceleme_ayari_eksik)",
+   "kaynak": "D01, D07"
+  }
+ ],
+ "compose_servisleri": [
+  {
+   "servis": "caddy",
+   "profil": "prod",
+   "imaj": "ghcr.io/<depo>/iu-yoklama-caddy@<özet> (apps/server/Dockerfile hedef caddy)",
+   "ag": "onyuz (172.30.11.10 sabit)",
+   "ayrinti": "80, 443/tcp, 443/udp yayımlar; birimler caddy-veri (/data), caddy-ayar (/config); restart unless-stopped; read_only, tmpfs /tmp"
+  },
+  {
+   "servis": "api-1, api-2",
+   "profil": "prod",
+   "imaj": "ghcr.io/<depo>/iu-yoklama-sunucu@<özet> (hedef sunucu); komut node src/server.ts",
+   "ag": "onyuz, veritabani",
+   "ayrinti": "TZ=UTC, init, user node, read_only, cap_drop ALL, no-new-privileges; mem_limit 1g; stop_grace_period 30s; sağlık /health/live (10 sn, 3 deneme, start_period 60 sn); /durum/saat salt okunur, api-durum birimi /durum/api; depends_on goc tamamlandı ve postgres sağlıklı"
+  },
+  {
+   "servis": "isci",
+   "profil": "prod",
+   "imaj": "aynı sunucu imajı; komut node src/worker.ts (D14)",
+   "ag": "onyuz (caddy:443 sertifika denetimi için), veritabani; dışarı çıkış açık",
+   "ayrinti": "TZ=UTC, init, user node, read_only; mem_limit 512m; stop_grace_period 40s (D14); /durum/saat, /durum/makine, /durum/veritabani ve api-durum salt okunur"
+  },
+  {
+   "servis": "goc",
+   "profil": "prod",
+   "imaj": "aynı sunucu imajı; komut node --run db:migrate",
+   "ag": "veritabani",
+   "ayrinti": "tek seferlik (restart no); yayın betiği docker compose run --rm goc ile çalıştırır; api ve isci service_completed_successfully bekler"
+  },
+  {
+   "servis": "xprem",
+   "profil": "prod",
+   "imaj": "xprem imajı docker/xprem/surum.env özetiyle (cosign verify sonrası)",
+   "ag": "onyuz, veritabani",
+   "ayrinti": "DISABLE_TELEMETRY=true; xprem-dosyalari birimi (D12 gece yedekler); yönetim paneli portu yayımlanmaz, yalnız SSH tüneli; restart unless-stopped; havuzu destekliyorsa 10 bağlantı"
+  },
+  {
+   "servis": "mailpit",
+   "profil": "dev",
+   "imaj": "axllent/mailpit sürüm sabit",
+   "ag": "varsayılan",
+   "ayrinti": "yalnız 127.0.0.1:1025 ve 127.0.0.1:8025 (teknik.html#kod-gelistirme-ortami)"
+  },
+  {
+   "servis": "postgres, postgres-test, yedek",
+   "profil": "profilsiz, test, yedek",
+   "imaj": "D12 Compose parçası (include: docker/postgres/compose.yaml)",
+   "ag": "veritabani (172.30.12.0/24, D12)",
+   "ayrinti": "D12; bütün servislerde logging local, API kopyalarında max-size 100m ve max-file 10, öbürlerinde 50m ve 5"
+  }
+ ],
+ "caddy_yollari": [
+  {
+   "yol": "/health/*",
+   "hedef": "respond 404",
+   "not": "Sağlık uçları dışarıya kapalı."
+  },
+  {
+   "yol": "/v1 ve /v1/*",
+   "hedef": "reverse_proxy api-1:3000 api-2:3000",
+   "not": "lb_policy header X-Kurulum-Kimligi (yoksa rastgele); lb_try_duration 5s; etkin sağlık /health/live, 2 sn aralık, 1 sn zaman aşımı, 2 başarısızlık ve 2 başarı; transport keepalive 60s, dial_timeout 2s, response_header_timeout 25s. Güvenlik başlıkları API'de helmet'in (D13)."
+  },
+  {
+   "yol": "/guncelleme/*",
+   "hedef": "reverse_proxy xprem",
+   "not": "Yalnız xprem'in güncelleme protokolü ve yayın API'si önekleri iletilir (ilk kurulumda xprem belgesinden yazılır); yönetim paneli yolu iletilmez, CI Caddy senaryosu denetler."
+  },
+  {
+   "yol": "/gizlilik",
+   "hedef": "file_server /srv/sayfalar/gizlilik.html",
+   "not": "İçerik sahibin kararı (plan.html#acik-gizlilik-politikasi); API düşse de açılır."
+  },
+  {
+   "yol": "/hesap-silme",
+   "hedef": "file_server /srv/sayfalar/hesap-silme.html",
+   "not": "Dosya D01'in, sunma D15'in."
+  },
+  {
+   "yol": "/assets/*",
+   "hedef": "file_server /srv/panel",
+   "not": "Cache-Control public, max-age=31536000, immutable; eksik dosya 404 (teknik.html#panel-sunulma)."
+  },
+  {
+   "yol": "diğer her yol",
+   "hedef": "try_files {path} /index.html; file_server /srv/panel",
+   "not": "Cache-Control no-cache; CSP, Permissions-Policy, Referrer-Policy, nosniff, HSTS (D15-B05)."
+  },
+  {
+   "yol": "genel",
+   "hedef": "encode zstd gzip; request_body max_size 4MB; -Server",
+   "not": "Sunucu zaman aşımları: read_header 10s, read_body 30s, idle 2m. Erişim logu kapalı, hata logu stderr. İstemci adres başlıkları yok sayılır; ağ geçidi varsa yalnız GUVENILEN_AG_GECIDI'nin ISTEMCI_ADRES_BASLIGI'na güvenilir."
+  }
+ ],
+ "yuk_testi": {
+  "tetikler": [
+   "Ders çıkışı yük testi: ilk yayından önce; her dönem başından önce; gönderim, saat belgesi, kimlik ya da yoklama şemasına dokunan sunucu yayınından önce; Fastify, PostgreSQL, Node ya da Drizzle büyük sürüm geçişinden önce.",
+   "Haftalık işin elle koşusu: her sunucu yayınından önce.",
+   "Android 7.0 emülatörü ve güncel Android denemesi: her mağaza ve APK sürümünde, sertifika sağlayıcısı değişince.",
+   "xprem denemesi (imzalı yayın, yüzde, geri alma, bozuk imza reddi): ilk derlemede ve her Expo SDK yükseltmesinde."
+  ],
+  "profiller": [
+   "Ders başı: 20.000 telefon, 60 saniyeye yayılmış sabit geliş; telefon başına saat belgesi ve tek kayıtlık gönderim.",
+   "Ders çıkışı (en kötü durum): 20.000 telefon 1 dakikada; saat belgesi, gönderim (paket başına 1 ile 6 kayıt, yüzde 5'i 200 kayıt), yüzde 30'u değişenler; aynı anda 50 hoca ders raporu ve AKSİS özeti.",
+   "Gece: 5.000 iPhone arka plan gönderimi 30 dakikaya yayılmış; gece işleri aynı pencerede elle tetiklenir.",
+   "Giriş yığılması: 300 hoca 2 dakika içinde kod ister ve girer (D14 testi); e-posta hazırlık ortamında yerel kutuya."
+  ],
+  "olcutler": [
+   "POST /v1/esitleme/gonderim: p95 < 1000 ms, p99 < 3000 ms (D06).",
+   "POST /v1/saat/belge: p95 < 100 ms, p99 < 300 ms (D04).",
+   "503 dışı 5xx: 0. 503: yüzde 2 altı ve hepsi Retry-After'lı (D06, D13). 429: 0 (D13).",
+   "Makbuzlu (KABUL ya da ZATEN_VAR almış) her kayıt sunucuda tam bir kez (sonrasi-denetim.ts, plan.html#hedefler).",
+   "pg_stat_activity en çok 80 bağlantı; havuz bekleme p99 < 2 s; havuz dolu oranı yüzde 1 altı (D12).",
+   "AKSİS özeti ve ders raporu ders çıkışı sürerken p95 <= 2 s, gönderim p95 raporsuz koşudan en çok yüzde 10 kötü (D10).",
+   "devam_hesapla gecikmesi p95 <= 5 dakika yük altında, olağan saatte <= 30 saniye (D08).",
+   "Oturum kancası süresi istek süresinin p95'te yüzde 10'unu geçmez (D01); D02 değişenler kaynağı p95 < 15 ms (D02).",
+   "Kayıt başına veritabanı gidiş dönüşü, 100.000 kayıt başına tablo ve dizin boyutu ve zarf boyu dağılımı rapora yazılır (D05, teknik.html#veritabani-donem-alani)."
+  ]
+ },
+ "tehdit_modeli": {
+  "varliklar": "İmzalı yoklama kayıtları ve denetim kaydı; saat belgesi, QR, giriş kodu özeti, e-posta özeti ve ulaşma makbuzu anahtarları; oturum anahtarı özetleri; xprem güncelleme imza anahtarı ve yayın anahtarı; veritabanı ve yedekleri; SSH erişimi; CI sırları (cosign, xprem yayın anahtarı).",
+  "saldirganlar": "Toplu hile isteyen öğrenci (plan.html#hile); dışarıdan saldırgan; ele geçmiş hoca hesabı; kötü niyetli yönetici; tedarik zinciri (npm, imaj, eylem); BİDB içinden ya da hipervizörden erişim.",
+  "sinirlar": "İnternet ile Caddy; Caddy ile API (iç ağ, trustProxy yalnız Caddy); API ile PostgreSQL (rol ve yetki, D12); CI ile GHCR ve xprem (onaylı ortam); sahip ile SSH; makine ile dış izleme hizmeti (yalnız gövdesiz istek).",
+  "onlemler": "Cihaz imzası ve ikinci çapa (plan.html#gun-ikinci-capa); tek etkenli giriş sınırları (plan.html#kararlar-tek-etkenli-giris); hız sınıfları ve aşırı yük (teknik.html#sunucu-guvenlik); Origin ve çerez kuralı (teknik.html#sunucu-kimlik); gizli anahtar ayrımı ve kid (teknik.html#sunucu-ayarlar); imzalı imaj ve özetle çekme (D15-B11); bağımlılık beklemesi ve denetimi (teknik.html#temel, teknik.html#altyapi-guncellemeler); onaylı OTA yayını ve gece denetimi (D15-B31); log gizliliği (teknik.html#sunucu-ayarlar); yedek ve geri yükleme denemesi (teknik.html#veritabani-yedek).",
+  "kabul_edilen_riskler": "Güncelleme imzası sunucuda atılır: sunucuyu ya da yayın anahtarını ele geçiren bütün telefonlara kod gönderebilir (teknik.html#dagitim-ayrinti-xprem-guvenligi), gece denetimi ve etiketler yalnız fark eder. Hoca girişi tek etkenlidir (plan.html#kararlar-tek-etkenli-giris). Sunucu yurt dışına açıktır, coğrafi engel konamaz (plan.html#kararlar-inceleme-hesaplari). Sanal disk ve hipervizör BİDB'nin elindedir (D15-A01). Bellekteki hız sınırları kopya sayısı katı geniştir (plan.html#teknoloji-sunucu-yeri)."
+ },
+ "olay_mudahalesi": [
+  {
+   "durum": "Saat belgesi, QR ya da ulaşma makbuzu anahtarı sızdı",
+   "adimlar": "anahtar-uret ele-gecirildi --amac <amaç> --kid <kid> --yeni-kid <yeni>; yayinla.sh --yeniden-baslat; o kid'le belgelenmiş ve şüphe anından sonra ulaşan kayıtlar D04 işaretiyle D07'de İncelemede; çevrimdışı yedek yenilenir."
+  },
+  {
+   "durum": "Giriş kodu ya da e-posta özeti anahtarı sızdı",
+   "adimlar": "anahtar-uret dondur ile hemen değiştir, kopyaları sırayla yeniden başlat; yalnız 5 dakikalık kodlar ve e-posta sayaçları düşer (teknik.html#dagitim-ayrinti-korunacak-anahtarlar)."
+  },
+  {
+   "durum": "Hoca hesapları ele geçti şüphesi",
+   "adimlar": "anahtar-uret oturumlari-kapat --tur personel (D01.oturumlariKapat, her oturum için denetim kaydı); hocalar e-posta koduyla yeniden girer."
+  },
+  {
+   "durum": "xprem yayın anahtarı ya da CI şüphesi",
+   "adimlar": "ota-yayin ortamındaki anahtar xprem'de iptal edilip yenilenir; ota_yayin_denetimi elle koşturulur; etiketsiz güncelleme xprem panelinden (SSH tüneli) geri alınır; sahibin GitHub oturumları kapatılır."
+  },
+  {
+   "durum": "Sunucu ele geçti şüphesi",
+   "adimlar": "Makine temiz imajla yeniden kurulur; bütün sırlar yeniden üretilir (saat belgesi ve QR için ele-gecirildi); veritabanı şüpheden önceki âna PITR ile döner (D12); telefonlar sonraki kayıtları yeniden gönderir (plan.html#gun-kenar-durumlar); xprem imza anahtarı da değiştirilir ve yeni uygulama sürümü gerekir."
+  },
+  {
+   "durum": "SSH anahtarı kayboldu ya da sızdı",
+   "adimlar": "Anahtar authorized_keys'ten çıkarılır, ikinci donanım anahtarıyla girilir (D15-A10); sızıntıda sunucu şüphesi adımları uygulanır."
+  }
+ ],
+ "hata_kodlari": [
+  {
+   "kod": "ISLETIM_KAPANIYOR",
+   "http": "503",
+   "nerede": "/health/live, /health/ready, /v1/durum",
+   "anlam": "Süreç kapanıyor; Caddy kopyayı devreden çıkarır."
+  },
+  {
+   "kod": "ISLETIM_HAZIR_DEGIL_VERITABANI",
+   "http": "503",
+   "nerede": "/health/ready",
+   "anlam": "Veritabanına ulaşılamadı ya da 2 saniyede cevap yok."
+  },
+  {
+   "kod": "ISLETIM_HAZIR_DEGIL_SEMA",
+   "http": "503",
+   "nerede": "/health/ready",
+   "anlam": "İmajdaki son göç defterde yok ya da nesil belirsiz."
+  },
+  {
+   "kod": "ISLETIM_GUN_ARALIK_DISI",
+   "http": "400",
+   "nerede": "POST /v1/isletim/ekran-sureleri",
+   "anlam": "Gün ileri tarihli ya da 14 günden eski."
+  },
+  {
+   "kod": "ISLETIM_SURE_GECERSIZ",
+   "http": "400",
+   "nerede": "POST /v1/isletim/ekran-sureleri",
+   "anlam": "Çift (oturum, ekran) ya da toplam 86400 saniye üstü."
+  },
+  {
+   "kod": "ISLETIM_SAYAC_GOVDE_GECERSIZ",
+   "http": "öğe RET",
+   "nerede": "telefon_sayaci",
+   "anlam": "Gövde JSON değil ya da şemaya uymuyor."
+  },
+  {
+   "kod": "ISLETIM_SAYAC_GUN_GECERSIZ",
+   "http": "öğe RET",
+   "nerede": "telefon_sayaci",
+   "anlam": "Gün ulaşma gününden 1 günden fazla ileri ya da 395 günden eski."
+  },
+  {
+   "kod": "ISLETIM_SAYAC_ROL_GECERSIZ",
+   "http": "öğe RET",
+   "nerede": "telefon_sayaci",
+   "anlam": "Öğrenci paketinde ekran süresi."
+  },
+  {
+   "kod": "ISLETIM_AYAR_GECERSIZ",
+   "http": "süreç",
+   "nerede": "ayarlariYukle",
+   "anlam": "Eksik ya da hatalı ayar veya sır; süreç çıkış kodu 78."
+  },
+  {
+   "kod": "ISLETIM_AYARLAR_YUKLENMEDI",
+   "http": "süreç",
+   "nerede": "ayarlar()",
+   "anlam": "Programlama hatası: ayarlar yüklenmeden okundu."
+  },
+  {
+   "kod": "ISLETIM_AYARLAR_ZATEN_YUKLU",
+   "http": "süreç",
+   "nerede": "ayarlariYukle",
+   "anlam": "Farklı girdiyle ikinci yükleme."
+  },
+  {
+   "kod": "ISLETIM_SAAT_DILIMI",
+   "http": "süreç",
+   "nerede": "ayarlariYukle",
+   "anlam": "Süreç saat farkı 0 değil (TZ=UTC değil)."
+  },
+  {
+   "kod": "ISLETIM_BASKI_BELLEK_SINIRI",
+   "http": "süreç",
+   "nerede": "ayarlariYukle",
+   "anlam": "BASKI_BELLEK_BAYT kap sınırından küçük değil."
+  },
+  {
+   "kod": "ISLETIM_GIZLI_ANAHTAR_YOK",
+   "http": "süreç",
+   "nerede": "gizliAnahtar",
+   "anlam": "Amaç bu sürece yüklenmemiş."
+  },
+  {
+   "kod": "ISLETIM_UYARI_GECERSIZ",
+   "http": "süreç",
+   "nerede": "uyariAc",
+   "anlam": "Tür, anahtar ya da metin kuralı tutmuyor."
+  },
+  {
+   "kod": "ISLETIM_YUK_TOHUMU_YASAK",
+   "http": "süreç",
+   "nerede": "test/yuk/tohum.ts",
+   "anlam": "Tohum betiği uretim ortamında çalıştırıldı."
+  },
+  {
+   "kod": "ISLETIM_SEMA_GERIDE",
+   "http": "süreç",
+   "nerede": "server.ts açılışı",
+   "anlam": "Veritabanı imajın beklediği göçün gerisinde; süreç açılmaz."
+  },
+  {
+   "kod": "API_UC_BULUNAMADI, API_ISTEK_GECERSIZ, API_KIMLIK_GEREKLI, API_ROL_YETKISIZ, API_KOKEN_GECERSIZ, API_GOVDE_COK_BUYUK, API_ICERIK_TURU, API_HIZ_SINIRI, API_SUNUCU_YOGUN",
+   "http": "D13",
+   "nerede": "bütün D15 rotaları (örtük)",
+   "anlam": "D13'ün kök kodları."
+  }
+ ],
+ "istekler": [
+  {
+   "modul": "D13",
+   "istek": "app.ts isletimEklentisi'ni rotalariKaydet, D06.ogeTuruKaydet, D01.kimlikOlayiDinleyicisiKaydet, veritabani, saat ve surec ile kaydeder; logger olarak D15'in log'unu (logOlustur sonucu) verir; apiKur ayarlarını D15 ayarlarından eşler (panelAdresi, baski, guvenilenVekilAdresi, yayinBilgisiYolu)."
+  },
+  {
+   "modul": "D14",
+   "istek": "worker.ts: ayarlariYukle({ surec: 'isci' }), logOlustur, isletimIsleri(bag) tanımlarını isTanimla'ya uyarlar; IsSagligi zamanlama girdisine sonCikti; isletim_ozeti e-posta türü; testte deleteAllJobs yardımcısı; çizelge güncellemesi (D15-A12)."
+  },
+  {
+   "modul": "D12",
+   "istek": "olcum_ önekli görünüm göçleri D15 adıyla (<UTC>_isletim_<açıklama>) ve başka tabloları okuyabilir; yoklama_isci pg_monitor üyesi (kararlı); YedekIsDurumu dosyaları /var/lib/iu-yoklama/durum/veritabani/<iş>.json."
+  },
+  {
+   "modul": "D06",
+   "istek": "PaketBaglami'na hesapSilinmis (gecikmiş sayaç paketi silinmiş hesaba yeniden bağlanmasın); telefon_sayaci için govdeEnBuyukBayt 16384."
+  },
+  {
+   "modul": "D01",
+   "istek": "kimlikOlayiDinleyicisiKaydet ve oturumlariKapat dış yüzleri (D01-A14); inceleme ayarları D15 şemasında hazır."
+  },
+  {
+   "modul": "D07",
+   "istek": "KID_BILINMIYOR için 'anahtar emekli' gerekçesi; iptal listesi ve App Attest yenileme uyarılarında uyariAc türleri dogrulama.* önekiyle."
+  },
+  {
+   "modul": "D05",
+   "istek": "olcum_ görünümleri ilk_kesin_karar, etiket_* ve hesaplanan_ani sütunlarını okur; bu sütunlar kaldırılacaksa önce görünüm güncellenir (önce genişlet, sonra daralt)."
+  },
+  {
+   "modul": "Telefon uygulaması (harita dışı)",
+   "istek": "telefon_sayaci gövde kuralları (sıfır gün gönderilmez, haftada en az bir paket, çok oturumlu ekranda eşit bölme, 60 saniye boşta durma); her uygulama yayınında eski sürüm istek örnekleri (D15-B32)."
+  },
+  {
+   "modul": "Panel (harita dışı)",
+   "istek": "Ekran süreleri birikmiş toplamla, en çok 5 dakikada bir ve sayfa gizlenirken; istemciKimligi yerel depoda."
+  }
+ ],
+ "surec_akisi": [
+  "1. ayarlariYukle({ surec: 'api' }); hata varsa stderr'e yalnız ad listesi, çıkış kodu 78.",
+  "2. logOlustur({ ayarlar, ekGizliAdlar: LISTELER_GIZLI_ALANLAR (D03) }); saat = sistemSaati() (D04).",
+  "3. veritabani = veritabaniKur({ adres, parola: yoklama_api_parolasi, rol: 'yoklama_api', havuzBoyutu: 20, havuzBeklemeMs: 2000, uygulamaAdi: 'iu-yoklama-' + kopyaAdi }) (D12); semaDurumu hazir dönene kadar en çok 120 saniye bekle (ulasilamiyor ve nesil_belirsiz beklenir; geride hemen çıkış 1, ISLETIM_SEMA_GERIDE).",
+  "4. isKuyrugu = isKuyruguKur({ rol: 'api', veritabani, saat, log }) ve eposta = epostaKur({ tasiyici: smtpTasiyicisi(...), ozetAnahtari: gizliAnahtar('eposta_ozeti').deger, ... }) (D14), app.ts'ten önce.",
+  "5. app = app.ts kurucusu ({ ayarlar, log, veritabani, saat, isKuyrugu, eposta, ... }) (D13); bütün eklentiler, D15'inki dahil; app.ready().",
+  "6. app.listen({ host: API_DINLEME_ADRESI, port: API_PORT }).",
+  "7. SIGTERM ya da SIGINT: kapanisiBaslat(); KAPANIS_ONCESI_BEKLEME_MS bekle; app.close(); eposta.kapat(10000); isKuyrugu.durdur(); veritabani.kapat(); log flush; çıkış 0. İkinci sinyal ya da 25 saniye aşımı çıkış 1.",
+  "8. unhandledRejection ve uncaughtException: hata sınıfı ve yığın fatal düzeyde loglanır (değer yok), flush, çıkış 1; Docker yeniden başlatır."
+ ],
+ "dosya_semalari": [
+  {
+   "dosya": "chrony.json (/durum/saat)",
+   "bicim": "{ bicim: 1, olcumAni: ISO, senkron: boolean, sapmaMs: tam sayı >= 0, katman: 1..16 | null, kaynak: en çok 64 karakter | null, sonBozukAni: ISO | null }",
+   "kim": "saat_esitleme_izleme yazar; D04 ve D15 okur."
+  },
+  {
+   "dosya": "makine.json (/durum/makine)",
+   "bicim": "{ bicim: 1, olcumAni, diskler: [{ bagla, toplamBayt, kullanilanBayt }], bellek: { toplamBayt, kullanilabilirBayt }, kaplar: [{ servis, durum, saglik | null, yenidenBaslamaSayisi, yenidenBaslamaArtisi, bellekTasti, baslamaAni }] }",
+   "kim": "makine_denetimi yazar; isletim_denetimi okur."
+  },
+  {
+   "dosya": "<kopya>.json (/durum/api)",
+   "bicim": "{ bicim: 1, kopya, yazmaAni, dakikalar: [{ dakika, toplam, besYuzDis, servisYok, hizSiniri, gonderim: { adet, kovalar: 15 sayı (25, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 10000, 20000 ms ve üstü) } }] (son 15 dakika) }; sağlık uçları ve /v1/durum sayılmaz",
+   "kim": "Her API kopyası dakikada bir yazar; isletim_denetimi okur."
+  },
+  {
+   "dosya": "<iş>.json (/durum/veritabani)",
+   "bicim": "D12'nin YedekIsDurumu şeması (packages/contracts/src/veritabani.ts)",
+   "kim": "D12 makine işleri yazar; isletim_denetimi okur."
+  },
+  {
+   "dosya": "<amaç>.json (Compose sırrı)",
+   "bicim": "{ bicim: 1, amac, etkinKid, anahtarlar: [{ kid: ^[a-z0-9-]{1,8}$, deger: base64 32 bayt, durum: ETKIN | YALNIZ_DOGRULAMA | ELE_GECIRILDI, olusturmaAni, emeklilikAni? }] (1..4) }; tam bir ETKIN ve etkinKid ona eşit",
+   "kim": "anahtar-uret yazar; ayarlariYukle okur."
+  }
+ ],
+ "paketler": [
+  "Kök package.json: private, packageManager pnpm@12 tam sürüm (teknik.html#temel), engines.node 26; betikler: dev (docker compose --profile dev up --wait, sunucuda node --run db:migrate, sonra pnpm -r --parallel ile sunucu, işçi ve panel), denetle (biome ci ve tip denetimi), test (pnpm -r test).",
+  "pnpm-workspace.yaml: packages apps/* ve packages/*; minimumReleaseAge: 1440 açıkça (katı), trustPolicy: no-downgrade, allowBuilds yalnız gerekçesi yazılı paketler, pmOnFail: ignore (Dependabot tek belgeli kilit dosyası okur), shellEmulator: true (TZ=UTC gibi ortam önekli betikler Windows'ta da çalışsın), overrides yalnız pnpm deploy tek sürüm istediğinde ve gerekçesiyle.",
+  "Katalog (tek yerde sürüm): typescript ~6.0, zod 4.2 ve üstü, vitest 5 ile aynı sürümde @vitest/coverage-v8, fast-check; SheetJS 0.20.3 kendi sitesindeki paket dosyasından (D03 isteği: packages/core'da yalnız geliştirme bağımlılığı, panelle aynı dosya; teknik.html#panel-excel).",
+  "apps/server/package.json tam sabit sürümler: fastify 5.12.5 ve üstü, fastify-type-provider-zod 7, drizzle-orm 1.0.0-rc.4, pg-boss 12.36.0 ve üstü, nodemailer, pg-boss'un kullandığı cron-parser (D14 isteği), pino, @cucumber/cucumber 13.2 ve üstü, @fastify/helmet, @fastify/rate-limit, @fastify/under-pressure, @fastify/cookie (D13); betikler: db:migrate (D12 göç adımı, pg-boss migrate, worker.ts kur; tek betik, teknik.html#altyapi-imaj), test:senaryo (TZ=UTC cucumber-js), test:birim (TZ=UTC vitest run).",
+  "packages/core/package.json betikleri: test (TZ=UTC vitest run --coverage, satır ve dal eşiği 90 komut satırında), test:istanbul (TZ=Europe/Istanbul vitest run; teknik.html#testler-veritabani-sifirlama), mutasyon (stryker run, sonra node stryker-esik-denetimi.ts). stryker.config.json: testRunner command, commandRunner.command 'pnpm vitest run', Vitest eklentisi kurulmaz (teknik.html#testler-kalite), reporters json ve clear-text, concurrency işlemci sayısı.",
+  "biome.json: biçimlendirme ve recommended kurallar; noFloatingPromises hata düzeyinde apps/server ve apps/mobile'da; noNodejsModules packages/core ve packages/contracts'ta (teknik.html#temel); noPrivateImports hata düzeyinde (modül sınırı, teknik.html#sunucu-mimari); noRestrictedImports: pg-boss ve nodemailer yalnız infra/is-kuyrugu ve infra/eposta'da (D14 isteği), pino yalnız infra/izleme'de, infra/** altından modules/** yasak, dotenv her yerde yasak, tsx yalnız test/steps altında (teknik.html#testler).",
+  "tsconfig.base.json: strict, module ve moduleResolution nodenext, verbatimModuleSyntax ve erasableSyntaxOnly açık, enum ve paths yok, types açıkça; apps/server allowImportingTsExtensions ve noEmit, packages/core rewriteRelativeImportExtensions (teknik.html#temel).",
+  "apps/server/cucumber.js: import önce test/support/**, sonra test/steps/** (kancaların sırası sabit); features/**/*.feature; dil tr; parallel os.availableParallelism(); retry yok; FSTDEP uyarısı kancada kırmızı.",
+  ".env.example: ayar şemasındaki her ortam değişkeni geliştirme değeriyle ve açıklamasıyla; sır yok (sırlar ./.gizli altında, anahtar-uret uret ve D12'nin gelistirme-gizli-uret.sh üretir)."
+ ],
+ "imaj": [
+  "apps/server/Dockerfile çok aşamalı (teknik.html#altyapi-imaj): taban Node 26 resmî imajı özetle sabit (Dependabot FROM satırını yükseltir), pnpm resmî imajı packageManager sürümüyle.",
+  "derle aşaması: çalışma alanı bildirimleri ve kilit dosyası, pnpm install --frozen-lockfile, packages/core ve packages/contracts tsc ile JS'e (Node node_modules altında .ts çalıştırmaz), pnpm deploy --filter sunucu --prod /cikti; CI'nın ürettiği yayin-bilgisi.json kopyalanır.",
+  "panel aşaması: apps/panel Vite derlemesi (harita dışı kod, D15 yalnız derler).",
+  "sunucu hedefi: /app altında deploy çıktısı ve yayin-bilgisi.json; /durum/api node sahipli açılır (adlı birim sahipliği imajdan alır); USER node; ENV TZ=UTC NODE_ENV=production; LABEL org.opencontainers.image.revision; aynı imaj API, işçi ve göç servisi olur.",
+  "caddy hedefi: Caddy resmî imajı özetle sabit; /etc/caddy/Caddyfile, /srv/panel (panel çıktısı), /srv/sayfalar (gizlilik D15, hesap silme D01).",
+  "Dockerfile.dockerignore: node_modules, .git, testler dışı veriler ve infra/izleme/makine (ana makine betikleri imaja girmez)."
+ ],
+ "yayin_is_akislari": [
+  "yayin-sunucu.yml: etiket (sunucu/v*) ya da elle; önce haftalik.yml'nin son koşusu yeşil olmalı (değilse durur); yayin-bilgisi-uret.ts, iki hedefin derlenmesi, GHCR'ye yükleme (iş düzeyinde packages: write), anahtarlı cosign imzası (sırlar sunucu-yayin ortamında, sahibin onayıyla), özetlerin yayın notuna ve surum.env yapıtına yazılması. CI sunucuya erişmez.",
+  "yayin-ota.yml: yalnız elle; 'ota-yayin' ortamı sahibin onayını ister; xprem ile aynı sürümdeki eoas (docker/xprem/surum.env) ile yayın; ota/<runtimeVersion>/<güncelleme kimliği> etiketi (iş düzeyinde contents: write); iş özetine güncelleme kimliği, runtimeVersion, yüzde ve commit (D15-B31).",
+  "Ortak: permissions: contents: read varsayılan, her eylem tam commit özetiyle, eylem çalışma ortamı Node 24, concurrency ile aynı yayının iki koşusu engellenir; APK yayınlanan GitHub sürümleri değiştirilemez ayarlı (teknik.html#altyapi-imaj)."
+ ]
+}

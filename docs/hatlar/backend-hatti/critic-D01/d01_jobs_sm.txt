@@ -1,0 +1,108 @@
+##### JOBS
+{
+ "name": "kimlik_temizligi",
+ "schedule": "Saatlik, her saatin 17. dakikası, Europe/Istanbul (pg-boss zamanlaması, missed: once).",
+ "idempotency": "Koşullar saat arayüzündeki ana göredir; ikinci çalıştırma silecek satır bulmaz. 1000 satırlık partiler, her parti kendi işleminde; iş verisi boş.",
+ "does": "24 saatten eski giriş kodlarını, 24 saattir yanlışı olmayan ve beklemesi bitmiş eposta_giris_durumlari satırlarını siler. 24 saatte doğrulanmayan başvuruyu siler (önceki reddi varsa reddedildi durumuna döndürür). Retten 30 gün sonra reddedilmiş başvurunun ad-soyadını ve adresini silip durumunu silindi yapar. Geçersiz ya da kullanılmış olmasının üstünden 7 gün geçen kayıt kodlarını ve karar verilmesinin üstünden 30 gün geçen değişim taleplerini siler. Silinen satır sayılarını yalnız sayı olarak loglar."
+}
+{
+ "name": "giris_oturumu_temizligi",
+ "schedule": "Her gece 04:40 Europe/Istanbul (gecelik pg_dump 03:30 ve temizlik 04:30 sonrası), missed: once.",
+ "idempotency": "Yalnız kapanışı ya da bitişi 30 günden eski satırları seçer; ikinci çalıştırma boş geçer.",
+ "does": "Kapanmış ya da süresi dolmuş (personelde bitiş, panelde 1 saat işlemsizlik) ve bunun üstünden 30 gün geçmiş giriş oturumu satırlarını siler. Giriş ve kapanış olayları denetim kaydında kalır."
+}
+{
+ "name": "hesap_silme_yurutucu",
+ "schedule": "Her gece 02:20 Europe/Istanbul, missed: once.",
+ "idempotency": "Sıradaki istekler FOR UPDATE SKIP LOCKED ile alınır, her biri kendi işleminde yürür; yapılmış istek durum yapildi olduğundan yeniden seçilmez, silinmiş hesapta hesabiSil değişiklik yapmaz.",
+ "does": "Durumu sirada olan ve son_yurutme_ani geçmiş hesap silme isteklerini hesabiSil ile yürütür (alan listesi: Durumlar ve kurallar). Bekleyen iş telefon kaybolduğu için hiç gelmese de mağaza şartı gereği silme yapılır."
+}
+{
+ "name": "inceleme_hesaplari_kurulumu",
+ "schedule": "İşçi açılışında bir kez (yayın adımı), her gece 02:50 Europe/Istanbul ve inceleme hocası silinince silme işleminde kuyruğa (D14.isGonder, gün başına tekil anahtar).",
+ "idempotency": "Ayarlardaki adres için aktif inceleme hocası varsa dokunmaz; yoksa açar. Aynı girdiyle ikinci çalıştırma satır eklemez.",
+ "does": "D15.ayarlar'daki deneme hocası adresi ve adıyla onaylı, hoca rollü, inceleme_hesabi işaretli personel hesabını kurar ya da silinmişse yeniden kurar. Deneme öğrencisi hesabı bu işle değil, ayarlardaki numarayla gelen ilk kayıtta teyitli açılır. Ayar ya da gizli sabit kod eksikse D15.uyariAc ile işletim uyarısı açar."
+}
+{
+ "name": "bekleyen_kayit_kapatma",
+ "schedule": "Her gece 00:40 Europe/Istanbul (D02 donem_kilidi 00:05 sonrası), missed: once.",
+ "idempotency": "Kapanan hesap durumu kapandi olduğundan yeniden seçilmez; her hesap kendi işleminde.",
+ "does": "Teyit bekleyen, eşleşmesi listede_yok olan, en az 30 günlük ve oluşturulmasından sonra en az bir birim ve dönem kilidi geçmiş (D02.kilitliBirimDonemleri) öğrenci hesabını D03.numaraIleEslestir ile son kez dener; yine listede yoksa hesabı kapandi, cihazını kapandi (bekleme_bitti) yapar, oturumunu kapatır ve D07.yenidenDegerlendir çağırır."
+}
+##### STATE MACHINES
+
+== personel_hesabi ==
+states: ["yok","kod_bekliyor","onay_bekliyor","aktif","pasif","reddedildi","silindi"]
+  T: {"from":"yok","to":"kod_bekliyor","by":"POST /v1/kimlik/basvuru","when":"Adres kayıtlı değil; kişi satırı açılır, başvuru kodu e-postası gider."}
+  T: {"from":"kod_bekliyor","to":"onay_bekliyor","by":"POST /v1/kimlik/basvuru/dogrula","when":"Doğru başvuru kodu; oturum açılmaz."}
+  T: {"from":"kod_bekliyor","to":"yok","by":"kimlik_temizligi","when":"24 saatte doğrulanmadı ve önceki ret yok; satır fiziksel silinir."}
+  T: {"from":"kod_bekliyor","to":"reddedildi","by":"kimlik_temizligi","when":"Yeniden başvuru 24 saatte doğrulanmadı; önceki ret durur."}
+  T: {"from":"onay_bekliyor","to":"aktif","by":"POST /v1/kimlik/yonetim/basvurular/{kisiId}/onay","when":"Kapsamındaki yönetici onaylar; hoca rolü verilir."}
+  T: {"from":"onay_bekliyor","to":"reddedildi","by":"POST /v1/kimlik/yonetim/basvurular/{kisiId}/ret","when":"Gerekçe koduyla; son_ret_ani dolar."}
+  T: {"from":"reddedildi","to":"kod_bekliyor","by":"POST /v1/kimlik/basvuru","when":"Aynı adresle yeniden başvuru; yöneticiye önceki ret gösterilir."}
+  T: {"from":"yok","to":"aktif","by":"yonetici-ekle, POST /v1/kimlik/yonetim/yoneticiler, inceleme_hesaplari_kurulumu","when":"Onaylı hesap doğrudan açılır."}
+  T: {"from":"kod_bekliyor, onay_bekliyor, reddedildi","to":"aktif","by":"yonetici-ekle, POST /v1/kimlik/yonetim/yoneticiler","when":"Yöneticinin ya da komutun açık işlemi onay sayılır."}
+  T: {"from":"aktif","to":"pasif","by":"POST /v1/kimlik/yonetim/hesaplar/{kisiId}/pasif","when":"Bütün oturumlar aynı işlemde kapanır; son tüm kapsamlı yönetici pasif olamaz."}
+  T: {"from":"pasif","to":"aktif","by":"POST /v1/kimlik/yonetim/hesaplar/{kisiId}/etkin, yonetici-ekle","when":"Oturum açılmaz, kişi yeniden kodla girer."}
+  T: {"from":"aktif, pasif","to":"silindi","by":"POST /v1/kimlik/hesap-silme, hesap_silme_yurutucu","when":"E-posta, kodlar ve oturum satırları silinir, roller geri alınır; ad-soyad ve bölüm kalır."}
+  T: {"from":"kod_bekliyor, onay_bekliyor, reddedildi","to":"silindi","by":"POST /v1/kimlik/basvuru/silme, kimlik_temizligi","when":"Başvuru sahibinin isteği ya da retten 30 gün sonra; ad-soyad ve adres de silinir."}
+
+== ogrenci_hesabi ==
+states: ["yok","aktif_teyit_bekliyor","aktif_teyitli","reddedildi","kapandi","silindi"]
+  T: {"from":"yok","to":"aktif_teyit_bekliyor","by":"POST /v1/kimlik/ogrenci/kayit","when":"Numarada teyitli hesap yok ve numarada 5'ten az teyitsiz hesap var."}
+  T: {"from":"yok","to":"aktif_teyitli","by":"POST /v1/kimlik/ogrenci/kayit","when":"Geçerli kayıt kodu (KAYIT_KODU_ACIK iken) ya da ayarlardaki inceleme numarası."}
+  T: {"from":"aktif_teyit_bekliyor","to":"aktif_teyitli","by":"ogrenciTeyitEt (D09 ucu)","when":"Öğrencinin etkin liste satırı olan dersin hocası; toplu yolda yalnız eşleşmiş, cihazı doğrulanmış ve çakışmasız hesap."}
+  T: {"from":"aktif_teyit_bekliyor","to":"reddedildi","by":"ogrenciTeyidiniReddet ya da aynı numaranın başka hesabının teyidi","when":"Cihaz ve oturum kapanır, açık talep iptal olur, kayıtları D07 yeniden değerlendirir (sonucu D01-A05)."}
+  T: {"from":"aktif_teyit_bekliyor","to":"kapandi","by":"bekleyen_kayit_kapatma","when":"Hiçbir listede yok, en az 30 gün ve oluşturmadan sonra bir dönem kilidi geçti."}
+  T: {"from":"aktif_teyit_bekliyor, aktif_teyitli","to":"silindi","by":"POST /v1/kimlik/hesap-silme, POST /v1/kimlik/ogrenciler/{kisiId}/hesap-silme, hesap_silme_yurutucu","when":"Oturum satırları ve girilen isim silinir, cihaz kapanır; numara, teyit bilgisi ve açık anahtarlar kalır."}
+  T: {"from":"reddedildi, kapandi","to":"silindi","by":"POST /v1/kimlik/ogrenciler/{kisiId}/hesap-silme","when":"Hoca yüz yüze başlatır; oturumu olmayan hesabın tek silme yolu."}
+
+== eslesme_durumu ==
+states: ["listede_yok","isim_uyusmuyor","eslesti"]
+  T: {"from":"yok","to":"listede_yok, isim_uyusmuyor, eslesti","by":"POST /v1/kimlik/ogrenci/kayit","when":"D03.numaraIleEslestir sonucu; isimde yalnız NFC, boşluk ve Türkçe büyük küçük harf farkı yok sayılır."}
+  T: {"from":"listede_yok, isim_uyusmuyor, eslesti","to":"listede_yok, isim_uyusmuyor, eslesti","by":"bekleyenKayitlariEslestir (D03 liste dinleyicisi)","when":"Şubenin listesi uygulanınca aynı işlemde; yalnız teyit bekleyen hesaplar. Teyitli hesabın eşleşmesi değişmez."}
+
+== cihaz ==
+states: ["yok","etkin","degisim_bekliyor","kapandi"]
+  T: {"from":"yok","to":"etkin","by":"POST /v1/kimlik/ogrenci/kayit","when":"Yeni hesap ya da inceleme hesabına ek cihaz."}
+  T: {"from":"yok","to":"degisim_bekliyor","by":"POST /v1/kimlik/ogrenci/kayit, POST /v1/kimlik/cihaz-degisimi","when":"Numarada teyitli hesap var; talep açılır."}
+  T: {"from":"degisim_bekliyor","to":"etkin","by":"POST /v1/kimlik/cihaz-degisimi/{talepId}/onay","when":"Hoca kimliği görür ve QR değeriyle onaylar; aynı işlemde eski cihaz kapanır."}
+  T: {"from":"degisim_bekliyor","to":"kapandi","by":"ret, iptal, yeni talep, çıkış, hesap silme","when":"Nedenler degisim_ret, degisim_iptal, silme."}
+  T: {"from":"etkin","to":"kapandi","by":"değişim onayı (eski cihaz), POST /v1/kimlik/cikis, hesap silme, teyit reddi, bekleyen_kayit_kapatma","when":"Nedenler degisim, cikis, silme, teyit_ret, bekleme_bitti; kapanma_ani etkinlik bitişidir, açık anahtarlar kalır."}
+
+== giris_oturumu ==
+states: ["yok","acik","kapali","suresi_dolmus","silinmis"]
+  T: {"from":"yok","to":"acik","by":"POST /v1/kimlik/giris, öğrenci kaydı, değişim talebi","when":"Personelde yalnız durum aktif kişiye; değişim bekleyen cihazın oturumu kapsam degisim_bekliyor ile açılır."}
+  T: {"from":"acik (degisim_bekliyor)","to":"acik (tam)","by":"POST /v1/kimlik/cihaz-degisimi/{talepId}/onay","when":"Aynı satırın kapsamı değişir, telefon anahtarı aynı kalır."}
+  T: {"from":"acik","to":"kapali","by":"çıkış, Oturumlarım, yönetici, 4. giriş, yenileme, pasif, cihaz değişimi, teyit reddi, bekleme bitti, olay komutu, geri yükleme","when":"kapanma_nedeni yazılır, denetime düşer, kimlik olayı dinleyicilere gider."}
+  T: {"from":"acik","to":"suresi_dolmus","by":"saat arayüzü","when":"Personel bitis_ani geçti ya da panelde son kullanımdan 1 saat geçti; satıra yazılmaz, kanca hesaplar. Öğrencide olmaz."}
+  T: {"from":"kapali, suresi_dolmus","to":"silinmis","by":"giris_oturumu_temizligi","when":"Kapanış ya da bitişten 30 gün sonra."}
+  T: {"from":"acik, kapali, suresi_dolmus","to":"silinmis","by":"hesap silme","when":"Aynı işlemde; oturum anahtarının özeti kalmaz."}
+
+== cihaz_degisim_talebi ==
+states: ["bekliyor","onaylandi","reddedildi","iptal"]
+  T: {"from":"bekliyor","to":"onaylandi","by":"POST /v1/kimlik/cihaz-degisimi/{talepId}/onay","when":"Yetkili hoca, süresi geçmemiş QR değeri."}
+  T: {"from":"bekliyor","to":"reddedildi","by":"POST /v1/kimlik/cihaz-degisimi/{talepId}/ret","when":"Yetkili hoca ya da hesabın etkin cihazı."}
+  T: {"from":"bekliyor","to":"iptal","by":"ret ucu (yeni cihaz), çıkış, başka yeni cihazdan talep, hesabın kapanması","when":"karar_gerekcesi vazgecildi, yeni_talep ya da hesap_kapandi."}
+
+== hesap_silme_istegi ==
+states: ["yok","sirada","yapildi","iptal"]
+  T: {"from":"yok","to":"yapildi","by":"POST /v1/kimlik/hesap-silme","when":"Telefon 0 bekleyen öğe bildirdi ya da panelde personelin açık telefon oturumu yok; aynı işlemde."}
+  T: {"from":"yok","to":"sirada","by":"POST /v1/kimlik/hesap-silme","when":"Telefonda bekleyen öğe var ya da personelin açık telefon oturumu var."}
+  T: {"from":"sirada","to":"yapildi","by":"POST /v1/kimlik/hesap-silme (bekleyenOgeSayisi 0), hesap_silme_yurutucu","when":"Kuyruk boşaldı ya da 7 gün doldu."}
+  T: {"from":"sirada","to":"iptal","by":"DELETE /v1/kimlik/hesap-silme","when":"Yapılmadan önce aynı hesap vazgeçer."}
+  T: {"from":"yok","to":"yapildi","by":"POST /v1/kimlik/ogrenciler/{kisiId}/hesap-silme","when":"Hoca yüz yüze; telefon olmadığından beklenecek iş yok."}
+
+== giris_kodu ==
+states: ["acik","kullanildi","gecersiz","suresi_doldu","silinmis"]
+  T: {"from":"acik","to":"kullanildi","by":"giris, basvuru/dogrula, basvuru/silme","when":"Doğru kod; aynı işlemde kişinin aynı amaçlı öbür açık kodları gecersiz olur."}
+  T: {"from":"acik","to":"gecersiz","by":"yanlış deneme","when":"Kişinin açık kodlarında ortak 3. yanlış."}
+  T: {"from":"acik","to":"suresi_doldu","by":"saat arayüzü","when":"300 saniye; satıra yazılmaz."}
+  T: {"from":"kullanildi, gecersiz, suresi_doldu","to":"silinmis","by":"kimlik_temizligi","when":"Oluşturmadan 24 saat sonra."}
+
+== kayit_kodu ==
+states: ["acik","kullanildi","gecersiz","suresi_doldu","silinmis"]
+  T: {"from":"acik","to":"kullanildi","by":"POST /v1/kimlik/ogrenci/kayit","when":"Doğru kod ve aynı numara; hesap teyitli açılır."}
+  T: {"from":"acik","to":"gecersiz","by":"yanlış deneme ya da yeni kod","when":"5. yanlış ya da aynı numaraya yeni kod."}
+  T: {"from":"acik","to":"suresi_doldu","by":"saat arayüzü","when":"72 saat."}
+  T: {"from":"kullanildi, gecersiz, suresi_doldu","to":"silinmis","by":"kimlik_temizligi","when":"7 gün sonra."}

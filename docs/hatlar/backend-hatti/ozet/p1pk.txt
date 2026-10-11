@@ -1,0 +1,319 @@
+=== D13-P01
+{
+ "id": "D13-P01",
+ "title": "Sözleşme paketi iskeleti ile rota, hata, kimlik, sayfa ve öğe temelleri",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "MODULLER",
+  "ModulAdi",
+  "genisleyenEnum",
+  "anSemasi",
+  "gunSemasi",
+  "dersSaatiSemasi",
+  "sureMsSemasi",
+  "bindeSemasi",
+  "buyukSayiSemasi",
+  "Kimlik",
+  "KisiId",
+  "GirisOturumuId",
+  "CihazId",
+  "ProjeksiyonId",
+  "BirimId",
+  "kimlikNesnesiSemasi",
+  "kimlikSemasi",
+  "istemciKimligiSemasi",
+  "ogrenciNoSemasi",
+  "beklenenSurumNoSemasi",
+  "sayfaSemasi",
+  "sayfaSorgusuSemasi",
+  "tamListeSemasi",
+  "hataKodlariTanimla",
+  "HataTanimi",
+  "UygulamaHatasi",
+  "hataZarfiSemasi",
+  "GECICI_SQLSTATELER",
+  "HataAyrintisi",
+  "HIZ_SINIFLARI",
+  "BASLIKLAR",
+  "CEREZLER",
+  "IstemciBilgisi",
+  "ogeTuruTanimla",
+  "OgeTuruTanimi",
+  "ogeSonuclariSemasi",
+  "rotaTanimla",
+  "RotaTanimi",
+  "KimlikBirlesimi",
+  "RotaGirdisi"
+ ],
+ "needs": [],
+ "tests": [
+  "Kimlik nesnesi tek şemaya uyar",
+  "Öğe sonucu şeması yalnız ekleme alanlarını kabul eder"
+ ],
+ "size": "L",
+ "notes": "Her modülün sözleşme paketinin ilk adımda içe aktardığı her şey tek pakette ve hiçbir şeyi beklemeden yazılır, böylece modül sözleşmeleri ikinci aşamada başlar: packages/contracts çalışma alanı paketi kaynak ve default koşullu giriş noktalarıyla ve Node tipsiz tsconfig ile kurulur; modül adları, genişleyen enum, zaman, kimlik, sayfa, hata kataloğu tanımı ile markalı UygulamaHatasi ve hata zarfı, geçici SQLSTATE tablosu, hız sınıfları, başlık ve çerez adları, öğe türü ve öğe sonucu şemaları ve tanım anı kurallarıyla rotaTanimla yazılır (HataAyrintisi hatalar.ts içe aktarılmadan onun genişlettiği kayıt arayüzüyle kurulur). Kimlik nesnesi testi geçerli ve geçersiz örnekleri, öğe sonucu testi ek alan kabulünü ve reddini denetler."
+}
+=== D12-P01
+{
+ "id": "D12-P01",
+ "title": "Dış yüz girişi, tablo yardımcıları, kısıt adı ve ortak SQL işlevleri",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "Islem",
+  "kisitAdi",
+  "tabloYardimcilari"
+ ],
+ "needs": [],
+ "tests": [
+  "kisitAdi"
+ ],
+ "size": "M",
+ "notes": "index.ts dış yüzün tek girişi olarak Islem tipini, kisitAdi ve tabloYardimcilari ile açılır, sonraki altyapı paketleri index.ts'e yalnız kendi dışa açma satırlarını ekler; drizzle.config.ts bütün tablolar.ts dosyalarını yükler. veritabani_islevler göçü (uygulama.veritabani_degismez_sutun() tetikleyici işlevi ve nesil okuma işlevleri, yoklama_goc rolüne ait SECURITY DEFINER, uygulama rollerine yalnız EXECUTE) bilerek burada: D02 kendi göçünde bu tetikleyici işlevini bağlar ve yalnız bu paketin dışa açtıklarını bekler, işlev göçü böylece her tablo göçünden önce gelir. kisitAdi fast-check özelliğiyle (63 bayt, ASCII, özet, ek) denetlenir. Hiçbir şey beklemez."
+}
+=== D12-P03
+{
+ "id": "D12-P03",
+ "title": "PostgreSQL imajı ve küme ayarları",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Sürüm denetimi"
+ ],
+ "size": "M",
+ "notes": "PostgreSQL 18 imajı (pgBackRest, pg_stat_statements), üretim ve postgres-test servisleri, ayar ve pg_hba dosyaları kurulur, böylece bütün modüllerin testleri aynı kümeyle koşar; surum-denetimi.sh uyuşan sürümlerde yeşil, bozulmuş kopyada VERITABANI_SURUM_UYUSMAZ ile kırmızı koşar. Hiçbir şey beklemez."
+}
+=== D09-P01
+{
+ "id": "D09-P01",
+ "title": "Ortak saf kurallar",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "sonDurumOnceligi",
+  "SEBEP_KODLARI",
+  "NEDEN_KODLARI",
+  "SON_DURUMLAR"
+ ],
+ "needs": [],
+ "tests": [
+  "Son durum önceliği tek ve tam",
+  "Düzeltme zinciri doğrusal kalır",
+  "Belge numarası normalleştirmesi",
+  "İstek özeti belirlenimli",
+  "Sorun bildirimi süresi sınırı",
+  "Parti seçimi belirlenimli",
+  "Ortak kurallar mutasyon testi"
+ ],
+ "size": "L",
+ "notes": "Bağımlılığı yok, ilk aşamada başlar; D08, D10, D05 ve sözleşme dosyası buradaki dört dışa açık değeri bekler. Sebep ve neden kodu kataloğu, son durum önceliği, düzeltme zinciri, belge numarası, istek özeti, sorun süresi ve parti seçimi Intl kullanmayan saf işlevlerdir; index.ts yedi dosyanın hepsini dışa verir. fast-check özellik testleri TZ=UTC ve TZ=Europe/Istanbul koşularında, Stryker yüzde 80 kırma eşiğiyle doğrulanır. Tek Stryker yapılandırması ve tek dışa açık giriş dosyası olduğu için bölünmedi."
+}
+=== D14-P02
+{
+ "id": "D14-P02",
+ "title": "E-posta türleri, SMTP taşıyıcısı ve sahte posta kutusu",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "EPOSTA_TURLERI",
+  "EpostaVerisi",
+  "EpostaHataTuru",
+  "sahtePostaKutusu"
+ ],
+ "needs": [],
+ "tests": [
+  "STARTTLS ilan etmeyen sunucuya ileti gitmez"
+ ],
+ "size": "M",
+ "notes": "Türler, şablon verisi şemaları, hata türleri ve EpostaTasiyicisi arayüzü tek sabitten, sabit cümleler, Nodemailer havuzlu smtpTasiyicisi (SMTP_TLS_AYARLARI, 'yok' yalnız geliştirmede) ve testlerin bellek içi sahtePostaKutusu yazılır; hiçbir paketi beklemez, böylece D15 test dünyası sahte posta kutusunu ilk aşamada alır. tasiyici.test.ts STARTTLS ilan etmeyen sahte sunucuya AUTH ve DATA gitmediğini, ilan edende iletinin gittiğini ve TLS ayarlarının değiştirilemediğini denetler; koruyucu bozma burada denenir: requireTLS kaldırılınca test kırmızıya döner, baytlar md5 ile geri yazılır. smtpTasiyicisi bileşim köklerine e-posta dış yüzünden (P09) verilir."
+}
+=== D04-P01
+{
+ "id": "D04-P01",
+ "title": "Saat arayüzü ve İstanbul yardımcıları",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "simdi",
+  "istanbulTarihi",
+  "istanbulAni",
+  "istanbulGunSonuAni",
+  "duvarSaatiFarkiMs"
+ ],
+ "needs": [],
+ "tests": [
+  "Saat dilimi bağımsızlığı ve İstanbul yardımcıları"
+ ],
+ "size": "S",
+ "notes": "Kural anlarının tek kaynağı Saat arayüzü, sistem saati, duvar saati farkı, pg-boss saatine bağlı sahte saat ve İstanbul tarih yardımcıları hiçbir modüle bağlanmadan yazılır; istanbul.test.ts yaz saatli ve bugünkü örnekleri TZ=UTC ve TZ=Europe/Istanbul altında iki kez koşar. Hiçbir şey beklemez; simdi ve istanbulTarihi bu yüzden ilk aşamada hazırdır."
+}
+=== D15-P01
+{
+ "id": "D15-P01",
+ "title": "Çalışma alanı iskeleti ve Node sürümü denetimi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Node sürümü üç dosyada aynı"
+ ],
+ "size": "M",
+ "notes": "Kök ve sunucu paket bildirimleri, pnpm çalışma alanı ve katalog, biome kuralları, ortak tsconfig, *.test.ts dosyalarını yüklemeyen Cucumber ayarı, .env.example ve .node-version yazılır, bütün paketler bunun üstüne kurulur; node-surumu-denetimi.test.ts deneme klasöründe .node-version, Dockerfile ve eas.json sürümleri ayrışınca çıkış 1, aynıyken 0 bekler."
+}
+=== D02-P02
+{
+ "id": "D02-P02",
+ "title": "Takvim, çakışma ve ders kodu kuralları",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Son hafta, kilit günü ve dönem arası",
+  "Çakışma aralığı yarı açıktır",
+  "Program saati örtüşmesi",
+  "Normalleştirme sabit noktadır ve Türkçe harfi doğru büyütür"
+ ],
+ "size": "M",
+ "notes": "Son hafta, kilit günü, dönem arası, tatil ve sınav haftası kuralları, yarı açık aralık, program saati örtüşmesi ve Türkçe büyüten ders kodu normalleştirmesi hiçbir dosya içe aktarmayan saf işlevler olarak yazılır; Vitest ve fast-check özellikleri TZ=UTC ve TZ=Europe/Istanbul ile iki kez koşar."
+}
+=== D08-P01
+{
+ "id": "D08-P01",
+ "title": "Çekirdek: tipler, hak formülü ve kapsam yüklemi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "oturumSaatleri",
+  "kapsamdaMi"
+ ],
+ "needs": [],
+ "tests": [
+  "Hak formülü tanımla birebir",
+  "Ondalıklı hesap karşı örneği",
+  "Yüzde ile karar tutarlı",
+  "Formül mutasyonu",
+  "Dışa açık kapsam yüklemi ve oturum saatleri"
+ ],
+ "size": "M",
+ "notes": "Hak, yüzde ve tür kararı ile D09'un da içe aktardığı oturumSaatleri ve kapsamdaMi saf ve Intl'siz yazılır, hesabın katılımla genişleyen kapsam kararı da kapsam.ts'te durur; tanım tabanlı özellik testleri, ondalıklı karşı örnek ve 99 sabitinin md5 ile geri yazılan mutasyonu denetler."
+}
+=== D03-P02
+{
+ "id": "D03-P02",
+ "title": "Ad eşleştirme, kova ve şube anahtarları",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "listeKovaAnahtari"
+ ],
+ "needs": [],
+ "tests": [
+  "Ad anahtarı iki kez uygulanınca değişmez",
+  "Ad eşleşmesi yansımalı ve simetrik",
+  "Türkçe büyük harf kendi küçüğüyle eşleşir, harf sadeleştirmesi yoktur",
+  "Kova numarası belirlenimci",
+  "Şube anahtarı yazım farkında aynı kalır"
+ ],
+ "size": "M",
+ "notes": "Türkçe ad anahtarı ve isimlerEslesir, kovaNo ile listeKovaAnahtari ve şube anahtarı hiçbir dış bağımlılığı olmayan saf işlevler olarak yazılır, D01 ve D09'un beklediği kova anahtarı burada çıkar; fast-check özellik testleri ve Türkçe harf tablo testi doğrular."
+}
+=== D01-P02
+{
+ "id": "D01-P02",
+ "title": "Saf kurallar: e-posta, kayıt kodu ve toplu teyit",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "epostaNormallestir",
+  "topluTeyitUygunMu"
+ ],
+ "needs": [],
+ "tests": [
+  "E-posta normalleştirme",
+  "Kayıt kodu biçimi",
+  "Toplu teyit kuralı tek yerde"
+ ],
+ "size": "M",
+ "notes": "Sözleşme dosyasına dayanmayan üç saf işlev ilk aşamada yazılır: e-posta normalleştirme (alan adı ve yerel kısım kuralı dosyada), Crockford kayıt kodu (8 karakter, 40 bit) ve toplu teyit yüklemi ile engel işlevi (girdi ve engel tipleri imzadaki gibi teyit.ts içinde). fast-check testleri iki kez normalleştirmenin değişmediğini, kod biçimini ve yüklemle engelin her girdide aynı sonucu verdiğini denetler; ogrenciTeyitEt'in toplu yol davranışı D01-P11'in senaryosundadır."
+}
+=== D06-P01
+{
+ "id": "D06-P01",
+ "title": "Çekirdek: imleç, su seviyesi ve sayfa kesme",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "İmleç kodlaması",
+  "Su seviyesi hesabı",
+  "Sayfa kesme"
+ ],
+ "size": "M",
+ "notes": "İmleç kodlaması, kesintisiz son sıra ve sürüm sınırında sayfa kesme saf işlev olarak yazılır; fast-check testleri kodla ve çöz tersliğini, 64 bitlik kimliğin kaybolmadığını, boşluk alanlarının sıfırlanmasını ve hiçbir sürümün iki sayfaya bölünmediğini sınar. Bağımlılığı yoktur."
+}
+=== D06-P02
+{
+ "id": "D06-P02",
+ "title": "Çekirdek: ikinci çapa metni ve makbuz biçimi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "İkinci çapa metni",
+  "Ulaşma makbuzu"
+ ],
+ "size": "M",
+ "notes": "İkinci çapanın imzalı metni ve ulaşma makbuzunun bayt biçimi saf işlev olarak yazılır; özellik testleri tek bayt değişiminde doğrulamanın düştüğünü, anahtar türü eşlemesini ve kid kurallarını sınar. Bağımlılığı yoktur."
+}
+=== D06-P03
+{
+ "id": "D06-P03",
+ "title": "Çekirdek: telefon kuyruk protokolü",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Telefon protokol kuralları",
+  "Tam indirme yarıda kalınca bayat satır kalmaz"
+ ],
+ "size": "M",
+ "notes": "Telefonun paket seçimi, bekleme, gerileme, bölme, ilk gönderim kaydırması ve tam indirme temizliği kuralları saf işlev olarak yazılır; fast-check testleri her kuralı rastgele cevap ve sayfa dizileriyle sınar. Bağımlılığı yoktur."
+}
+=== D10-P07
+{
+ "id": "D10-P07",
+ "title": "Rapor test kurucusu",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "En büyük sınıfın tam dönem raporu süre bütçesinde",
+  "Gün sonu işi ve dönem sonu raporu büyük birimde"
+ ],
+ "size": "M",
+ "notes": "Öbür modüllerin kurucularını birleştirerek 14 öğrencilik altın tablo kurulumunu, tohumu yazılı 50 derslik fast-check üretecini (şube değişimi, birlikte işlenen oturum, Md.9/4 geç kayıt, ekle-bırak), 400 öğrenci ve 70 oturumluk şubeyi ve 1000 şubelik birimi kuran kurucu yazılır; D15 k6 yük senaryoları bu kurucunun verisiyle süre bütçesini ölçer."
+}

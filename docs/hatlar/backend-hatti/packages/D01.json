@@ -1,0 +1,842 @@
+{
+  "id": "D01",
+  "packages": [
+    {
+      "id": "D01-P01",
+      "title": "Kimlik sözleşmesi ve yetki işlevi",
+      "files": [
+        "packages/contracts/src/kimlik.ts",
+        "apps/server/src/modules/kimlik/yetki.ts",
+        "apps/server/src/modules/kimlik/yetki.test.ts"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [
+        "KimlikDinleyicisi",
+        "KimlikOlayi"
+      ],
+      "needs": [
+        "D13.rotaTanimla",
+        "D13.hataKodlariTanimla",
+        "D13.genisleyenEnum",
+        "D13.Kimlik",
+        "D13.KisiId",
+        "D13.BirimId",
+        "D13.CihazId",
+        "D13.GirisOturumuId",
+        "D13.DEGISIM_BEKLEYEN_ROTALARI",
+        "D13.HIZ_SINIFLARI",
+        "D12.Islem"
+      ],
+      "tests": [
+        "Rota listesi tam ve yetkili"
+      ],
+      "depends_on": [],
+      "size": "L",
+      "notes": "Sözleşme dosyasına 28 rotanın şemaları, KIMLIK_ hata kodları, KIMLIK_DENETIM_OLAYLARI, KIMLIK_SABITLERI ve kimlik olayı tipleri, yetki.ts'e saf yetkiDenetle yazılır (dış yüzü yaprak.ts verir, D01-P04); yetki.test.ts rota beyanlarını ve yönetici kapsam kuralını denetler. Abone modüller KimlikDinleyicisi ve KimlikOlayi tiplerini bu paketten alır, sunucu kodunu beklemez."
+    },
+    {
+      "id": "D01-P02",
+      "title": "Saf kurallar: e-posta, kayıt kodu ve toplu teyit",
+      "files": [
+        "packages/core/src/kimlik/eposta.ts",
+        "packages/core/src/kimlik/eposta.test.ts",
+        "packages/core/src/kimlik/kayit-kodu.ts",
+        "packages/core/src/kimlik/kayit-kodu.test.ts",
+        "packages/core/src/kimlik/teyit.ts",
+        "packages/core/src/kimlik/teyit.test.ts"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [
+        "epostaNormallestir",
+        "topluTeyitUygunMu"
+      ],
+      "needs": [],
+      "tests": [
+        "E-posta normalleştirme",
+        "Kayıt kodu biçimi",
+        "Toplu teyit kuralı tek yerde"
+      ],
+      "depends_on": [],
+      "size": "M",
+      "notes": "Sözleşme dosyasına dayanmayan üç saf işlev ilk aşamada yazılır: e-posta normalleştirme (alan adı ve yerel kısım kuralı dosyada), Crockford kayıt kodu (8 karakter, 40 bit) ve toplu teyit yüklemi ile engel işlevi (girdi ve engel tipleri imzadaki gibi teyit.ts içinde). fast-check testleri iki kez normalleştirmenin değişmediğini, kod biçimini ve yüklemle engelin her girdide aynı sonucu verdiğini denetler; ogrenciTeyitEt'in toplu yol davranışı D01-P11'in senaryosundadır."
+    },
+    {
+      "id": "D01-P03",
+      "title": "Saf kurallar: bekleme, oturum seçimi ve cihaz etiketi",
+      "files": [
+        "packages/core/src/kimlik/index.ts",
+        "packages/core/src/kimlik/bekleme.ts",
+        "packages/core/src/kimlik/bekleme.test.ts",
+        "packages/core/src/kimlik/oturum-kurallari.ts",
+        "packages/core/src/kimlik/oturum-kurallari.test.ts",
+        "packages/core/src/kimlik/cihaz-etiketi.ts",
+        "packages/core/src/kimlik/cihaz-etiketi.test.ts"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [],
+      "needs": [
+        "D14.EPOSTA_TURLERI"
+      ],
+      "tests": [
+        "Bekleme süresi tekdüze ve sınırlı",
+        "Kapatılacak oturumun seçimi",
+        "Cihaz etiketi D14 kümesinde kalır"
+      ],
+      "depends_on": [
+        "D01-P01",
+        "D01-P02"
+      ],
+      "size": "M",
+      "notes": "KIMLIK_SABITLERI'ni sözleşmeden alan üç saf işlev (uzayan bekleme, kapatılacak oturumun seçimi, cihaz etiketi) ve altı dosyayı dışa veren core dizini yazılır. fast-check testleri sabitleri sözleşmeden içe alır; cihaz etiketi testi çıktıyı D14'ün giris_bildirimi şemasından geçirir."
+    },
+    {
+      "id": "D01-P04",
+      "title": "Şema, göç ve yaprak okuyucular",
+      "files": [
+        "apps/server/src/modules/kimlik/tablolar.ts",
+        "apps/server/src/modules/kimlik/yaprak.ts",
+        "apps/server/src/modules/kimlik/ozetler.ts",
+        "apps/server/src/modules/kimlik/ozetler.test.ts",
+        "apps/server/migrations/20261020090000_kimlik_ilk_sema/migration.sql",
+        "apps/server/migrations/20261020090000_kimlik_ilk_sema/snapshot.json"
+      ],
+      "tables": [
+        "kisiler",
+        "personel_rolleri",
+        "giris_kodlari",
+        "eposta_giris_durumlari",
+        "giris_oturumlari",
+        "ogrenci_hesaplari",
+        "cihazlar",
+        "cihaz_anahtarlari",
+        "cihaz_degisim_talepleri",
+        "kayit_kodlari",
+        "hesap_silme_istekleri"
+      ],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [
+        "yetkiDenetle",
+        "kisiGetir",
+        "personelRolleri",
+        "hesapSilindiMi",
+        "ogrenciHesabiGetir",
+        "cihazGetir",
+        "cihazAnahtariGetir",
+        "girisOturumuGetir"
+      ],
+      "needs": [
+        "D12.tabloYardimcilari",
+        "D12.Islem",
+        "D13.Kimlik",
+        "D13.KisiId",
+        "D13.BirimId",
+        "D13.CihazId",
+        "D13.GirisOturumuId"
+      ],
+      "tests": [
+        "Hesap ile numara arasında toplu geçiş"
+      ],
+      "depends_on": [
+        "D01-P01",
+        "D01-P02"
+      ],
+      "size": "L",
+      "notes": "On bir tablo kısmi tekil dizinleri ve kopya sütunlarıyla tek göç klasöründe kurulur, sekiz yaprak okuyucu (yetkiDenetle yetki.ts'ten yeniden dışa verilir) ile kod ve anahtar özet işlevleri yazılır. yaprak.ts topluTeyitEngeli için yalnız core teyit.ts'i içe aktarır, core dizinini ve servisleri beklemez; D07, D05, D02 ve öbür okuyucular bu paketten sonra başlayabilir. ozetler.test.ts özetleri, timingSafeEqual karşılaştırmasını ve toplu okuyucunun gerçek veritabanında tek sorgu yaptığını denetler."
+    },
+    {
+      "id": "D01-P05",
+      "title": "Olay yayını, cihaz satırı ve ortak sorgular",
+      "files": [
+        "apps/server/src/modules/kimlik/olaylar.ts",
+        "apps/server/src/modules/kimlik/olaylar.test.ts",
+        "apps/server/src/modules/kimlik/cihaz-servisi.ts",
+        "apps/server/src/modules/kimlik/sorgular.ts",
+        "apps/server/src/modules/kimlik/inceleme.ts"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [
+        "kimlikDinleyicileriniKur",
+        "kimlikDinleyicileriHazir",
+        "cihazDogrulamaSonucunuYaz"
+      ],
+      "needs": [
+        "D09.denetimeYaz",
+        "D15.log",
+        "D15.ayarlar",
+        "D04.simdi",
+        "D12.Islem"
+      ],
+      "tests": [
+        "Sonradan değişen doğrulama sonucu cihaz satırına yazılır"
+      ],
+      "depends_on": [
+        "D01-P01",
+        "D01-P04"
+      ],
+      "size": "L",
+      "notes": "Dört aboneye sabit sırayla olay veren kayıt ve yapısal olay log satırı; D07 çağırmayan cihaz satırı işlemleri (bağlama, kapatma, doğrulama sonucu yazma, değişim talebi satırı ve QR değeri özeti); ortak kilit sorguları (kişi satırı, numaranın satırları kisi_id sırasıyla, numaranın öbür teyitsiz hesaplarını reddedip kimliklerini dönen satır işlemi) ve inceleme kuralları yazılır. D07 ve D06 çağrılarını ve oturum kapatmayı çağıran servis yapar, böylece teyit, kayıt, değişim ve silme servisleri birbirini içe aktarmaz. olaylar.test.ts abone sırasını, eksik abonede KIMLIK_DINLEYICI_EKSIK hatasını ve aynı sonuçla ikinci cihazDogrulamaSonucunuYaz çağrısının denetim satırı eklemediğini denetler."
+    },
+    {
+      "id": "D01-P06",
+      "title": "Oturum servisi ve kök oturum kancası",
+      "files": [
+        "apps/server/src/modules/kimlik/oturum-servisi.ts",
+        "apps/server/src/modules/kimlik/kanca.ts",
+        "apps/server/src/modules/kimlik/kanca.test.ts"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [
+        "oturumDogrula",
+        "oturumlariKapat"
+      ],
+      "needs": [
+        "D13.OturumGirdisi",
+        "D13.OturumSonucu",
+        "D13.CEREZLER",
+        "D13.IstemciBilgisi",
+        "D04.simdi",
+        "D12.islem",
+        "D09.denetimeYaz"
+      ],
+      "tests": [
+        "Telefon oturumu 30 günde biter, kullanımla uzamaz",
+        "Panel oturumu 1 saat işlemsizlikte ve 24 saatte biter",
+        "Olay komutu bütün personel oturumlarını kapatır"
+      ],
+      "depends_on": [
+        "D01-P03",
+        "D01-P04",
+        "D01-P05"
+      ],
+      "size": "L",
+      "notes": "Oturum açma, üç oturum sınırı (kişi satırı kilidinde), telefon yenilemesi, kısıtlı değişim oturumu, kapatma ve oturumlariKapat ile kökteki oturumDogrula kancası yazılır; kanca son kullanımı kendi kısa işleminde yazar. kanca.test.ts sahte saatle telefon ve panel sürelerini, X-Arka-Plan başlığını, kapanmış cihazın oturumunu ve oturumlariKapat'tan sonra olay_komutu nedenini denetler."
+    },
+    {
+      "id": "D01-P07",
+      "title": "Kişi bağı saklaması, veri kurucuları ve öğrenci adımları",
+      "files": [
+        "apps/server/src/modules/kimlik/saklama.ts",
+        "apps/server/test/features/kimlik/saklama.feature",
+        "apps/server/test/support/kurucular/kimlik.ts",
+        "apps/server/test/steps/kimlik/ogrenci.steps.ts"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [],
+      "needs": [
+        "D12.saklamaIsleyicisiniCalistir",
+        "D15.kurucuTanimla"
+      ],
+      "tests": [
+        "kimlik.kisi_bagi işleyicisi anonimleştirir"
+      ],
+      "depends_on": [
+        "D01-P01",
+        "D01-P04"
+      ],
+      "size": "L",
+      "notes": "kimlik.kisi_bagi işleyicisi silinmiş, kapanmış ve reddedilmiş öğrenci hesaplarında numarayı ve girilen ismi partiler halinde siler. Öbür modüllerin ve D01 senaryolarının kullandığı kimlik veri kurucuları (hoca, yönetici, her durumda öğrenci hesabı, cihaz ve bilinen anahtarlı oturum) yalnız tablolar ve özetlerle yazılır, servis içe aktarmaz; ogrenci.steps.ts bu kurucularla hesap adımlarını ve öğrencinin, hocanın teyit, ret, kayıt, çıkış ve kayıt kodu isteklerini sözleşmedeki rota tanımlarıyla kurar. saklama.feature sınır anından önceki ve sonraki hesapları bu adımlarla kurar ve denetler."
+    },
+    {
+      "id": "D01-P08",
+      "title": "Kod isteği, e-posta yolu ve personel girişi",
+      "files": [
+        "apps/server/src/modules/kimlik/sabit-sure.ts",
+        "apps/server/src/modules/kimlik/eposta-yolu.ts",
+        "apps/server/src/modules/kimlik/giris-servisi.ts",
+        "apps/server/test/steps/kimlik/giris.steps.ts",
+        "apps/server/test/features/kimlik/hoca-girisi.feature"
+      ],
+      "tables": [],
+      "endpoints": [
+        "POST /v1/kimlik/kod",
+        "POST /v1/kimlik/giris"
+      ],
+      "jobs": [],
+      "exports": [],
+      "needs": [
+        "D14.epostaSiniriDenetle",
+        "D14.epostaGonder",
+        "D15.gizliAnahtar",
+        "D09.denetimeYaz",
+        "D04.simdi"
+      ],
+      "tests": [
+        "Kod isteği her durumda aynı cevabı verir",
+        "Adres başına gönderim sınırı sessiz kalır",
+        "Kod 5 dakika geçerli ve tek kullanımlık",
+        "Üç yanlış denemede adresin açık kodları düşer",
+        "Ardışık yanlışta bekleme uzar ve kendiliğinden kalkar",
+        "Bekleme yabancıyı durdurur, gerçek kullanıcının yeni kodunu durdurmaz",
+        "Onaydan önce giriş yok"
+      ],
+      "depends_on": [
+        "D01-P02",
+        "D01-P03",
+        "D01-P04",
+        "D01-P05",
+        "D01-P06",
+        "D01-P07"
+      ],
+      "size": "L",
+      "notes": "Her durumda aynı cevabı aynı sürede veren kod isteği, D14 sınırından geçen e-posta yolu ve kodla giriş (tek kullanım, 5 dakika, üç yanlış, uzayan bekleme, inceleme sabit kodu, başvuru kodunun giriş formunda doğrulanması) yazılır; kod doğrulama işlevi başvuru ve oturumsuz silme uçlarının da kullandığı tek yoldur. hoca-girisi.feature sahte saat ve sahte posta kutusuyla denetler."
+    },
+    {
+      "id": "D01-P09",
+      "title": "Hoca başvurusu ve yönetici onayı",
+      "files": [
+        "apps/server/src/modules/kimlik/basvuru-servisi.ts",
+        "apps/server/test/features/kimlik/hoca-basvurusu.feature"
+      ],
+      "tables": [],
+      "endpoints": [
+        "POST /v1/kimlik/basvuru",
+        "POST /v1/kimlik/basvuru/dogrula",
+        "GET /v1/kimlik/yonetim/basvurular",
+        "POST /v1/kimlik/yonetim/basvurular/{kisiId}/onay",
+        "POST /v1/kimlik/yonetim/basvurular/{kisiId}/ret"
+      ],
+      "jobs": [],
+      "exports": [],
+      "needs": [
+        "D02.birimGetir",
+        "D09.denetimeYaz"
+      ],
+      "tests": [
+        "Başvuru kodu giriş formunda da doğrular",
+        "Hoca başvurusu, doğrulama, onay ve ret",
+        "Doğrulanmamış ikinci başvuru kişi satırını değiştirmez",
+        "Kapsamlı yönetici kapsamı dışını göremez"
+      ],
+      "depends_on": [
+        "D01-P02",
+        "D01-P04",
+        "D01-P05",
+        "D01-P07",
+        "D01-P08"
+      ],
+      "size": "M",
+      "notes": "Hoca başvurusu, kod doğrulaması (D01-P08'in kod doğrulama işleviyle), onay bekleyenler listesi ve yöneticinin kapsamlı onayı ile reddi yazılır; hoca-basvurusu.feature doğrulanmamış ikinci başvurunun kişi satırını değiştirmediğini, başvuru kodunun giriş formunda da doğruladığını ve birim kapsamlı yöneticinin kapsamı dışındaki başvuruyu göremediğini denetler."
+    },
+    {
+      "id": "D01-P10",
+      "title": "Oturumlarım ve yönetici hesap işlemleri",
+      "files": [
+        "apps/server/src/modules/kimlik/yonetim-servisi.ts",
+        "apps/server/test/steps/kimlik/yonetim.steps.ts",
+        "apps/server/test/features/kimlik/yonetim.feature",
+        "apps/server/test/features/kimlik/oturumlar.feature"
+      ],
+      "tables": [],
+      "endpoints": [
+        "GET /v1/kimlik/oturumlar",
+        "DELETE /v1/kimlik/oturumlar/{girisOturumuId}",
+        "GET /v1/kimlik/yonetim/hesaplar",
+        "POST /v1/kimlik/yonetim/hesaplar/{kisiId}/oturumlari-kapat",
+        "POST /v1/kimlik/yonetim/hesaplar/{kisiId}/pasif",
+        "POST /v1/kimlik/yonetim/hesaplar/{kisiId}/etkin",
+        "POST /v1/kimlik/yonetim/yoneticiler",
+        "DELETE /v1/kimlik/yonetim/yoneticiler/{kisiId}"
+      ],
+      "jobs": [],
+      "exports": [],
+      "needs": [
+        "D02.birimGetir",
+        "D09.denetimeYaz"
+      ],
+      "tests": [
+        "Dördüncü girişte önce en eski panel oturumu kapanır",
+        "Telefon yenilemesi kendi oturumunun yerine geçer",
+        "Bildirim e-postası gidemezse giriş geri alınmaz",
+        "Oturumlarım yalnız kendi oturumlarını gösterir ve kapatır",
+        "Yönetici oturumları kapatır, pasif hesabın oturumları biter",
+        "Son tüm kapsamlı yönetici korunur",
+        "Yönetici hedefinde rol kapsamı geçerli"
+      ],
+      "depends_on": [
+        "D01-P02",
+        "D01-P04",
+        "D01-P05",
+        "D01-P06",
+        "D01-P07",
+        "D01-P08"
+      ],
+      "size": "L",
+      "notes": "Oturumlarım listesi ve kapatma, yöneticinin hesap listesi, oturum kapatma, pasif ve etkin yapma, yönetici ve hoca rolü verme ve geri alma yazılır; oturumlar.feature girişleri D01-P08'in adımlarıyla açar, yonetim.feature son tüm kapsamlı yönetici korumasını ve yönetici hedefinde rol kapsamı kuralını denetler."
+    },
+    {
+      "id": "D01-P11",
+      "title": "İlk kayıt teyidi",
+      "files": [
+        "apps/server/src/modules/kimlik/teyit-servisi.ts",
+        "apps/server/test/features/kimlik/ilk-kayit-teyidi.feature"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [
+        "ogrenciTeyitEt",
+        "ogrenciTeyidiniReddet"
+      ],
+      "needs": [
+        "D02.dersYetkisi",
+        "D02.dersGetir",
+        "D03.ogrencininEtkinSatirlari",
+        "D06.ogrenciDurumuDegisti",
+        "D07.yenidenDegerlendir",
+        "D07.dogrulamaTeyitAnahtari",
+        "D12.danismaKilidi",
+        "D12.danismaKilidiDene",
+        "D09.denetimeYaz"
+      ],
+      "tests": [
+        "Aynı numarada iki teyitsiz hesap: biri teyit edilince öbürü reddedilir",
+        "Teyit yetkisi yalnız öğrencinin dersinin hocasında",
+        "Teyit ekranının verisi",
+        "Doğrulanmamış cihaz toplu teyide girmez"
+      ],
+      "depends_on": [
+        "D01-P02",
+        "D01-P04",
+        "D01-P05",
+        "D01-P06",
+        "D01-P07"
+      ],
+      "size": "M",
+      "notes": "ogrenciTeyitEt ve ogrenciTeyidiniReddet teyit anahtarı, numara satırı kilidi (D01-P05'in ortak sorgusu) ve aynı işlemde D07 ile D06 çağrısıyla yazılır; kayıt, değişim ve silme servislerini içe aktarmaz. ilk-kayit-teyidi.feature hesapları D01-P07'nin kurucularıyla kurar, toplu ve tek yolu, teyit yetkisini ve aynı numaradaki öbür hesabın reddini denetler."
+    },
+    {
+      "id": "D01-P12",
+      "title": "Cihaz değişimi ve App Attest yenilemesi",
+      "files": [
+        "apps/server/src/modules/kimlik/degisim-servisi.ts",
+        "apps/server/test/steps/kimlik/cihaz.steps.ts",
+        "apps/server/test/features/kimlik/cihaz-degisimi.feature"
+      ],
+      "tables": [],
+      "endpoints": [
+        "POST /v1/kimlik/cihaz-degisimi",
+        "GET /v1/kimlik/cihaz-degisimi/{talepId}",
+        "POST /v1/kimlik/cihaz-degisimi/{talepId}/onay",
+        "POST /v1/kimlik/cihaz-degisimi/{talepId}/ret",
+        "POST /v1/kimlik/cihaz/app-attest-yenile"
+      ],
+      "jobs": [],
+      "exports": [],
+      "needs": [
+        "D07.dogrulamaDegeriniTuket",
+        "D07.cihazKanitiniDogrula",
+        "D07.yenidenDegerlendir",
+        "D02.dersYetkisi",
+        "D03.ogrencininEtkinSatirlari",
+        "D09.denetimeYaz",
+        "D15.ayarlar"
+      ],
+      "tests": [
+        "Cihaz değişimi onayı tek işlemdir",
+        "Başka cihazdan talep gerçek talebi düşürmez"
+      ],
+      "depends_on": [
+        "D01-P04",
+        "D01-P05",
+        "D01-P06",
+        "D01-P07"
+      ],
+      "size": "L",
+      "notes": "Girişsiz değişim talebi, QR değeri ve yenilemesi, hocanın tek işlemdeki onayı, etkin cihazın ve hocanın reddi, 72 saati dolan talebi kapatan iç işlev (kimlik_temizligi bunu çağırır) ve App Attest anahtar yenilemesi yazılır; talep satırı D01-P05'in cihaz servisindedir, kayıt servisi içe aktarılmaz. cihaz.steps.ts değişim, QR ve App Attest adımlarını kurar; cihaz-degisimi.feature sahte doğrulayıcı ve sahte saatle onayı, başka cihazdan talebi ve süresi dolan talebin iç işlevle kapanmasını denetler. App Attest senaryoları D01-P17'dedir."
+    },
+    {
+      "id": "D01-P13",
+      "title": "Öğrenci kaydı, çıkış ve kayıt kodu",
+      "files": [
+        "apps/server/src/modules/kimlik/ogrenci-servisi.ts",
+        "apps/server/test/features/kimlik/ogrenci-kaydi.feature"
+      ],
+      "tables": [],
+      "endpoints": [
+        "POST /v1/kimlik/ogrenci/kayit",
+        "POST /v1/kimlik/cikis",
+        "GET /v1/kimlik/ben",
+        "POST /v1/kimlik/kayit-kodlari"
+      ],
+      "jobs": [],
+      "exports": [
+        "bekleyenKayitlariEslestir"
+      ],
+      "needs": [
+        "D07.dogrulamaDegeriniTuket",
+        "D07.cihazKanitiniDogrula",
+        "D07.yenidenDegerlendir",
+        "D07.dogrulamaTeyitAnahtari",
+        "D03.numaraIleEslestir",
+        "D03.listeKovaAnahtari",
+        "D03.ogrencininEtkinSatirlari",
+        "D02.dersGetir",
+        "D02.dersYetkisi",
+        "D06.ogrenciDurumuDegisti",
+        "D12.danismaKilidi",
+        "D12.danismaKilidiDene",
+        "D09.denetimeYaz",
+        "D15.ayarlar",
+        "D15.gizliAnahtar"
+      ],
+      "tests": [
+        "Öğrenci kaydında eşleşme durumları",
+        "Aynı donanım anahtarı ikinci hesaba bağlanamaz",
+        "Kapanmış cihazın anahtarı oturum alamaz",
+        "Öğrenci çıkışı cihazı kapatır"
+      ],
+      "depends_on": [
+        "D01-P02",
+        "D01-P04",
+        "D01-P05",
+        "D01-P06",
+        "D01-P07"
+      ],
+      "size": "L",
+      "notes": "Öğrenci kaydı (eşleşme, tek etkin cihaz, kaybolan cevapta yeniden bağlama, teyitli numarada D01-P05'in talep satırıyla değişim talebi, teyitsiz hesap sınırı, kayıt kodu üretimi ve kodla kayıt), bekleyenKayitlariEslestir, öğrenci çıkışı ve /ben yazılır; numaranın öbür hesaplarının reddi D01-P05'in ortak sorgusuyla yapılır, teyit ve değişim servisleri içe aktarılmaz. ogrenci-kaydi.feature sahte doğrulayıcıyla eşleşmeyi, değişiklik numaralarıyla eşleştirmeyi, donanım anahtarı tekliğini, kapanmış cihazı ve çıkışı denetler; kayıt kodu ve teyitle birleşen senaryolar D01-P17'dedir."
+    },
+    {
+      "id": "D01-P14",
+      "title": "Hesap silme",
+      "files": [
+        "apps/server/src/modules/kimlik/silme-servisi.ts",
+        "apps/server/src/modules/kimlik/kuyruklar.ts",
+        "apps/server/test/steps/kimlik/silme.steps.ts",
+        "apps/server/test/features/kimlik/hesap-silme.feature",
+        "docker/caddy/sayfalar/hesap-silme.html"
+      ],
+      "tables": [],
+      "endpoints": [
+        "POST /v1/kimlik/hesap-silme",
+        "DELETE /v1/kimlik/hesap-silme",
+        "POST /v1/kimlik/ogrenciler/{kisiId}/hesap-silme",
+        "POST /v1/kimlik/basvuru/silme"
+      ],
+      "jobs": [],
+      "exports": [
+        "hesabiSil"
+      ],
+      "needs": [
+        "D07.yenidenDegerlendir",
+        "D07.dogrulamaTeyitAnahtari",
+        "D02.dersYetkisi",
+        "D02.dersGetir",
+        "D03.ogrencininEtkinSatirlari",
+        "D12.danismaKilidi",
+        "D14.isGonder",
+        "D14.KuyrukTanimi",
+        "D09.denetimeYaz",
+        "D15.gizliAnahtar"
+      ],
+      "tests": [
+        "Hesap silme: bekleyen iş yoksa hemen, varsa sırada",
+        "İki telefonlu hocanın silmesi öbür telefonu bekler",
+        "Silme isteği iptalinden sonra kayıt sayılır",
+        "Hoca silmesi yakın giriş ister ve adresi siler",
+        "Hocanın yüz yüze başlattığı öğrenci silmesi",
+        "Başvuran onaydan önce silebilir",
+        "Her durumda bir silme yolu var"
+      ],
+      "depends_on": [
+        "D01-P04",
+        "D01-P05",
+        "D01-P06",
+        "D01-P07",
+        "D01-P08"
+      ],
+      "size": "L",
+      "notes": "Hemen ya da sırada yürüyen silme isteği ve iptali, iki telefonlu hocanın beklemesi, sıradaki istekleri yürüten iç işlev (hesap_silme_yurutucu bunu çağırır), hocanın yüz yüze öğrenci silmesi, D01-P08'in kod doğrulamasıyla oturumsuz başvuru silmesi, hesabiSil, kuyruk tanımları ve durağan hesap silme sayfası yazılır. hesap-silme.feature reddedilmiş ve kapanmış hesapları kurucularla kurar, gece adımını iç işlevle sahte saatte yürütür ve her hesap durumunda bir silme yolu olduğunu denetler."
+    },
+    {
+      "id": "D01-P15",
+      "title": "Eklenti, uç bağlama ve dış yüz",
+      "files": [
+        "apps/server/src/modules/kimlik/uclar.ts",
+        "apps/server/src/modules/kimlik/eklenti.ts",
+        "apps/server/src/modules/kimlik/index.ts",
+        "apps/server/src/modules/kimlik/sinirlar.test.ts"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [
+        "kimlikEklentisi"
+      ],
+      "needs": [
+        "D13.rotalariKaydet",
+        "D13.EklentiTemelSecenekleri",
+        "D03.listeDegisikligiDinleyicisiKaydet",
+        "D12.saklamaIsleyicisiKaydet",
+        "D09.denetimOlaylariniKaydet"
+      ],
+      "tests": [
+        "Eklenti kayıtta veritabanına dokunmaz",
+        "Modül sınırı döngüsüz"
+      ],
+      "depends_on": [
+        "D01-P05",
+        "D01-P06",
+        "D01-P07",
+        "D01-P08",
+        "D01-P09",
+        "D01-P10",
+        "D01-P11",
+        "D01-P12",
+        "D01-P13",
+        "D01-P14"
+      ],
+      "size": "L",
+      "notes": "28 rotanın işleyicileri rotalariKaydet ile bağlanır, kimlikEklentisi D03 (bekleyenKayitlariEslestir), D12 ve D09 kayıtlarını her süreçte yapar ve index.ts dış yüzü kurulur; eklenti yalnız servis paketlerini bekler, birleşik senaryo paketini (D01-P17) beklemez. sinirlar.test.ts dependency-cruiser ile yaprak kuralını, eklentinin kapalı veritabanı havuzuyla kaydolduğunu ve rota listesinin tam geldiğini denetler."
+    },
+    {
+      "id": "D01-P16",
+      "title": "Kimlik işleri ve zamanlama",
+      "files": [
+        "apps/server/src/jobs/kimlik/index.ts",
+        "apps/server/src/jobs/kimlik/kimlik-temizligi.ts",
+        "apps/server/src/jobs/kimlik/giris-oturumu-temizligi.ts",
+        "apps/server/src/jobs/kimlik/hesap-silme-yurutucu.ts",
+        "apps/server/src/jobs/kimlik/bekleyen-kayit-kapatma.ts",
+        "apps/server/src/jobs/kimlik/inceleme-hesaplari-kurulumu.ts",
+        "apps/server/src/jobs/kimlik/zamanlama.test.ts"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [
+        "kimlik_temizligi",
+        "giris_oturumu_temizligi",
+        "hesap_silme_yurutucu",
+        "bekleyen_kayit_kapatma",
+        "inceleme_hesaplari_kurulumu"
+      ],
+      "exports": [],
+      "needs": [
+        "D14.isTanimla",
+        "D02.kilitliBirimDonemleri",
+        "D02.denemeDersiniKur",
+        "D03.denemeListesiniKur",
+        "D03.numaraIleEslestir",
+        "D03.listeKovaAnahtari",
+        "D03.ogrencininEtkinSatirlari",
+        "D07.yenidenDegerlendir",
+        "D07.dogrulamaTeyitAnahtari",
+        "D12.danismaKilidi",
+        "D15.ayarlar",
+        "D15.uyariAc"
+      ],
+      "tests": [
+        "İş zamanlaması kurala uyar"
+      ],
+      "depends_on": [
+        "D01-P04",
+        "D01-P05",
+        "D01-P06",
+        "D01-P12",
+        "D01-P14"
+      ],
+      "size": "L",
+      "notes": "Beş iş yazılır ve isler dizisinde D14.isTanimla ile tanımlanır: temizlik ve silme yürütücü D01-P12 ile D01-P14'ün iç işlevlerini çağıran ince işlerdir, bekleyen kayıt kapatma ve inceleme hesapları kurulumu kendi kuralını taşır; bileşim kökünü beklemez. zamanlama.test.ts D14 çizelge kuralını ve kuyruk tanımlarının kuyruklar.ts'ten geldiğini denetler; işçi süreciyle koşan iş senaryoları D01-P20'dedir."
+    },
+    {
+      "id": "D01-P17",
+      "title": "Kayıt kodu, cihaz kanıtı ve App Attest senaryoları",
+      "files": [
+        "apps/server/test/features/kimlik/kayit-kodu.feature",
+        "apps/server/test/features/kimlik/app-attest-yenileme.feature"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [],
+      "needs": [],
+      "tests": [
+        "Kayıt kodu kuralları",
+        "Teyitsiz hesap sınırı ve kayıt kodu",
+        "Teyitsiz hesapta çıkış ve yeniden kayıt tek hesap bırakır",
+        "Silinen öğrenci yeniden kaydolunca yeni hesap ve yeniden teyit",
+        "App Attest anahtarı yenilenir, eski anahtar kalır",
+        "App Attest yenilemesi doğrulanamazsa iz kalır",
+        "Kayıt ve değişimde kanıt satırı saklanan anahtara bağlanır",
+        "Kanıt reddi ayara bağlı"
+      ],
+      "depends_on": [
+        "D01-P06",
+        "D01-P07",
+        "D01-P11",
+        "D01-P12",
+        "D01-P13",
+        "D01-P14"
+      ],
+      "size": "L",
+      "notes": "Kayıt servisini teyit, değişim ve silme servisleriyle birlikte kullanan senaryolar modül düzeyinde, bileşim kökü olmadan koşar ve eklenti bu paketi beklemez. kayit-kodu.feature kayıt kodu kurallarını, hocanın reddiyle açılan teyitsiz hesap sınırını, teyitsiz hesapta çıkış ve yeniden kaydı, silinen öğrencinin yeni hesabını ve yeniden teyidini; app-attest-yenileme.feature kayıt, değişim talebi ve App Attest yenilemesinde kanıt satırının saklanan anahtara bağlanmasını, kanıt reddi ayarının iki yolunu, yenilenen anahtarda eskisinin kaldığını ve doğrulanamayan yenilemenin iz bıraktığını sahte doğrulayıcıyla denetler. Değerler sabitlerden ve D15 ayar anahtarlarından içe alınır."
+    },
+    {
+      "id": "D01-P18",
+      "title": "Gerçek kanca, köken ve yetki senaryoları",
+      "files": [
+        "apps/server/test/features/kimlik/kanca.feature",
+        "apps/server/test/features/kimlik/yetki.feature"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [],
+      "needs": [
+        "D13.uygulamaKur"
+      ],
+      "tests": [
+        "Gerçek kanca köken ve çerez kuralını uygular",
+        "Panel girişinde köken denetimi",
+        "Kanca yük altında hafif kalır",
+        "Teyitli numaraya gelen kayıt değişim talebine döner",
+        "Hoca rolü yönetici ucundan verilir ve alınır",
+        "Rol geri alınınca açık oturumda yetki hemen düşer",
+        "Değişim talebini hesabın etkin cihazı reddeder"
+      ],
+      "depends_on": [
+        "D01-P06",
+        "D01-P07",
+        "D01-P08",
+        "D01-P10",
+        "D01-P12",
+        "D01-P13"
+      ],
+      "size": "L",
+      "notes": "D13 bileşimi üstünde gerçek kanca, çerez ve köken kuralı, kısıtlı değişim oturumunun öbür modül rotalarında reddi, D02 ders ucuyla rol verme ve geri alma ve etkin cihazın talep reddinin D05 kaydını karara bağlaması uçtan uca denetlenir; kanca.feature ve yetki.feature sahte oturumDogrula olmadan koşar, yük senaryosu kancanın p95 payını ölçer. Öbür uçtan uca kimlik paketlerini beklemez."
+    },
+    {
+      "id": "D01-P19",
+      "title": "Bileşim kökleri ve ilk yönetici komutu",
+      "files": [
+        "apps/server/src/cli/yonetici-ekle.ts",
+        "apps/server/test/steps/kimlik/bilesim.steps.ts",
+        "apps/server/test/features/kimlik/bilesim.feature",
+        "apps/server/test/features/kimlik/ilk-yonetici.feature"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [],
+      "needs": [
+        "D13.uygulamaKur",
+        "D02.derslerKimlikDinleyicisi",
+        "D06.esitlemeKimlikDinleyicisi",
+        "D11.projeksiyonKimlikDinleyicisi",
+        "D15.kimlikOlayiDinleyicisi",
+        "D15.ayarlariYukle",
+        "D12.veritabaniKur",
+        "D14.isiCalistirVeBekle"
+      ],
+      "tests": [
+        "İlk yönetici komutu",
+        "Dinleyiciler her bileşim kökünde kurulur",
+        "Dinleyici hatası işlemi geri alır",
+        "Kimlik olayları yapısal loga yalnız iç kimlikle yazılır",
+        "Denetim olay türleri kayıtlı ve birimId taşır"
+      ],
+      "depends_on": [
+        "D01-P05",
+        "D01-P06",
+        "D01-P07",
+        "D01-P08",
+        "D01-P10",
+        "D01-P14",
+        "D01-P16"
+      ],
+      "size": "L",
+      "notes": "yonetici-ekle komutu dört aboneyle kendi bileşim kökünü kurar; bilesim.feature dinleyicilerin her kökte sırayla kurulduğunu, işçide hesap_silme_yurutucu ile dört abonenin aynı işlemde işlediğini, dinleyici hatasının işlemi geri aldığını, olay log satırlarını ve denetim türlerinin kaydını, ilk-yonetici.feature komutun tekrar çalışmasını denetler. Öbür uçtan uca kimlik paketlerini beklemez."
+    },
+    {
+      "id": "D01-P20",
+      "title": "İş ve inceleme yolu uçtan uca senaryoları",
+      "files": [
+        "apps/server/test/steps/kimlik/isler.steps.ts",
+        "apps/server/test/features/kimlik/kimlik-isleri.feature",
+        "apps/server/test/features/kimlik/inceleme-hesaplari.feature"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [],
+      "needs": [
+        "D13.uygulamaKur",
+        "D14.isiCalistirVeBekle"
+      ],
+      "tests": [
+        "İşçide personel silmesi anahtarsız biter",
+        "Bekleyen kayıt kapatma",
+        "Temizlik işleri yalnız eski satırları işler",
+        "Beş iş aynı veriyle iki kez çalışınca sonuç aynı",
+        "İnceleme hesapları her an çalışır",
+        "Boş veritabanında inceleme yolu uçtan uca",
+        "İnceleme ayarı değişince eski hesap ayrıcalığını kaybeder"
+      ],
+      "depends_on": [
+        "D01-P07",
+        "D01-P08",
+        "D01-P13",
+        "D01-P14",
+        "D01-P16"
+      ],
+      "size": "L",
+      "notes": "İşçi süreci bileşimiyle beş iş, D14'ün 'aynı veriyle iki kez çalışırsa' adımı, işçide anahtarsız personel silmesi, bekleyen kayıt kapatma ve temizlik eşikleri; boş veritabanında işçi açılışından inceleme girişine ve deneme öğrencisinin kaydına kadar inceleme yolu ve ayar değişince eski inceleme hesabının ayrıcalığını kaybetmesi denetlenir. Öbür uçtan uca kimlik paketlerini beklemez."
+    },
+    {
+      "id": "D01-P21",
+      "title": "Eşzamanlılık, kilit katmanları ve gizlilik taramaları",
+      "files": [
+        "apps/server/test/features/kimlik/eszamanlilik.feature",
+        "apps/server/test/features/kimlik/kilit-katmanlari.feature",
+        "apps/server/test/features/kimlik/gizlilik.feature"
+      ],
+      "tables": [],
+      "endpoints": [],
+      "jobs": [],
+      "exports": [],
+      "needs": [
+        "D13.uygulamaKur"
+      ],
+      "tests": [
+        "Kişisel veri hiçbir loga, adres satırına ve iş verisine girmez",
+        "Liste uygulanırken eşzamanlı kayıt bekleyende kalmaz",
+        "Aynı numarada eşzamanlı iki teyit tek teyitli hesap bırakır",
+        "Kayıt ile teyit aynı numarada sıralanır",
+        "Personel akışları eşzamanlı kilitlenmez",
+        "Kopya alanlar tutarlı kalır",
+        "Hata kodları ve genişleyen değerler",
+        "Danışma kilidi katmanlarına uyulur",
+        "Kurallar mutasyona dayanıklı"
+      ],
+      "depends_on": [
+        "D01-P02",
+        "D01-P03",
+        "D01-P05",
+        "D01-P06",
+        "D01-P08",
+        "D01-P09",
+        "D01-P10",
+        "D01-P11",
+        "D01-P12",
+        "D01-P13",
+        "D01-P14",
+        "D01-P16",
+        "D01-P17"
+      ],
+      "size": "L",
+      "notes": "İki bağlantıda eşzamanlı kayıt, teyit ve personel akışları, danışma kilidi sırası, kişisel veri taraması, kopya alan tutarlılığı, hata kodlarının tamlığı ve mutasyon koşusu modül düzeyindeki bütün kimlik senaryoları üstünde denetlenir; aynı aşamadaki öbür uçtan uca kimlik paketlerini beklemez, onların senaryoları CI'da aynı taramaya girer."
+    }
+  ]
+}

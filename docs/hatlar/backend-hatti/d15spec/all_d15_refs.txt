@@ -1,0 +1,273 @@
+D01 .tables[2].columns[4].note: Özeti üreten anahtarın kimliği (D15.gizliAnahtar); anahtar değişince eski kodlar eski kid ile doğrulanır.
+
+D01 .endpoints[10].rate_limit: Oturum başına girişli sınır (D13 hizSinifi girisli). Her yenileme denetime yazılır, sıklık D15 izlemesine düşer.
+
+D01 .jobs[3].does: D15.ayarlar'daki deneme hocası adresi ve adıyla onaylı, hoca rollü, inceleme_hesabi işaretli personel hesabını kurar ya da silinmişse yeniden kurar. Deneme öğrencisi hesabı bu işle değil, ayarlardaki numarayla gelen ilk kayıtta teyitli açılır. Ayar ya da gizli sabit kod eksikse D15.uyariAc ile işletim uyarısı açar.
+
+D01 .exports[11].purpose: Ek dış yüz (D01-A14). Alt modüller D01'i içe aktarmadan olaya bağlanır: D11 QR anahtar yuvasını iptal eder ya da yenilenen oturuma devreder, D15 telefon sayaçlarını, D06 kurulum izini siler, D02 silinen hocanın dersleri için kendi kararını uygular. Dinleyiciler olayı doğuran işlemin içinde çağrılır.
+
+D01 .exports[12].purpose: Ek dış yüz (D01-A14): D15'in olay müdahalesindeki bütün hoca oturumlarını kapatma komutu ve D12'nin geri yüklemeden sonra panel oturumlarını kapatma adımı için; kapatılan sayıyı döner, her oturum için olay ve denetim yazar.
+
+D01 .tests[53].asserts: D15'in ders çıkışı k6 senaryosunda kanca her istekte tek dizinli okuma ve en çok dakikada bir yazma yapar; kanca süresi p95 istek süresinin yüzde 10'unu geçmez (pg_stat_statements ve istek logundan ölçülür).
+
+D01 .resolved_gaps[28].decision: Öğrenci silinince: oturum satırları, girilen isim, cihazların etkinliği ve cihaz ayrıntıları (model, son görülme, sürüm, kanal, güvenlik düzeyi, doğrulanmış açılış, iOS alanları) silinir; telefon sayaçlarını D15 kimlik olayıyla siler. Kalır: numara, teyit bilgisi, cihaz platformu, doğrulama özeti ve isSystemUser, açık anahtarlar.
+
+D01 .resolved_gaps[32].decision: Gizli ayarlarda deneme hocası adresi ve adı, deneme öğrenci numarası ve adı, gizli sabit kod (D15). inceleme_hesaplari_kurulumu işi hocayı idempotent kurar, silinmişse aynı gün yeniden kurar. Deneme hocasının kod isteği e-posta göndermez, aynı cevabı döner; giriş sabit kodla. Deneme numarasıyla gelen kayıt teyitli ve inceleme cihazı işaretiyle bağlanır, önceki cihazlar kapanmaz. Her giriş ve yanlış deneme denetime ve loga.
+
+D01 .contradictions_resolved[8].resolution: Silinen ve kalan alanların tek listesi bu bölümdedir (D01-B34): oturum satırları iki rolde de silinir (plan'daki "kapanır" ve teknik'teki "silinir" birlikte sağlanır), cihazların etkinliği kalkar, telefon sayaçlarını D15 hesap_silindi olayıyla siler.
+
+D01 .open_points[13].question: contracts.json'a eklenmesi gerekenler: D01 dış yüzüne kimlikOlayiDinleyicisiKaydet, oturumlariKapat, incelemeHesaplari, girisOturumuGetir, hesabiSil ve epostaNormallestir; D01 okuduklarına D04 (yalnız saat arayüzü simdi, bileşim kökünden parametreyle); D14'e basvuru_silme_kodu şablonu ve epostaSiniriDenetle'nin normalleştirilmiş adresi alıp özeti kendisi üretmesi; D15 ayarlarına panelAdresi, inceleme hocası adresi ve adı, inceleme öğrenci numarası ve adı, gizli inceleme_sabit_kodu. D01'in dayandığı davranışlar: D03.numaraIleEslestir paylaşımlı liste kilidini kendisi alır (D03-B19); D03.ogrencininEtkinSatirlari satırları ders ve şube kimliği ve liste ismiyle döner; D07.cihazKanitiniDogrula cihazId ile çağrılır, bağlama imzasını da doğrular, sonucu dogrulandi, dogrulanamadi ya da reddedildi olarak döner; D07.yenidenDegerlendir teyit, teyit reddi, değişim onayı ve reddi, hesap silme ve kapanma nedenlerini kabul eder.
+
+D01 .open_points[13].recommendation: Hepsi yalnız ekleme; kayıt deseni ve paylaşılan kurallarla uyumlu. Dinleyiciler: D11 (oturum kapandı ve yenilendi), D15 ve D06 (hesap silindi), D02 (hesap silindi, D01-A08). Davranış beklentileri ilgili modülün tasarımında aynen yazılmazsa D01 akışları değişmeden kalır, yalnız çağrı yeri uyarlanır.
+
+D02 .tests[47].asserts: D15'in k6 ders çıkışı koşusunda değişenler isteğinde D02 kaynağı 6 dersli öğrenci için p95 15 ms altında ve değişiklik yokken en çok 4 sorgu çalıştırır (pg_stat_statements ile sayılır).
+
+D02 .open_points[13].question: Sözleşme eki: "dönem arası" bilgisini en düşük sürüm koruması (D13-B17) ve yayın penceresi istiyor; D13 ve D15 D02'yi okumuyor.
+
+D02 .open_points[13].recommendation: D02 dış yüzüne donemArasiMi(tx, an?) eklenir; app.ts (D13) bu işlevi en düşük sürüm denetimine parametre olarak verir, D15 de aynı yoldan alır. contracts.json güncellenmeli.
+
+D03 .tests[38].asserts: Vitest: ornekler klasöründeki her dosya (BOM'lu ve 1254 CSV, UTF-16 sekmeli metin, sayı hücreli ve sıfır biçimli xlsx, başlık üstü satırlı, ayrı ad soyadlı, ikinci sayfada, eski xls, HTML tablolu xls) beklenen satırlara; parolalı dosya DOSYA_PAROLALI; maskeli AKSİS örneği geldiğinde aynı testle (D03-A01). SheetJS packages/core'da yalnız test bağımlılığıdır, panelle aynı sabit paket dosyası (istek D15'e); okuma.ts onu içe aktarmaz.
+
+D03 .tests[47].asserts: D15'in haftalık Stryker işinde packages/core/src/listeler kırma eşiğinin altına düşmez; isim.ts, numara.ts ve fark.ts'te yaşayan mutant kalmaz (bilinçli eşdeğerler yorumla gerekçelenir).
+
+D03 .resolved_gaps[16].decision: Uçlar /v1/listeler altında, şube ve satır UUIDv7 kimliğiyle; numara yolda ve sorguda yok. Kodlar paylaşılan kuraldaki modül önekiyle (LISTELER_, envanterdeki LISTE_ değil). Başka hocanın kaynağı 403 değil 404 (D13-B02, envanterdeki LISTE_YETKI_YOK kalktı); 403 yalnız rol için. Doğrulama hatasında yalnız alan yolu; gizleme yolları sözleşmedeki LISTELER_GIZLI_ALANLAR sabitiyle D15'in pino ayarına verilir.
+
+D04 .jobs[1].does: D15.saatEsitlemeDurumu() okunur ve infra/saat duvarSaatiFarkiMs() ile duvar saatinin iç sayaca göre farkı alınır. Sağlıklı okuma: dosya okundu, senkron true, mutlak sapma eşikten (başlangıç 100 ms) büyük değil, ölçüm 120 saniyeden eski değil ve fark bir önceki okumadan eşikten fazla oynamadı (oynadıysa neden saat_sicradi: makine uykudan dönünce ya da saat adım atınca dosyanın 30 saniyelik yazma aralığını beklemeden yakalanır; aynı denetim her saatBelgesiVer çağrısında da yapılır). Bozuk okumada süreç hemen BOZUK olur (belge durur); açık kesinti yoksa açılır, varsa son_bozuk_okuma_ani ve en_buyuk_sapma_ms en çok 10 saniyede bir güncellenir. Art arda iki sağlıklı okumada süreç SAGLIKLI olur; açık kesintinin son_bozuk_okuma_ani 15 saniyeden eskiyse satır kapatılır ve aynı işlemde D14.isGonder ile esitleme_sonrasi_yeniden_degerlendir kuyruğa girer. Veritabanı yazılamazsa durum bellekte sürer, hata loglanır, sonraki okumada yeniden denenir.
+
+D04 .tests[39].asserts: D15 k6 ders çıkışı profili: 20.000 telefon 1 dakikada, telefon başına bir belge isteği ve gönderim; belge ucunda p95 < 100 ms, p99 < 300 ms, 5xx yok; pg_stat_statements belge isteği başına oturum doğrulaması dışında sorgu göstermez.
+
+D04 .tests[40].asserts: Stryker haftalık işi packages/core/src/saat için en az yüzde 90 öldürme eşiğiyle koşar (iş D15'in, eşik bu modülün); kayma payını sıfırlayan, sınırı < yerine <= yapan ve sıralamayı ters çeviren mutantlar öldürülür.
+
+D04 .resolved_gaps[11].why: Belge imzalı kayıt metnine aynen girer ve makbuz QR'ına taşınır; kısa, yeniden biçimlendirmeye kapalı ve Node yerleşik kriptosuyla doğrulanır (yeni paket yok). Sürüm baytı ileride yer bırakır; kid D15'in anahtar dosyasındaki adla aynıdır, eşleme tablosu gerekmez.
+
+D04 .resolved_gaps[17].decision: Bağlayıcı karara göre süreç içi SNTP ölçümü yok: saat_esitleme_denetimi her API sürecinde 5 saniyede bir D15.saatEsitlemeDurumu() okur. Bozuk: dosya yok ya da okunamıyor, senkron değil, mutlak sapma 100 ms üstü ya da ölçüm 120 saniyeden eski (D15-B21); ayrıca duvar saati iç sayaca göre eşikten fazla sıçradıysa (makine uykudan dönüşü, saat adımı; dosyanın 30 saniyelik yazma aralığını beklemeden). Tek bozuk okuma belgeyi durdurur, iki sağlıklı okuma açar; aralıklar saat_esitleme_kesintileri tablosunda. Eşik ve süreler ayardır.
+
+D04 .resolved_gaps[19].decision: Anahtar D15'in secrets dosyasında amaç saat_belgesi altında kid ile durur; D04 yeni belgeyi gizliAnahtar('saat_belgesi') ile etkin kidle, doğrulamayı gizliAnahtar('saat_belgesi', kid) ile yapar. kid 1 ile 8 karakter [a-z0-9-] olmalı, değilse süreç açılmaz. Eski kid en az bütün birimlerin dönem kilidine kadar yalnız doğrulamada kalır; ele geçirildi işaretli kidle doğrulanan belge anahtarEleGecirildi true döner, D07 İncelemede alır (D15-B08).
+
+D04 .resolved_gaps[19].why: Kayıtlar dönem kilidine kadar ulaşabildiğinden eski belge o güne dek doğrulanmalı (teknik.html#sunucu-ayarlar); döndürme takvimi ve yedek D15'in işi (teknik.html#dagitim-ayrinti-korunacak-anahtarlar).
+
+D04 .open_points[4].recommendation: contracts.json D04 dış yüzüne pencereDegistiDinleyicisiKaydet ve infra/saat İstanbul yardımcıları eklenir; D07 yenidenDegerlendir fonksiyonunu bu dinleyiciye kaydeder. Beklenenler: D02 dinleyiciye OturumPlani alanlarını verir ve oturumlariGetir süzgeci hoca kişisi ve şube listesini kabul eder; D05 kayıt satırına saatSonucu alanlarını (ilk ve ikinci çapa durumu, kayit_ani_alt, kayit_ani_ust, pay_ms, saat kaynağı, esitleme_bozukken_ulasti) ekler; D06 çapa metnine ikinci belge istek süresini ve öğe başına olaydanBelgeyeMs ya da yokNedeni alanını koyar, işleyici bağlamına kurulum, sıra, öğe kimliği, kişi, giriş oturumu, ulaşma anı ve ikinci çapayı verir, kişi paketlerinde de (imzasız) ikinci çapayı geçirir ve ulaşma anını esitlemeSaglikliMi ile paket başına bir kez okur; D13 başlıkları X-Saat-Istegi ve X-Saat-Belgesi adıyla yazar ve kancada özneyi istekteki kimlikten alır, cihaz imzasıyla doğrulanan gönderimde özneyi D06 isteğe yazar; D15 saat_belgesi kidlerini 1 ile 8 karakter [a-z0-9-] tutar, ayar şemasına SAAT_ESITLEME_ESIK_MS (100), SAAT_ESITLEME_DOSYA_YASI_MS (120000), SAAT_ESITLEME_DENETIM_ARALIGI_MS (5000) ekler; D11-B14 hocada kişi kimliğine göre düzeltilir.
+
+D04 .dis_yuz_kullanimi[8]: D15: ayarlar, gizliAnahtar, log, saatEsitlemeDurumu
+
+D05 .tests[39].asserts: D15 profilinde gönderim p95 1 saniyenin altında; kayıt başına veritabanı gidiş dönüş sayısı ve 100.000 kayıt başına tablo ve dizin boyutu yazılır; kimlik araması planında Seq Scan yoktur; zarf boyu dağılımı ölçülür.
+
+D06 .jobs[0].does: kesintisiz_son_sira < en_buyuk_sira ya da acik_bosluk_sayisi > 0 olan kurulum satırlarını 500'lük işlemlerle tarar. Her biri için kesintisiz son sıranın üstündeki defter satırlarını LEAD ile sıralayıp eksik sıra sayısını ve ilk eksik sırayı bulur (boşluk aralığını üretmez, satır sayısıyla sınırlıdır); acik_bosluk_sayisi, ilk_eksik_sira ve bosluk_denetim_ani yazar, boşluğu kapanmış satırı sıfırlar. Sonunda tek log satırı yazar: boşluklu kurulum sayısı, 24 saatten eski boşluk sayısı (sira_ilerleme_ani), toplam eksik sıra, önceki İstanbul gününün gerekçe koduna göre RET ve TEKRAR_DENE sayıları; numara, isim ve gövde yok. D15'in olcum_ görünümleri kurulumlar ve gonderim_defteri tablolarını okur.
+
+D06 .exports[1].purpose: Öğe türünün sahibi eklentisi yüklenirken bir kez kaydolur; aynı tür ikinci kez kaydolursa açılış durur. Sahipler: yoklama_kaydi, makbuz_okutmasi (D05); pencere_suresi, erken_kapatma (D04); kafa_sayisi (D07); elle_ekleme, sorun_bildirimi (D09); gosterim_kaydi (D11); telefon_sayaci (D15). İşleyici ardışık aynı tür öğeleri sıra düzeninde alır (isleToplu bir çağrıda, isle tek tek), aynı uzunlukta ve sırada sonuç döner, beklenen hiçbir durumda fırlatmaz, hızlı yolda öğe başına SAVEPOINT açmaz.
+
+D06 .tests[49].asserts: k6 sabit geliş hızıyla 20.000 telefon 1 dakikada; telefon başına belge, gönderim ve gerekirse indirme; gönderim p95 1 saniye ve p99 3 saniye altında, 503 oranı yüzde 2 altında ve hepsi Retry-After'lı, 503 dışı 5xx sıfır, her makbuzlu kayıt tam bir kez (D15-B15 profili); sayaç kilidi bekleme süresi ölçülür.
+
+D06 .tests[51].asserts: Haftalık Stryker işinde packages/core/src/esitleme'nin imleç, su seviyesi, sayfa kesme, gönderme süresi, ikinci çapa metni ve protokol mutantları öldürülür (eşik D15'in); her değişmez testi bir kez bilerek bozulup kırmızıya döndüğü görülür, dosya md5 ile geri yazılır.
+
+D06 .resolved_gaps[23].decision: Yayın bilgisi dosyası yayin-bilgisi.json: CI yazar (D15), şema ve okuma D13'ün (contracts). D06 bu dosyayı okumaz.
+
+D06 .resolved_gaps[27].decision: Günlük sayaçlar D15'in telefon_sayaci öğesidir; gün sınırı, tekillik ve birikme D15'in. Sıra kuralı kendiliğinden korunur: öğe gün kapanınca kuyruğa girer ve o günün kayıtlarından sonraki sırayı alır. Panel süreleri POST /v1/isletim/ekran-sureleri (D15).
+
+D06 .olcum[1]: Gönderim ucunda p95 1 saniye, p99 3 saniye altı; 503 oranı yüzde 2 altı (ders çıkışı yük testi, D15-B15).
+
+D06 .olcum[3]: Gönderim izi: her gönderimde tek log satırı (istek kimliği, kurulum ve kişi iç kimliği, öğe sayısı, sonuçların koda göre sayısı, ikinci çapa durumu, süre, sonSira). İndirme izi: baştan indirme nedeni, satır sayısı, sayfa, süre. Kayıtların yüzde 95'inin 24 saatte ulaşması kayıt satırlarından ölçülür (D15).
+
+D06 .kayitlar[0]: app.ts: esitlemeEklentisi(app, { saat, log, ulasmaMakbuzu: { etkinKid, anahtarlar } }); anahtarlar D15.gizliAnahtar('ulasma_makbuzu', kid) ile bileşim kökünde okunur
+
+D06 .beklenenler[4]: D15: 'ulasma_makbuzu' amaçlı gizli anahtar (kid'li; eski anahtar en az dönem kilidine kadar saklanır, teknik.html#sunucu-ayarlar listesine eklenir); ders çıkışı yük testinde gönderim ve indirme profili; olcum_ görünümleri kurulumlar ve gonderim_defteri'ni okur.
+
+D06 .beklenenler[5]: Öğe sahipleri (D04, D05, D07, D09, D11, D15): ogeTuruKaydet ile kaydolur; işleyici beklenen her sonucu döner, fırlatmaz, hızlı yolda öğe başına SAVEPOINT açmaz; ayrıntı şemasını kendi sözleşmesinde yazar; öğe kimliğini kendi tablosunda hedefli ON CONFLICT ile tekil tutar; GelenOge.ulasmaAni'yi (paket anı ya da makbuz anı) ulaşma anı olarak yazar.
+
+D06 .tipler[2]:  kafa_sayisi: 'D07', elle_ekleme: 'D09', sorun_bildirimi: 'D09', gosterim_kaydi: 'D11', telefon_sayaci: 'D15' } as const;
+
+D07 .jobs[0].does: Google'ın anahtar kanıtı iptal listesini ayarlardaki adresten (https://android.googleapis.com/attestation/status) HTTPS ile, en çok 20 MiB ve 30 saniyede çeker, Zod ile denetler. Başarılıysa satırları ekler ya da günceller, bu çekimde olmayanları siler. Yeni iptal ya da askıya alma görülen seri numarasını taşıyan Android kanıtlarına iptal_ani ve iptal_durumu yazar, D01.cihazDogrulamaSonucunuYaz ile cihazı DOGRULANAMADI (IPTAL_LISTESINDE) yapar, dogrulama.cihaz_iptal_listesinde olayını yazar; askıya alma kalkınca tersini yapar. Çekim başarısızsa eski liste kalır; son başarılı çekim 7 günden eskiyse D15.uyariAc. Sonraki kayıtlar etkilenir, geçmiş etiketler değişmez.
+
+D07 .tests[17].asserts: Sahte HTTP hata dönünce tablo değişmez; son başarılı çekim 7 gün 1 dakika önceyse D15.uyariAc çağrılır, 6 gün 23 saatte çağrılmaz (pozitif kontrol); 20 MiB'yi aşan cevap reddedilir.
+
+D07 .tests[44].asserts: Sorgu sayan işlem sarmalayıcısıyla (Aşama 1): kararHesapla tek şubeli etiketsiz kayıtta en çok 10, en kötü durumda (üç şube, etiketli kayıt, aynı gün başka kayıt) en çok 16; kararGecmisineYaz en çok 3; appAttestSayaciniDenetle en çok 4 SQL ifadesi. Bütçe aşılırsa kırmızı. Ders çıkışı yük testinde (D15) karar yolu dahil gönderme ucunun süresi ayrıca raporlanır.
+
+D07 .resolved_gaps[21].decision: android_iptal_listesi_cek her gün 05:40'ta çeker; başarısızsa son başarılı liste kullanılır, 7 günden eskiyse D15.uyariAc. Yeni iptal ya da askıya alma görülen seri numarasını taşıyan kanıtlara iptal_ani yazılır, D01 cihaz sonucu DOGRULANAMADI olur; o andan sonra ulaşan kayıtlar Cihaz doğrulanmadı, geçmiş kararlar ve etiketler değişmez; askıya alma kalkınca tersine döner. Kökler kokler.ts'de sabittir, değişiklik yeni sunucu sürümüyle gelir.
+
+D07 .resolved_gaps[25].decision: Yenileme ucu D01'indir (POST /v1/kimlik/cihaz/app-attest-yenile). Akış: telefon ANAHTAR_YENILEME değeri alır; D01 isteğin Secure Enclave imzasını doğrular, dogrulamaDegeriniTuket ve yeni anahtar satırından sonra cihazKanitiniDogrula'yı (ANAHTAR_YENILEME) çağırır. Yeni anahtarın sayaç dizisi sıfırdan başlar; eski anahtarın satırları kalır, bekleyen kayıtlar onlarla denetlenir. Günde birden fazla yenileme engellenmez; kanıt satırlarından sayılır ve D15'in uyarısına gider.
+
+D07 .open_points[5].question: D13 ve D15 hizalaması: yayin-bilgisi.json alanları, ayarlar ve dışarı çıkış.
+
+D07 .open_points[5].recommendation: yayin-bilgisi.json şemasına (packages/contracts/src/api.ts) eklemeyle: hataliSurumler [{ platform, uygulamaSurumu, guncellemeKimligi, baslangicAni, gerekce }], iosPaketSurumleri ve iosDagitimTurleri; CI yazar (D15). Ayarlar (D15.ayarlar): androidPaketAdi, androidImzaOzetleri, appAttestUygulamaKimligi, iptalListesiAdresi, yayinBilgisiYolu. Google iptal listesi adresi sunucunun dışarı çıkış listesine girer (D15-B10). packages/contracts/src/dogrulama.ts kod listelerini packages/core/src/dogrulama/kodlar.ts'den alır; paket bağımlılığı D15'in.
+
+D08 .jobs[1].does: Kilidi uygulanmamış ya da kilidinden bu yana 30 günden az geçmiş birim dönemlerinin, devam_sonuclari'nda satırı olan her dersini sıfırdan hesaplar ve saklananla karşılaştırır. Farkları sınıflar (saat, hak ve karar, oturum son durumu, hesaplanan seviye, KARAR BEKLİYOR açık işaret; bağlantı nedeninin yenilenmesi ve seviye tutmasından gelen gösterilen > hesaplanan fark sayılmaz), düzeltir ve tek log satırı yazar: { olay: devam.tutarlilik, dersSayisi, ogrenciSayisi, farkSayisi, farkTurleri }. kural_surumu ya da sayim_tabani ayardan farklı satırları yeniden hesaplar (neden KURAL). Aynı sayılar pg-boss iş çıktısına da yazılır; fark > 0 "hesabın elle hesaplananla uyuşmazlığı 0" hedefinin ihlalidir. D08 D15'i çağırmaz: uyarıyı D15'in isletim_denetimi iş çıktısından açar (D08-A08).
+
+D08 .tests[37].asserts: 20.000 kayıt 5 dakikada gelirken devam_hesapla gecikmesi (işin oluşmasından bitişine) p95 en çok 5 dakika, olağan saatte p95 en çok 30 saniye; gönderim işlemine eklenen tek iş satırı gönderim p95 bütçesini aşmaz (D15 yük testi, veri D08 kurucusundan).
+
+D08 .resolved_gaps[17].why: Teyide kadar yapılan saat (plan.html#acik-sayim-tabani); PLANLANAN tanımı sahibin açık noktası (D08-A06); ayar şeması D15'in infra/ayarlar dosyasında, D08 bileşim kökünden parametre olarak alır (Ayarlar (teknik.html#sunucu-ayarlar)).
+
+D08 .open_points[7].recommendation: D05: sayılan işareti ya da kararı değişen her kayıt yazımında aynı işlemde devamHesaplaIsiKoy(tx, dersId, ogrenciId, KAYIT ya da KARAR); sayilanKayitlar süzgeci {dersId, ogrenciIdler?}, alanlar karar, kendiBeyani, onayBekliyor. D02: kafa sayısı ve "Ders yapıldı mı?" yazımında devamHesaplaIsiKoy(tx, dersId, null, YAPILDI); dersYetkisi dönüşü {hoca, yonetici (kapsam dahil)}; oturumlariGetir oturumda şube kimlikleri, tür (NORMAL, TELAFI), durum, iptal nedeni, yapildi, saatler. D06: kurulumSonTemasi dönüşünde son temas anı ve varsa ders başına bekleyen öğe sayısı. D09: düzeltme ve sorun bildirimi açılış ve kapanışında devamHesaplaIsiKoy; sonDurumOnceligi dönüşünde kazanan düzeltmenin kimliği; hesapsız öğrencinin düzeltmesinde liste satırı kimliği; duzeltmeleriGetir süzgeci {dersId, ogrenciIdler?}. D15: ayar şemasına DEVAM_SAYIM_TABANI (ilk sürümde yalnız YAPILAN); isletim_denetimi devam_tutarlilik_denetimi çıktısındaki farkSayisi > 0 için işletim uyarısı açar.
+
+D09 .tables[2].constraints[0]: denetim_kayitlari_olay_turu_ck: olay_turu ~ '^(kimlik|dersler|listeler|saat|yoklama|esitleme|dogrulama|devam|duzeltmeler|raporlar|projeksiyon|veritabani|api|is-kuyrugu|isletim)[.][a-z][a-z0-9_]{1,62}$'
+
+D09 .open_points[8].recommendation: Sahipleri yalnız ekleyerek sağlar: D05.sayilanKayitlar süzgecinde dersIdler, kararlar, etiket, onaysız ve ulaşma aralığı, dönen kayıtta karar, gerekçe, karar anı, karar kaynağı, karar sürümü, ulaşma anı, etiketler ve onaylayan; D02.oturumlariGetir'de hocanın açık dönemdeki dersleri; D01.ogrenciHesabiGetir'in bir numaradaki bütün silinmemiş hesapları dönmesi, yük testinde yavaşsa toplu okuma; D06 öğe zarfında çapalanmış işlem anı ve kimlik; D07.kararDegistir kaynağında hoca işlemi (KENDI_BEYANI_ONAY, KENDI_BEYANI_RET, INCELEME_ONAY, INCELEME_RET, ISARETLI_OTURUM_RET) ve 'kilitte dondu' sonucu; D10.aksisAnligiGetir'de karşılaştırma tabanı; D15 ayarlarında DUZELTMELER_PARTI_BOYU; D12 saklama sırasında kayda başvuran satırların kayıtlardan önce işlenmesi.
+
+D10 .jobs[0].does: Kilidi uygulanmış birim ve dönemlerde (D02.kilitliBirimDonemleri) gün sonu anlığı olmayan her şubeyi bulur (deneme dersi hariç; boş şube 0 satırlı anlık alır, tamlık denetimi basit kalır). Her şube için REPEATABLE READ işlem açar, D08.dersSonuclari hesabın bekliyor olduğunu söylüyorsa şubeyi atlar (contracts.json notu: kilidin kuyruğa koyduğu devam_hesapla işleri bitmeden anlık alınmaz), değilse GET ucundaki özet kurucunun aynısıyla özeti ve ozetOzeti'ni hesaplar, başlığı ve satırları yazar. Bir şubenin hatası ötekileri durdurmaz; iş sonunda hatalı şube varsa iş başarısız sayılır ve D14 politikasıyla yeniden dener. Log yalnız sayılar ve iç kimliklerle: alınan, bekleyen, hatalı şube sayısı ve süre. Yeniden kuyruğa koyma ayrı işlemde ve hata atılmadan önce yapılır. Kilit anından 6 saat sonra hâlâ bekleyen şube varsa iş hata koduyla biter; D14 politikasıyla yeniden dener, sonunda ölü mektup kuyruğuna düşer ve D15'in isletim_denetimi (D14.isSagligi) uyarı açar, böylece takılan şube sessiz kalmaz.
+
+D10 .tests[41].asserts: k6 senaryosu (D15'in yük testi klasöründe, veri bu modülün kurucusuyla): 400 öğrenci ve 70 oturumluk şubede ders raporu ve AKSİS özeti p95 en çok 2 sn, veritabanı süresi en çok 500 ms; aynı anda ders çıkışı gönderim yükü sürerken gönderme ucunun p95'i raporsuz ölçümden en çok %10 kötü. Kesin değerler D15'in tablosuna yazılır.
+
+D10 .tests[43].asserts: Stryker packages/core/src/raporlar üzerinde koşar; eşik D15'in ayarında; yuzdeMetni yuvarlaması, harf tablosu, kanonik sıra, dosya adı ve değişim sınıfı mutantlarının hepsi ölür.
+
+D12 .summary: D12 veritabanının kendisini ve verinin ömrünü yönetir: PostgreSQL 18 kümesi ve kendi imajı, ayar dosyaları, roller ve şemalar, tek göç klasörünün kuralı ve CI denetimi, bağlantı havuzu ve işlem yardımcısı, nesil okuma, yedek, geri yükleme, saklama süresi işi ve test veritabanı. Alan tablosu tutmaz; yalnız göç defterinin (__drizzle_migrations), geri yükleme kayıtlarının ve saklama kanıtının sahibidir, tek ucu yöneticiye geri yüklemeleri listeler. Başka modül içe aktarmaz: modüller dış yüzünü çağırır ve saklama işleyicilerini ona kaydeder, bağlantı ayarlarını ve saati bileşim kökleri verir. Yedek ve geri yükleme işleri ana makinedeki zamanlayıcıyla pg-boss dışında çalışır, sonucunu D15'in okuduğu durum dosyasına yazar. Saklama süresi İÜ'den gelene kadar hiçbir kayıt silinmez: mekanizma baştan kurulur, süre ayarı boş kalır.
+
+D12 .jobs[0].does: saklama/sureler.ts'te süresi yazılı her veri sınıfı için kayıtlı işleyiciyi bağımlılık sırasıyla çalıştırır: bir sınıfa başvuran sınıflar önce işlenir. Her parti ayrı kısa işlemdir: işlem SET LOCAL ROLE yoklama_saklama ile başlar, işleyici en çok 1000 satırı siler ya da anonimleştirir, kanıt satırı aynı işlemde saklama_islemleri'ne yazılır. Süresi yazılı ama işleyicisi kayıtlı olmayan sınıfta iş VERITABANI_SAKLAMA_ISLEYICI_YOK ile düşer ve D15 uyarır. Bir gecede en çok 30 dakika çalışır, kalan ertesi gece o gecenin sınırıyla sürer.
+
+D12 .jobs[5].schedule: Çarşamba 01:30 Europe/Istanbul (fark yedeği sürüyorsa kilitte bekler); ayrıca her sunucu yayınında D15'in yayın betiği docker/postgres/yedek/pgbackrest.sh denetle komutunu çağırır.
+
+D12 .jobs[5].does: pgbackrest verify ile depodaki yedek ve WAL dosyalarının bütünlüğünü, pgbackrest check ile arşivin şu an çalıştığını denetler; hata VERITABANI_YEDEK_DOGRULAMA_BASARISIZ olarak durum dosyasına yazılır, D15 uyarır.
+
+D12 .jobs[6].schedule: Ayın ilk cumartesisi 05:30 Europe/Istanbul, her PostgreSQL büyük sürüm geçişinden önce ve elle. Hazırlık makinesi varsa orada (D15-B13), yoksa üretim makinesinde ayrı Compose projesinde; boş disk dökümün iki katı artı 10 GB değilse atlanır.
+
+D12 .jobs[7].does: uygulama şemasındaki bölünmüş tabloları katalogdan bulur; her birinin varsayılan bölümü boş olmalıdır, doluysa VERITABANI_BOLUM_VARSAYILAN_DOLU ile düşer ve D15 uyarır. Bölme yapıldığında yeni dönem bölümü dönem açılırken açılır (D12-B14); bu iş eksik kalan bölümü yakalayan güvenlik ağıdır.
+
+D12 .state_machines[3].name: hazirlik (semaDurumu, D15 /health/ready ucunun veritabanı yarısı)
+
+D12 .exports[0].purpose: Contracts'taki veritabani: bileşim kökü (server.ts, worker.ts, göç ve CLI girişleri) bir kez kurar, app.ts'e ve işlere parametre olarak verir. node-postgres havuzu ve Drizzle (casing snake_case); DATE ve TIME metin okunur; Drizzle istemcisi dışarı verilmez, her sorgu islem içinden geçer. semaDurumu D15'in /health/ready ucunun veritabanı yarısıdır.
+
+D12 .exports[5].purpose: Cucumber koordinatör kancasında bir kez (kanca dosyası D15'in): önceki koşudan kalan yoklama_test_* ve yoklama_sablon veritabanlarını WITH (FORCE) ile siler, şablonu db:migrate ile kurar, bağlantıyı kapatır, her işçiye yoklama_test_<n> kopyasını şablondan açar. postgres-test'e ulaşılamazsa VERITABANI_TEST_ULASILAMIYOR ve açık mesajla durur.
+
+D12 .exports[6].purpose: Her senaryodan önce sahip rolle uygulama şemasındaki bütün tabloları tek TRUNCATE ... RESTART IDENTITY ile boşaltır, sütuna bağlı olmayan dizileri başa alır; drizzle ve pgboss şemalarına dokunmaz. İş kuyruğunu D15'in kancası D14 üzerinden deleteAllJobs ile temizler. testVeritabaniAdi işçi numarasından yoklama_test_<n> adını verir.
+
+D12 .exports[12].purpose: Uç şemaları ve rota beyanı (D13 birleştirir), hata kodları ve HTTP durumları (D13'ün kataloğu birleştirir; http null olanlar işletim kodudur), D15'in okuduğu yedek durum dosyasının şeması, CHECK listelerinin tek kaynağı.
+
+D12 .tests[40].asserts: D15'in k6 ders çıkışı testinde havuz bekleme p99 2 saniyenin altında, VERITABANI_HAVUZ_DOLU oranı yüzde 1'in altında, pg_stat_activity bağlantı sayısı 80'i geçmiyor.
+
+D12 .resolved_gaps[2].decision: Giriş rolleri: yoklama_sahip (bütün nesnelerin sahibi; göç servisi, test sıfırlaması, veri kurucular, geri yükleme komutu), yoklama_api ve yoklama_isci (uygulama şemasında varsayılan SELECT, INSERT, UPDATE, DELETE; drizzle'da SELECT; pgboss'ta veri yetkisi; TRUNCATE ve DDL yok; @yalniz-ekleme tablolarda UPDATE ve DELETE sahibinin göçünde geri alınır), xprem (yalnız kendi veritabanı). Giriş yetkisiz yoklama_saklama: uygulama şemasında SELECT, UPDATE, DELETE ve saklama_islemleri'ne INSERT; yoklama_isci'ye INHERIT FALSE, SET TRUE ile verilir, yalnız saklama işi SET LOCAL ROLE ile geçer. yoklama_isci'ye pg_monitor (D15'in veritabanı ölçüleri). pgBackRest ve gece dökümü kap içinden, yerel soketten postgres kullanıcısıyla. Rol ayarları: yoklama_api statement_timeout 5 s, lock_timeout 2 s, idle_in_transaction_session_timeout 30 s; yoklama_isci 5 dk, 30 s, 5 dk; hepsinde timezone UTC. yonetici-ekle yoklama_api ile bağlanır. Parolalar Compose sırrıyla yalnız ilgili servise.
+
+D12 .resolved_gaps[6].decision: node-postgres ve Drizzle'ın node-postgres sürücüsü; API'de pg-boss işi çağıranın işleminde gönderir (D14-B02). Bağlantı bütçesi, D15-B17 ve D14-B10 ile aynı başlangıç: API kopyası başına 20 (2 kopya 40), işçi 5, xprem 10, göç servisi 2, pgBackRest 2, gece dökümü 1, süper kullanıcıya ayrılan 3: toplam 63, üst sınır 80. Havuzda bekleme 2 saniye, sonra VERITABANI_HAVUZ_DOLU (503). Rol süreleri D12-B03'te; islem saltOkunur ve zamanAsimiMs ile rapor sorgusunda süreyi en çok 20 saniyeye çıkarır, Fastify'ın 25 saniyelik istek süresinin altında (D13-B26). Değerler yük testinden sonra kesinleşir.
+
+D12 .resolved_gaps[6].why: pg-boss node-postgres üstüne kurulu, aynı işlem doğrudan paylaşılır. Bütçe üçüncü bir API kopyasına yer bırakır; 80 sınırı D15'in yüzde 80 uyarı eşiğiyle aynı (D15-B20).
+
+D12 .resolved_gaps[9].decision: semaDurumu açılışta imajdaki göç klasörünü drizzle-orm/migrator'ın readMigrationFiles işleviyle okur ve son göçün özetini beklenen değer yapar. Hazır: veritabanına ulaşılıyor, beklenen özet drizzle.__drizzle_migrations'ta var (sonrası da olabilir) ve nesil iki kaynakta tutarlı; değilse neden ulasilamiyor, geride ya da nesil_belirsiz. D15'in /health/ready ucu bunu çağırır; ayrı şema sürümü tablosu yok.
+
+D12 .resolved_gaps[9].why: Genişlet ve daralt yönteminde veritabanı imajdan ileride olabilir ve kopya o durumda hazır sayılmalı (D15-B41 aynı kuralı istiyor); özet Drizzle'ın kendi işleviyle hesaplanınca göç çalıştırıcısıyla hep aynı kalır.
+
+D12 .resolved_gaps[24].decision: pgBackRest: pazar 01:00 tam, öteki geceler 01:00 fark; repo1-retention-full=3 (sayı): PITR penceresi en az 14 gün, en eski yedek en çok 21 gün; çarşamba 01:30 verify, her yayında check. pg_dump her gece 02:15, restic'te 35 gün. Dönem sonu uzun döküm yok. Başarısız ya da 26 saatten eski yedek durum dosyası üzerinden D15'in uyarısına gider.
+
+D12 .resolved_gaps[27].decision: Ayın ilk cumartesisi 05:30, her büyük sürüm geçişinden önce ve elle. Yer: hazırlık makinesi varsa orası (D15-B13), yoksa üretim makinesinde ayrı Compose projesi; ayrı birim ve ağ, deneme kabına 1,5 çekirdek ve 2 GB bellek sınırı, boş disk dökümün iki katı artı 10 GB değilse atlanır. Adımlar ve kabul ölçütü işin tanımında; süre ölçülür, kurtarma süresi olarak teknik.html'e yazılır ve D15-B39'daki hedefle karşılaştırılır. Sonuç durum dosyasına ve tarihli rapora.
+
+D12 .resolved_gaps[28].decision: archive-async=y ve archive-push-queue-max=20GiB: depo ulaşılmazsa WAL en çok 20 GiB birikir, sonra pgBackRest WAL'ı düşürür, PITR o aralıkta kopar ama veritabanı çalışır; telefonlar işleri dönem kilidine kadar sakladığından kayıp telefonda durur (plan.html#gun-kenar-durumlar). Arşiv gecikmesi pg_stat_archiver'dan, disk doluluğu makineden D15'in eşikleriyle uyarır (D15-B20); depo dönünce hemen tam yedek alınır.
+
+D13 .summary: api modülü sunucunun dış yüzünü tek yerde toplar: rota tablosunun biçimi ve kaydı, kök kancalar (istek kimliği, istemci başlıkları, köken denetimi, oturum kancasının bağlanması, hız sınıfları, aşırı yük), tek hata zarfı ve hata kataloğu, ortak sözleşme tipleri ve telefonla panelin paylaştığı fetch yardımcısı. Bileşim kökü app.ts bu modülündür: altyapıyı ve bütün modül eklentilerini parametreyle bağlar; infra/api hiçbir modülü içe aktarmaz, oturum doğrulama (D01), saat belgesi (D04) ve dönem arası bilgisi (D02) ona app.ts'ten işlev olarak gelir. Tek tablosu istemci_surum_esikleri, imajdaki yayin-bilgisi.json dosyasından alınan en düşük sürüm kararlarının yalnız eklenen tarihçesidir; GET /v1/surum cevabını bu tarihçeden verir ve en düşük sürümü yalnız ortak dönem arasında yükseltir. Sunucu hiçbir isteği istemci sürümüne göre reddetmez, kayıt gönderme ucu hiçbir sürüme kapanmaz. OpenAPI belgesi yalnız kırılma denetimi için üretilir; her uygulama sürümünün belgesi saklanır ve CI her değişiklikte oasdiff ile karşılaştırır.
+
+D13 .state_machines[1].name: istek_hatti (her API isteği, kancaların sırası)
+
+D13 .state_machines[1].transitions[2].by: kök onRequest kancaları (infra/api/kancalar; yalnız işlemci işi, veritabanına dokunmaz)
+
+D13 .state_machines[1].transitions[3].by: oturum kancası (kökte, under-pressure'dan ve ucuz kancalardan sonra; D01'in oturumDogrula işlevi app.ts'ten)
+
+D13 .state_machines[1].transitions[5].by: modül kancaları ve kimlik beyanı denetimi (rotalariKaydet ekler)
+
+D13 .state_machines[1].transitions[8].by: Zod cevap şeması ve kök onSend kancaları
+
+D13 .exports[0].signature: function rotalariKaydet(app: FastifyInstance, rotalar: readonly RotaUygulamasi[]): void; type RotaUygulamasi<R extends RotaTanimi = RotaTanimi> = { tanim: R; isleyici: RotaIsleyicisi<R>; oncekiKancalar?: readonly preHandlerAsyncHookHandler[] }
+
+D13 .exports[0].purpose: Modül eklentisi kendi sözleşme dosyasındaki rota tanımlarını işleyicileriyle kaydeder. Tanımın TUM_ROTALAR'da olduğunu, yolun modülün önekiyle başladığını, kimlik, rol, hız sınıfı ve gövde sınırı beyanını açılışta denetler; Fastify yolunu ({dersId} biçiminden :dersId'ye), Zod şemalarını, gövde sınırını kurar ve rotaya sırasıyla modülün kancalarını, kimlik beyanı denetimini ve hız sınıfı kancasını ekler. Kaydedileni tamlık denetimi için not eder.
+
+D13 .exports[7].purpose: apiKur kökte şu sırayla kurar: ilk kanca olarak @fastify/under-pressure (eşikler ayarlardan; pressureHandler zarflı 503 ve rastgele Retry-After verir), @fastify/cookie, @fastify/helmet (API başlıkları D15-B05: nosniff, frame-ancestors 'none', HSTS), @fastify/rate-limit (global kapalı), yalnız application/json ayrıştırıcısı, veritabanına dokunmayan kök kancalar, oturum kancası, onSend kancaları, yakalayıcılar ve rota bekçisi; böylece aşırı yükte istek veritabanına gitmeden düşer. eklenti GET /v1/surum'u kaydeder. Tipler drizzle-orm kütüphanesinden gelir, D12 içe aktarılmaz; app.ts D01'in işlevi fırlatırsa da OturumSonucu biçimine çevirir. Başka modül kullanmaz.
+
+D13 .exports[15].purpose: CI'nın yazdığı (D15), sunucunun yalnız okuduğu dosyanın şeması. kanallar dört platform ve kanal çiftinin her birini tam bir kez taşır: {platform, kanal, enSonSurum, enDusukSurum (en son sürümden büyük olamaz), magazaBaglantisi (https), gecisBaglantisi (yalnız testflight, öteki kanalda null), kademeler (yalnız github; en çok 10, başlangıçlar artan, yüzdeler azalmayan)}. hataliSurumler: [{platform, surum, guncellemeKimligi ya da null, baslangic, neden}] en çok 100 (D07); iosPaketSurumleri en çok 500 (D07).
+
+D13 .files[10]: apps/server/src/infra/api/kancalar/istek-kimligi.ts
+
+D13 .files[11]: apps/server/src/infra/api/kancalar/istemci-basliklari.ts
+
+D13 .files[12]: apps/server/src/infra/api/kancalar/koken.ts
+
+D13 .files[13]: apps/server/src/infra/api/kancalar/kimlik.ts
+
+D13 .files[14]: apps/server/src/infra/api/kancalar/cevap-basliklari.ts
+
+D13 .files[15]: apps/server/src/infra/api/kancalar/saat-belgesi.ts
+
+D13 .files[16]: apps/server/src/infra/api/kancalar/istek-logu.ts
+
+D13 .tests[43].asserts: D15'in k6 ders çıkışı senaryosunda (binlerce ayrı cihaz kimliği, sınırlar açık, 20.000 telefon 1 dakikada): 429 oranı sıfır; bütün 503'ler Retry-After taşır; hız sınıfı tablolarının bellek payı ve gönderim ucunda cevap serileştirmenin süre payı ölçülüp yazılır; under-pressure eşikleri ve sınıf değerleri bu ölçümden sonra kesinleşir.
+
+D13 .resolved_gaps[3].decision: Fastify genReqId crypto.randomUUID (UUIDv4), requestIdHeader false (gelen değer yok sayılır), log etiketi istekKimligi. Başarı dahil her cevapta X-Istek-Kimligi başlığı (X-Request-Id değil: başlık adları da Türkçe ASCII kuralına uyar), hata zarfında istekKimligi. İşi tetikleyen istek varsa modül iş verisine kaynakIstekKimligi: istekKimligi(istek) koyar; işçi logu aynı kimlikle aranır (D15-B18'deki log arama aracı).
+
+D13 .resolved_gaps[8].why: Eklentinin varsayılan 5000 anahtarlık tablosu 50.000 öğrencide sayaçları sürekli atar. Değerler yazılmazsa sınırlar açık koşan yük testi (teknik.html#testler-kalite) ya 429 yağmuruna ya sınırsızlığa göre geçer. Sınıf adları ve değerler D13'ün, ölçüm D15'in yük testinde (D06-B29 ve D15-B42 bu bölüşümle uzlaşır).
+
+D13 .resolved_gaps[9].decision: Aşırı yük (under-pressure), havuz dolması ve geçici veritabanı hataları aynı 503 API_SUNUCU_YOGUN zarfıyla ve 15 ile 45 saniye arasında sunucuda rastgele seçilen Retry-After ile döner (under-pressure'da pressureHandler); istemci üstüne kendi rastgele payını ekler. Eşikler (maxEventLoopDelay, maxEventLoopUtilization, maxRssBytes kap sınırının altında) ayarlardan (D15) okunur, yazılmazsa uygulama açılmaz. under-pressure kökteki ilk kancadır; /health/live ve /v1/durum rota tablosunda baskiDisi taşır ve rotalariKaydet onlara null dönen rota düzeyi pressureHandler koyar (eklenti fastify-plugin ile sarılı, null dönüşte isteği geçirir; kaynağında doğrulandı). SQLSTATE 40P01, 40001, 53300, 57P03 503 API_SUNUCU_YOGUN'a, 57014 503 API_SORGU_ZAMAN_ASIMI'na çevrilir; havuz bekleme zaman aşımını D12 tipli hatayla bildirir (D13-A04).
+
+D13 .resolved_gaps[10].decision: Genel gövde sınırı 64 KiB (Fastify bodyLimit); rota tablosunda uç başına sınır beyan edilir, en çok 2 MiB (fazlası açılışta hata). Öneriler: gönderim 1 MiB (D06 beyan eder; 200 zarflı en büyük paketin yaklaşık üç katı), liste yükleme 2 MiB (D03), toplu işlemler 256 KiB. Aşan istek 413 API_GOVDE_COK_BUYUK. Caddy'deki istek sınırı en büyük rota sınırından büyük tutulur ki 413'ü zarfla Fastify versin (D15).
+
+D13 .resolved_gaps[17].decision: yayin-bilgisi.json CI'da üretilir ve sunucu imajına girer (D15-B26: CI sunucuya erişmez, imaj imzalı olduğundan dosya da imzalı gelir); yolu ayarlardan gelir. Şema packages/contracts/src/api.ts'te (yayinBilgisiSemasi): bicim, artan sira, olusturmaAni, dört platform ve kanal çiftinin her biri tam bir kez, hataliSurumler, iosPaketSurumleri. Sunucu açılışta dosyayı Zod'la doğrular; geçersizse açılmaz, sırayla yeniden başlatmada eski kopya hizmette kalır (ortam ayarlarındaki kuralla aynı, teknik.html#sunucu-ayarlar). Geçerli dosyanın kararları istemci_surum_esikleri'ne eklenir, cevaplar tablodan verilir; böylece eski imajlı ya da geri alınmış kopya daha küçük sıralı dosyasıyla kayıtlı kararı geri çeviremez. GitHub kademeleri dosyada tarihli takvimdir ({baslangic, yuzde}), yüzde artırmak yeni yayın istemez. İnventerdeki Compose birimi ve değişme zamanına bakarak yeniden okuma önerisi bırakıldı.
+
+D13 .resolved_gaps[17].why: Birim önerisi CI'ya sunucuya yazma yolu açardı, D15 bunu dışlıyor; imajdaki dosya imzalı gelir, kopyalar arası tutarlılığı tablo sağlar. Bozuk dosyanın en düşük sürümü yanlışlıkla yükseltmesi açılışta durdurulur (plan.html#dagitim-guncelleme: sunucu yalnız okur).
+
+D13 .resolved_gaps[18].decision: openapi_belgesi_sakla betiği (apps/server/src/jobs/api/openapi-belgesi-sakla.ts) uygulamayı app.ts ile sahte altyapıyla ve bütün eklentiler açık kurar, app.ready() sonrası port açmadan @fastify/swagger çıktısını anahtarları sıralı JSON olarak packages/contracts/openapi/<uygulama sürümü>.json'a yazar; belge üretimde sunulmaz, swagger yalnız bu kipte kaydedilir. Saklı belgeler yalnız eklenir. Desteklenen küme: packages/contracts/openapi/destek.json'daki tamDenetimTabani'na eşit ya da yüksek her saklı sürüm (tam denetim) ve bütün saklı sürümler (yalnız gönderme yoluna süzülmüş ikinci koşu, --match-path). Taban yalnız etkin en düşük sürüm (GET /v1/surum) onu geçtikten sonra, dönem arasında, elle ve gözden geçirilerek yükseltilir. Güvenlik şemaları (Bearer, çerez, x-kimlik ile cihaz imzası ve projeksiyon), isteğe bağlı sürüm ve saat başlıkları ve rotanın hata kodları belgede yazılır. Uzaktan güncelleme ayrı belge üretmez. Bu liste D15'in eski sürüm istek örnekleriyle (D15-B32) aynıdır.
+
+D13 .resolved_gaps[25].decision: Fastify requestTimeout 20 saniye (isteğin alınması; telefonun 30 saniyesinden kısa, aşılınca Node 408 döner ve telefon yeniden dener); keepAliveTimeout Fastify varsayılanı 72 saniye kalır, Caddy'nin üst akış boşta bağlantı süresi bundan kısa tutulur (D15). İşleyici süresini D12'nin sınırları bağlar: havuz bekleme ve rol düzeyinde statement_timeout (değerler D12'nin); deyim süresi aşımı 503 API_SORGU_ZAMAN_ASIMI. Rapor uçları agir hız sınıfındadır, süreye sığmazsa kapsam daraltılır. Değerler yük testiyle doğrulanır. İnventerdeki 25 saniyelik istek süresi önerisi D15-B17'deki 20 saniyeyle birleştirildi.
+
+D13 .resolved_gaps[29].decision: Yalnız cevaplar sıkıştırılır, Caddy'de (encode zstd gzip; D15). İstek gövdesi sıkıştırılmaz; Content-Encoding taşıyan gövdeli istek 415 API_ICERIK_TURU.
+
+D13 .resolved_gaps[30].decision: Yayın sırası önce API (göç ve yeni kopyalar hazır), sonra panel dosyaları (D15'in yayın adımı). Panel yeni bir uçta API_UC_BULUNAMADI alırsa sayfayı yenile önerisiyle gösterir; vite:preloadError'da bir kez kendiliğinden yenileme zaten karar (teknik.html#panel-sunulma). Yalnız ekleme kuralı açık kalmış eski sekmenin yeni API'yle konuşmasını güvenli kılar; X-Panel-Surumu logda eski sekmeyi gösterir.
+
+D13 .open_points[4].question: D15 tarafında hangi eşleşmeler gerekiyor?
+
+D13 .open_points[4].recommendation: Ayar şemasına PANEL_ADRESI (Origin karşılaştırması), GUVENILEN_VEKIL_ADRESI (trustProxy, Caddy'nin sabit iç adresi), YAYIN_BILGISI_YOLU ve under-pressure eşikleri (olay döngüsü gecikmesi, kullanım, kap sınırının altında bellek) eklensin. İşletim modülünün /health/live ve /v1/durum tanımları baskiDisi: true taşısın (aşırı yükte de cevap versinler, teknik.html#sunucu-ayarlar). Caddy'de istek gövdesi sınırı 2 MiB'tan büyük, üst akış boşta bağlantı süresi 72 saniyeden kısa olsun ve yük dağıtımında X-Kurulum-Kimligi başlığının özeti kullanılsın (D15-B42). Yayın akışı yayin-bilgisi.json'u artan sira ile üretip imaja koysun. Ortak test kancası her cevabı rotanın cevap şemasıyla, her 4xx ve 5xx gövdesini hataZarfiSemasi ile denetlesin; yük testi hız sınıfı ve baskı değerlerini ölçsün.
+
+D14 .tables[0].columns[2].note: giris_kodu, basvuru_kodu, onay_bekliyor, giris_bildirimi, isletim_uyarisi. Liste ve CHECK infra/eposta/turler.ts'teki EPOSTA_TURLERI sabitinden; yeni tür CHECK'i genişleten göçle.
+
+D14 .tables[0].constraints[2]: eposta_gonderimleri_tur_ck CHECK (tur IN ('giris_kodu','basvuru_kodu','onay_bekliyor','giris_bildirimi','isletim_uyarisi'))
+
+D14 .state_machines[0].transitions[2].when: Sınıra girmeyen tür (giris_bildirimi, isletim_uyarisi); kendi kısa işleminde eklenir.
+
+D14 .exports[4].purpose: Yalnız işçide (API'de IS_KUYRUGU_YANLIS_SUREC): kuyruk ve zamanlama sağlığı ile e-posta özeti. Eşik ve uyarı D15'in isletim_denetimi işindedir; D14 yalnız ölçer.
+
+D14 .exports[8].signature: const EPOSTA_TURLERI: { giris_kodu, basvuru_kodu, onay_bekliyor, giris_bildirimi, isletim_uyarisi }; type EpostaVerisi = { giris_kodu: { kod: string /* ^\d{6}$ */; gecerlilikDakika: number }; basvuru_kodu: { kod: string; gecerlilikDakika: number }; onay_bekliyor: Record<string, never>; giris_bildirimi: { girisAni: Date; istemciTuru: 'telefon' | 'panel'; cihazEtiketi: string; kapananOturumEtiketi: string | null }; isletim_uyarisi: { konu: string; satirlar: string[] } }
+
+D14 .exports[8].purpose: Türler, sınıra dahil olup olmadığı, ürün e-postası olup olmadığı ve şablon verisinin şeması tek sabitten; CHECK listesi de buradan. Ürün türlerinde alıcı alan adı tam istanbul.edu.tr; isletim_uyarisi ürün değildir, sınıra girmez, sabit cümle taşımaz. Cihaz etiketi en çok 60 karakter, harf, rakam, boşluk, virgül, nokta, parantez ve tire; bağlantı içerirse metne 'Bilinmeyen cihaz' yazılır. Metinler Şablon metinleri tablosunda.
+
+D14 .files[31]: apps/server/src/infra/eposta/sablonlar/isletim-uyarisi.ts
+
+D14 .files[50]: apps/server/test/steps/is-kuyrugu/kancalar.ts
+
+D14 .tests[32].name: Ders başı giriş yığılması (D15 yük testine eklenecek senaryo)
+
+D14 .resolved_gaps[1].decision: isGonder(tx, ...) pg-boss send çağrısına db: fromDrizzle(tx, sql) verir; iş, iş kuralının işlemiyle aynı bağlantıda ve aynı işlemde eklenir. pg-boss'u yalnız infra/is-kuyrugu içe aktarır (D15'ten Biome noRestrictedImports kuralı istenir). İki senaryo: işlem geri alınınca 0 iş, işlem bitince tam 1 iş.
+
+D14 .resolved_gaps[2].decision: İki kurucu, ikisi de schema 'pgboss', migrate false, createSchema false. API: supervise false, schedule false, registerInstance false, kendi havuzu yok (kurucunun db seçeneğine Drizzle havuzu üstünde bağdaştırıcı: fromDrizzle(veritabani, sql); belge yalnız işlem nesnesini örneklediğinden çalışmazsa havuzun query'sini çağıran executeSql nesnesi), yalnız send. API örneğinde açık kalan başka bir pg-boss döngüsü yetki hatası verirse (API rolü yalnız ekler) sözleşme testi yakalar, döngü kurucu seçeneğiyle kapatılır. İşçi: supervise true, schedule true, registerInstance true, doğrudan bağlantılı kendi havuzu (max 2), useListenNotify false. Açılışta isInstalled ve schemaVersion() BEKLENEN_PGBOSS_SEMA_SURUMU ile karşılaştırılır, uyuşmazsa süreç açılmaz. İşçi kapanışı stop({ graceful: true, timeout: 30000 }); Compose'ta işçinin stop_grace_period değeri 40 saniye (D15).
+
+D14 .resolved_gaps[4].decision: Sunucu işleri pg-boss'ta; makine işleri (pg_dump, pgBackRest, xprem birim yedeği, log arşivi) makinede ve D12 ile D15'indir. pg-boss zamanlama kuralları D14'ündür ve işçi açılışı, kur ve sözleşme testi denetler: tz her zaman Europe/Istanbul; günlük ve seyrek işler 03:00-05:00 arasında başlamaz, aralarında en az 5 dakika olur, missed: once ile kaydedilir; sık işler missed: skip. Önerilen yerleşim İşler bölümündeki çizelgede; sahibi modül cron'unu isTanimla'da yazar, sıra gereken iş sonra listesiyle bildirir (ör. gece_inceleme_siralamasi 05:50, pencere_beklemede_kesinlestir 05:15, bekleyen_kararlari_coz 05:25 ve devam_tutarlilik_denetimi 05:35'ten sonra).
+
+D14 .resolved_gaps[7].decision: API, işçi ve göç kapları TZ=UTC ile çalışır (Compose, D15); işçi açılışta süreç saat farkı 0 değilse IS_KUYRUGU_SAAT_DILIMI ile açılmaz. PostgreSQL timezone 'UTC' (D12). Her zamanlama tz: 'Europe/Istanbul' ile kaydedilir, tanımda değiştirilemez. Kural taşıyan İstanbul dönüşümü D04'ün infra/saat yardımcısında. E-postadaki giriş saati yalnız görünümdür: infra/eposta/bicim.ts Intl'i açık timeZone 'Europe/Istanbul' ile yalnız sayısal parçalar için kullanır, ay ve gün adları kendi tablosundan; testi TZ=UTC ve TZ=Europe/Istanbul ile koşar.
+
+D14 .resolved_gaps[9].decision: Başlangıçta tek işçi kopyası; kuyruk başına localConcurrency 1, batchSize 1, pollingIntervalSeconds 2 (pg-boss varsayılanları açıkça yazılır). İşçinin bağlantı payı 5: pg-boss havuzu 2 (doğrudan), işleyicilerin Drizzle havuzu 3, havuzda bekleme 30 saniye (işçi etkileşimli değil). Sayı D15'in bağlantı hesabındaki 5 ile aynı; yük testinden sonra gerekirse artar.
+
+D14 .resolved_gaps[9].why: D12 envanteri işçide 10, D14 ve D15 envanterleri 5 önerdi; 100 sınırının yarısında kalan D15 hesabı 5'e dayanıyor. Bir zamanlama birden çok kopyada da tek iş gönderir; kopya artırmak zamanlamayı çoğaltmaz (pgboss.io/api/scheduling).
+
+D14 .resolved_gaps[10].decision: İzleme ve uyarı D15'indir (contracts.json: isletim_denetimi D15'e geçti). D14 isSagligi ile ölçüyü verir: kuyruk sayaçları, ölü kuyruk, zamanlamalı işlerde son başarı, beklenen aralık ve son süre, canlı işçi örneği (getInstances), şema sürümü, e-postada 24 saatlik sayılar, art arda başarısız ve yarım kalan gönderim. D14 kendisi uyarı yollamaz; e-postayla uyarı istenirse D15 isletim_uyarisi türüyle epostaGonder çağırır. SMTP düşünce uyarının gidememesi D15'in dış kanalıyla kapanır.
+
+D14 .resolved_gaps[10].why: Eşik ve uyarı tablosu D15'in; iş D14'te kalınca D14 ile D15 birbirini çağırıyordu. pg-boss 12'nin örnek kaydı (registerInstance, 30 saniyelik kalp atışı) teknik.html#sunucu-ayarlar'daki 'kayıt tablosundan izlenir' kuralını karşılar.
+
+D14 .resolved_gaps[14].decision: Kararlı türler şimdi yazılır: giris_kodu, basvuru_kodu, onay_bekliyor, giris_bildirimi ve ürün dışı isletim_uyarisi (D15 için). Kalan türler (başvuru onaylandı, hesap yok, başvuru silme kodu, başvuru reddedildi, Aşama 2 projeksiyon uyarısı) sahibin kararını bekler: D14-A01. Yeni tür bir şablon, tür listesine bir satır ve CHECK'i genişleten bir göçtür.
+
+D14 .resolved_gaps[17].why: teknik.html#sunucu-kimlik bildirimi kod e-postasıyla aynı yola bağlıyor ve contracts.json giris_bildirimi_eposta işini bu yüzden düşürdü; envanterdeki iş önerisi bu kararla çelişiyordu. Süreç çökmesinde kalan risk (bildirim ve onun denetim satırı yok) gönderim satırında yarım kalan olarak görünür ve D15 uyarır; giriş yine oturum listesinde ve denetim kaydındadır.
+
+D14 .resolved_gaps[19].decision: Sayaç ve sonuç D14'ün eposta_gonderimleri tablosunda; alıcı normalleştirilmiş adresin HMAC-SHA256 özetiyle (32 bayt) durur. Anahtar tek iş içindir (amaç 'eposta_ozeti'), Compose secrets ile gelir, bileşim kökü D15.gizliAnahtar ile okuyup epostaKur'a verir; yoksa ya da 32 bayttan kısaysa süreç açılmaz. teknik.html#sunucu-ayarlar'daki gizli anahtar listesine bu anahtar eklenir. Anahtar değişirse yalnız sayaçlar sıfırlanır. Normalleştirmeyi D01 yapar; D14 yeniden yazmaz, yalnız denetler: küçük harfli ASCII, boşluksuz, tek @, ürün türlerinde alan adı tam istanbul.edu.tr; uymayan adres IS_KUYRUGU_EPOSTA_ADRES_GECERSIZ.
+
+D14 .resolved_gaps[20].decision: Tek taşıyıcı arayüzü (tasiyici.ts); ilk yazılan genel SMTP ayarıdır (sunucu, port, tls ya da starttls, kullanıcı, parola), geliştirmede Mailpit ile denenir. Google rölesi aynı ayarla kurulur (smtp-relay.gmail.com, 587, STARTTLS, gönderici hesapla SMTP kimlik doğrulaması); OAuth2 ve DKIM imzası kodu yalnız o yol seçilirse yazılır. Otomatik yedek yol yok. Günlük ileti ve tekil alıcı sayısı eposta_gonderimleri'nden isSagligi'na girer, ayarlı günlük sınırla birlikte; yüzde 80 eşiği D15'in. Geri dönen e-postalar gönderici hesabın kutusunda kalır, ilk sürümde işlenmez. SMTP gizli ayarı API'ye ve, D15 işletim uyarısını e-postayla yollarsa, işçiye verilir. BİDB'den istenecek kimlik doğrulaması: D14-A04.
+
+D14 .open_points[3].recommendation: IP izni ve SMTP kimlik doğrulaması birlikte istensin; röle yalnız IP'ye dayanırsa aynı paylaşılan NAT arkasındaki başka makineler de üniversite adına gönderebilir. Yazıda makinenin sabit ve paylaşılmayan çıkış IP'si belirtilsin (D15'in sunucu makinesi sorusuyla birlikte). Röle olmazsa aynı hesapla OAuth2 (plan.html#kararlar-e-posta-gonderimi).
+
+D14 .schedule_plan[1].is: isletim_denetimi
+
+D14 .schedule_plan[1].sahip: D15
+
+D14 .schedule_plan[2].is: isletim_kalp_atisi
+
+D14 .schedule_plan[2].sahip: D15
+
+D14 .schedule_plan[15].not: 03:30 gecelik_pg_dump ve ardından xprem_birimi_yedegi (D12), 03:30 gunluk_log_arsivi (D15), makinede
+
+D14 .schedule_plan[23].sahip: D15
+
+D14 .schedule_plan[23].not: D15 önerisi 04:00 yasak penceredeydi
+
+D14 .schedule_plan[25].sahip: D15
+
+D14 .templates[4].tur: isletim_uyarisi
+
+D14 .requests[4].modul: D15

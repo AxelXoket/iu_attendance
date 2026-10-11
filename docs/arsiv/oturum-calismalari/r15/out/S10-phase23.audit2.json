@@ -1,0 +1,545 @@
+{
+ "verdicts": [
+  {
+   "id": "S10-F01",
+   "verdict": "CONFIRMED",
+   "note": "Arithmetic re-done from plan line 188: 2 s + 100 ppm x 86,400 s = 10.64 s after 1 day, 27.92 s after 3 days, 62.48 s after 7 days (line 188 itself says about 1 minute per week). The QR delay is measured on the student's computed clock, so its error bound is that allowance, plus the instructor phone's own allowance on the offline path. The recommendation is sound: the allowance is subtracted before the reject test and a large allowance only flags. Staying offline on purpose to widen the allowance only reaches the flagged band, which goes to instructor review.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc6238",
+     "quote": "Because of possible clock drifts between a client and a validation server, we RECOMMEND that the validator be set with a specific limit to the number of time steps a prover can be \"out of synch\" before being rejected.",
+     "date": "2011-05"
+    }
+   ]
+  },
+  {
+   "id": "S10-F02",
+   "verdict": "CONFIRMED",
+   "note": "The wall clock quote is verbatim in the AOSP SystemClock javadoc (the developer.android.com reference page did not render for the fetcher, so the AOSP source was used). Using the time certificate plus monotonic counter on the instructor phone reuses plan lines 182 to 190. It only matters on the offline path; the projection path takes slots from the server clock.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/core/java/android/os/SystemClock.java",
+     "quote": "The wall clock can be set by the user or the phone network (see {@link #setCurrentTimeMillis}), so the time may jump backwards or forwards unpredictably.",
+     "date": "AOSP main, accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S10-F03",
+   "verdict": "CORRECTED",
+   "note": "Encoding facts hold and are stronger than stated: on iOS live scanning (AVCaptureMetadataOutput) expo-camera 57 sets data from AVMetadataMachineReadableCodeObject.stringValue; on Android it uses ML Kit rawValue and falls back to String(rawBytes), so binary payloads are lossy on both platforms. Base64 forces byte mode; digits fit version 2-L (77). The MAC length statement is wrong: RFC 2104 asks for at least half the hash output AND at least 80 bits, which is 128 bits for HMAC-SHA-256; 80 bits is the floor only for SHA-1. NIST SP 800-107r1 calls a 64-bit tag commonly acceptable. Only the server verifies and each student gets one record per session, so 64 bits is defensible, and then the researcher's own 9-byte header plus an 8-byte tag (17 bytes = 136 bits, at most 41 digits) fits version 1-L (41 digits; numeric bitstream 4 + 10 + 137 = 151 of 152 bits). Version 1 is 21 modules, so with the 4-module quiet zone the modules are about 14 percent larger than version 2 on the same screen (29 vs 33 modules).",
+   "correction": "Do not call 80 bits the RFC 2104 minimum. Pick one on purpose: a 128-bit tag (RFC 2104 with SHA-256) gives 61 digits and version 2-L; a 64-bit tag (NIST SP 800-107r1 'commonly acceptable') gives 41 digits and version 1-L, which is what the plan's 'en küçük QR sürümü' asks for.",
+   "evidence": [
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc2104",
+     "quote": "We recommend that the output length t be not less than half the length of the hash output (to match the birthday attack bound) and not less than 80 bits",
+     "date": "1997-02"
+    },
+    {
+     "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-107r1.pdf",
+     "quote": "A commonly acceptable length for the MacTag is 64 bits; MacTags with lengths shorter than 64 bits are discouraged.",
+     "date": "2012-08 (SP 800-107 Rev. 1, section 5.3.5)"
+    },
+    {
+     "url": "https://www.thonky.com/qr-code-tutorial/character-capacities",
+     "quote": "Version 1, Level L: Numeric 41, Alphanumeric 25, Byte 17; Version 2, Level L: Numeric 77, Alphanumeric 47, Byte 32 (secondary corroboration of ISO/IEC 18004 capacities)",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-camera/ios/Current/BarcodeScannerUtils.swift",
+     "quote": "result[\"data\"] = barcodeScannerResult.stringValue",
+     "date": "sdk-57 branch, accessed 2026-10-05"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-camera/android/src/main/java/expo/modules/camera/analyzers/BarcodeAnalyzer.kt",
+     "quote": "barcode.rawValue ?: barcode.rawBytes?.let { String(it) }",
+     "date": "sdk-57 branch, accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S10-F04",
+   "verdict": "CORRECTED",
+   "note": "Facts verified: expo-camera 57.0.6 builds ImageAnalysis with ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY and exposes no prop for it; ML Kit advises about 2 MP. The consequence drawn from them is overstated.",
+   "correction": "In picture mode (the default) expo-camera 57 binds Preview, ImageCapture and ImageAnalysis in one bindToLifecycle call. The Camera2 guaranteed combination for that set is PRIV PREVIEW + YUV PREVIEW + JPEG MAXIMUM, where PREVIEW is the screen resolution or 1080p, whichever is smaller, and CameraX warns some combinations only work at lower resolutions. So 10+ MP analysis frames are unlikely. The probable problem is the opposite: budget phones with HD+ screens analyze near 1280x720, which shortens back-row range. A patch asking for 1920x1080 may not take effect while ImageCapture stays bound. Keep the two-device measurement; the first lever is the planned 2x zoom, not a patch.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt",
+     "quote": "if (cameraMode == CameraMode.PICTURE) { imageCaptureUseCase?.let { addUseCase(it) } imageAnalysisUseCase?.let { addUseCase(it) } } ... .setResolutionStrategy(ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY)",
+     "date": "sdk-57 branch, expo-camera 57.0.6"
+    },
+    {
+     "url": "https://developer.android.com/media/camera/camera2/multiple-camera-streams-simultaneously",
+     "quote": "PREVIEW refers to the best size match to the device's screen resolution or to 1080p (1920x1080), whichever is smaller. [LEGACY table row] PRIV PREVIEW + YUV PREVIEW + JPEG MAXIMUM: Still capture plus in-app processing.",
+     "date": "2026-01-14"
+    },
+    {
+     "url": "https://developer.android.com/media/camera/camerax/architecture",
+     "quote": "Depending on camera capability, some cameras may support the combination at lower resolution modes, but can not support the same combination at some higher resolutions.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developers.google.com/ml-kit/vision/barcode-scanning/android",
+     "quote": "Instead, only request the size from the camera that's required for barcode detection, which is usually no more than 2 megapixels.",
+     "date": "2026-09-28"
+    }
+   ]
+  },
+  {
+   "id": "S10-F05",
+   "verdict": "CONFIRMED",
+   "note": "Both mappings read in sdk-57 sources: Android targetZoomRatio = max(1, min(max, zoom x max)); iOS videoZoomFactor = 1.0 x pow(activeFormat.videoMaxZoomFactor / 1.0, zoom). The example checks out (16^(1/8) = 1.41x). The docs still describe zoom as a percentage of max zoom, so only source code shows the iOS curve. Optional Android-only lever if 2x is not enough: ML Kit bundled 17.2.0+ offers auto-zoom (setZoomSuggestionOptions), but expo-camera 57 builds the scanner with setBarcodeFormats only, so it would need a patch; not recommended by default.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt",
+     "quote": "val targetZoomRatio = max(1f, min(maxZoomRatio, value.coerceIn(0f, 1f) * maxZoomRatio))",
+     "date": "sdk-57 branch"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-camera/ios/Current/CameraSessionManager.swift",
+     "quote": "let minZoom = 1.0 ... device.videoZoomFactor = minZoom * pow(device.activeFormat.videoMaxZoomFactor / minZoom, delegate.zoom)",
+     "date": "sdk-57 branch"
+    },
+    {
+     "url": "https://docs.expo.dev/versions/latest/sdk/camera/",
+     "quote": "A value between 0 and 1 being a percentage of device's max zoom, where 0 means not zoomed and 1 means maximum zoom.",
+     "date": "SDK 57 docs, accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S10-F06",
+   "verdict": "CONFIRMED",
+   "note": "Expo docs: on Android launchScanner uses the Google code scanner (on iOS it uses DataScannerViewController). Google: the code scanner delegates scanning to Google Play services. Low severity is right; naming the CameraView path removes the ambiguity in plan line 692 ('ML Kit tarayıcısı').",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://docs.expo.dev/versions/latest/sdk/camera/",
+     "quote": "On Android, we will use the Google code scanner.",
+     "date": "SDK 57 docs, accessed 2026-10-05"
+    },
+    {
+     "url": "https://developers.google.com/ml-kit/vision/barcode-scanning/code-scanner",
+     "quote": "delegating the task of scanning the code to Google Play services and returning only the scan results to your app",
+     "date": "2026-09-28"
+    }
+   ]
+  },
+  {
+   "id": "S10-F07",
+   "verdict": "CORRECTED",
+   "note": "Registry re-check: munim-bluetooth has 52 releases, all 0.x, one npm maintainer, peer react-native-nitro-modules >=0.36.5 <1, 24 GitHub stars. Older advertisers are dead (react-native-ble-advertiser 0.0.17 on 2022-09-27, react-native-peripheral 0.0.3 on 2022-05-14). Newer candidates are no better: react-native-ble-lite 1.1.0 (3 releases, one maintainer, last 2026-03-11), expo-ble 0.5.0 (9 releases, one maintainer, last 2026-01-24); expo-bluetooth is a 0.0.0 placeholder from 2022. Missed by the researcher and in favour of the finding: react-native-ble-manager itself has a single npm maintainer (marcosinigaglia). iPhone advertising really accepts only two keys. The own-module conclusion stands; the permissions argument does not (see recommendation_issues).",
+   "correction": "munim-bluetooth published 14 releases on 2026-01-16 UTC (0.3.0 to 0.3.14, no 0.3.9), not 13.",
+   "evidence": [
+    {
+     "url": "https://www.npmjs.com/package/munim-bluetooth",
+     "quote": "\"0.3.0\": \"2026-01-16T02:05:50.362Z\" ... \"0.3.14\": \"2026-01-16T03:29:10.505Z\"; \"maintainers\": [\"sheehanmunim\"]; 52 version entries",
+     "date": "npm registry, read 2026-10-05"
+    },
+    {
+     "url": "https://www.npmjs.com/package/react-native-ble-manager",
+     "quote": "\"version\": \"12.5.3\", \"maintainers\": [\"marcosinigaglia <marco.sinigaglia@innove.it>\"], \"time.modified\": \"2026-09-21T09:29:06.431Z\"",
+     "date": "npm registry, read 2026-10-05"
+    },
+    {
+     "url": "https://www.npmjs.com/package/react-native-ble-lite",
+     "quote": "\"version\": \"1.1.0\", \"maintainers\": [\"nucleus48\"], \"time.created\": \"2026-03-09T22:47:47.080Z\", \"time.modified\": \"2026-03-11T00:57:09.904Z\"",
+     "date": "npm registry, read 2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/corebluetooth/cbperipheralmanager/startadvertising(_:)",
+     "quote": "The peripheral manager only supports two keys: CBAdvertisementDataLocalNameKey and CBAdvertisementDataServiceUUIDsKey.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S10-F08",
+   "verdict": "CONFIRMED",
+   "note": "Android guidance verbatim (page updated 2026-02-26). The 5-starts-in-30-s limit has a primary source the researcher did not use: AOSP AppScanStats (Android 8.0) keeps 5 scan starts and treats them as excessive inside 30 s; current main reads the same quota from AdapterService. Partial-UUID mask filtering verified in ScanFilter.java; screen-off pause verified in the 2017 AOSP commit. 'Sees the advertiser within seconds' has no source (low confidence). The rule only covers Android; iPhone students need their own scanning rule (see misses, line 259).",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/develop/connectivity/bluetooth/ble/find-ble-devices",
+     "quote": "As soon as you find the desired device, stop scanning. Never scan on a loop, and always set a time limit on your scan.",
+     "date": "2026-02-26"
+    },
+    {
+     "url": "https://android.googlesource.com/platform/packages/apps/Bluetooth/+/refs/tags/android-8.0.0_r1/src/com/android/bluetooth/gatt/AppScanStats.java",
+     "quote": "static final int NUM_SCAN_DURATIONS_KEPT = 5; static final long EXCESSIVE_SCANNING_PERIOD_MS = 30 * 1000;",
+     "date": "android-8.0.0_r1"
+    },
+    {
+     "url": "https://android.googlesource.com/platform/packages/modules/Bluetooth/+/refs/heads/main/framework/java/android/bluetooth/le/ScanFilter.java",
+     "quote": "Set filter on partial service uuid. The {@code uuidMask} is the bit mask for the {@code serviceUuid}.",
+     "date": "AOSP main, accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S10-F09",
+   "verdict": "CONFIRMED",
+   "note": "Both Acadly pages, including the plan's own source uic.acadly.com/faq.html, describe a mesh over Bluetooth and WiFi; the UIC help article gives more than 95 percent and about 98 percent after training. The plan's design at line 259 is single hop, so the borrowed rate is not transferable without measurement.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://uic.acadly.com/faq.html",
+     "quote": "Acadly discovers students in professors' proximity using a mesh-network technology that uses Bluetooth and WiFi.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://help.uillinois.edu/TDClient/37/uic/KB/ArticleDet?ID=2353",
+     "quote": "more than 95% of all students present in a class should be marked present",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S10-F10",
+   "verdict": "CONFIRMED",
+   "note": "Android quote verbatim (page updated 2026-10-01). expo-location 57 reports iOS accuracy as 'full' or 'reduced' and documents no temporary full accuracy call. Apple's call always fails when Info.plist has no NSLocationTemporaryUsageDescriptionDictionary entry for the purpose key, or when the app is in the background, so the key goes into app.json and the request is made at check-in time in the foreground.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/develop/sensors-and-location/location/permissions",
+     "quote": "If the user grants the approximate location permission, your app only has access to approximate location, regardless of which location permissions your app declares.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/corelocation/cllocationmanager/requesttemporaryfullaccuracyauthorization(withpurposekey:completion:)",
+     "quote": "The request always fails with a promptDeclined error in the following cases: The Info.plist file doesn't have an entry for the given purposeKey value. The app is already authorized for full accuracy. The app is in the background.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S10-F11",
+   "verdict": "CONFIRMED",
+   "note": "sdk-57 expo-location (module 57.0.20) declares play-services-location 21.0.1 and creates only a FusedLocationProviderClient, with no GoogleApiAvailability check and no LocationManager fallback. Expo forum reports of E_LOCATION_UNAVAILABLE on Huawei phones corroborate (secondary). The iOS half follows from the docs: mocked is Android only and no source information is returned. The Android replacement needs care (see recommendation_issues).",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-location/android/build.gradle",
+     "quote": "api 'com.google.android.gms:play-services-location:21.0.1'",
+     "date": "sdk-57 branch, version = '57.0.20'"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-location/android/src/main/java/expo/modules/location/LocationModule.kt",
+     "quote": "mLocationProvider = LocationServices.getFusedLocationProviderClient(mContext)",
+     "date": "sdk-57 branch"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/corelocation/cllocationsourceinformation/issimulatedbysoftware",
+     "quote": "Core Location sets isSimulatedBySoftware to true if the system generated the location using on-device software simulation.",
+     "date": "accessed 2026-10-05 (iOS 15.0+)"
+    }
+   ]
+  },
+  {
+   "id": "S10-F12",
+   "verdict": "CONFIRMED",
+   "note": "The cited facts are verified (gps.gov 4.9 m under open sky and worse near buildings; the Apple engineer reply of Aug 2025, with a second request for reports in Jun 2026). The recommendation is not acceptable under the owner's constraints (see recommendation_issues).",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://www.gps.gov/gps-accuracy",
+     "quote": "GPS-enabled smartphones are typically accurate to within a 4.9 m (16 ft.) radius under open sky. However, their accuracy worsens near buildings, bridges, and trees.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/forums/thread/797864",
+     "quote": "It is not possible to know how every single spoofing tool works and goes around CoreLocation",
+     "date": "2025-08"
+    }
+   ]
+  },
+  {
+   "id": "S10-F13",
+   "verdict": "CONFIRMED",
+   "note": "Quote verbatim; available from iOS 15.0, inside the plan's iOS 16.4 floor; it sits on the same CLLocationSourceInformation object as isSimulatedBySoftware.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/documentation/corelocation/cllocationsourceinformation/isproducedbyaccessory",
+     "quote": "Core Location sets isProducedByAccessory to true if the system retrieved the location from an external accessory attached to the device, such as a Made for iPhone GPS dongle or CarPlay.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S10-F14",
+   "verdict": "CONFIRMED",
+   "note": "Both ML Kit quotes verbatim (page updated 2026-09-28). Small inaccuracy without effect on the finding: plan line 863 asks for the largest class size and lectern projection, not the screen height, so screen height and back-row distance are a new measurement rather than an existing open point.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://developers.google.com/ml-kit/vision/barcode-scanning/android",
+     "quote": "the smallest meaningful unit of the barcode should be at least 2 pixels wide, and for 2-dimensional codes, 2 pixels tall.",
+     "date": "2026-09-28"
+    }
+   ]
+  },
+  {
+   "id": "S10-F15",
+   "verdict": "CONFIRMED",
+   "note": "RFC 6749 section 4.1.2 and RFC 8628 section 5.1 quoted verbatim. RFC 8628 also describes a stronger pattern for exactly this case, where the screen device shows the code and the trusted device approves (see misses, line 241).",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc6749",
+     "quote": "If an authorization code is used more than once, the authorization server MUST deny the request and SHOULD revoke (when possible) all tokens previously issued based on that authorization code.",
+     "date": "2012-10"
+    },
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc8628",
+     "quote": "The user code SHOULD have enough entropy that, when combined with rate-limiting and other mitigations, a brute-force attack becomes infeasible.",
+     "date": "2019-08"
+    }
+   ]
+  },
+  {
+   "id": "S10-F16",
+   "verdict": "CONFIRMED",
+   "note": "react-native-qrcode-svg 6.3.26 peers react-native-svg >=14 and itself depends on qrcode ^1.5.4, which also proves qrcode runs under Metro. qrcode 1.5.4 was published 2024-08-05 (no release for 26 months) but has two npm maintainers and 33.5 million downloads in the week to 2026-10-03, so the pick is acceptable. Two details for the plan: the default error level is M, so L must be set explicitly; create() returns only the module matrix, so a phone renderer drawn with plain views must add the 4-module quiet zone itself (the library's own renderers default to margin 4).",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://www.npmjs.com/package/react-native-qrcode-svg",
+     "quote": "\"dependencies\": {\"qrcode\": \"^1.5.4\", ...}, \"peerDependencies\": {\"react-native-svg\": \">=14.0.0\", ...}",
+     "date": "6.3.26, npm registry read 2026-10-05"
+    },
+    {
+     "url": "https://github.com/soldair/node-qrcode",
+     "quote": "errorCorrectionLevel: Type String, Default M ... margin: Type Number, Default 4, Define how much wide the quiet zone should be.",
+     "date": "1.5.4 published 2024-08-05, accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S10-F17",
+   "verdict": "CONFIRMED",
+   "note": "expo 57.0.26 (current latest) depends on expo-keep-awake ~57.0.2. MDN: Baseline 2025, newly available since March 2025, secure contexts only. Locks are released automatically when the document becomes inactive, so the projection page re-requests the lock whenever it becomes visible again.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API",
+     "quote": "Baseline 2025 Newly available. Since March 2025, this feature works across the latest devices and browser versions. ... Only active documents can acquire screen wake locks and previously acquired locks are automatically released when document becomes inactive.",
+     "date": "2026-09-11"
+    },
+    {
+     "url": "https://www.npmjs.com/package/expo",
+     "quote": "\"version\": \"57.0.26\" ... \"expo-keep-awake\": \"~57.0.2\"",
+     "date": "npm registry, read 2026-10-05"
+    }
+   ]
+  }
+ ],
+ "recommendation_issues": [
+  {
+   "id": "S10-F04",
+   "problem": "The fallback 'pnpm patch to 1920x1080' may do nothing: with ImageCapture bound in picture mode, the guaranteed YUV size is PREVIEW (screen or 1080p, whichever is smaller), so a budget phone with an HD+ screen can stay near 720p whatever the analyzer asks for. A patch on a core Expo package also has to be redone on every SDK upgrade. Drop the patch as the named remedy; keep the device measurement and the 2x zoom as the first lever, and treat any patch as a last resort with its own regression test."
+  },
+  {
+   "id": "S10-F07",
+   "problem": "The 'extra permissions' argument is partly wrong. Location permission is needed anyway (BLE scanning on Android 11 and lower, GPS in Aşama 3). BLUETOOTH_CONNECT is not dead weight: on Android 12+ the system 'turn on Bluetooth' dialog (BluetoothAdapter.ACTION_REQUEST_ENABLE) is annotated @RequiresPermission(BLUETOOTH_CONNECT), and apps targeting API 33+ can no longer enable Bluetooth themselves (enable() always returns false). The own module should still declare and request BLUETOOTH_CONNECT if students and instructors are to get that dialog. The core recommendation (one own module for advertising plus scan-only) stands, but the plan should name react-native-ble-manager as the scanning fallback, matching its own rule that single-maintainer code has a named backup. Source: https://android.googlesource.com/platform/packages/modules/Bluetooth/+/refs/heads/main/framework/java/android/bluetooth/BluetoothAdapter.java ('@RequiresBluetoothConnectPermission @RequiresPermission(BLUETOOTH_CONNECT) ... ACTION_REQUEST_ENABLE')."
+  },
+  {
+   "id": "S10-F11",
+   "problem": "'Android'de sistemin konum servisi' is too loose. A GPS-only read often gives no fix indoors, and NETWORK_PROVIDER 'may require a data connection', which an offline student lacks. The own module should call getCurrentLocation on FUSED_PROVIDER where present (API 31+), else NETWORK then GPS, with a short timeout, and return the accuracy radius and the mock flag. Dropping expo-location also moves permission prompts and iOS authorization into own code, so the effort is larger than the plan's 'küçük yerel kod'; acceptable, but it should be written down. Source: https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android14-release/location/java/android/location/LocationManager.java ('Operation of this provider may require a data connection.')."
+  },
+  {
+   "id": "S10-F12",
+   "problem": "Recommends deferring GPS inside Aşama 3 until trial data shows a need. That re-stages phase content, which the owner excluded from this audit, and it narrows a scope the owner set. Reject the recommendation. The underlying facts (indoor drift, approximate grants, iOS spoofers) are already handled by F10 and by the plan's own rule that GPS is never used alone."
+  },
+  {
+   "id": "S10-F08",
+   "problem": "The recommendation is Android-only (UUID mask filter, scan-start quota). An iPhone student cannot filter for a rotating UUID, cannot scan for it in the background, and by default gets one discovery event per peripheral. Without an iPhone rule, the 30 s scan can silently miss the changed code or give a single RSSI sample. Add the iPhone rule from the miss at line 259."
+  }
+ ],
+ "checked_ok_disputes": [
+  {
+   "plan_line": 692,
+   "claim": "Android analysis frames use ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY, i.e. highest available resolution; there is no prop to change it. (Plan: 'kareleri en yüksek çözünürlükte işler')",
+   "problem": "The strategy name is right, but 'highest available' is limited by the use cases bound together. expo-camera 57 binds Preview, ImageCapture and ImageAnalysis in picture mode, and the guaranteed Camera2 combination for that set gives the YUV analysis stream PREVIEW size, i.e. the screen resolution or 1080p, whichever is smaller. Both the plan sentence and the checked item overstate the frame size; on budget phones the real risk is too few pixels, not too many. Suggested plan wording: 'kareleri oturumun izin verdiği en yüksek çözünürlükte işler (çoğu telefonda ekran çözünürlüğü ya da 1080p)'.",
+   "evidence": [
+    {
+     "url": "https://raw.githubusercontent.com/expo/expo/sdk-57/packages/expo-camera/android/src/main/java/expo/modules/camera/ExpoCameraView.kt",
+     "quote": "addUseCase(preview) if (cameraMode == CameraMode.PICTURE) { imageCaptureUseCase?.let { addUseCase(it) } imageAnalysisUseCase?.let { addUseCase(it) } }",
+     "date": "sdk-57 branch"
+    },
+    {
+     "url": "https://developer.android.com/media/camera/camera2/multiple-camera-streams-simultaneously",
+     "quote": "PREVIEW refers to the best size match to the device's screen resolution or to 1080p (1920x1080), whichever is smaller.",
+     "date": "2026-01-14"
+    },
+    {
+     "url": "https://developer.android.com/media/camera/camerax/architecture",
+     "quote": "Depending on camera capability, some cameras may support the combination at lower resolution modes, but can not support the same combination at some higher resolutions.",
+     "date": "2026-10-01"
+    }
+   ]
+  }
+ ],
+ "misses": [
+  {
+   "plan_line": 259,
+   "plan_quote": "dakikalık bir pencerede tarar ve sinyal gücünü kaydeder",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "Nothing in the plan or the research covers iPhone students (23 percent per line 353). The student cannot compute the rotating code, so it cannot pass the exact service UUID to scanForPeripherals; it must scan with no service filter, which iOS allows only in the foreground. By default iOS merges repeated discoveries of the same peripheral into one event, so repeated RSSI samples and a code that changes every 10 to 15 s need the allow-duplicates option, and that option has no effect in the background. If the screen locks, the scan stops.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/documentation/corebluetooth/cbcentralmanager/scanforperipherals(withservices:options:)",
+     "quote": "Your app can scan for Bluetooth devices in the background by specifying the bluetooth-central background mode. To do this, your app must explicitly scan for one or more services by specifying them in the serviceUUIDs parameter. The CBCentralManager scan option has no effect while scanning in the background.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.apple.com/documentation/corebluetooth/cbcentralmanagerscanoptionallowduplicateskey",
+     "quote": "If true, the central disables filtering and generates a discovery event each time it receives an advertising packet from the peripheral. If false (the default), the central coalesces multiple discoveries of the same peripheral into a single discovery event.",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "iPhone'da öğrenci taraması yalnız uygulama açıkken ve süzgeçsiz yapılır; kodun sabit ilk yarısını uygulama kendisi süzer. Aynı cihazın tekrar eden yayınlarını görmek için yineleme süzgeci kapatılır (AllowDuplicates). Tarama bitene kadar ekran açık kalır; ekran kilitlenirse tarama yarıda kalır ve kayıt 'Bluetooth yok' sayılır, öğrencinin aleyhine kullanılmaz."
+  },
+  {
+   "plan_line": 261,
+   "plan_quote": "Android 12 ve üstünde yalnız Bluetooth izni, Android 11 ve altında konum izni ve açık konum gerekir.",
+   "kind": "RISK",
+   "severity": "medium",
+   "finding": "The sentence is true only if BLUETOOTH_SCAN is declared with neverForLocation, which the plan never states. Android reserves that assertion for apps that do not use scan results to derive physical location, while Aşama 3 uses the scan to show the student is in the room and records signal strength. Without the flag, Android 12+ also needs location permission, and turning location services off stops scanning. That is the same burden the plan uses as its reason to avoid iBeacon.",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/develop/connectivity/bluetooth/bt-permissions",
+     "quote": "If your app doesn't use Bluetooth scan results to derive physical location, you can make a strong assertion that your app never uses the Bluetooth permissions to derive physical location.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://source.android.com/docs/core/connect/bluetooth/ble",
+     "quote": "Turning off location services turns off Bluetooth scanning. ... apps that declare neverForLocation can get Bluetooth scanning results even when location services are off.",
+     "date": "2026-06-17"
+    }
+   ],
+   "recommendation_tr": "Bluetooth tarama iznini neverForLocation bayrağıyla bildiririm ve gerekçesini plana yazarım: tarama sonucundan konum hesaplanmaz, yalnız hocanın o anki kodu görüldü mü diye bakılır, sinyal gücü konuma çevrilmez. Bu gerekçeyi savunamazsam bayrağı kullanmam ve 261. satırı 'Android'in her sürümünde konum izni ve açık konum gerekir' diye düzeltirim."
+  },
+  {
+   "plan_line": 241,
+   "plan_quote": "kürsü bilgisayarındaki panel bu kodla yalnız o dersin QR'ını sunucudan alıp tam ekran gösterir ve ders bitince kapanır.",
+   "kind": "RISK",
+   "severity": "medium",
+   "finding": "The plan does not say what the projection page shows when it cannot fetch the next code: a lectern network drop (the plan's own research at line 337 reports campus internet failures) or a hidden tab whose timers are throttled. If the last QR stays on screen, students scanning it in good faith land in the 10 to 30 s flagged band or past 30 s and get rejected, which works against the 'Haksız devamsız 0' target at line 839. RFC 6238 accepts at most one time step of delay, so a code older than one step should not be on screen.",
+   "evidence": [
+    {
+     "url": "https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout",
+     "quote": "Timers in this state are checked once per minute, which may be batched together with other timers that have similar timeouts.",
+     "date": "2026-09-03"
+    },
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc6238",
+     "quote": "We RECOMMEND that at most one time step is allowed as the network delay.",
+     "date": "2011-05"
+    }
+   ],
+   "recommendation_tr": "Projeksiyon sayfası kodları sunucudan en çok 30 saniye önceden toplu alır ve her birini sunucu saatine göre kendi zamanında gösterir. Ekrandaki kodun süresi dolduğunda yenisi yoksa QR'ı kaldırır ve 'bağlantı bekleniyor' yazar; eski QR hiçbir zaman ekranda kalmaz. Sayfa yeniden görünür olunca saati yeniden okur, zamanlayıcıya güvenmez."
+  },
+  {
+   "plan_line": 241,
+   "plan_quote": "Hoca telefonundan o ders için kısa süreli bir eşleştirme kodu açar",
+   "kind": "BETTER",
+   "severity": "low",
+   "finding": "The code is typed on a lectern PC that is usually already projecting, so the room can read it while it is typed. RFC 8628 covers this case by reversing the roles: the screen device shows a code or QR and the user approves it on a trusted device. The instructor app already has a camera scanner, so the PC can show a pairing QR, the instructor's phone scans and approves it, and nothing secret is typed or projected. Trade-off: the phone must be online at pairing time, so the phone-made single-use code stays as the fallback.",
+   "evidence": [
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc8628",
+     "quote": "When 'verification_uri_complete' is included in the authorization response, clients MAY present this URI in a non-textual manner using any method that results in the browser being opened with the URI, such as with QR codes or NFC.",
+     "date": "2019-08"
+    }
+   ],
+   "recommendation_tr": "Eşleştirmeyi tersine çeviririm: kürsü bilgisayarı bir eşleştirme QR'ı gösterir, ben hoca uygulamasıyla okutup onaylarım. Kod yazılmaz; projeksiyonda görünse de başkasının işine yaramaz. Telefonda internet yoksa telefonun ürettiği tek kullanımlık kod yedek yol olarak kalır."
+  },
+  {
+   "plan_line": 263,
+   "plan_quote": "sorusunu cevaplar; referans hocanın telefonudur.",
+   "kind": "RISK",
+   "severity": "low",
+   "finding": "Android's reported accuracy is a 68 percent radius, so roughly one honest fix in three lies outside it; comparing two such fixes (student and instructor) against a fixed distance will call honest students 'far'. An offline phone may also get no network location at all, and indoors GNSS may give no fix, so 'no location' must be a neutral outcome.",
+   "evidence": [
+    {
+     "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android14-release/location/java/android/location/Location.java",
+     "quote": "Returns the estimated horizontal accuracy radius in meters of this location at the 68th percentile confidence level.",
+     "date": "android14-release"
+    },
+    {
+     "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android14-release/location/java/android/location/LocationManager.java",
+     "quote": "If present, this provider determines location based on nearby of cell tower and WiFi access points. Operation of this provider may require a data connection.",
+     "date": "android14-release"
+    }
+   ],
+   "recommendation_tr": "Bina civarı kontrolünde iki telefonun bildirdiği doğruluk yarıçaplarını toplar, üstüne pay eklerim; bu yarıçap yalnız %68 olasılıkla doğru. Konum alınamazsa ya da yarıçap çok büyükse sonuç 'konum yok' olur ve öğrencinin aleyhine sayılmaz; internetsiz telefonda kapalı alanda konum hiç gelmeyebilir."
+  },
+  {
+   "plan_line": 247,
+   "plan_quote": "İçerik kısa tutulur, en küçük QR sürümü ve düşük hata düzeltme seçilir; kareler büyük olur ve uzaktan okunur.",
+   "kind": "MISSING",
+   "severity": "low",
+   "finding": "The symbol needs a clear margin four modules wide on every side. F16 has the phone draw modules with plain views from create(), which returns the matrix only, so the margin is the app's job there; a full-screen projection that crops to the code or applies the panel's dark theme to it also breaks the standard layout.",
+   "evidence": [
+    {
+     "url": "https://www.qrcode.com/en/howto/code.html",
+     "quote": "QR Code requires a four-module wide margin at all sides of a symbol.",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "QR projeksiyonda ve telefonda açık zemin üzerinde koyu karelerle ve her yanda dört kare genişliğinde boş kenarla gösterilir. Telefonda kareleri kendim çizdiğim için bu kenarı da kendim bırakırım; panelin koyu teması QR'a uygulanmaz."
+  },
+  {
+   "plan_line": 243,
+   "plan_quote": "QR 5 saniyede bir değişir; şimdiki ve bir önceki kod kabul edilir.",
+   "kind": "UNCLEAR",
+   "severity": "low",
+   "finding": "With 5 s codes, 'current and previous' covers about 10 s, yet the next sentence flags 10 to 30 s and rejects only after 30 s. Codes 2 to 6 steps old are therefore both 'not accepted' and 'flagged'. The server rule should be one ladder keyed on delay, with 'current and previous' as the definition of the normal band only.",
+   "evidence": [
+    {
+     "url": "https://www.rfc-editor.org/rfc/rfc6238",
+     "quote": "We RECOMMEND that at most one time step is allowed as the network delay.",
+     "date": "2011-05"
+    }
+   ],
+   "recommendation_tr": "Kuralı tek basamak olarak yazarım: gecikme, okutma anı ile QR'ın zaman diliminin başı arasındaki farktır; 10 saniyeye kadar normal, 10 ile 30 saniye arası işaretli, 30 saniyeden fazlası ret. 'Şimdiki ve bir önceki kod' ifadesi yalnız normal basamağın tanımı olarak kalır."
+  },
+  {
+   "plan_line": 281,
+   "plan_quote": "Galerideki QR resmini okutmak (yalnız canlı kamera)",
+   "kind": "RISK",
+   "severity": "low",
+   "finding": "Adjacent to the slice (QR). Listed under 'Engellenir', but blocking the gallery picker does not stop a forwarded photo shown on a second screen from being read by the live camera. What catches it is the rotation plus the delay check at line 291, the same mechanism other products rely on, so the item belongs under 'İşaretlenir'.",
+   "evidence": [
+    {
+     "url": "https://help.edusign.com/en/articles/4742581-getting-student-signatures-via-qr-code",
+     "quote": "for enhanced security, the QR code changes every 5 seconds. ... It is not possible to take a photo of the QR code for later use. This will not work.",
+     "date": "2026-04-01"
+    }
+   ],
+   "recommendation_tr": "Bu maddeyi 'Engellenir'den 'İşaretlenir'e taşırım: başka bir ekranda açılan QR fotoğrafı canlı kamerayla okunabilir. Onu yakalayan galeri yasağı değil, 291. satırdaki gecikme kontrolüdür."
+  },
+  {
+   "plan_line": 249,
+   "plan_quote": "Anahtar hocanın cihazına özeldir.",
+   "kind": "BETTER",
+   "severity": "low",
+   "finding": "The plan does not say where the 5-day QR keys live on the instructor phone. Android Keystore can import HMAC keys, and key material inside Keystore is not accessible to the app afterwards, which narrows the 'stolen instructor key' case at line 297 to a rooted or exploited phone. On iPhone the plan's existing expo-secure-store 'this device only' storage is the available equivalent.",
+   "evidence": [
+    {
+     "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android14-release/keystore/java/android/security/keystore/KeyProtection.java",
+     "quote": "NOTE: The key material of keys stored in the Android Keystore is not accessible. ... Example: HMAC key for generating MACs using SHA-512",
+     "date": "android14-release"
+    }
+   ],
+   "recommendation_tr": "İndirilen QR anahtarlarını Android'de Keystore'a dışarı çıkarılamayan HMAC anahtarı olarak alırım; iPhone'da expo-secure-store ile 'yalnız bu cihaz' olarak tutarım. Anahtarlar dosyada ya da uygulama verisinde açık durmaz."
+  }
+ ],
+ "slice_verdict": "PASS",
+ "verdict_reason": "All 17 findings were re-checked against primary sources: 14 CONFIRMED, 3 CORRECTED (F03 MAC length: RFC 2104 gives 128 bits for SHA-256, and a 64-bit tag allows QR version 1-L; F04 real analysis resolution is capped at PREVIEW size; F07 14 releases on one day, not 13), 0 REFUTED, 0 UNVERIFIABLE. No finding is high severity. Five recommendations need changes (F04 patch, F07 permissions rationale, F08 Android-only, F11 Android provider, F12 out of the owner's bounds). One checked_ok item disputed (line 692 'highest resolution'). Nine misses: three medium (iPhone BLE scanning, the neverForLocation premise of line 261, a stale projected QR on network loss) and six low; none high. The accepted recommendations still remove more dependencies than they add."
+}

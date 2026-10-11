@@ -1,0 +1,34 @@
+# Backend design: progress and handoff (6 October 2026)
+
+Owner request (verbatim): "Backend tasarımını netleştirmeni istiyorum, backend dosyası oluşturmanı istiyorum ayrıca, olışturduktan sonra tasarımı netleştir içerisinde, netleştirdikten sonra en rahat iş yüküne göre yapılabilirliğe göre bölümlere ayır, her aşama için 15 agent kullanabilirsin, çakışmayan scopeları olmasına dikkat et"
+
+Deliverable: repo file backend.html (same stylesheet as plan.html and teknik.html; header with the placement rule and links to plan, teknik, tasarim). Commit only with the owner's permission. Research stays outside the repo.
+
+## Stages (15 agents each)
+1. Inventory: DONE. inv/D01..D15.json, all pass inv-validate.js (anchors and verbatim quotes). 1,689 decided facts, 486 gaps (94 need the owner, gaps-owner.txt), 61 contradictions.
+2. Ownership map (architect, between stages): DONE. contracts.json passes contracts-validate.js: 15 modules, 73 tables, 112 endpoints, 47 jobs, 147 file globs. build-contracts.js regenerates it.
+3. Design: DONE. spec/Dxx.json and frag/Dxx.html all pass spec-validate.js (73 tables, 112 endpoints, 47 jobs, about 935 files, about 700 tests, 139 open points). assemble-backend.js builds out/backend-draft.html: dgate PASS, 1.9 MB, about 39k visible words plus about 139k inside details blocks.
+4. Review and fix (one round): DONE (wf-review.js, run wf_769ccfc8-755). 15 critics, 518 findings (114 HIGH); 15 owners fixed their files; all 15 pass spec-validate.js.
+4b. Integration: RUNNING (wf-integrate.js). collect-inbox.js wrote align/inbox.json (123 cross-module items). Architect decides them (align/decisions.json, align/Dxx.json, gate align-validate.js), then 15 modules align (gate spec-validate.js, now also requires plain export names), then 15 modules package.
+5. Work breakdown: inside wf-integrate.js. Package fields exports and needs (Dxx.export); schedule.js resolves needs to packages, rejects cycles, schedules ready packages longest critical path first, at most 15 per phase. Tests: node test-schedule.js (13 behavioural tests, mutation-checked).
+6. Assemble backend.html (stylesheet copied from plan.html), gate with design/dgate.js --repo, add backend.html pointers to plan.html and teknik.html headers and nav, report, ask to commit.
+
+## Prepared next steps
+- Stage 3 and 4: Workflow scriptPath wf-review.js (15 critics, then 15 owners fix; findings routed by "owner").
+- Stage 5: Workflow scriptPath wf-breakdown.js (packages/Dxx.json, gate: node schedule.js --check Dxx), then node schedule.js --html frag/is-bolumu.html (phases of at most 15, disjoint files, tables, endpoints, jobs).
+- Assembly: build backend.html from plan.html's stylesheet + header + nav + generated module map (contracts.json) + frag/D13, D12, D14, D15 (shared rules first) + frag/D01..D11 + Açık noktalar (spec open_points, needs_owner) + frag/is-bolumu.html; gate with ..\..\r16\design\dgate.js --repo.
+
+## Architect's unresolved items (in this file, not a separate arch-open.md)
+All five settled on 10 October 2026 in align/decisions.json (A1 to A5); the 123 inbox items are decided there too (I001 to I123). 128 decisions in all: 90 ACCEPT, 36 CHANGE, 1 REJECT (I005), 1 OWNER (I117, D11-A16 stays with the owner). Per-module instructions are align/D01.json to D15.json; gate `node align-validate.js` prints OK. Contract changes are in build-contracts.js (block "architect alignment" and the rule and decision block before `const C`); contracts.json regenerated, `node contracts-validate.js` OK. Backups: build-contracts.before-align.js, contracts.before-align.json.
+1. SETTLED, A1 (ACCEPT). Each module writes only apps/server/migrations/<14 digit UTC>_<token>_<açıklama>/ (token from migration_dir); file_ownership now has one glob per module (apps/server/migrations/??????????????_<token>_*), D12's broad glob is gone; D12 owns the folder rule and the CI check (name, timestamp newer than main, table ownership from canonical_tables with the D15 olcum_ view exception, drizzle-kit generate clean on main, drizzle-kit check). Parallel work: no shared tables per phase, folder format has no shared journal, snapshot chain is rebased and regenerated before merge, merge queue takes one at a time. Migration files go into packages, not spec.files.
+2. SETTLED, A2 (CHANGE). No listener rewrite needed for the four pairs: leaf-file rule. yaprak.ts imports other modules only through their yaprak.ts; D02 uses D01 only via kimlik/yaprak.ts and D01 uses D02 only via dersler/yaprak.ts; D07 uses D01 and D05 only via their yaprak.ts or plugin options; D08 uses D09 only via duzeltmeler/yaprak.ts and packages/core. jobs/ and composition roots (app.ts, server.ts, worker.ts, cli/) are exempt; D13's boundary test checks it with dependency-cruiser.
+3. SETTLED, A3 (ACCEPT). muaf is not in D03's PATCH body (strict schema, 400); only D08's PUT /v1/devam/dersler/{dersId}/ogrenciler/{satirId}/muaf writes it through D03.muafIsaretle(tx, satirId, muaf, b); contracts decision "Oran ve muaf" updated.
+4. SETTLED, A4 (ACCEPT, no owner question). All three apply teknik.html sentences, not product decisions: chrony file is the NTP sync and monitoring of teknik.html#altyapi-sunucu-makinesi (D04 closes D04-A08); login notification goes unqueued per teknik.html#sunucu-kimlik; admin routes sit under /v1/<modül>/yonetim/ per teknik.html#sunucu (D08 oranlar and D10 donem-sonu moved in contracts.json).
+5. SETTLED, A5 (CHANGE). No sequencing needed: the snapshot reads D08.dersSonuclari and oturumSonDurumlari live in its own transaction and sees the D07 closure of the lock transaction; D10's lock step (sira 20) queues the job inside the lock transaction, safety net cron 00:25 with sonra donem_kilidi. contracts.json D10 note fixed; D02 replaces the sentence in its donem_kilidi text.
+
+## 11 October 2026: delivered, waiting for commit approval
+- Integration (wf-integrate.js): 128 architect decisions (align/decisions.json), 15 modules aligned, 0 non-owner open points left, 108 owner open points.
+- Tightening (wf-tighten.js): 302 packages, 21 phases (20 x 15 + 2), chain 16 (minimum for 302 at 15 per phase is 21 phases). critical-report.js shows the chains.
+- Wording: rename-sahip.js (15 identifiers, 95 files), clean-contracts.js, 15 module agents (wf-final.js); gate sahip-check.js --all.
+- Phase briefings: ozet/asama-NN.json, gate ozet-validate.js (every package id named). Rounds: wf-final (rejected), wf-brief2 (stalled, rubric R3 too wide), wf-brief3 (R3 made advisory, 8 passed), wf-brief4 (13 surgical fixes, all verified).
+- finalize.sh builds out/backend.html, runs every gate and the browser check, copies to the repo, links plan, teknik and tasarim (link-repo.js, tasarim rebuilt from tasarim-hatti). Repo: backend.html new, plan.html, teknik.html, tasarim.html linked. Not committed.

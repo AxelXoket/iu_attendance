@@ -1,0 +1,1105 @@
+{
+  "id": "R03",
+  "angle": "Hareket sistemi temelleri: süre, eğri ve yay",
+  "summary": "Büyük tasarım sistemlerinin (IBM Carbon, Material 3, Fluent 2, Shopify Polaris, GitHub Primer, Atlassian) yayımladığı süreler 100, 150, 200, 250, 300 ve 400 ms adımlarında büyük ölçüde buluşuyor; ölçeğimizi bu ortak adımlardan, uydurmadan kurabiliriz. Uygulayıcılar ve araştırmalar (Emil Kowalski, NN/g, Apple HIG) arayüz animasyonlarının genelde 300 ms altında kalmasını, 400 ms'nin çok yavaş, 500 ms ve üstünün yük gibi hissettirdiğini, sık tekrarlanan ve klavyeyle başlatılan işlemlerin hiç ya da çok az canlandırılmasını söylüyor. Açılış kapanıştan biraz uzun olmalı: NN/g örneğinde 300 ms açılış, 200 ya da 250 ms kapanış; Primer'de giriş 300 ms, çıkış 200 ms. Sakin ve hassas bir his için yaylar kritik sönüme yakın seçilmeli: Material 3 'standard' şeması 0.9 sönüm oranıyla yalnız yüzde 0.15 aşma üretiyor, 'expressive' şemanın hızlı yayı ise yüzde 9.48 aşmayla oyunbaz bir his veriyor. Yaylar kesildiğinde hızı koruyarak yeni hedefe dönebiliyor (Apple WWDC23), bu yüzden uygulamada (Reanimated 4) konum ve boyut değişimleri yayla yapılmalı; Reanimated 4'ün varsayılan yayı hesabımızla yüzde 1'e 443 ms'de oturduğu için her çağrıda açık ayar verilmeli. Web panelinde CSS geçişleri cubic-bezier ile yapılmalı; hesabımıza göre CSS 'ease' eğrisi Material standard yaylarını 150, 200 ve 300 ms'de yaklaşık yüzde 1.5 sapmayla taklit ediyor, böylece telefon ve panel aynı hareket dilini konuşuyor. linear() Aralık 2023'ten beri tüm ana tarayıcılarda var ve büyük paneller için yay eğrisinin CSS karşılığı olarak isteğe bağlı kullanılabilir. Önerilen set: 7 süre, 7 eğri, 4 yay; hover yalnız 100 ms renk geçişi, basma scale(0.97), kademeli girişte öğe başına 20 ms ve toplam 500 ms sınırı.",
+  "findings": [
+    {
+      "id": "R03-F01",
+      "title": "Carbon: üretken ve ifadeci hareket",
+      "claim": "IBM Carbon iki hareket tarzı tanımlar: gündelik iş için üretken (productive), önemli anlar için ifadeci (expressive); süreler 70 ile 700 ms arasında altı tokendır ve süre öğenin boyutuna ve kat ettiği mesafeye göre uzar.",
+      "evidence": "duration-fast-01 70ms (buton ve anahtar gibi mikro etkileşimler), duration-fast-02 110ms (solma gibi mikro etkileşimler), duration-moderate-01 150ms (mikro etkileşim, küçük genişleme, kısa mesafe), duration-moderate-02 240ms (genişleme, sistem iletişimi, toast), duration-slow-01 400ms (büyük genişleme, önemli sistem bildirimleri), duration-slow-02 700ms (arka plan karartma). Eğriler: standard productive cubic-bezier(0.2, 0, 0.38, 0.9), expressive cubic-bezier(0.4, 0.14, 0.3, 1); entrance productive cubic-bezier(0, 0, 0.38, 0.9), expressive cubic-bezier(0, 0, 0.3, 1); exit productive cubic-bezier(0.2, 0, 1, 0.9), expressive cubic-bezier(0.4, 0.14, 1, 1). Üretken hareket: verimli ve çabuk tepki veren bir his yaratır, göze batmadan geri planda kalır. Süre için: öğenin aldığı yol ya da boyut değişimi (ölçekleme) büyüdükçe animasyon uzar.",
+      "implication": "Akademik bir iş aracı için Carbon'un üretken tarzı doğru ton; ifadeci tarz yalnız seyrek ve önemli anlara uygun. 150, 240 ve 400 ms eşikleri ölçeğimizle örtüşüyor; 700 ms yalnız arka plan karartma gibi bekletmeyen işler için geçiyor.",
+      "sources": [
+        {
+          "url": "https://carbondesignsystem.com/elements/motion/overview/",
+          "title": "Motion",
+          "publisher": "IBM Carbon Design System",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F02",
+      "title": "Material 3 süre ve eğri tokenları",
+      "claim": "Material 3 süre ölçeği 50 ms'den 1000 ms'ye 16 adımdır; standart eğri cubic-bezier(0.2, 0, 0, 1), giriş eğrisi (standard decelerate) cubic-bezier(0, 0, 0, 1), çıkış eğrisi (standard accelerate) cubic-bezier(0.3, 0, 1, 1).",
+      "evidence": "Compose MotionTokens.kt: DurationShort1 50, Short2 100, Short3 150, Short4 200, Medium1 250, Medium2 300, Medium3 350, Medium4 400, Long1 450, Long2 500, Long3 550, Long4 600, ExtraLong1 700, ExtraLong2 800, ExtraLong3 900, ExtraLong4 1000. Eğriler: EasingStandard 0.2, 0, 0, 1; EasingStandardAccelerate 0.3, 0, 1, 1; EasingStandardDecelerate 0, 0, 0, 1; EasingEmphasizedAccelerate 0.3, 0, 0.8, 0.15; EasingEmphasizedDecelerate 0.05, 0.7, 0.1, 1; EasingEmphasized (tek kübik karşılığı) 0.2, 0, 0, 1, yani standard ile aynı; EasingLegacy 0.4, 0, 0.2, 1; EasingLegacyAccelerate 0.4, 0, 1, 1; EasingLegacyDecelerate 0, 0, 0.2, 1; EasingLinear 0, 0, 1, 1. m3.material.io token sayfası JavaScript ile çizildiği için metni okunamadı; değerler Android'in resmi Compose kaynağından alındı.",
+      "implication": "Standart, giriş ve çıkış eğrilerimizin temeli. Aynı cubic-bezier(0.2, 0, 0, 1) Atlassian'da easeOut, cubic-bezier(0, 0, 0, 1) Fluent'te curveDecelerateMid olarak birebir geçiyor.",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/MotionTokens.kt",
+          "title": "MotionTokens.kt",
+          "publisher": "Android Open Source Project (androidx, Compose Material 3)",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F03",
+      "title": "Material 3 yayları: standard ve expressive şema",
+      "claim": "Material 3 iki hareket şeması tanımlar: standard şemada konum ve boyut (uzamsal) yaylarının sönüm oranı 0.9, expressive şemada 0.6 ile 0.8; renk ve opaklık (efekt) yayları iki şemada da 1.0, yani aşmasızdır.",
+      "evidence": "StandardMotionTokens.kt (sönüm oranı / sertlik): FastSpatial 0.9 / 1400, DefaultSpatial 0.9 / 700, SlowSpatial 0.9 / 300; FastEffects 1.0 / 3800, DefaultEffects 1.0 / 1600, SlowEffects 1.0 / 800. ExpressiveMotionTokens.kt: FastSpatial 0.6 / 800, DefaultSpatial 0.8 / 380, SlowSpatial 0.8 / 200; efektler standard ile aynı (1.0 / 3800, 1.0 / 1600, 1.0 / 800). MotionScheme.kt: standard, işlevsel arayüz öğeleri ve tekrarlanan etkileşimler için temel şemadır ve 'a linear motion feel' verir; expressive, öne çıkan öğeler ve ana (hero) etkileşimler için önerilen şemadır ve 'a visually engaging motion feel' verir Uzamsal yaylar 'animations that may change the shape or bounds of the component' için, efekt yayları bileşenin biçimini ya da sınırlarını değiştirmeyen animasyonlar (örneğin renk animasyonu) için.",
+      "implication": "İÜ Yoklama gündelik ve tekrar eden bir iş aracı; standard şema bizim tonumuz. Konum ve boyut için uzamsal, renk ve opaklık için efekt yayı ayrımı aynen alınmalı.",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/StandardMotionTokens.kt",
+          "title": "StandardMotionTokens.kt",
+          "publisher": "Android Open Source Project (androidx, Compose Material 3)",
+          "date": ""
+        },
+        {
+          "url": "https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExpressiveMotionTokens.kt",
+          "title": "ExpressiveMotionTokens.kt",
+          "publisher": "Android Open Source Project (androidx, Compose Material 3)",
+          "date": ""
+        },
+        {
+          "url": "https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/MotionScheme.kt",
+          "title": "MotionScheme.kt",
+          "publisher": "Android Open Source Project (androidx, Compose Material 3)",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F04",
+      "title": "Fluent 2 süre ve eğri tokenları",
+      "claim": "Microsoft Fluent 2 sekiz süre (50 ile 500 ms) ve dokuz eğri tokenı yayımlar; büyük öğelere küçüklerden daha fazla süre verilmesini ister.",
+      "evidence": "durations.ts: durationUltraFast 50ms, durationFaster 100ms, durationFast 150ms, durationNormal 200ms, durationGentle 250ms, durationSlow 300ms, durationSlower 400ms, durationUltraSlow 500ms. curves.ts: curveAccelerateMax cubic-bezier(0.9,0.1,1,0.2), curveAccelerateMid cubic-bezier(1,0,1,1), curveAccelerateMin cubic-bezier(0.8,0,0.78,1), curveDecelerateMax cubic-bezier(0.1,0.9,0.2,1), curveDecelerateMid cubic-bezier(0,0,0,1), curveDecelerateMin cubic-bezier(0.33,0,0.1,1), curveEasyEaseMax cubic-bezier(0.8,0,0.2,1), curveEasyEase cubic-bezier(0.33,0,0.67,1), curveLinear cubic-bezier(0,0,1,1). Hareket sayfası: 'Give larger elements more time to animate than smaller elements.' ve animasyonlar 'too sluggish' ile 'too abrupt' arasında denge kurmalı.",
+      "implication": "100, 150, 200, 250, 300 ve 400 ms adımları Material ile birebir aynı; boyuta göre süre kuralı ikinci bir sistemle doğrulanıyor.",
+      "sources": [
+        {
+          "url": "https://fluent2.microsoft.design/motion",
+          "title": "Motion",
+          "publisher": "Microsoft Fluent 2 Design System",
+          "date": ""
+        },
+        {
+          "url": "https://raw.githubusercontent.com/microsoft/fluentui/master/packages/tokens/src/global/durations.ts",
+          "title": "durations.ts",
+          "publisher": "Microsoft Fluent UI (GitHub)",
+          "date": ""
+        },
+        {
+          "url": "https://raw.githubusercontent.com/microsoft/fluentui/master/packages/tokens/src/global/curves.ts",
+          "title": "curves.ts",
+          "publisher": "Microsoft Fluent UI (GitHub)",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F05",
+      "title": "Polaris: etkileşim varsayılanı 'ease'",
+      "claim": "Shopify Polaris 0 ile 500 ms arasında 50 ms adımlı süreler ve beş eğri tanımlar; her kullanıcı etkileşimi için varsayılan eğri CSS 'ease' karşılığı olan cubic-bezier(0.25, 0.1, 0.25, 1)'dir.",
+      "evidence": "motion-duration-0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500 ve 5000 ms. motion-ease cubic-bezier(0.25, 0.1, 0.25, 1): 'Responds quickly and finishes with control. A great default for any user interaction.'; motion-ease-in cubic-bezier(0.42, 0, 1, 1): 'Use sparingly.'; motion-ease-out cubic-bezier(0.19, 0.91, 0.38, 1): 'Use sparingly.'; motion-ease-in-out cubic-bezier(0.42, 0, 0.58, 1): 'A good default for transitions triggered by the system.'; motion-linear cubic-bezier(0, 0, 1, 1): 'Use for continuous and mechanical animations, such as rotating spinners.' Not: polaris-react.shopify.com/tokens/motion adresi artık 301 ile shopify.dev/docs/api/polaris adresine yönleniyor; değerler GitHub'daki polaris-tokens kaynağından okundu, güncelliği bu yüzden orta güvenle.",
+      "implication": "Hover ve mikro etkileşim için 'ease' eğrisini destekliyor; linear yalnız yükleniyor göstergesi gibi sürekli hareket içindir.",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/Shopify/polaris/main/polaris-tokens/src/themes/base/motion.ts",
+          "title": "polaris-tokens/src/themes/base/motion.ts",
+          "publisher": "Shopify Polaris (GitHub)",
+          "date": ""
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F06",
+      "title": "Primer: giriş, çıkış ve hover çiftleri",
+      "claim": "GitHub Primer (primitives 11.10.0) hareketi taban ve işlevsel olmak üzere iki katmanda tanımlar; giriş 300 ms yavaşlayan eğri, çıkış 200 ms hızlanan eğri, hover 100 ms 'ease' ile yapılır.",
+      "evidence": "Taban: süreler 0, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000 ms; --base-easing-ease cubic-bezier(0.25, 0.1, 0.25, 1) ('Use for hover state changes and micro-interactions.'), --base-easing-easeIn cubic-bezier(0.7, 0.1, 0.75, 0.9) (görüş alanından çıkan öğeler), --base-easing-easeInOut cubic-bezier(0.6, 0, 0.2, 1) (görüş alanında yer değiştiren ya da biçim değiştiren öğeler), --base-easing-easeOut cubic-bezier(0.3, 0.8, 0.6, 1) (giren öğeler), --base-easing-linear cubic-bezier(0, 0, 1, 1). İşlevsel: --motion-duration-micro 100ms ('Fast micro-interactions like hover, focus ring, and color shifts.'), --motion-duration-short 200ms ('expand/collapse, toggles, and visibility changes'), --motion-duration-medium 300ms ('elements entering or exiting the viewport, such as modals and dropdowns'), --motion-duration-long 500ms ('Use sparingly.'); --motion-transition-enter = medium + easeOut, --motion-transition-exit = short + easeIn, --motion-transition-hover = micro + ease, --motion-transition-stateChange = short + easeInOut.",
+      "implication": "Taban tokenlar ile kullanım adına göre işlevsel tokenlar ayrımı bizim için de doğru yapı. Giriş 300 ve çıkış 200 ms çifti NN/g ile örtüşüyor. Odak halkasını 100 ms canlandırması ise Kowalski'nin klavye kuralıyla çelişiyor.",
+      "sources": [
+        {
+          "url": "https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/css/base/motion/motion.css",
+          "title": "@primer/primitives 11.10.0: dist/css/base/motion/motion.css",
+          "publisher": "GitHub Primer",
+          "date": ""
+        },
+        {
+          "url": "https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/css/functional/motion/motion.css",
+          "title": "@primer/primitives 11.10.0: dist/css/functional/motion/motion.css",
+          "publisher": "GitHub Primer",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F07",
+      "title": "Atlassian: dört süre, yedi eğri",
+      "claim": "Atlassian @atlaskit/motion (9.3.0) yalnız dört süre (0, 100, 350, 700 ms; 25 ms adım) ve yedi eğri kullanır; easeOut eğrisi Material standard ile birebir aynıdır.",
+      "evidence": "durations.js: durationStep 25; none 0, small 100, medium 350, large 700. curves.js: easeInOut cubic-bezier(0.15,1,0.3,1), easeOut cubic-bezier(0.2,0,0,1), easeIn cubic-bezier(0.8,0,0,0.8), easeIn40Out cubic-bezier(0.4,0,0,1), easeIn60Out cubic-bezier(0.6,0,0,1), easeIn80Out cubic-bezier(0.8,0,0,1), linear cubic-bezier(0,0,1,1).",
+      "implication": "cubic-bezier(0.2, 0, 0, 1) iki büyük sistemde aynı; seçimimizi güçlendiriyor. 350 ve 700 ms adımları üst sınırımızın üstünde, ölçek olarak alınmamalı.",
+      "sources": [
+        {
+          "url": "https://cdn.jsdelivr.net/npm/@atlaskit/motion@9.3.0/dist/es2019/utils/curves.js",
+          "title": "@atlaskit/motion 9.3.0: dist/es2019/utils/curves.js",
+          "publisher": "Atlassian Design System",
+          "date": ""
+        },
+        {
+          "url": "https://cdn.jsdelivr.net/npm/@atlaskit/motion@9.3.0/dist/es2019/utils/durations.js",
+          "title": "@atlaskit/motion 9.3.0: dist/es2019/utils/durations.js",
+          "publisher": "Atlassian Design System",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F08",
+      "title": "Sistemler arası ortak adımlar",
+      "claim": "Altı sistemin yayımladığı süreler 100, 150, 200, 250, 300 ve 400 ms adımlarında örtüşüyor; üç eğri en az iki sistemde birebir aynı değerle geçiyor.",
+      "evidence": "100 ms: Material Short2, Fluent durationFaster, Polaris, Primer micro, Atlassian small. 150 ms: Carbon moderate-01, Material Short3, Fluent durationFast, Polaris. 200 ms: Material Short4, Fluent durationNormal, Polaris, Primer short. 250 ms: Material Medium1, Fluent durationGentle, Polaris (Carbon 240). 300 ms: Material Medium2, Fluent durationSlow, Polaris, Primer medium. 400 ms: Carbon slow-01, Material Medium4, Fluent durationSlower, Polaris, Primer 400. Eğriler: cubic-bezier(0.2, 0, 0, 1) Material standard ve Atlassian easeOut; cubic-bezier(0, 0, 0, 1) Material standard decelerate ve Fluent curveDecelerateMid; cubic-bezier(0.25, 0.1, 0.25, 1) Polaris motion-ease ve Primer ease.",
+      "implication": "Ölçek uydurulmadan, birden çok sistemin ortak adımlarından kurulabilir: 0, 100, 150, 200, 250, 300, 400 ms.",
+      "sources": [
+        {
+          "url": "https://carbondesignsystem.com/elements/motion/overview/",
+          "title": "Motion",
+          "publisher": "IBM Carbon Design System",
+          "date": ""
+        },
+        {
+          "url": "https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/MotionTokens.kt",
+          "title": "MotionTokens.kt",
+          "publisher": "Android Open Source Project (androidx, Compose Material 3)",
+          "date": ""
+        },
+        {
+          "url": "https://raw.githubusercontent.com/microsoft/fluentui/master/packages/tokens/src/global/durations.ts",
+          "title": "durations.ts",
+          "publisher": "Microsoft Fluent UI (GitHub)",
+          "date": ""
+        },
+        {
+          "url": "https://raw.githubusercontent.com/Shopify/polaris/main/polaris-tokens/src/themes/base/motion.ts",
+          "title": "polaris-tokens/src/themes/base/motion.ts",
+          "publisher": "Shopify Polaris (GitHub)",
+          "date": ""
+        },
+        {
+          "url": "https://cdn.jsdelivr.net/npm/@primer/primitives@11.10.0/dist/css/functional/motion/motion.css",
+          "title": "@primer/primitives 11.10.0: dist/css/functional/motion/motion.css",
+          "publisher": "GitHub Primer",
+          "date": ""
+        },
+        {
+          "url": "https://cdn.jsdelivr.net/npm/@atlaskit/motion@9.3.0/dist/es2019/utils/curves.js",
+          "title": "@atlaskit/motion 9.3.0: dist/es2019/utils/curves.js",
+          "publisher": "Atlassian Design System",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F09",
+      "title": "SwiftUI hazır yayları: smooth, snappy, bouncy",
+      "claim": "SwiftUI'nin hazır yayları aynı 0.5 saniyelik algısal süreyi kullanır; farkları yalnız temel sıçrama (bounce) değeridir: smooth 0, snappy 0.15, bouncy 0.3.",
+      "evidence": "smooth(duration: TimeInterval = 0.5, extraBounce: Double = 0.0): 'How much additional bounce should be added to the base bounce of 0.'; snappy aynı imza: 'base bounce of 0.15'; bouncy aynı imza: 'base bounce of 0.3'. duration: yayın temposunu belirleyen algısal süre; oturma süresine yaklaşık eşittir, çok zıplayan yaylarda ise bir salınım periyodunun süresidir. Özetler: smooth 'no bounce', snappy 'small amount of bounce that feels more snappy', bouncy 'higher amount of bounce'. Eski API: spring(response: Double = 0.5, dampingFraction: Double = 0.825, blendDuration: TimeInterval = 0); dampingFraction 'as a fraction of an estimate of amount needed to produce critical damping'.",
+      "implication": "Apple 'snappy' hissi için bile çok küçük bir sıçrama kullanıyor. Sakin ve hassas tonumuz smooth (0) ile snappy (0.15) arasında kalmalı; bouncy dışarıda.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/swiftui/animation/smooth(duration:extraBounce:).json",
+          "title": "smooth(duration:extraBounce:)",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/swiftui/animation/snappy(duration:extraBounce:).json",
+          "title": "snappy(duration:extraBounce:)",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/swiftui/animation/bouncy(duration:extraBounce:).json",
+          "title": "bouncy(duration:extraBounce:)",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/swiftui/animation/spring(response:dampingfraction:blendduration:).json",
+          "title": "spring(response:dampingFraction:blendDuration:)",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/swiftui/animation/snappy.json",
+          "title": "snappy",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F10",
+      "title": "Yaylar hızı korur ve kesilebilir",
+      "claim": "Apple yayları, kesildiklerinde o anki hızı koruyarak yeni hedefe yönelebildikleri için eğrilere tercih eder ve emin olunmadığında sıçramasız (bounce 0) yay önerir.",
+      "evidence": "WWDC23 'Animate with springs': emin değilsen bounce 0 olan yayı kullan, bounce verilmezse gelen de budur; yay, hem durağan başlangıçta hem başlangıç hızı olan durumda sürekliliği koruyan tek animasyon türüdür; yeniden hedeflenince yay, o anki hızını yeni hedefe doğru başlangıç hızı olarak kullanır. bounce 0'dan büyükse yay hedefi aşar, 0 ise uzun bir kuyrukla yaklaşır, negatifse daha düz yaklaşır; zıplayan yaylarda bounce yüzde 100'e kadar çıkar, düzleştirilmiş yaylarda 0 ile yüzde eksi 100 arasındadır. duration parametresi 'a perceptual duration', oturma süresi değildir.",
+      "implication": "Uygulamada konum ve boyut değişimleri yayla yapılmalı; alt sayfayı sürükleyip bırakma gibi jestlerde jestin hızı yaya aktarılmalı. Varsayılan tonumuz sıçramasız.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/videos/play/wwdc2023/10158/",
+          "title": "Animate with springs",
+          "publisher": "Apple (WWDC23)",
+          "date": "2023-06"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F11",
+      "title": "Apple formülü ve sönüm oranı ilişkisi (türetme)",
+      "claim": "WWDC23 kod parçasındaki sönüm formülü yazıldığı haliyle Apple'ın kendi tanımıyla çelişiyor; kritik sönümle tutarlı biçim, sönüm oranı = 1 - bounce ilişkisini veriyor.",
+      "evidence": "Basılı parça (19:26, 'Spring Parameter Conversion'): 'mass = 1', 'stiffness = (2π ÷ duration)^2', 'damping = 1 - 4π × bounce ÷ duration, bounce ≥ 0', '4π ÷ (duration + 4π × bounce), bounce < 0'. springs.js hesabı: bu haliyle duration 0.5 ve bounce 0 için sönüm oranı 0.0398 çıkıyor (salınan bir yay), oysa Apple bounce 0'ın aşmadan yaklaştığını söylüyor. (1 - bounce) × 4π ÷ duration biçimi bounce 0'da tam kritik sönüm (1.0) veriyor; bu biçimle snappy 0.85, bouncy 0.70 sönüm oranına denk geliyor, aşmaları yüzde 0.63 ve yüzde 4.60.",
+      "implication": "Apple değerleri Reanimated'a çevrilirken sönüm oranı = 1 - bounce kullanılabilir; ancak bu bizim türetmemiz olduğu için tokenlarımız doğrudan yayımlanmış Material değerlerine dayanmalı.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/videos/play/wwdc2023/10158/",
+          "title": "Animate with springs",
+          "publisher": "Apple (WWDC23)",
+          "date": "2023-06"
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/swiftui/animation/spring(response:dampingfraction:blendduration:).json",
+          "title": "spring(response:dampingFraction:blendDuration:)",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F12",
+      "title": "Apple HIG: amaçlı, kısa, kesilebilir hareket",
+      "claim": "Apple HIG hareketin amaçlı ve isteğe bağlı, geri bildirimin kısa ve kesin olmasını, sık yapılan etkileşimlere hareket eklenmemesini ve kullanıcının hareketi kesebilmesini ister.",
+      "evidence": "Hareket amaçla eklenir, deneyimi destekler ama gölgelemez; yalnız hareket olsun diye eklenmez. 'Make motion optional.' (hareket önemli bilgiyi iletmenin tek yolu olmamalı). 'Aim for brevity and precision in feedback animations.' 'In apps, generally avoid adding motion to UI interactions that occur frequently.' 'Let people cancel motion.' Kullanıcı bir şey yapmak için animasyonun bitmesini mümkün olduğunca beklememeli, özellikle aynı animasyonu birden çok kez görecekse.",
+      "implication": "Sahibin 'kullanıcının etkileşime geçeceği her şey animasyonlu olsun' isteği sıklığa göre ayarlanmalı: sık işlemlerde yalnız kısa renk geçişi, seyrek ve büyük değişimlerde hareket. Hiçbir animasyon girdiyi bekletmemeli.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/motion.json",
+          "title": "Motion",
+          "publisher": "Apple Human Interface Guidelines",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F13",
+      "title": "NN/g: süre aralıkları ve giriş-çıkış farkı",
+      "claim": "NN/g çoğu animasyon için 100 ile 500 ms aralığını, basit geri bildirim için yaklaşık 100 ms'yi, modal gibi büyük değişimler için 200 ile 300 ms'yi önerir; 400 ms'yi çok yavaş, 500 ms ve üstünü yük gibi görür; açılış kapanıştan biraz uzun olmalıdır.",
+      "evidence": "Çoğu animasyon 100 ile 500 ms arasında, karmaşıklığa ve mesafeye göre; onay kutusu ve anahtar gibi basit geri bildirimde yaklaşık 100 ms 'feels immediate'; modal gibi büyük ekran değişimlerinde 200 ile 300 ms; 100 ile 400 ms uygun, '400ms being a very slow animation'; 500 ms ve sonrası 'start to feel like a real drag'; açılır pencere 300 ms'de görünebilir, kapanışı ise yalnız 200 ya da 250 ms sürer; ne kadar sık görülürse 'the more subtle and shorter you'll want it to be'. Yazar Page Laubheimer, 9 Şubat 2020.",
+      "implication": "Üst sınırımız 400 ms; kullanıcının beklediği her geçiş 300 ms içinde kalmalı; çıkış süresi girişin yaklaşık üçte ikisi ile beşte dördü arasında olmalı.",
+      "sources": [
+        {
+          "url": "https://www.nngroup.com/articles/animation-duration/",
+          "title": "Executing UX Animations: Duration and Motion Characteristics",
+          "publisher": "Nielsen Norman Group",
+          "date": "2020-02-09"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F14",
+      "title": "Val Head: boyuta göre süre",
+      "claim": "Val Head arayüz animasyonları için 200 ile 500 ms ile başlamayı, küçük öğelerde 200 ile 300 ms, uzun mesafeli büyük hareketlerde 400 ile 500 ms'yi önerir.",
+      "evidence": "'200ms to 500ms seconds is a good range to start with for interface animations.'; küçük öğeler için '200ms to 300ms range'; büyük hareket ya da karmaşık eğri için 400 ile 500 ms; 100 ms anlık algılanır, 1 saniye ise kullanıcının düşünce akışının üst sınırı sayılır; 'on average it takes a human 230ms to visually perceive something'; arayüz animasyonunun doğru hissettirmesi arkasındaki kesin sayılardan önemlidir (5 Mayıs 2016).",
+      "implication": "Boyuta göre süre ilkesini destekliyor; ancak 2016 tarihli üst uç (500 ms) bugünkü uygulayıcı görüşüne ve NN/g'nin 400 ms uyarısına göre bizim için uzun.",
+      "sources": [
+        {
+          "url": "https://valhead.com/2016/05/05/how-fast-should-your-ui-animations-be/",
+          "title": "How fast should your UI animations be?",
+          "publisher": "Val Head",
+          "date": "2016-05-05"
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F15",
+      "title": "Kowalski: 300 ms altı, ease-out, klavyeye animasyon yok",
+      "claim": "Emil Kowalski arayüz animasyonlarının genelde 300 ms altında kalmasını, giriş için ease-out kullanılmasını, yalnız transform ve opacity canlandırılmasını ve klavyeyle başlatılan işlemlerin hiç canlandırılmamasını söyler.",
+      "evidence": "'Your animations should also usually be shorter than 300ms.'; bu iş için en iyi eğri ease-out'tur: hızlı başlar, sonda yavaşlar; transform ve opacity yalnız birleştirme (composite) adımını tetikler, padding ve margin üç adımın hepsini tetikler; 'never animate keyboard initiated actions', bu işlemler 'sometimes hundreds of times a day' yapılır; CSS geçişleri araya girilebilir (interruptible); @media (prefers-reduced-motion: reduce) dikkate alınmalı.",
+      "implication": "Panel yalnız klavyeyle kullanılabilmeli (plan.html kararı); klavye kısayolu, ok tuşu gezinmesi ve odak halkası anlık olmalı. Düşük donanımlı Android telefonlar için yalnız transform ve opacity canlandırılmalı.",
+      "sources": [
+        {
+          "url": "https://emilkowal.ski/ui/great-animations",
+          "title": "Great Animations",
+          "publisher": "Emil Kowalski",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F16",
+      "title": "Kowalski: sık kullanılan öğe animasyonsuz",
+      "claim": "Günde birçok kez kullanılan öğeler animasyonsuz daha iyi olabilir; Raycast günde yüzlerce kez açıldığı halde hiç animasyon kullanmaz.",
+      "evidence": "hover etkisi hoştur ama günde birçok kez kullanılıyorsa en iyisi hiç animasyon olmamasıdır; klavye işlemleri için 'You should never animate them.'; 'As a rule of thumb, UI animations should generally stay under 300ms.'; 180ms açılır menü 400ms olana göre 'feels more responsive'.",
+      "implication": "Sahip hover animasyonu istiyor; bu yüzden hover tümden kaldırılmamalı ama hareketsiz, yalnız renk geçişi ve en kısa süreyle (100 ms) yapılmalı.",
+      "sources": [
+        {
+          "url": "https://emilkowal.ski/ui/you-dont-need-animations",
+          "title": "You Don't Need Animations",
+          "publisher": "Emil Kowalski",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F17",
+      "title": "Kowalski: basma ölçeği ve giriş biçimi",
+      "claim": "Basılan buton scale(0.97)'ye küçülmeli, açılan öğe scale(0)'dan değil 0.9 ve üstünden başlamalı, ardışık tooltip'ler gecikmesiz ve animasyonsuz açılmalı, açılan katman tetikleyicisinden büyümelidir.",
+      "evidence": "':active' durumunda 'scale(0.97)'; scale(0) yerine 0.9 ve üstü, örnekte 0.93; ilk tooltip gecikmeli, sonrakiler için '&[data-instant] { transition-duration: 0ms; }'; giriş ve çıkışta ease-out, UI animasyonlarında ease-in'den kaçın; transform-origin için Radix 'var(--radix-dropdown-menu-content-transform-origin)', Base UI 'var(--transform-origin)'; süre 300 ms altında; başka çare kalmazsa 'filter: blur(2px)'.",
+      "implication": "Basma geri bildirimi ve açılır katmanların başlangıç durumu için doğrudan değer veriyor. Köşeli yapı ölçeklemeyle sorun çıkarmaz; blur keskin görünümü yumuşattığı için yalnız son çare.",
+      "sources": [
+        {
+          "url": "https://emilkowal.ski/ui/7-practical-animation-tips",
+          "title": "7 Practical Animation Tips",
+          "publisher": "Emil Kowalski",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F18",
+      "title": "Rauno: kesilebilirlik, momentum, sıklık",
+      "claim": "Rauno Freiberg akıcı etkileşimi kesilebilirlik, momentumun korunması, anında tepki ve sık kullanımda azalan yenilik üzerinden tanımlar.",
+      "evidence": "'Great interactions are modeled after properties from the real world, like interruptability.'; fırlatılan jest 'retains the momentum and angle at which it was thrown'; 'Truly fluid gestures are immediately responsive.'; çok sık yapılan bir etkileşimde hareketi hızlandırmasına rağmen 'my perceived performance was making me feel like I have to wait too much'; hafif işlemler jest sürerken, yıkıcı işlemler jest bitince tetiklenir; hareket kaynağından (ör. uygulama simgesinden) başlar. Yazıda sayısal değer yok (Temmuz 2023).",
+      "implication": "Alt sayfa ve kaydırarak kapatma gibi jestlerde hız aktarımı ve araya girilebilirlik zorunlu; sık işlemler hızlandırılmak yerine animasyonsuz bırakılmalı; kayıt silme gibi yıkıcı işlemler jest bitmeden tetiklenmemeli.",
+      "sources": [
+        {
+          "url": "https://rauno.me/craft/interaction-design",
+          "title": "Invisible Details of Interaction Design",
+          "publisher": "Rauno Freiberg (rauno.me)",
+          "date": "2023-07"
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F19",
+      "title": "Comeau: yay parametrelerinin anlamı",
+      "claim": "Josh W. Comeau yayları kütle, gerginlik (stiffness) ve sürtünme (damping) ile açıklar; sürtünme arttıkça sıçrama azalır, gerginlik arttıkça hareket hızlanır.",
+      "evidence": "kütle taşınan şeyin ağırlığıdır; ağır nesne daha yavaş hareket eder ama eylemsizliği de büyüktür; yay ne kadar gerginse o kadar çok enerji açığa çıkar, hareket çabuk ve zıplayan olur; sürtünme arttıkça yay giderek daha az zıplar. Yazıdaki { mass: 1.75, tension: 200, friction: 12 } bir deneme örneğidir, önerilen varsayılan değildir. 21 Eylül 2020, güncelleme 3 Kasım 2025.",
+      "implication": "Reanimated'daki mass, stiffness ve damping parametrelerinin sezgisel anlamı; sakin ton için damping, sertliğe göre yüksek tutulmalı (sönüm oranı 1'e yakın).",
+      "sources": [
+        {
+          "url": "https://www.joshwcomeau.com/animation/a-friendly-introduction-to-spring-physics/",
+          "title": "A Friendly Introduction to Spring Physics Animation in JavaScript",
+          "publisher": "Josh W. Comeau",
+          "date": "2020-09-21"
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F20",
+      "title": "CSS'te yay: linear() ve sınırları",
+      "claim": "CSS linear() ile yay eğrisi taklit edilebilir, ama CSS geçişi sabit bir süre ister ve kesildiğinde hızı korumaz; linear() Aralık 2023'ten beri tüm ana tarayıcılarda vardır.",
+      "evidence": "'CSS transitions require a duration'; kesilince CSS sürümü 'turns around instantly, as though it hit a wall', React Spring ise öğenin 'current inertia' değerini hesaba katar; Ekim 2025 itibarıyla linear() tarayıcı desteği yaklaşık yüzde 88, Aralık 2023'ten beri bütün ana tarayıcılarda var; araçlar: Jake Archibald ve Adam Argyle'ın 'Linear() Easing Generator' aracı ve 'Easing Wizard'; '11 values are just not enough', 50 nokta inandırıcı, araçlar genelde 40'tan fazla nokta üretir. 28 Ekim 2025, güncelleme 5 Mayıs 2026.",
+      "implication": "Web panelinde yay hissi CSS ile verilebilir; gerçek yayın kesilme davranışı yalnız uygulamada (Reanimated) olur. Paneldeki kısa sürelerde bu fark küçük kalır.",
+      "sources": [
+        {
+          "url": "https://www.joshwcomeau.com/animation/linear-timing-function/",
+          "title": "Springs and Bounces in Native CSS",
+          "publisher": "Josh W. Comeau",
+          "date": "2025-10-28"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F21",
+      "title": "linear() tarayıcı desteği ve üretici",
+      "claim": "linear() noktalar arasında doğrusal ara değer üreterek sıçrama ve yay eğrilerini CSS'te kurmayı sağlar; Chrome 113, Edge 113, Firefox 112 ve Safari 17.2'den beri desteklenir.",
+      "evidence": "'interpolates linearly between its points, allowing you to recreate bounce and spring effects'; destek Chrome 113+, Edge 113+, Firefox 112+, Safari 17.2+; Jake Archibald'ın üreticisi (https://linear-easing-generator.netlify.app/) JavaScript eğrisini veya SVG yolunu linear() sözdizimine çevirir; Spring, Bounce ve Material emphasized hazırları vardır. Yazar Bramus, son güncelleme 25 Mayıs 2023.",
+      "implication": "Panelin hedef tarayıcıları için yeterli; daha eski tarayıcıya @supports ile cubic-bezier yedeği verilebilir.",
+      "sources": [
+        {
+          "url": "https://developer.chrome.com/docs/css-ui/css-linear-easing-function",
+          "title": "Create complex animation curves in CSS with the linear() easing function",
+          "publisher": "Chrome for Developers",
+          "date": "2023-05-25"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F22",
+      "title": "Reanimated 4 withSpring varsayılanları",
+      "claim": "Reanimated 4'te withSpring fizik tabanlı (stiffness, damping, mass) ya da süre tabanlı (duration, dampingRatio) çalışır, ikisi birlikte kullanılamaz; varsayılanlar stiffness 900, damping 120, mass 4 ya da duration 550 ve dampingRatio 1'dir ve duration algısal süredir.",
+      "evidence": "Varsayılanlar: stiffness 900, damping 120, mass 4, velocity 0, overshootClamping false, energyThreshold 6e-9, reduceMotion ReduceMotion.System; duration 550, dampingRatio 1. Fizik tabanlı stiffness ve damping, süre tabanlı duration ve dampingRatio ile birlikte kullanılamaz; ikisi birden verilirse duration ve dampingRatio geçerli olur. duration: animasyonun milisaniye cinsinden algısal süresi; gerçek süre bunun 1.5 katı. dampingRatio: 1 kritik sönümlü, 1'den büyük aşırı sönümlü, 1'den küçük düşük sönümlü yay demektir. mass: 'Reducing this value makes the animation faster.'",
+      "implication": "Varsayılan yay kritik sönümlü ama yavaş (hesabımızla yüzde 1'e 443 ms); her çağrıda açık fizik ayarı verilmeli. Material yayları (sönüm oranı ve sertlik, kütle 1) fizik moduna damping = 2 × sönüm oranı × karekök(sertlik) ile birebir çevrilir.",
+      "sources": [
+        {
+          "url": "https://docs.swmansion.com/react-native-reanimated/docs/animations/withSpring/",
+          "title": "withSpring",
+          "publisher": "Software Mansion (React Native Reanimated)",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F23",
+      "title": "Reanimated 4 CSS geçişleri aynı eğrileri alır",
+      "claim": "Reanimated 4'ün CSS geçişleri cubicBezier(), linear() ve steps() zamanlama işlevlerini ve standart anahtar kelimeleri kabul eder; varsayılan 'ease'dir.",
+      "evidence": "Anahtar kelimeler: linear, ease, ease-in, ease-out, ease-in-out, step-start, step-end. cubicBezier(x1, y1, x2, y2), örnek cubicBezier(0.25, 0.1, 0.5, 2); linear(...points), örnek linear(0, [0.25, '75%'], 1); steps(stepsNumber, modifier?), örnek steps(4, 'jump-end'). transitionTimingFunction 'Defaults to ease.'; transitionProperty sırasına göre özellik başına dizi verilebilir.",
+      "implication": "Aynı eğri tokenları hem panelin CSS'inde hem uygulamanın basit durum geçişlerinde (renk, opaklık) kullanılabilir; tek token kaynağı mümkün.",
+      "sources": [
+        {
+          "url": "https://docs.swmansion.com/react-native-reanimated/docs/css-transitions/transition-timing-function/",
+          "title": "transitionTimingFunction",
+          "publisher": "Software Mansion (React Native Reanimated)",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R03-F24",
+      "title": "Hesap: oturma süreleri, aşma ve CSS karşılığı",
+      "claim": "Hesabımıza göre Material standard yayları neredeyse hiç aşmaz (yüzde 0.15) ve kısa sürede oturur; expressive şema ve Apple bouncy belirgin biçimde zıplar; CSS 'ease' eğrisi standard uzamsal yayları yaklaşık yüzde 1.5 sapmayla taklit eder.",
+      "evidence": "springs.js (adım yanıtı, başlangıç hızı 0, kütle 1): standard fast spatial (0.9 / 1400): aşma yüzde 0.15, yüzde 1'e 137 ms, yüzde 0.1'e 224 ms; default spatial (0.9 / 700): yüzde 1'e 194 ms, yüzde 0.1'e 317 ms; slow spatial (0.9 / 300): yüzde 1'e 296 ms, yüzde 0.1'e 484 ms; default effects (1.0 / 1600): aşma yok, yüzde 1'e 166 ms, yüzde 0.1'e 231 ms. Reanimated 4 varsayılanı (kütle 4, sertlik 900, sönüm 120): sönüm oranı 1.0, yüzde 1'e 443 ms, yüzde 0.1'e 616 ms. Expressive fast spatial (0.6 / 800): aşma yüzde 9.48; expressive default (0.8 / 380): yüzde 1.52; Apple snappy yüzde 0.63, bouncy yüzde 4.60 (sönüm oranı = 1 - bounce varsayımıyla). On bir yayımlanmış eğri arasında en yakını CSS ease cubic-bezier(0.25, 0.1, 0.25, 1): fast için 143 ms'de en çok yüzde 1.53, default için 203 ms'de yüzde 1.54, slow için 310 ms'de yüzde 1.53, default effects için 145 ms'de yüzde 3.25 sapma; Material standard (0.2, 0, 0, 1) aynı uzamsal yaylarda en çok yüzde 4.80 sapma verir. Aynı sönüm oranındaki üç uzamsal yayın eğri biçimi aynıdır, yalnız süreleri farklıdır.",
+      "implication": "Uygulamadaki yay ile paneldeki CSS eğrisi aynı hareket dilini konuşabilir: spring-fast ile 150 ms, spring-default ile 200 ms, spring-slow ile 300 ms 'ease'. Sakin ton için aşma sınırı yüzde 0.15 tutulmalı.",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/StandardMotionTokens.kt",
+          "title": "StandardMotionTokens.kt",
+          "publisher": "Android Open Source Project (androidx, Compose Material 3)",
+          "date": ""
+        },
+        {
+          "url": "https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/ExpressiveMotionTokens.kt",
+          "title": "ExpressiveMotionTokens.kt",
+          "publisher": "Android Open Source Project (androidx, Compose Material 3)",
+          "date": ""
+        },
+        {
+          "url": "https://docs.swmansion.com/react-native-reanimated/docs/animations/withSpring/",
+          "title": "withSpring",
+          "publisher": "Software Mansion (React Native Reanimated)",
+          "date": ""
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/swiftui/animation/snappy(duration:extraBounce:).json",
+          "title": "snappy(duration:extraBounce:)",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R03-F25",
+      "title": "Carbon: kademeli giriş 20 ms, toplam 500 ms",
+      "claim": "Carbon tablo içeriğinin girişinin 20 ms aralıklarla kademelendirilmesini ve toplam sürenin 500 ms içinde kalmasını önerir.",
+      "evidence": "tablo içeriğinin girişini 20 ms aralıkla kademelendirmek bilişsel yükü belirgin biçimde azaltır ('staggering the entrance of table content by 20 ms'); gecikme, toplam süre yine 500 ms içinde kalacak biçimde ayarlanmalı; sıra: sabit iskelet (kabuk, gezinme), sabit gövde (başlıklar, görseller), dinamik içerik (tablo sonuçları), birincil eylem butonları, canlandırılmış içerik (grafikler). springs.js hesabı: 20 ms adımla 150 ms'lik öğelerde en çok 18, 200 ms'lik öğelerde 16, 250 ms'lik öğelerde 13 öğe 500 ms'ye sığar.",
+      "implication": "Liste ve tablolarda kademeli giriş öğe başına 20 ms; sınırı aşan öğeler birlikte görünmeli.",
+      "sources": [
+        {
+          "url": "https://carbondesignsystem.com/elements/motion/choreography/",
+          "title": "Choreography",
+          "publisher": "IBM Carbon Design System",
+          "date": ""
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "R03-K01",
+      "topic": "Süre ölçeği",
+      "recommendation": "Yedi süre tokenı kullanılsın; taban adlar sayıyla, kullanım adları işlevle verilsin (Primer'deki gibi iki katman). Kullanıcının beklediği hiçbir geçiş 300 ms'yi, hiçbir geçiş 400 ms'yi geçmesin.",
+      "values": [
+        {
+          "name": "--motion-duration-instant",
+          "value": "0ms",
+          "note": "Klavyeyle başlatılan işlem, odak halkası, azaltılmış hareket."
+        },
+        {
+          "name": "--motion-duration-micro",
+          "value": "100ms",
+          "note": "Hover renk, zemin ve kenar geçişi; basma geri bildirimi."
+        },
+        {
+          "name": "--motion-duration-fast",
+          "value": "150ms",
+          "note": "Tooltip, küçük solma, onay kutusu ve anahtar; menü kapanışı."
+        },
+        {
+          "name": "--motion-duration-base",
+          "value": "200ms",
+          "note": "Menü ve açılır liste açılışı, aç/kapa, durum değişimi; diyalog ve panel kapanışı."
+        },
+        {
+          "name": "--motion-duration-moderate",
+          "value": "250ms",
+          "note": "Diyalog ve bildirim (toast) açılışı."
+        },
+        {
+          "name": "--motion-duration-slow",
+          "value": "300ms",
+          "note": "Büyük yüzey açılışı: yan panel, alt sayfa, ekran geçişi."
+        },
+        {
+          "name": "--motion-duration-max",
+          "value": "400ms",
+          "note": "Üst sınır; yalnız seyrek ve kullanıcıyı bekletmeyen büyük değişim."
+        }
+      ],
+      "reasons": "Her adım en az üç sistemde birebir var (100: beş sistem, 150: dört, 200: dört, 250: üç ve Carbon 240, 300: dört, 400: beş). NN/g 400 ms'yi çok yavaş, 500 ms'yi yük olarak görüyor; Kowalski 300 ms altını öneriyor. Boyut büyüdükçe süre uzuyor (Carbon, Fluent, Val Head).",
+      "alternatives": [
+        {
+          "option": "Carbon ölçeği (70, 110, 150, 240, 400, 700)",
+          "why_not": "70 ve 110 başka sistemde yok; 700 üst sınırımızın üstünde."
+        },
+        {
+          "option": "Material'in 16 adımlı ölçeği",
+          "why_not": "450 ms üstündeki adımlar bu iş aracında gereksiz; fazla seçenek tutarsız kullanıma yol açar."
+        },
+        {
+          "option": "Atlassian ölçeği (0, 100, 350, 700)",
+          "why_not": "Çok kaba; 350 ve 700 sınırımızın üstünde."
+        }
+      ],
+      "based_on": [
+        "R03-F02",
+        "R03-F04",
+        "R03-F06",
+        "R03-F08",
+        "R03-F13",
+        "R03-F15"
+      ]
+    },
+    {
+      "id": "R03-K02",
+      "topic": "Eğriler",
+      "recommendation": "Yedi eğri tokenı kullanılsın: ekranda kalan öğe için standard, giren katman için enter, çıkan katman için exit, hover ve basma için micro; vurgulu çift yalnız büyük yüzeylerde; linear yalnız sürekli harekette. Giriş ve hover için ease-in hiç kullanılmasın.",
+      "values": [
+        {
+          "name": "--motion-ease-standard",
+          "value": "cubic-bezier(0.2, 0, 0, 1)",
+          "note": "Ekranda kalan öğenin yer, boyut ve durum değişimi; aç/kapa. Material standard, Atlassian easeOut."
+        },
+        {
+          "name": "--motion-ease-enter",
+          "value": "cubic-bezier(0, 0, 0, 1)",
+          "note": "Ekrana giren katman: menü, diyalog, toast. Material standard decelerate, Fluent curveDecelerateMid."
+        },
+        {
+          "name": "--motion-ease-exit",
+          "value": "cubic-bezier(0.3, 0, 1, 1)",
+          "note": "Ekrandan çıkan katman; her zaman kısa süreyle. Material standard accelerate."
+        },
+        {
+          "name": "--motion-ease-micro",
+          "value": "cubic-bezier(0.25, 0.1, 0.25, 1)",
+          "note": "Hover, basma, renk ve opaklık; panelde yayların CSS karşılığı. Polaris motion-ease, Primer ease."
+        },
+        {
+          "name": "--motion-ease-emphasized-enter",
+          "value": "cubic-bezier(0.05, 0.7, 0.1, 1)",
+          "note": "Yalnız büyük yüzey girişi; paneller konuşulunca kesinleşecek. Material emphasized decelerate."
+        },
+        {
+          "name": "--motion-ease-emphasized-exit",
+          "value": "cubic-bezier(0.3, 0, 0.8, 0.15)",
+          "note": "Büyük yüzey çıkışı. Material emphasized accelerate."
+        },
+        {
+          "name": "--motion-ease-linear",
+          "value": "linear",
+          "note": "Yalnız sürekli hareket: yükleniyor göstergesi, ilerleme çubuğu."
+        }
+      ],
+      "reasons": "standard ve enter eğrileri ikişer sistemde birebir aynı; micro eğrisi iki sistemin etkileşim varsayılanı ve hesabımızda standard yaylara en yakın yayımlanmış eğri. Kowalski giriş için ease-out ister, ease-in'den kaçınır. Carbon'un 'productive' tonu ile Material standard aynı amaca hizmet ediyor: hızlı, göze batmayan hareket.",
+      "alternatives": [
+        {
+          "option": "Carbon productive eğrileri",
+          "why_not": "Geçerli ve sakin, ama değerleri başka sistemde birebir geçmiyor; ortak değerli Material ve Fluent eğrileri tercih edildi."
+        },
+        {
+          "option": "Carbon expressive eğrileri",
+          "why_not": "Carbon ifade eğrilerini coşkulu ve canlı hareket için tanımlıyor; akademik araç tonuna uymuyor."
+        },
+        {
+          "option": "Primer easeOut cubic-bezier(0.3, 0.8, 0.6, 1)",
+          "why_not": "Tek sistemde geçiyor ve hesabımızda yaylara uzak: efekt yaylarında en iyi durumda yüzde 7.44 sapma, uzamsal yaylarda ilk üçe bile girmiyor."
+        }
+      ],
+      "based_on": [
+        "R03-F01",
+        "R03-F02",
+        "R03-F05",
+        "R03-F06",
+        "R03-F07",
+        "R03-F08",
+        "R03-F15",
+        "R03-F24"
+      ]
+    },
+    {
+      "id": "R03-K03",
+      "topic": "Yay presetleri (uygulama, Reanimated 4)",
+      "recommendation": "Uygulamada konum ve boyut değişimleri dört yayla yapılsın; değerler Material 3 standard şemasından, Reanimated fizik moduna kütle 1 ile çevrilerek alınsın. Expressive şema ve sıçramalı yaylar kullanılmasın.",
+      "values": [
+        {
+          "name": "spring-effects",
+          "value": "withSpring(v, { mass: 1, stiffness: 1600, damping: 80 })",
+          "note": "Opaklık, renk, gölge; aşmasız; yüzde 1'e 166 ms. Kaynak: standard default effects 1.0 / 1600."
+        },
+        {
+          "name": "spring-fast",
+          "value": "withSpring(v, { mass: 1, stiffness: 1400, damping: 67.35 })",
+          "note": "Küçük öğe: anahtar topuzu, onay işareti, basmayı bırakma; aşma yüzde 0.15; yüzde 1'e 137 ms. Kaynak: standard fast spatial 0.9 / 1400."
+        },
+        {
+          "name": "spring-default",
+          "value": "withSpring(v, { mass: 1, stiffness: 700, damping: 47.62 })",
+          "note": "Orta yüzey: menü, kart, alt sayfanın ara konumu; yüzde 1'e 194 ms. Kaynak: standard default spatial 0.9 / 700."
+        },
+        {
+          "name": "spring-slow",
+          "value": "withSpring(v, { mass: 1, stiffness: 300, damping: 31.18 })",
+          "note": "Büyük yüzey: tam boy alt sayfa, yan panel, ekran; yüzde 1'e 296 ms. Kaynak: standard slow spatial 0.9 / 300."
+        },
+        {
+          "name": "jest bırakma",
+          "value": "velocity: jestin bırakma anındaki hızı",
+          "note": "Alt sayfa sürüklenip bırakılınca hız yaya aktarılır."
+        },
+        {
+          "name": "reduceMotion",
+          "value": "ReduceMotion.System",
+          "note": "Reanimated varsayılanı; değiştirilmez."
+        }
+      ],
+      "reasons": "Material standard şeması 'utilitarian UI elements and recurring interactions' için tanımlı; 0.9 sönüm oranında aşma yüzde 0.15 ile gözle görülmez, hareket sakin ve kesin görünür. Apple da emin olunmadığında sıçramasız yay öneriyor ve yayların kesilince hızı koruduğunu söylüyor. damping değerleri 2 × 0.9 × karekök(sertlik) formülüyle springs.js tarafından hesaplandı.",
+      "alternatives": [
+        {
+          "option": "Reanimated varsayılan yayı (mass 4, stiffness 900, damping 120)",
+          "why_not": "Kritik sönümlü ama yüzde 1'e 443 ms'de oturuyor; bütçemizden yavaş."
+        },
+        {
+          "option": "Material expressive yayları",
+          "why_not": "Hızlı uzamsal yayda yüzde 9.48 aşma; oyunbaz, akademik tona uymuyor."
+        },
+        {
+          "option": "Apple snappy ve bouncy",
+          "why_not": "0.5 saniyelik algısal süre ve yüzde 0.63 ile yüzde 4.60 aşma; bizim kısa sürelerimize göre yavaş ve hareketli."
+        },
+        {
+          "option": "Süre tabanlı mod (duration, dampingRatio)",
+          "why_not": "duration algısal, gerçek süre 1.5 katı; tokenlarla eşleşmesi belirsiz, fizik modu birebir çevrilebiliyor."
+        }
+      ],
+      "based_on": [
+        "R03-F03",
+        "R03-F09",
+        "R03-F10",
+        "R03-F11",
+        "R03-F22",
+        "R03-F24"
+      ]
+    },
+    {
+      "id": "R03-K04",
+      "topic": "Giriş ve çıkış çiftleri",
+      "recommendation": "Her açılan katman için çıkış girişten kısa olsun ve hızlanan eğriyle bitsin; açılış yavaşlayan eğriyle gelsin.",
+      "values": [
+        {
+          "name": "tooltip",
+          "value": "giriş 150ms --motion-ease-enter; ardışık tooltip 0ms",
+          "note": "İlk gösterim gecikmeli; gecikme süresi kaynaklarda sayıyla verilmedi."
+        },
+        {
+          "name": "menü, açılır liste, popover",
+          "value": "giriş 200ms --motion-ease-enter; çıkış 150ms --motion-ease-exit"
+        },
+        {
+          "name": "diyalog, toast",
+          "value": "giriş 250ms --motion-ease-enter; çıkış 200ms --motion-ease-exit"
+        },
+        {
+          "name": "yan panel, alt sayfa, ekran",
+          "value": "giriş 300ms (uygulamada spring-slow); çıkış 200ms --motion-ease-exit",
+          "note": "Paneller kurulurken ayrıca konuşulacak; şimdilik yer tutucu."
+        },
+        {
+          "name": "çıkış / giriş oranı",
+          "value": "0.67 ile 0.80",
+          "note": "NN/g örneği 0.67 ile 0.83 (springs.js)."
+        }
+      ],
+      "reasons": "NN/g: açılış 300 ms, kapanış 200 ya da 250 ms. Primer: giriş 300 ms yavaşlayan, çıkış 200 ms hızlanan. Kullanıcı kapattığı şeyi izlemek istemez; Kowalski 180 ms menünün 400 ms olandan daha hızlı tepki verdiğini gösteriyor.",
+      "alternatives": [
+        {
+          "option": "Simetrik süre (giriş = çıkış)",
+          "why_not": "Kapanış gereksiz uzun hissettirir."
+        },
+        {
+          "option": "Tüm girişler 300 ms (Primer)",
+          "why_not": "Küçük menüler için uzun; boyuta göre süre ilkesine aykırı."
+        }
+      ],
+      "based_on": [
+        "R03-F06",
+        "R03-F13",
+        "R03-F16",
+        "R03-F17"
+      ]
+    },
+    {
+      "id": "R03-K05",
+      "topic": "Sık kullanım kuralı ve kesilebilirlik",
+      "recommendation": "Her etkileşimin bir durum geçişi olsun, ama miktarı sıklığa göre ayarlansın: sık işlemde yalnız kısa renk geçişi, seyrek ve büyük değişimde hareket, klavyede hiç animasyon yok. Hiçbir animasyon girdiyi beklettirmesin.",
+      "values": [
+        {
+          "name": "klavye kısayolu, ok tuşu gezinmesi, odak halkası",
+          "value": "0ms"
+        },
+        {
+          "name": "hover (panel)",
+          "value": "100ms --motion-ease-micro; yalnız color, background-color, border-color",
+          "note": "Hover'da translate ya da scale yok."
+        },
+        {
+          "name": "sık listeler (yoklama, onay listesi) satır durumu",
+          "value": "100ms ile 150ms; yalnız renk ve opaklık",
+          "note": "Sıralama, filtreleme ve sayfalamada animasyon yok."
+        },
+        {
+          "name": "girdi engelleme",
+          "value": "yok",
+          "note": "Panelde durum değişimleri keyframes ile değil transition ile; uygulamada yayla."
+        }
+      ],
+      "reasons": "Apple HIG sık etkileşime hareket eklememeyi ve hareketin kesilebilmesini, Kowalski klavye işlemlerinin hiç canlandırılmamasını, NN/g sıklık arttıkça animasyonun kısalmasını istiyor; Rauno sık işlemde hızlandırılmış hareketin bile bekletiyor gibi hissettirdiğini anlatıyor. Sahibin 'her şey smooth olsun' isteği renk geçişiyle karşılanır, iş akışı yavaşlamaz.",
+      "alternatives": [
+        {
+          "option": "Odak halkasını 100 ms canlandırmak (Primer)",
+          "why_not": "Panel yalnız klavyeyle kullanılabilmeli; odak her tuşta yer değiştirir, gecikme birikir."
+        },
+        {
+          "option": "Hover'ı tümden kaldırmak (Kowalski)",
+          "why_not": "Sahibin açık isteğine ters; 100 ms renk geçişi ara çözüm."
+        }
+      ],
+      "based_on": [
+        "R03-F12",
+        "R03-F13",
+        "R03-F15",
+        "R03-F16",
+        "R03-F18"
+      ]
+    },
+    {
+      "id": "R03-K06",
+      "topic": "Basma geri bildirimi ve açılış biçimi",
+      "recommendation": "Butonlar basılınca hafifçe küçülsün; açılan katmanlar hiçlikten değil, tetikleyicisinden ve hafif küçük ölçekten büyüsün; yalnız transform ve opacity canlandırılsın.",
+      "values": [
+        {
+          "name": "buton :active (panel) ve basılı durum (uygulama)",
+          "value": "transform: scale(0.97); 100ms --motion-ease-micro",
+          "note": "Bırakınca uygulamada spring-fast, panelde 150ms --motion-ease-micro."
+        },
+        {
+          "name": "açılan katmanın başlangıcı",
+          "value": "opacity: 0; transform: scale(0.93)",
+          "note": "Asla scale(0); 0.9 altına inilmez."
+        },
+        {
+          "name": "transform-origin",
+          "value": "var(--radix-dropdown-menu-content-transform-origin) ya da var(--transform-origin)",
+          "note": "Kullanılacak bileşen kütüphanesine göre (Radix ya da Base UI); katman tetikleyiciden büyür."
+        },
+        {
+          "name": "canlandırılan özellikler",
+          "value": "transform, opacity",
+          "note": "width, height, padding, margin canlandırılmaz."
+        }
+      ],
+      "reasons": "Değerler Kowalski'den; transform ve opacity yalnız birleştirme adımını tetikliyor, bu da Türkiye'de yaygın orta ve alt segment Android telefonlarda akıcılık için önemli. Liste satırı ve kart gibi büyük yüzeylerde ölçek yerine renk değişimi yeterli.",
+      "alternatives": [
+        {
+          "option": "Geçişte blur(2px)",
+          "why_not": "Keskin, köşeli görünümü yumuşatır; Kowalski de yalnız son çare diyor."
+        },
+        {
+          "option": "Hover'da yukarı kalkma (translateY) ya da büyüme",
+          "why_not": "Sık kullanımda dikkat dağıtır ve sık kullanım kuralına aykırı."
+        }
+      ],
+      "based_on": [
+        "R03-F15",
+        "R03-F17"
+      ]
+    },
+    {
+      "id": "R03-K07",
+      "topic": "Kademeli giriş (stagger)",
+      "recommendation": "Liste ve tablolarda kademeli giriş yalnız ekranın ilk açılışında, öğe başına 20 ms ile yapılsın ve toplam 500 ms'yi geçmesin; sınırı aşan öğeler birlikte görünsün.",
+      "values": [
+        {
+          "name": "--motion-stagger-step",
+          "value": "20ms"
+        },
+        {
+          "name": "toplam süre sınırı",
+          "value": "500ms"
+        },
+        {
+          "name": "en çok kademeli öğe",
+          "value": "200ms öğede 16, 250ms öğede 13",
+          "note": "springs.js hesabı."
+        },
+        {
+          "name": "kapsam",
+          "value": "yalnız ilk açılış",
+          "note": "Yenileme, filtreleme, sıralama ve sayfalamada kademe yok."
+        }
+      ],
+      "reasons": "Carbon 20 ms kademenin bilişsel yükü azalttığını ve toplamın 500 ms içinde kalmasını söylüyor. Aynı ekranı günde defalarca açan öğretim üyesi için tekrar eden kademe, sık kullanım kuralına göre gereksiz bekleme olur.",
+      "alternatives": [
+        {
+          "option": "Daha büyük kademe adımı",
+          "why_not": "Kaynaklı bir değer bulunamadı ve liste geç dolar."
+        },
+        {
+          "option": "Hiç kademe yok",
+          "why_not": "Kabul edilebilir; yalnız ilk açılıştaki okuma sırası yönlendirmesi kaybolur."
+        }
+      ],
+      "based_on": [
+        "R03-F12",
+        "R03-F13",
+        "R03-F25"
+      ]
+    },
+    {
+      "id": "R03-K08",
+      "topic": "Web panelinde yay karşılığı ve linear()",
+      "recommendation": "Panelde temel yol cubic-bezier ile CSS geçişi olsun; uygulamadaki yayların karşılığı aynı süre tokenlarıyla 'ease' eğrisi olsun. Büyük paneller için isteğe bağlı olarak tek bir linear() yay eğrisi, @supports ile ve cubic-bezier yedeğiyle kullanılabilir.",
+      "values": [
+        {
+          "name": "spring-fast karşılığı",
+          "value": "150ms cubic-bezier(0.25, 0.1, 0.25, 1)",
+          "note": "143 ms'de en çok yüzde 1.53 sapma; token 150 ms'ye yuvarlandı."
+        },
+        {
+          "name": "spring-default karşılığı",
+          "value": "200ms cubic-bezier(0.25, 0.1, 0.25, 1)",
+          "note": "203 ms'de en çok yüzde 1.54 sapma."
+        },
+        {
+          "name": "spring-slow karşılığı",
+          "value": "300ms cubic-bezier(0.25, 0.1, 0.25, 1)",
+          "note": "310 ms'de en çok yüzde 1.53 sapma; token 300 ms'ye yuvarlandı."
+        },
+        {
+          "name": "--motion-ease-spring (isteğe bağlı)",
+          "value": "linear(0, 0.02, 0.07, 0.138, 0.217, 0.3, 0.383, 0.462, 0.536, 0.604, 0.665, 0.719, 0.767, 0.808, 0.843, 0.873, 0.898, 0.919, 0.936, 0.95, 0.962, 0.971, 0.979, 0.985, 0.989, 0.993, 0.995, 0.997, 0.999, 1, 1.001, 1.001, 1.001, 1.001, 1.002, 1.001, 1.001, 1.001, 1.001, 1.001, 1)",
+          "note": "springs.js ile 0.9 sönüm oranlı yaydan 41 noktada örneklendi; üç uzamsal yayın biçimi aynı, yalnız süre değişir."
+        },
+        {
+          "name": "--motion-ease-spring süreleri",
+          "value": "fast 230ms, default 320ms, slow 490ms",
+          "note": "Yüzde 0.1 oturma süresine göre; algılanan süre yüzde 1 oturmaya yakın (137, 194, 296 ms), kuyruk görünmez."
+        },
+        {
+          "name": "yedek",
+          "value": "@supports (transition-timing-function: linear(0, 1))",
+          "note": "Desteklemeyen tarayıcıda cubic-bezier karşılığı kalır."
+        }
+      ],
+      "reasons": "Hesabımızda CSS ease, standard uzamsal yayları yaklaşık yüzde 1.5 sapmayla taklit ediyor; böylece telefon ve panel aynı dili konuşuyor ve panel ek kütüphane istemiyor. linear() Aralık 2023'ten beri tüm ana tarayıcılarda; Comeau 40'tan fazla noktanın gerektiğini gösteriyor. CSS geçişi kesilince hızı korumuyor, ama kısa sürelerde bu fark küçük.",
+      "alternatives": [
+        {
+          "option": "Panelde JavaScript yay kütüphanesi",
+          "why_not": "Hız korumalı kesilme sağlar ama yeni bağımlılık ekler; kısa sürelerde kazanç küçük."
+        },
+        {
+          "option": "Yalnız linear() kullanmak",
+          "why_not": "Safari 17.2 öncesinde yok ve 490 ms gibi uzun CSS süreleri transitionend olayını geciktirir."
+        }
+      ],
+      "based_on": [
+        "R03-F20",
+        "R03-F21",
+        "R03-F23",
+        "R03-F24"
+      ]
+    },
+    {
+      "id": "R03-K09",
+      "topic": "Azaltılmış hareket",
+      "recommendation": "Telefonun ve tarayıcının azaltılmış hareket ayarı izlensin: konum ve ölçek hareketleri kapansın, renk ve opaklık geçişleri kısa kalsın; hiçbir bilgi yalnız hareketle verilmesin.",
+      "values": [
+        {
+          "name": "uygulama",
+          "value": "reduceMotion: ReduceMotion.System",
+          "note": "Reanimated varsayılanı; her animasyonda korunur."
+        },
+        {
+          "name": "panel",
+          "value": "@media (prefers-reduced-motion: reduce)",
+          "note": "transform hareketleri kapanır; renk ve opaklık en çok 150ms ya da 0ms."
+        },
+        {
+          "name": "bilgi",
+          "value": "durum metin, renk ve simgeyle de görünür"
+        }
+      ],
+      "reasons": "Apple 'Make motion optional' diyor ve hareketin önemli bilginin tek yolu olmamasını istiyor; Kowalski prefers-reduced-motion'a uyulmasını söylüyor. plan.html'deki 'uygulama telefon ve tarayıcı ayarlarını izler, uygulama içi görünüm ayarı yok' kararıyla uyumlu.",
+      "alternatives": [
+        {
+          "option": "Uygulama içi hareket ayarı",
+          "why_not": "plan.html uygulama içi görünüm ayarı istemiyor; sistem ayarı yeterli."
+        }
+      ],
+      "based_on": [
+        "R03-F12",
+        "R03-F15",
+        "R03-F22"
+      ]
+    },
+    {
+      "id": "R03-K10",
+      "topic": "Tek token kaynağı ve uygulama kuralları",
+      "recommendation": "Süre, eğri ve yay değerleri tek bir dosyada tutulsun; panel için CSS değişkenleri, uygulama için TypeScript sabitleri bu dosyadan üretilsin. withSpring her zaman açık fizik ayarıyla çağrılsın.",
+      "values": [
+        {
+          "name": "token kaynağı",
+          "value": "tek JSON dosyası: panel için CSS custom properties, uygulama için TypeScript sabitleri"
+        },
+        {
+          "name": "Reanimated CSS geçişi",
+          "value": "transitionTimingFunction: cubicBezier(0.2, 0, 0, 1)",
+          "note": "Uygulamadaki basit renk ve opaklık geçişlerinde aynı eğri tokenları."
+        },
+        {
+          "name": "withSpring çağrısı",
+          "value": "her zaman { mass, stiffness, damping } verilir",
+          "note": "Varsayılan ve süre tabanlı mod kullanılmaz."
+        },
+        {
+          "name": "uygulamada konum ve boyut",
+          "value": "yay (spring-fast, spring-default, spring-slow)",
+          "note": "Kesilince hız korunur."
+        },
+        {
+          "name": "uygulamada renk ve opaklık",
+          "value": "spring-effects ya da süre tokenı ile CSS geçişi"
+        }
+      ],
+      "reasons": "Reanimated 4 CSS geçişleri cubicBezier() ve linear() aldığı için aynı eğri değerleri iki platformda geçerli; tek kaynak zamanla ayrışmayı önler. Yaylar kesilince hızı koruyor (Apple), CSS geçişi korumuyor (Comeau); bu yüzden uygulamada hareket yayla yapılır.",
+      "alternatives": [
+        {
+          "option": "İki platformda elle yazılmış ayrı değerler",
+          "why_not": "Zamanla ayrışır, tutarlılık ölçülemez."
+        },
+        {
+          "option": "Uygulamada her şeyi süre ve eğriyle yapmak",
+          "why_not": "Jest sonrasında ve kesilmede hız kaybolur, hareket kopuk görünür."
+        }
+      ],
+      "based_on": [
+        "R03-F10",
+        "R03-F20",
+        "R03-F22",
+        "R03-F23",
+        "R03-F24"
+      ]
+    },
+    {
+      "id": "R03-K11",
+      "topic": "Doğrulama kapısı",
+      "recommendation": "Token dosyası için hızlı ve deterministik bir kapı testi yazılsın; süre sınırı, giriş-çıkış oranı, yay aşması ve yasak eğriler her committe kontrol edilsin.",
+      "values": [
+        {
+          "name": "en uzun süre tokenı",
+          "value": "400ms"
+        },
+        {
+          "name": "yay oturma süresi (yüzde 1)",
+          "value": "300ms veya altı",
+          "note": "springs.js ile hesaplanır; spring-slow 296 ms."
+        },
+        {
+          "name": "yay aşması",
+          "value": "yüzde 0.15 veya altı"
+        },
+        {
+          "name": "çıkış / giriş oranı",
+          "value": "0.83 veya altı"
+        },
+        {
+          "name": "giriş ve hover eğrisi",
+          "value": "ease-in ve accelerate eğrileri yasak"
+        }
+      ],
+      "reasons": "Değerler yazılı kalırsa zamanla kayar; kapı testi sınırları ölçülebilir kılar. Sınırlar NN/g (400 ms, giriş-çıkış farkı), Kowalski (ease-in yok) ve hesabımızdan (aşma, oturma) geliyor.",
+      "alternatives": [
+        {
+          "option": "Gözle kontrol",
+          "why_not": "Ölçülemez ve tekrarlanamaz."
+        }
+      ],
+      "based_on": [
+        "R03-F06",
+        "R03-F13",
+        "R03-F15",
+        "R03-F24"
+      ]
+    }
+  ],
+  "signals": [],
+  "benchmarks": [],
+  "open_questions": [
+    "Öğretmenin QR ekranında kod yenilenirken geçiş animasyonu olmalı mı? Çapraz geçiş (crossfade) sırasında iki kod üst üste bineceği için tarama bozulabilir; anlık değişim ile kısa solma expo-camera ve gerçek telefonlarla denenmeli.",
+    "Yan panel, alt sayfa ve diyalog animasyonları sahibin dediği gibi paneller kurulurken ayrıca konuşulacak; spring-slow, 300 ms ve vurgulu eğri çifti şimdilik yer tutucu.",
+    "Reanimated ReduceMotion.System, Android'deki 'Animasyonları kaldır' ve iOS'taki 'Hareketi Azalt' ayarında beklendiği gibi davranıyor mu; gerçek cihazda doğrulanmalı.",
+    "Orta ve alt segment Android telefonlarda yay animasyonlarının kare kaybı ölçülmedi; ölçümün hangi cihazla yapılacağı belirlenmeli.",
+    "Sahibin 'her şey animasyonlu' isteği ile sık kullanım kuralı çatışıyor: panelde hover'ın 100 ms renk geçişiyle sınırlı kalmasını sahip onaylamalı.",
+    "Projeksiyon sayfasında (yalnız QR) hiç hareket olmamalı mı; QR'ın yenilenme zamanını gösteren bir geri sayım çubuğu olacaksa linear eğri yeterli mi?",
+    "İlk tooltip için gecikme süresi kaynaklarda sayıyla bulunamadı; kullanılacak bileşen kütüphanesinin varsayılanı incelenmeli."
+  ]
+}

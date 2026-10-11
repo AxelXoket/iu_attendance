@@ -1,0 +1,104 @@
+{
+ "id": "D03",
+ "instructions": [
+  {
+   "refs": [
+    "I011",
+    "I096",
+    "A3"
+   ],
+   "do": "D03-A07'yi kapat. Dış yüz (contracts.json güncellendi): denemeListesiniKur(tx, subeId, ogrenciNo, adSoyad): Promise<ListeSatiri>, ogrencininSatirlari(tx, ogrenciNo, s?: { donemIdler? }) (pasifler dahil), muafIsaretle(tx, satirId, muaf, b: { an; yapan }) sonuç birliğiyle (D08 kendi koduna çevirir), listeKovaAnahtari(kovaNo) (packages/core/src/listeler/kova.ts). PATCH /v1/listeler/satirlar/{satirId} gövdesinde muaf yoktur (katı şema, 400); muafı yalnız D08'in ucu muafIsaretle ile yazar. D03 kendi eklentisinde D02.listeKaynagiKaydet({ etkinSatirlar }) ile kaydolur. denemeListesiniKur'u D01'in inceleme_hesaplari_kurulumu işi D02.denemeDersiniKur'un döndürdüğü subeId ile çağırır; D02.denemeDersi'ne gönderme yapan cümleleri kaldır."
+  },
+  {
+   "refs": [
+    "I012",
+    "I001",
+    "I047"
+   ],
+   "do": "D03-A08'i kapat. Öğrenci kimliği (I001, contracts.json ortak kural): ogrenci_id hesap (kisiler) kimliğidir ve yalnız hesaptan gelen satırlarda durur; ders içindeki öğrenci (ders, numara) ile anılır ve aynı numaranın derste birden çok liste satırı tek öğrencidir; yolda, iş verisinde ve logda numara yoktur, liste satırı kimliği (satirId) taşınır ve numara D03.satirGetir ile çözülür; hesap ile numara arasında D01.ogrenciHesabiGetir(tx, { kisiIdler }) ve ({ numaralar }) toplu çağrısı kullanılır, silinmiş hesabın kayıtları da sayılır. D03 için: ListeDegisikligi olayında değişen her satır satirId ile ogrenciNo'yu birlikte taşır; satirGetir numarayı çözen tek yoldur."
+  },
+  {
+   "refs": [
+    "I013",
+    "I097",
+    "I010",
+    "I094"
+   ],
+   "do": "D03-A09'u kapat: öğrenci kapsam kaynağını ('ogrenci_liste_kapsami', KapsamKaynagi rol OGRENCI) D03 kaydeder; pasif liste satırının şubesi kapsamda kalır; kapsam.dersler ve kapsam.birimler D02.subeGetir ve dersGetir ile doldurulur; degistiMi uyelik_surumu ile. D03 teyidi bilmez: D06 imleçteki hesap özetine teyit durumunu katar, teyit değişince baştan indirme olur ve ad o indirmede iner; teyitsiz öğrenciye kendi satırının adı gönderilmez (Kapsam.teyitli false). D02'ye yalnız etkinSatirlar verilir; pasiflesenSatirlar yoktur."
+  },
+  {
+   "refs": [
+    "I014",
+    "I035",
+    "I010"
+   ],
+   "do": "D03-A10'u kapat. Danışma kilidi katmanları (contracts.json ortak kural): 1 dogrulama:liste, devam:hesap, is-kuyrugu:eposta, isletim:*; 2 listeler:kova, dogrulama:teyit; 3 yoklama:cift, projeksiyon:*, esitleme:kurulum_siniri, duzeltmeler:zincir; 4 dogrulama:sayac; 5 dogrulama:isaret. Tek genel sıra vardır, önce katman sonra anahtar metni: D12.danismaKilidi(tx, anahtarlar) bir çağrıdaki anahtarları bu sırayla alır; bir işlem birden çok kez çağırabilir ama yeni her anahtar işlemin tuttuğu bütün anahtarlardan sonra gelir; işlemin zaten tuttuğu anahtarı yeniden istemek işlemsizdir; sırada geride kalan yeni anahtar yalnız D12.danismaKilidiDene(tx, anahtar) ile alınır (beklemez, false dönerse çağıran TEKRAR_DENE döner ya da işi yeniden dener). Çok öğeli işlem öğelerin anahtarlarını saf anahtar işlevleriyle (D05 yoklamaCiftAnahtari, D07 kararAnahtarlari, dogrulamaTeyitAnahtari, dogrulamaListeAnahtari, D03 listeKovaAnahtari, D11 qrKilitAnahtarlari) baştan toplar ve tek çağrıda alır. Anahtar biçimi string ya da { anahtar, kip: 'paylasimli' }. Elle pg_advisory_xact_lock yazılmaz. Sıra: danışma anahtarları, satırlar, iş kuyruğu (D14.isGonder) ve öğrenci sürümü (D06.ogrenciDurumuDegisti), en son genel sayaç (D06.surumAl, bir kez). D03 liste yazması sırası: (1) değişen bütün şubelerin 'dogrulama:liste:<subeId>' anahtarları (D07'nin dogrulamaListeAnahtari(subeId) işleviyle, katman 1, dışlayıcı) tek çağrıda; (2) dersin sube_listeleri satırları kimlik sırasıyla FOR UPDATE; (3) D02 şube ve ders satırları subeGetir/dersGetir(..., { kilitle: 'paylasimli' }) ile FOR SHARE; (4) üyeliği ya da adı değişen numaraların kova anahtarları 'listeler:kova:<kovaNo>' (listeKovaAnahtari, katman 2, dışlayıcı) tek çağrıda; (5) satır yazımları; (6) dinleyiciler ESLESTIRME, KARAR, HESAP; (7) en son D06.surumAl. İki tam sayılı pg_advisory_xact_lock(3, kova) kalkar, kova kilidi D12.danismaKilidi metin anahtarıyla alınır. numaraIleEslestir ve uyelikDenetle'nin ret yolu kovayı { anahtar, kip: 'paylasimli' } ile ister (çağıran tutuyorsa işlemsiz). Bir D03 yazmasının içinde kova kümesi dışındaki numarayla numaraIleEslestir iç hata kalır. D12-B08'in bir kez yeniden deneme kuralı yalnız son güvencedir."
+  },
+  {
+   "refs": [
+    "I015",
+    "I098"
+   ],
+   "do": "D03-A11'i kapat; öneri değişti. Uyarlayıcılar: D01 ESLESTIRME, değişikliğin ayrık her subeId'si için bekleyenKayitlariEslestir(tx, subeId, { ogrenciNolari }) yalnız o değişikliğin numaralarıyla; D07 KARAR { ad: 'dogrulama', basamak: 'KARAR', isle } kararı iş kuyruğuna koymaz, liste işleminin içinde D07.yenidenDegerlendir(tx, { dersId, subeIdleri, ogrenciNolari }, 'LISTE_DEGISTI') ile verir (plan.html#kararlar-supheli-kayit: karar ilgili olayın işleminde); D08 HESAP devamHesaplaIsiKoy(tx, dersId, null, 'LISTE', { tur: 'LISTE_SATIRI', id: satirId, donemId }). Bölümdeki 'karar ve devam iş kuyruğuyla' ifadesi 'karar aynı işlemde, devam iş kuyruğuyla' olur."
+  },
+  {
+   "refs": [
+    "I035"
+   ],
+   "do": "uyelikDenetle açıklamasındaki 'öneri' sözcüğünü sözleşmeyle değiştir: an'ı D07 seçer; kaydın hesaplanan saati (SaatSonucu.aralik üst ucu, pay öğrenci lehine), saat kurulamadıysa oturum başlangıcı; ulaşma anı hiç."
+  },
+  {
+   "refs": [
+    "I038",
+    "I049",
+    "I064",
+    "I025",
+    "I114"
+   ],
+   "do": "Saklama: yalnız D12 kataloğundaki 'listeler.donem_verisi' sınıfı için tek işleyici kaydet (saklamaIsleyicisiKaydet); öneksiz ya da ince sınıf adı (ör. 'yoklama_kayitlari', 'hesap_silme', 'aksis_ozet_anliklari', '<modül>.<tablo>') ve kayıtta oncekiSiniflar listesi yoktur, sıra kataloğun oncesinde listesinden gelir. İşleyici yoklama_saklama girişiyle açılan işlemde yalnız kendi tablolarında SELECT, UPDATE ve DELETE yapar; testi D12.saklamaIsleyicisiniCalistir ile yazılır. İşleyici liste_satirlari'nda numara ve adı anonimleştirir. devam, duzeltmeler ve raporlar sınıfları katalogda listelerden önce durur ve süreleri listelerinkinden uzun olamaz (D12 açılışta denetler); D03 bunun için oncekiSiniflar yazmaz. Muaf (ders, numara) başına tek değerdir ve aynı dersteki bütün satırlara yazılır: şube değişiminde ya da yeniden eklemede yeni satır aynı değeri alır."
+  },
+  {
+   "refs": [
+    "I039",
+    "A3"
+   ],
+   "do": "muafIsaretle liste satırı kimliğiyle (satirId) çağrılır; D08'in ucu PUT /v1/devam/dersler/{dersId}/ogrenciler/{satirId}/muaf'tır."
+  },
+  {
+   "refs": [
+    "I099"
+   ],
+   "do": "Pasif satırların GET /v1/listeler/subeler/{subeId} ucunda bolum=PASIF, imlec ve adet ile sayfalanması kalır; resolved_gaps'e mimar onayıyla yaz."
+  },
+  {
+   "refs": [
+    "I095"
+   ],
+   "do": "Bilgi notu: D03 tarafında ayrı iş yok; D03-A07 ile D03-A11 bu dosyadaki talimatlarla kapanır."
+  },
+  {
+   "refs": [
+    "I009"
+   ],
+   "do": "D02.dersYetkisi(tx, kimlik: Kimlik, dersId): Promise<'sahip' | 'yonetici' | null> (yoneticiKapsami parametresi yok; yönetici kapsamı kimlik.roller'dan okunur). Çağırdığın her yerde üç parametreyle çağır, YoneticiKapsami ya da personelRolleri'nden kurulan nesne kalkar; durum, tür ve neden değerlerini D02'nin sözleşme sabitlerinden (OTURUM_TURLERI, OTURUM_DURUMLARI, IPTAL_NEDENLERI) içe aktar, yeniden yazma."
+  },
+  {
+   "refs": [
+    "I045"
+   ],
+   "do": "Denetim (I045): dersId taşıyan her denetim olayı birimId de taşır; olay türleri sözleşme dosyasında LISTELER_DENETIM_OLAYLARI listesindedir ve D09.denetimOlaylariniKaydet ile kaydolur."
+  },
+  {
+   "refs": [
+    "I070"
+   ],
+   "do": "Birleşim (I070): index.ts listelerEklentisi adlı Fastify eklentisini ve EklentiTemelSecenekleri'ni ({ surec }) genişleten seçenek tipini dışa verir (spec.exports'a 'listelerEklentisi' adıyla); eklenti altyapıyı seçenekten alır, kayıt sırasında veritabanına dokunmaz, zamanlayıcıyı yalnız surec 'api' iken kurar, dinleyici kayıtlarını her süreçte yapar; rotalar yalnız D13.rotalariKaydet ile; setErrorHandler ve setNotFoundHandler yok; hata kodu öneki modül adının büyük harfi; kaynak düzeyi ret 404 <MODÜL>_BULUNAMADI, rota düzeyi rol reddi API_ROL_YETKISIZ."
+  },
+  {
+   "refs": [
+    "A1"
+   ],
+   "do": "Göç klasörü (A1): spec'te ve bölümde göç yerini contracts.json migration_dir ile aynı yaz: apps/server/migrations/<14 haneli UTC>_listeler_<açıklama>/ (migration.sql ve snapshot.json; dosya haritasında apps/server/migrations/??????????????_listeler_* globu bu modülündür). Göç yalnız bu modülün tablolarına dokunur; göç dosyaları spec.files'a değil iş paketine yazılır; klasör kuralı ve CI göç denetimi D12'nindir. Paralel paketler birleşmeden önce ana dala yeniden dayanır, araya göç girdiyse kendi klasörünü silip drizzle-kit generate ile yeniden üretir."
+  }
+ ]
+}

@@ -1,0 +1,195 @@
+.summary :: D12 veritabanının kendisini ve verinin ömrünü yönetir: PostgreSQL 18 kümesi ve kendi imajı, ayar dosyaları, roller ve şemalar, tek göç klasörünün kuralı ve CI denetimi, bağlantı havuzu ve işlem yardımcısı, nesil okuma, yedek, geri yükleme, saklama süresi işi ve test veritabanı. Alan tablosu tutmaz; yalnız göç defterinin (__drizzle_migrations), geri yükleme kayıtlarının ve saklama kanıtının sahibidir, tek ucu yöneticiye geri yüklemeleri listeler. Başka modül içe aktarmaz: modüller dış yüzünü çağırır ve saklama işleyicilerini ona kaydeder, bağlantı ayarlarını ve saati bileşim kökleri verir. Yedek ve geri yükleme işleri ana makinedeki zamanlayıcıyla pg-boss dışında çalışır, sonucunu D15'in okuduğu durum dosyasına yazar. Saklama süresi İÜ'den gelene kadar hiçbir kayıt silinmez: mekanizma baştan kurulur, süre ayarı boş kalır.
+
+.tables[0].purpose :: Drizzle'ın uygulanan göç defteri; drizzle şemasında durur. Satırı yalnız Drizzle'ın göç çalıştırıcısı yazar (göç servisi, yoklama_goc rolüyle); D12 kodu yalnız okur: semaDurumu imajdaki son göçün özetini burada arar. Test sıfırlaması dokunmaz; ad kuralının tek istisnasıdır (kütüphane tablosu).
+
+.tables[0].constraints[2] :: Yetki: yoklama_api ve yoklama_isci yalnız SELECT (hazırlık denetimi); yazma yalnız yoklama_goc.
+
+.tables[1].purpose :: Her gerçek geri yüklemenin ve nesli değiştiren büyük sürüm geçişinin kaydı: yöntem, gerekçe kodu, dönülen an, kayıp pencerenin sonu, önceki ve yeni nesil, süre. Satırı geri yükleme komutu (cli/geri-yukleme, yoklama_goc) dönüş doğrulandıktan sonra yazar; yönetici ucu listeler. Geri yükleme denemeleri buraya yazılmaz.
+
+.tables[1].constraints[7] :: Yetki: yoklama_api ve yoklama_isci yalnız SELECT; yazma yalnız yoklama_goc. Tablo yorumu @yalniz-ekleme.
+
+.tables[2].name :: saklama_islemleri
+
+.tables[2].purpose :: Saklama süresi işinin kanıtı: hangi veri sınıfında, hangi sınırla, hangi dönemde, kaç satır silindi ya da anonimleştirildi. Satırı yalnız saklama_suresi_isi yazar, işleyicinin partisiyle aynı işlemde ve yoklama_saklama rolüyle. Denetim kaydı da saklama kapsamında silinebildiğinden kanıt ayrı tabloda durur ve hiç silinmez.
+
+.tables[2].columns[2].note :: '<modül>.<sınıf>' biçiminde kayıtlı veri sınıfı (ör. yoklama.yoklama_kayitlari); CHECK biçim.
+
+.tables[2].columns[5].name :: saklama_suresi_ay
+
+.tables[2].columns[5].note :: O gece uygulanan süre (ay), saklama/sureler.ts'teki değer.
+
+.tables[2].columns[6].note :: Saklama başlangıcı bu andan önce olan veri işlendi; işin saatinden süre çıkarılarak hesaplanır.
+
+.tables[2].indexes[0] :: saklama_islemleri_id_pk: birincil anahtar dizini.
+
+.tables[2].indexes[1] :: saklama_islemleri_is_kimligi_veri_sinifi_parti_no_uq: tekil; yeniden denemede çift kanıtı önler.
+
+.tables[2].constraints[0] :: saklama_islemleri_id_pk: PRIMARY KEY (id).
+
+.tables[2].constraints[1] :: saklama_islemleri_veri_sinifi_ck: veri_sinifi ~ '^[a-z][a-z0-9_-]*[.][a-z][a-z0-9_]*$'.
+
+.tables[2].constraints[2] :: saklama_islemleri_islem_ck: islem IN ('silme','anonimlestirme','bolum_kaldirma').
+
+.tables[2].constraints[3] :: saklama_islemleri_saklama_suresi_ay_ck: saklama_suresi_ay > 0.
+
+.tables[2].constraints[4] :: saklama_islemleri_parti_no_ck: parti_no >= 1.
+
+.tables[2].constraints[5] :: saklama_islemleri_satir_sayisi_ck: satir_sayisi >= 0.
+
+.tables[2].constraints[6] :: Yetki: yoklama_saklama INSERT ve SELECT; yoklama_api ve yoklama_isci yalnız SELECT; UPDATE ve DELETE kimseye verilmez. Tablo yorumu @yalniz-ekleme.
+
+.jobs[0].name :: saklama_suresi_isi
+
+.jobs[0].does :: saklama/sureler.ts'te süresi yazılı her veri sınıfı için kayıtlı işleyiciyi bağımlılık sırasıyla çalıştırır: bir sınıfa başvuran sınıflar önce işlenir. Her parti ayrı kısa işlemdir: işlem SET LOCAL ROLE yoklama_saklama ile başlar, işleyici en çok 1000 satırı siler ya da anonimleştirir, kanıt satırı aynı işlemde saklama_islemleri'ne yazılır. Süresi yazılı ama işleyicisi kayıtlı olmayan sınıfta iş VERITABANI_SAKLAMA_ISLEYICI_YOK ile düşer ve D15 uyarır. Bir gecede en çok 30 dakika çalışır, kalan ertesi gece o gecenin sınırıyla sürer.
+
+.jobs[1].idempotency :: Bütün makine işleri tek kilitte (flock) sırayla çalışır; döküm adı tarihlidir, aynı gün ikinci çalıştırma yeni restic anlık görüntüsü açar, öncekini bozmaz; 35 günlük saklama kuralı her çalıştırmada aynı sonucu verir.
+
+.state_machines[1].name :: saklama_sinifi (bir gecede bir veri sınıfı)
+
+.state_machines[1].transitions[0].by :: saklama_suresi_isi
+
+.state_machines[1].transitions[1].by :: saklama_suresi_isi
+
+.state_machines[1].transitions[2].by :: saklama_suresi_isi
+
+.state_machines[1].transitions[2].when :: Süre var ama işleyici yok (VERITABANI_SAKLAMA_ISLEYICI_YOK).
+
+.state_machines[1].transitions[3].by :: saklama_suresi_isi
+
+.state_machines[1].transitions[4].by :: saklama_suresi_isi
+
+.state_machines[1].transitions[5].by :: saklama_suresi_isi
+
+.state_machines[1].transitions[6].by :: saklama_suresi_isi
+
+.invariants[7] :: Uygulama rolleri (yoklama_api, yoklama_isci) DDL ve TRUNCATE yapamaz; @yalniz-ekleme yorumlu tablolarda UPDATE ve DELETE yetkileri yoktur.
+
+.invariants[8] :: Satır silen tek yol saklama işinin işlem içinde geçtiği yoklama_saklama rolüdür; bu rolün yetkisi yoklama_isci'ye kendiliğinden geçmez (INHERIT FALSE).
+
+.invariants[16] :: Saklama süresi yazılmamış veri sınıfında hiçbir satır silinmez ya da anonimleştirilmez; her saklama partisi ve kanıt satırı aynı işlemdedir, kanıtsız silme olmaz.
+
+.invariants[17] :: Test veritabanı yayın servisinden ayrıdır (postgres-test, tmpfs); dayanıklılık ayarları yalnız orada kapalıdır; testler yayındaki rollerle bağlanır, sıfırlama ve veri kurucular sahip rolle; işlem geri alma kullanılmaz.
+
+.exports[0].signature :: veritabaniKur(ayar: VeritabaniAyari): Veritabani; interface VeritabaniAyari { adres: string; parola: string; rol: 'yoklama_api' | 'yoklama_isci' | 'yoklama_goc'; havuzBoyutu: number; havuzBeklemeMs?: number; uygulamaAdi: string; gocKlasoru?: string } interface Veritabani { islem: IslemYardimcisi; semaDurumu(): Promise<SemaDurumu>; kapat(): Promise<void> } type SemaDurumu = { hazir: boolean; neden: 'hazir' | 'ulasilamiyor' | 'geride' | 'nesil_belirsiz'; beklenenGoc: string; nesil: string | null }
+
+.exports[1].purpose :: Contracts'taki islem(fn). READ COMMITTED işlem açar; saltOkunur'da BEGIN READ ONLY. zamanAsimiMs SET LOCAL statement_timeout verir: rol varsayılanının altına her işlemde inebilir, üstüne yalnız salt okunur işlemde ve en çok 20000 ms çıkar. 40P01 ve 40001'de fn'yi bir kez baştan çalıştırır. İşlemden çıkan veritabanı hatasını değer taşımayan VeritabaniHatasi'na çevirir (kod, SQLSTATE, kısıt, tablo). Dış yüzler tx'i parametre alır.
+
+.exports[3].name :: saklamaIsleyicisiKaydet
+
+.exports[3].signature :: saklamaIsleyicisiKaydet(veriSinifi: string, isleyici: { islem: 'silme' | 'anonimlestirme'; oncekiSiniflar?: readonly string[]; partiIsle(b: { tx: Islem; sinirAni: Date; partiBoyutu: number }): Promise<{ satirSayisi: number; donemId?: string; bitti: boolean }> }): void
+
+.exports[3].purpose :: Modül saklama işleyicisini kendi kayıt işlevinde bildirir (işçide worker.ts'in çağırdığı modül kaydı). veriSinifi '<modül>.<sınıf>'; oncekiSiniflar bu sınıfa başvuran, önce işlenmesi gereken sınıflar. Aynı sınıfa farklı işleyici ya da bağımlılık döngüsü açılışta hata verir; aynı işleyicinin tekrar kaydı yok sayılır. İşleyici satırı kendi modülünün kodunda siler ya da anonimleştirir.
+
+.exports[6].purpose :: Her senaryodan önce sahip rolle uygulama şemasındaki bütün tabloları tek TRUNCATE ... RESTART IDENTITY ile boşaltır, sütuna bağlı olmayan dizileri başa alır; drizzle ve pgboss şemalarına dokunmaz. İş kuyruğunu D15'in kancası D14 üzerinden deleteAllJobs ile temizler. testVeritabaniAdi işçi numarasından yoklama_test_<n> adını verir.
+
+.exports[9].purpose :: Anahtarları sıralayıp her biri için pg_advisory_xact_lock(hashtextextended(anahtar, 0)) alır: sayaç ve en çok N kurallarında kilitlenmeyi önleyen sabit sıra. Anahtar biçimi '<modül>:<kural>:<iç kimlikler>'; numara ya da isim taşımaz.
+
+.exports[11].signature :: veritabaniIsleri(bag: { veritabani: Veritabani; simdi: () => Date }): Array<{ ad: 'saklama_suresi_isi' | 'donem_bolumu_denetimi'; cron: string; saatDilimi: 'Europe/Istanbul'; kacirilan: 'once'; isle(b: { isKimligi: string }): Promise<void> }>
+
+.exports[12].signature :: export const veritabaniRotalari: RotaTanimi[]; export const VERITABANI_HATA_KODLARI: Record<VeritabaniHataKodu, { http: 400 | 503 | null }>; export const GeriYuklemeListesiIstegi, GeriYuklemeListesiCevabi, YedekIsDurumu: z.ZodType; export const GERI_YUKLEME_YONTEMLERI, GERI_YUKLEME_GEREKCELERI, SAKLAMA_ISLEMLERI: readonly string[]
+
+.files[12] :: apps/server/src/infra/veritabani/saklama/kayit.ts
+
+.files[13] :: apps/server/src/infra/veritabani/saklama/sureler.ts
+
+.files[14] :: apps/server/src/infra/veritabani/saklama/calistir.ts
+
+.files[27] :: apps/server/src/infra/veritabani/saklama/kayit.test.ts
+
+.files[30] :: apps/server/src/jobs/veritabani/saklama-suresi.ts
+
+.files[45] :: apps/server/test/features/veritabani/saklama.feature
+
+.files[52] :: apps/server/test/steps/veritabani/saklama.adimlari.ts
+
+.tests[7].asserts :: @yalniz-ekleme yorumlu her tabloda yoklama_api ve yoklama_isci UPDATE ve DELETE denemesi 42501 alır; INSERT ve SELECT geçer (yer kontrolü).
+
+.tests[8].asserts :: yoklama_api ile CREATE TABLE, ALTER TABLE ve TRUNCATE 42501 alır; yeni tabloya varsayılan SELECT, INSERT, UPDATE, DELETE kendiliğinden gelir.
+
+.tests[9].name :: Yetki: saklama rolü yalnız SET ROLE ile
+
+.tests[9].asserts :: yoklama_isci @yalniz-ekleme tablosundan doğrudan silemez; aynı işlemde SET LOCAL ROLE yoklama_saklama sonrası siler; işlem bitince yetki kalmaz.
+
+.tests[10].asserts :: yoklama_api ile nesilOku değer döndürür; değer pg_control_system ve pg_control_checkpoint çıktısıyla aynı.
+
+.tests[13].asserts :: adı _dersler_ olan bir göç listeler tablosuna sütun eklerse katalog farkı denetimi VERITABANI_GOC_SAHIPLIK verir; kendi tablosuna eklerse geçer (yer kontrolü).
+
+.tests[22].asserts :: pg_sleep(6) yoklama_api ile VERITABANI_ZAMAN_ASIMI alır; saltOkunur ve zamanAsimiMs 8000 ile aynı sorgu geçer; yazan işlemde 5000'in üstü ve her işlemde 20000'in üstü reddedilir; zamanAsimiMs 1000 ile pg_sleep(2) zaman aşımı alır; salt okunur işlemde INSERT reddedilir.
+
+.tests[23].name :: Kilitlenmede tek yeniden deneme
+
+.tests[23].asserts :: Ters sırada iki satır kilitleyen iki işlemden 40P01 alan fn bir kez baştan çalışır ve başarır; zorla ikinci kez kilitlenen VERITABANI_KILITLENME alır.
+
+.tests[24].asserts :: Aynı iki anahtarı ters sırada veren eşzamanlı 100 işlem çiftinde hiç 40P01 yok (anahtarlar sıralanır).
+
+.tests[29].name :: Saklama: süre yokken dokunmaz
+
+.tests[29].asserts :: sureler.ts boşken iş çalışır, kayıtlı işleyici hiç çağrılmaz, satır sayıları önce ve sonra aynı (yer kontrolü: satırlar vardı), saklama_islemleri boş.
+
+.tests[30].name :: Saklama: sınır saatten, kanıt aynı işlemde
+
+.tests[31].name :: Saklama: bağımlılık sırası
+
+.tests[31].asserts :: fast-check: rastgele bağımlılık grafiğinde her sınıf, oncekiSiniflar'ındaki her sınıftan sonra işlenir; döngülü grafik kayıtta VERITABANI_SAKLAMA_DONGU verir.
+
+.tests[32].name :: Saklama: işleyicisiz süre
+
+.tests[32].asserts :: Süresi yazılı ama işleyicisi olmayan sınıfta iş VERITABANI_SAKLAMA_ISLEYICI_YOK ile düşer, hiçbir sınıfa dokunmadan önce.
+
+.tests[42].asserts :: saklama işinin süre yoksa dokunma koşulu, nesilOku'nun çapraz denetimi, havuz bekleme süresi ve hata temizliği tek tek kaldırılınca ilgili senaryo kırmızıya döner.
+
+.resolved_gaps[1].decision :: Üç şema: uygulama (bütün alan tabloları ve D12 tabloları), drizzle (göç defteri), pgboss (D14'ün kütüphanesi). Kurulum adımı üçünü yoklama_goc sahipliğinde açar ve varsayılan yetkileri şema başına verir; public'te tablo olmaz, rollerin search_path'i uygulama. Test sıfırlaması yalnız uygulama şemasını boşaltır.
+
+.resolved_gaps[2].decision :: Giriş rolleri: yoklama_goc (bütün nesnelerin sahibi; göç servisi, test sıfırlaması, veri kurucular, geri yükleme komutu), yoklama_api ve yoklama_isci (uygulama şemasında varsayılan SELECT, INSERT, UPDATE, DELETE; drizzle'da SELECT; pgboss'ta veri yetkisi; TRUNCATE ve DDL yok; @yalniz-ekleme tablolarda UPDATE ve DELETE sahibinin göçünde geri alınır), xprem (yalnız kendi veritabanı). Giriş yetkisiz yoklama_saklama: uygulama şemasında SELECT, UPDATE, DELETE ve saklama_islemleri'ne INSERT; yoklama_isci'ye INHERIT FALSE, SET TRUE ile verilir, yalnız saklama işi SET LOCAL ROLE ile geçer. yoklama_isci'ye pg_monitor (D15'in veritabanı ölçüleri). pgBackRest ve gece dökümü kap içinden, yerel soketten postgres kullanıcısıyla. Rol ayarları: yoklama_api statement_timeout 5 s, lock_timeout 2 s, idle_in_transaction_session_timeout 30 s; yoklama_isci 5 dk, 30 s, 5 dk; hepsinde timezone UTC. yonetici-ekle yoklama_api ile bağlanır. Parolalar Compose sırrıyla yalnız ilgili servise.
+
+.resolved_gaps[2].why :: Denetim tablosunun korunması (teknik.html#veritabani-donem-alani) ve kod hatası bile bozuk veri yazdıramaz kuralı rolle güvenceye alınır; saklama silmesi uygulama rolünün günlük yetkisine girmez (D12-C04). Kuyruklar yayın adımında sahip rolle açıldığından (D14-B04) çalışan rollere DDL gerekmez.
+
+.resolved_gaps[3].decision :: Kurulum adımı (goc/kurulum.ts, veritabani:goc'un ilk adımı) yalnız göç servisine verilen süper kullanıcı parolasıyla tekrar çalıştırılabilir: rolleri yoksa açar, parolalarını sır dosyasından yeniler; yoklama (sahibi yoklama_goc, builtin C.UTF-8) ve xprem (sahibi xprem) veritabanlarını açar; pg_stat_statements eklentisini kurar; üç şemayı ve varsayılan yetkileri verir; pg_control_system, pg_control_checkpoint, pg_current_wal_lsn ve pg_walfile_name için yoklama_api ve yoklama_isci'ye EXECUTE verir; rol üyeliklerini kurar. Dökümden dönüşte yalnız roller kipinde çalışır, şemaları pg_restore kurar.
+
+.resolved_gaps[4].decision :: docker/postgres/postgresql.conf ve pg_hba.conf depoda, Compose ile salt okunur bağlanır; ALTER SYSTEM kullanılmaz. Başlangıç (8 GB, 4 çekirdek): max_connections 100, shared_buffers 2GB, effective_cache_size 4GB, work_mem 16MB, maintenance_work_mem 512MB, max_wal_size 4GB, min_wal_size 1GB, checkpoint_timeout 15min, random_page_cost 1.1, effective_io_concurrency 200, wal_compression zstd, jit off, archive_mode on, archive_command pgbackrest --stanza=yoklama archive-push %p, archive_timeout 300, shared_preload_libraries pg_stat_statements, track_io_timing on, timezone ve log_timezone UTC, password_encryption scram-sha-256, log_min_duration_statement 500ms, log_lock_waits on, log_autovacuum_min_duration 1s, log_temp_files 10MB, log_error_verbosity terse, log_min_error_statement panic, log_parameter_max_length 0, log_parameter_max_length_on_error 0. pg_hba: yerel soket yalnız postgres (peer); Compose veritabanı ağının sabit alt ağından yoklama_api, yoklama_isci, yoklama_goc yoklama'ya, xprem xprem'e ve postgres her ikisine, hepsi scram-sha-256; geri kalanı reject. Süper kullanıcının parolası yalnız göç servisine verilir, ağdan yalnız kurulum adımı girer. shm_size 256mb. Değerler yük testinden sonra düzeltilip teknik.html'e yazılır.
+
+.resolved_gaps[7].gap :: D12-B08
+
+.resolved_gaps[7].decision :: Varsayılan READ COMMITTED. Sayaç ve en çok N kuralları anahtar başına danismaKilidi(tx, anahtarlar) ile (sıralı, işlem sonuna kadar) ya da sayaç satırında SELECT ... FOR UPDATE ile korunur; paketteki kayıtlar yazmadan önce (donem_id, id) sırasına dizilir. Gönderim işlemi telefona inen tablolara ve sürüm sayacı satırına yazmaz (D06-B19 ile aynı). 40P01 ve 40001'de islem fn'yi 50 ile 150 ms rastgele bekleyip bir kez baştan çalıştırır, sonra VERITABANI_KILITLENME (503); fn veritabanı dışında yan etki yapmaz. Gönderme ucunun eşzamanlı durum makinesi testi (teknik.html#testler-kalite) kuralı dener.
+
+.resolved_gaps[7].why :: SERIALIZABLE ders çıkışı yükünde yeniden deneme fırtınası yapar; sabit kilit sırası kilitlenmeyi yapısal olarak önler, tek yeniden deneme kalan nadir yarışı karşılar.
+
+.resolved_gaps[13].decision :: Bugünkü karar korunur: bölme yok. Tetikleyici sıra değil eşiktir: yoklama_kayitlari ve dizinlerinin 100.000 kayıt başına ölçülen boyutundan hesaplanan bir yıllık boyut sunucu belleğini aşınca ya da saklama süresi yazılınca, hangisi önce gelirse. Yöntem: LIST (donem_id) bölünmüş yeni ana tablo açılır, eski tablo önceden doğrulanmış CHECK (dönem listesi) ile tek bölüm olarak ATTACH edilir (yeniden yazım yok), varsayılan bölüm boş kalır. Yeni dönemin bölümü dönem açılırken açılır: o göçle D12'nin dış yüzüne donemBolumuAc(tx, donemId) eklenir ve D02 çağırır; donem_bolumu_denetimi gece varsayılan bölümün boş olduğunu denetler. Dönem silme DETACH PARTITION CONCURRENTLY ve DROP ile, yoklama_goc sahipliğindeki SECURITY DEFINER işlevle. Aynı yol @donem-bolunebilir işaretli öbür tablolara da açıktır (ör. gonderim_defteri).
+
+.resolved_gaps[13].why :: 600 ile 900 baytlık imzalı metin ve yılda en az 8,4 milyon kayıtla bellek eşiği PgBouncer'dan önce gelebilir; saklama süresi dolan dönemi silmek bölümle tek komut, bölmesiz tabloda milyonlarca satırlık DELETE ve şişme.
+
+.resolved_gaps[15].decision :: Yaşam döngüsü boş olabilen timestamptz(3) sütunlarıyla: silinme_ani, pasif_ani, arsiv_ani; an hem işaret hem kanıttır, kısmi dizin koşulları IS NULL. Kişi, ders, liste satırı, oturum, yoklama kaydı, düzeltme, sorun bildirimi ve denetim satırı fiziksel silinmez. Fiziksel silinenler: modüllerin kendi geçici verisi (kendi temizlik işleriyle), hesap silmede giriş alanları (D01) ve saklama süresi dolan veri (saklama_suresi_isi). Telefona inen tablolarda silindi işareti bu sütunlardan türer (D06).
+
+.resolved_gaps[15].why :: Ortak biçim olmazsa kısmi tekil dizin koşulları, indirme süzgeçleri ve saklama işi her tabloda başka kural izler.
+
+.resolved_gaps[17].gap :: D12-B18
+
+.resolved_gaps[21].decision :: Mekanizma karara bağlandı: saklama_suresi_isi her gece çalışır; süreler veri sınıfı başına ay olarak apps/server/src/infra/veritabani/saklama/sureler.ts'te durur ve bugün boştur, hiçbir sınıf silinmez; sınır işin saatinden süre çıkarılarak bulunur; modül kendi verisinin saklama başlangıcını (birim döneminin kilit anı) kendisi uygular; kanıt saklama_islemleri'nde. Hangi sınıfa ne süre, başlangıç ve etkin olmayan hesap kuralı açık nokta D12-A03.
+
+.resolved_gaps[21].why :: plan.html#acik-saklama-suresi: süre gelene kadar kayıt silinmez; mekanizmanın baştan kurulması buna engel değil, bölme ve anonimleştirme bu karara göre tasarlanır.
+
+.resolved_gaps[24].why :: Sayım tabanlı saklamada 2 tam yedek ancak 7 günü garanti eder, 14 gün için 3 gerekir. Uzun süreli döküm silinen hesabın giriş verisini yıllarca taşırdı; 35 gün sınırı silme ekranında yazılabilecek bir süre verir (D12-A01).
+
+.resolved_gaps[25].why :: İş API ve işçi düşmüşken de çalışmalı ve depo parolası onlara verilmemeli; restic kendi şifrelemesiyle S3 ve SFTP'nin ikisini de destekler, saklama kuralı yerleşik.
+
+.resolved_gaps[30].gap :: D12-B31
+
+.resolved_gaps[33].decision :: Sıfırlama sahip rolle uygulama şemasındaki bütün tabloları tek TRUNCATE ... RESTART IDENTITY ile boşaltır ve sütuna bağlı olmayan dizileri ALTER SEQUENCE ... RESTART ile başa alır. Göçle eklenen sabit satır yoktur: göç dosyası satır yazmaz; sabit satır gerektiren tablo (ör. D06'nın degisiklik_sayaci) satırını ilk kullanımda INSERT ... ON CONFLICT ile kendisi açar. Yayın, geliştirme ve test böylece aynı başlar.
+
+.resolved_gaps[34].decision :: Testlerde API ve işçi yayındaki rollerle (yoklama_api, yoklama_isci) bağlanır; sıfırlama ve veri kurucular yoklama_goc ile. Bir senaryo uygulama rolünün @yalniz-ekleme tablosunu güncelleyemediğini ve silemediğini gösterir; yetki bilerek verilince kırmızıya döndüğü bir kez görülür.
+
+.resolved_gaps[34].why :: Sahip rolle bağlanan test yetki hatasını ilk kez yayında gösterir ve denetim tablosunun koruması hiç denenmemiş olur.
+
+.contradictions_resolved[0].resolution :: teknik.html'deki eşik tetikleyicidir; plan.html'deki büyüdükçe sırasıyla listesi beklenen sıradır, önkoşul değildir: bölme bellek eşiği ya da saklama süresi gelince PgBouncer ve okuma kopyasından önce de yapılabilir (D12-B14). Plan cümlesine eşiklere göre ifadesinin eklenmesi D12-A07'de sahibin onayına sunulur.
+
+.contradictions_resolved[3].resolution :: Silinmez günlük işletme içindir: uygulama rolleri denetim ve düzeltme tablolarında silemez ve güncelleyemez; saklama süresi dolunca silme ya da anonimleştirme yalnız saklama_suresi_isi içinde, yoklama_saklama rolüne geçilerek ve kanıtı saklama_islemleri'ne yazılarak yapılır. teknik.html cümlesinin bu istisnayla yazılması D12-A07'de.
+
+.open_points[2].question :: Saklama süresi hangi veri sınıflarına ne kadar uygulanır, saat ne zaman başlar; hiçbir ders listesinde olmayan öğrencinin süresiz oturumu ne olur? (D12-B22)
+
+.open_points[2].recommendation :: Süre veri sınıfı başına (yoklama kayıtları, düzeltmeler, sorun bildirimleri, denetim kaydı, liste satırları, kişi bağı); saat birim döneminin kilidinden başlar ve hesap durumuna bakmadan o dönemin bütün verisine uygulanır; süre dolunca silme ya da kişi bağının koparılması (D12-B23). Hiçbir ders listesinde olmadan iki dönem geçen öğrencinin oturumu kapanır, cihaz etkinliği kalkar, yeniden gelirse cihaz değişimi akışı (D01). Süreler İÜ'nün kayıt saklama politikasından ya da Öğrenci İşleri'nden gelir (plan.html#acik-saklama-suresi); gelene kadar sureler.ts boş kalır.
+
+.open_points[3].recommendation :: BİDB nesne deposu verebiliyorsa S3 uyumlu depo; değiştirilemez kilit (object lock) varsa saklama süresine uygun açılır, sunucu ele geçirilirse yedeklerin silinmesini zorlaştırır. Vermezse BİDB'de ayrı makineye SFTP. pgBackRest ve restic yapılandırması ikisine de hazır.
+
+.open_points[5].question :: Geri yüklemede ulaşma anı kaybolan kayıt yeniden gönderilince gönderme süresi hangi ana göre işler? (D12-B31)
+
+.open_points[6].recommendation :: teknik Yedek: kopyalama aracı restic, yedek profili, 3 tam yedek ve 35 günlük döküm, dönem sonu uzun döküm yok. teknik Korunacak anahtarlar: restic parolası. teknik Denetim kaydı: uygulama silemez, saklama işi yoklama_saklama rolüyle siler ya da anonimleştirir (D12-C04). teknik Veritabanı erişimi: CONCURRENTLY dosyası göç klasöründe (D12-B09). teknik Ayarlar: süper kullanıcı ağdan yalnız veritabanı ağından ve kurulum adımı için (D12-B05). plan Ölçeklenme yolu: sıra eşiklere göre (D12-C01). plan İndirme: dönüş kurala uygun yapıldığında nesil kendiliğinden değişir (D12-C05).

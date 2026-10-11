@@ -1,0 +1,106 @@
+##### POST /v1/kimlik/yonetim/basvurular/{kisiId}/onay
+{
+"method": "POST",
+"path": "/v1/kimlik/yonetim/basvurular/{kisiId}/onay",
+"client": "panel",
+"auth": "Yönetici; başvurunun birimi kapsamında (dışındaysa 404 KIMLIK_BULUNAMADI).",
+"request": {
+"kisiId": "yol, uuid"
+},
+"response": {
+"durum": "aktif"
+},
+"errors": [
+"KIMLIK_BULUNAMADI",
+"KIMLIK_HESAP_DURUMU_UYGUN_DEGIL"
+],
+"idempotency": "Zaten aktif ve hoca rolü olan hesapta 200.",
+"rate_limit": "Oturum başına sınır (D13 hizSinifi oturum)."
+}
+##### POST /v1/kimlik/yonetim/basvurular/{kisiId}/ret
+{
+"method": "POST",
+"path": "/v1/kimlik/yonetim/basvurular/{kisiId}/ret",
+"client": "panel",
+"auth": "Yönetici; başvurunun birimi kapsamında (dışındaysa 404 KIMLIK_BULUNAMADI).",
+"request": {
+"kisiId": "yol, uuid",
+"gerekceKodu": "hoca_degil | bolum_yanlis | bilgi_eksik | diger"
+},
+"response": {
+"durum": "reddedildi"
+},
+"errors": [
+"KIMLIK_BULUNAMADI",
+"KIMLIK_HESAP_DURUMU_UYGUN_DEGIL"
+],
+"idempotency": "Zaten reddedilmiş başvuruda 200.",
+"rate_limit": "Oturum başına sınır (D13 hizSinifi oturum)."
+}
+##### POST /v1/kimlik/yonetim/hesaplar/{kisiId}/pasif
+{
+"method": "POST",
+"path": "/v1/kimlik/yonetim/hesaplar/{kisiId}/pasif",
+"client": "panel",
+"auth": "Yönetici; kapsamındaki personel, yönetici hedefte rol kapsamı kuralıyla (oturumlari-kapat ile aynı).",
+"request": {
+"kisiId": "yol, uuid"
+},
+"response": {
+"durum": "pasif"
+},
+"errors": [
+"KIMLIK_BULUNAMADI",
+"KIMLIK_HESAP_DURUMU_UYGUN_DEGIL",
+"KIMLIK_SON_YONETICI"
+],
+"idempotency": "Zaten pasifte 200. Bütün oturumlar aynı işlemde kapanır.",
+"rate_limit": "Oturum başına sınır (D13 hizSinifi oturum)."
+}
+##### DELETE /v1/kimlik/yonetim/yoneticiler/{kisiId}
+{
+"method": "DELETE",
+"path": "/v1/kimlik/yonetim/yoneticiler/{kisiId}",
+"client": "panel",
+"auth": "Yönetici; yönetici rolünde hedefin kapsamı kendi kapsamının içinde, hoca rolünde hedef kapsamındaki personel.",
+"request": {
+"kisiId": "yol, uuid",
+"rol": "sorgu, isteğe bağlı: yonetici (varsayılan) ya da hoca"
+},
+"response": {
+"durum": "204, gövde yok"
+},
+"errors": [
+"KIMLIK_BULUNAMADI",
+"KIMLIK_SON_YONETICI"
+],
+"idempotency": "Bu rolü olmayan kişide 204. Hoca rolü de bu uçtan geri alınır (yol adı contracts.json'da sabit); kimlik.rol_alindi denetimi. Kapsam dışı hedef 404 KIMLIK_BULUNAMADI.",
+"rate_limit": "Oturum başına sınır (D13 hizSinifi oturum)."
+}
+##### POST /v1/kimlik/yonetim/yoneticiler
+{
+"method": "POST",
+"path": "/v1/kimlik/yonetim/yoneticiler",
+"client": "panel",
+"auth": "Yönetici; kapsamlı yönetici yalnız kendi kapsamındaki birime ve yalnız birim kapsamlı yönetici ekler, hoca rolünü yalnız kapsamındaki personele verir. İstenen birim, kapsam (tüm dahil) ya da hedef çağıranın kapsamı dışındaysa 404 KIMLIK_BULUNAMADI (kaynak düzeyi ret).",
+"request": {
+"eposta": "metin, @istanbul.edu.tr",
+"adSoyad": "yeni hesapta zorunlu, 2 ile 120",
+"birimId": "yeni hesapta zorunlu, uuid",
+"bolumId": "yeni hesapta zorunlu, uuid",
+"rol": "isteğe bağlı: yonetici (varsayılan) ya da hoca",
+"kapsamBirimId": "yalnız rol yonetici iken: uuid ya da null (tüm)"
+},
+"response": {
+"kisiId": "uuid",
+"yeniHesap": "boolean"
+},
+"errors": [
+"KIMLIK_EPOSTA_GECERSIZ",
+"KIMLIK_BOLUM_GECERSIZ",
+"KIMLIK_HESAP_DURUMU_UYGUN_DEGIL",
+"KIMLIK_BULUNAMADI"
+],
+"idempotency": "Aynı rol ve aynı kapsam zaten varsa 200 ve yeniHesap false. Kişi başka bir kapsamla yönetici ise 409 KIMLIK_HESAP_DURUMU_UYGUN_DEGIL: önce DELETE ile rol geri alınır (son yönetici koruması orada), sonra yeniden eklenir; uç rolü hiçbir zaman sessizce daraltmaz. rol hoca aktif personele hoca rolü verir (yönetici olarak eklenen bölüm başkanı ders de verir, D01-B01); kimlik.rol_verildi denetimi.",
+"rate_limit": "Oturum başına sınır (D13 hizSinifi oturum)."
+}

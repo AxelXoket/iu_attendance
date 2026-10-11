@@ -1,0 +1,133 @@
+=== exports[0] 
+  [name] oturumDogrula
+  [signature] oturumDogrula(istek: { yontem: string; basliklar: Readonly<Record<string, string | undefined>>; cerezler: Readonly<Record<string, string | undefined>> }): Promise<{ durum: 'yok' } | { durum: 'gecersiz'; kod: 'KIMLIK_OTURUM_YOK' | 'KIMLIK_OTURUM_BITTI'; neden: OturumBitisNedeni | null } | { durum: 'gecerli'; kimlik: Kimlik }>
+  [purpose] Kökteki oturum kancası; D13 kaydeder, bileşim kökü veritabanı ve saati verir. Çerezi (__Host-oturum) ya da Bearer anahtarını SHA-256 özetiyle bulur, süreyi ve hesap durumunu denetler, son kullanımı ve öğrencide cihazın son görülmesini en çok dakikada bir yazar. Kimlik = { kisiId, tur, roller, girisOturumuId, istemci, kaynak: cerez | bearer, cihazId, oturumKapsami, incelemeHesabi }. Girişsiz rotada geçersiz anahtar isteği düşürmez; kararı rota yetkisiyle D13 verir.
+=== exports[1] 
+  [name] yetkiDenetle
+  [signature] yetkiDenetle(kimlik: Kimlik | null, gereksinim: { roller: ReadonlyArray<'ogrenci' | 'personel' | 'hoca' | 'yonetici'>; degisimBekleyenKabul?: boolean }, kapsam?: { birimId: BirimId | null }): { izin: true } | { izin: false; kod: 'KIMLIK_OTURUM_YOK' | 'KIMLIK_YETKI_YOK' | 'KIMLIK_KAPSAM_SINIRLI' | 'KIMLIK_HESAP_BULUNAMADI' }
+  [purpose] Saf işlev: rota tablosundaki yetki alanını D13'ün ortak ön işleyicisi bununla uygular; modüller yönetici kapsamını aynı işlevle denetler (kapsam dışı hedef varlık sızmasın diye KIMLIK_HESAP_BULUNAMADI). Kaynak düzeyi (bu dersin hocası mı) modül servisindedir.
+=== exports[2] 
+  [name] kisiGetir
+  [signature] kisiGetir(tx: Tx, kisiId: KisiId): Promise<{ kisiId: KisiId; tur: KisiTuru; durum: HesapDurumu; adSoyad: string | null; birimId: BirimId | null; bolumId: BolumId | null; incelemeHesabi: boolean; silinmeAni: Date | null } | null>
+  [purpose] Kişinin özeti; e-posta dönmez. D02 ders yükündeki hoca adı, D10 raporları ve denetim ekranları için.
+=== exports[3] 
+  [name] personelRolleri
+  [signature] personelRolleri(tx: Tx, kisiId: KisiId): Promise<ReadonlyArray<{ rol: 'hoca' | 'yonetici'; kapsamBirimId: BirimId | null; verilmeAni: Date }>>
+  [purpose] Etkin roller; geri alınanlar dönmez.
+=== exports[4] 
+  [name] ogrenciHesabiGetir
+  [signature] ogrenciHesabiGetir(tx: Tx, anahtar: { kisiId: KisiId }): Promise<OgrenciHesabi | null>; ogrenciHesabiGetir(tx: Tx, anahtar: { numara: string } | { numaralar: ReadonlyArray<string> }): Promise<ReadonlyArray<OgrenciHesabi>>
+  [purpose] OgrenciHesabi = { kisiId, ogrenciNo, durum, teyitDurumu, teyitYolu, teyitAni, teyitEdenKisiId, eslesmeDurumu, incelemeHesabi, etkinCihaz: { cihazId, dogrulandi, ikinciProfil } | null, bekleyenDegisimTalebi: { talepId, yeniCihazId, olusturmaAni } | null, silmeIstegiAni, silinmeAni, olusturmaAni }. Numarayla sorgu silinmişler dahil bütün hesapları döner (numara listede kalıcı kimliktir); D03 liste ekranı, D08 ve D10 toplama, D09 teyit grupları buradan okur.
+=== exports[5] 
+  [name] cihazGetir
+  [signature] cihazGetir(tx: Tx, cihazId: CihazId): Promise<{ cihazId: CihazId; kisiId: KisiId; durum: 'etkin' | 'degisim_bekliyor' | 'kapandi'; platform: 'android' | 'ios'; incelemeCihazi: boolean; dogrulamaSonucu: 'dogrulandi' | 'dogrulanamadi'; isSystemUser: boolean | null; model: string | null; etkinlesmeAni: Date | null; kapanmaAni: Date | null; kapanmaNedeni: CihazKapanmaNedeni | null; bekleyenDegisimTalebi: { talepId: TalepId; olusturmaAni: Date } | null; hesapSilmeIstegiAni: Date | null } | null>
+  [purpose] D05 imza yolunda ve D07 kararında cihazın durumu, etkinlik bitişi, ikinci profil ve doğrulama özeti için.
+=== exports[6] 
+  [name] cihazAnahtariGetir
+  [signature] cihazAnahtariGetir(tx: Tx, anahtarId: CihazAnahtariId): Promise<{ anahtarId: CihazAnahtariId; cihazId: CihazId; kisiId: KisiId; tur: 'android_p256' | 'app_attest' | 'secure_enclave'; acikAnahtar: Uint8Array; appAttestAnahtarKimligi: Uint8Array | null; olusturmaAni: Date; gecersizAni: Date | null } | null>
+  [purpose] Kayıt metnindeki anahtar kimliğiyle açık anahtar; kapanmış cihazın ve yenilenmiş anahtarın satırı da döner (kanıt).
+=== exports[7] 
+  [name] cihazDogrulamaSonucunuYaz
+  [signature] cihazDogrulamaSonucunuYaz(tx: Tx, cihazId: CihazId, sonuc: { sonuc: 'dogrulandi' | 'dogrulanamadi'; kanitId: string; guvenlikDuzeyi: string | null; dogrulanmisAcilis: boolean | null; iosAcilisDogrulamaTuru: string | null; iosPaketSurumu: string | null; neden: 'iptal_listesi' | 'yeniden_dogrulama' }): Promise<void>
+  [purpose] D07'nin sonradan değişen doğrulama sonucunu (iptal listesi gibi) cihaz satırına D01 yazar; değişiklik kimlik.cihaz_dogrulama_degisti olarak denetime düşer. Geçmiş kayıtların etiketi değişmez (D07).
+=== exports[8] 
+  [name] ogrenciTeyitEt
+  [signature] ogrenciTeyitEt(tx: Tx, istek: { yapan: Kimlik; ogrenciKisiId: KisiId; yol: 'toplu' | 'tek' }): Promise<{ sonuc: 'teyitli' | 'zaten_teyitli' | 'tek_tek_gerekli' | 'numara_teyitli' | 'bulunamadi'; reddedilenHesaplar: ReadonlyArray<KisiId> }>
+  [purpose] D09'un teyit ucu öğe başına kendi SAVEPOINT'inde çağırır. Yetkiyi (öğrencinin etkin liste satırı olan dersin hocası), toplu yol kuralını (yalnız eşleşmiş, doğrulanmış, çakışmasız) ve tekil numarayı D01 denetler; aynı numaranın öbür teyitsiz hesaplarını numara_baskasinda ile reddeder, aynı işlemde D07.yenidenDegerlendir çağırır ve kimlik.teyit yazar. Çağıran ayrıca denetim yazmaz.
+=== exports[9] 
+  [name] ogrenciTeyidiniReddet
+  [signature] ogrenciTeyidiniReddet(tx: Tx, istek: { yapan: Kimlik; ogrenciKisiId: KisiId; gerekceKodu: 'bu_ogrenci_degil' | 'diger' }): Promise<{ sonuc: 'reddedildi' | 'zaten_reddedildi' | 'teyitli_hesap' | 'bulunamadi' }>
+  [purpose] Teyit bekleyen hesabı reddeder: hesap ve teyit reddedildi, cihaz ve oturum kapanır, açık talep iptal olur, D07.yenidenDegerlendir çağrılır, kimlik.teyit_ret yazılır.
+=== exports[10] 
+  [name] bekleyenKayitlariEslestir
+  [signature] bekleyenKayitlariEslestir(tx: Tx, subeId: SubeId): Promise<{ degisenHesaplar: ReadonlyArray<KisiId> }>
+  [purpose] D03'e listeDegisikligiDinleyicisiKaydet ile kaydolur; liste uygulanırken D03'ün dışlayıcı kilidi altında, aynı işlemde şubenin etkin ve pasif satırlarındaki numaralara sahip teyit bekleyen hesapların eşleşmesini D03.numaraIleEslestir ile yeniler (çıkarılan öğrenci listede_yok'a da dönebilir). Numara kilidi almaz.
+=== exports[11] 
+  [name] kimlikOlayiDinleyicisiKaydet
+  [signature] kimlikOlayiDinleyicisiKaydet(dinleyici: (tx: Tx, olay: { tur: 'giris_oturumu_kapandi'; girisOturumuId: GirisOturumuId; kisiId: KisiId; neden: OturumBitisNedeni; an: Date } | { tur: 'giris_oturumu_yenilendi'; eskiId: GirisOturumuId; yeniId: GirisOturumuId; kisiId: KisiId; an: Date } | { tur: 'cihaz_kapandi'; cihazId: CihazId; kisiId: KisiId; neden: CihazKapanmaNedeni; an: Date } | { tur: 'hesap_durumu_degisti'; kisiId: KisiId; eski: HesapDurumu; yeni: HesapDurumu; an: Date } | { tur: 'hesap_silindi'; kisiId: KisiId; kisiTuru: KisiTuru; an: Date }) => Promise<void>): void
+  [purpose] Ek dış yüz (D01-A14). Alt modüller D01'i içe aktarmadan olaya bağlanır: D11 QR anahtar yuvasını iptal eder ya da yenilenen oturuma devreder, D15 telefon sayaçlarını, D06 kurulum izini siler, D02 silinen hocanın dersleri için kendi kararını uygular. Dinleyiciler olayı doğuran işlemin içinde çağrılır.
+=== exports[12] 
+  [name] oturumlariKapat
+  [signature] oturumlariKapat(tx: Tx, suzgec: { kisiId?: KisiId; tur?: KisiTuru; istemci?: 'telefon' | 'panel' }, neden: 'olay_komutu' | 'geri_yukleme'): Promise<number>
+  [purpose] Ek dış yüz (D01-A14): D15'in olay müdahalesindeki bütün hoca oturumlarını kapatma komutu ve D12'nin geri yüklemeden sonra panel oturumlarını kapatma adımı için; kapatılan sayıyı döner, her oturum için olay ve denetim yazar.
+=== exports[13] 
+  [name] incelemeHesaplari
+  [signature] incelemeHesaplari(tx: Tx): Promise<{ hocaKisiId: KisiId | null; ogrenciNo: string; ogrenciKisiIdleri: ReadonlyArray<KisiId> }>
+  [purpose] Ek dış yüz (D01-A14): D02 deneme dersinin sahibini, D03 deneme listesinin numarasını buradan okur.
+=== exports[14] 
+  [name] girisOturumuGetir
+  [signature] girisOturumuGetir(tx: Tx, girisOturumuId: GirisOturumuId): Promise<{ girisOturumuId: GirisOturumuId; kisiId: KisiId; tur: KisiTuru; istemci: 'telefon' | 'panel'; olusturmaAni: Date; bitisAni: Date | null; kapanmaAni: Date | null; kapanmaNedeni: OturumBitisNedeni | null; oncekiOturumId: GirisOturumuId | null } | null>
+  [purpose] Ek dış yüz (D01-A14): hoca telefonunun kimliği giriş oturumu olduğundan D04 saat belgesi öznesi ve D11 QR yuvası için. Silinmiş satırda null.
+=== exports[15] 
+  [name] hesabiSil
+  [signature] hesabiSil(tx: Tx, istek: { kisiId: KisiId; kaynak: 'geri_yukleme_yeniden' }): Promise<'yapildi' | 'zaten_silinmis'>
+  [purpose] Ek dış yüz (D01-A14): D12'nin geri yükleme komutu, kayıp penceredeki hesap silmeyi yapısal logdan yeniden uygularken çağırır; uçların ve gecelik işin kullandığı iç işlevle aynıdır.
+=== exports[16] 
+  [name] epostaNormallestir
+  [signature] epostaNormallestir(ham: string): { tamam: true; adres: string } | { tamam: false } (packages/core/src/kimlik/eposta.ts)
+  [purpose] Tek adres kuralı: baş ve son boşluk silinir, İ, I ve ı açık eşlemeyle i olur (toLowerCase'in İ için ürettiği birleşen nokta oluşmaz), A ile Z küçültülür; alan adı tam olarak istanbul.edu.tr, yerel kısım yalnız a-z, 0-9, nokta, alt çizgi, tire (1 ile 64), + ve ardışık nokta yok. D14 sınır özeti, telefon ve panel aynı işlevi kullanır.
+files[0] apps/server/src/modules/kimlik/index.ts
+files[1] apps/server/src/modules/kimlik/eklenti.ts
+files[2] apps/server/src/modules/kimlik/tablolar.ts
+files[3] apps/server/src/modules/kimlik/sorgular.ts
+files[4] apps/server/src/modules/kimlik/kanca.ts
+files[5] apps/server/src/modules/kimlik/yetki.ts
+files[6] apps/server/src/modules/kimlik/ozetler.ts
+files[7] apps/server/src/modules/kimlik/sabit-sure.ts
+files[8] apps/server/src/modules/kimlik/eposta-yolu.ts
+files[9] apps/server/src/modules/kimlik/giris-servisi.ts
+files[10] apps/server/src/modules/kimlik/oturum-servisi.ts
+files[11] apps/server/src/modules/kimlik/basvuru-servisi.ts
+files[12] apps/server/src/modules/kimlik/ogrenci-servisi.ts
+files[13] apps/server/src/modules/kimlik/teyit-servisi.ts
+files[14] apps/server/src/modules/kimlik/cihaz-servisi.ts
+files[15] apps/server/src/modules/kimlik/degisim-servisi.ts
+files[16] apps/server/src/modules/kimlik/silme-servisi.ts
+files[17] apps/server/src/modules/kimlik/yonetim-servisi.ts
+files[18] apps/server/src/modules/kimlik/inceleme.ts
+files[19] apps/server/src/modules/kimlik/olaylar.ts
+files[20] apps/server/src/modules/kimlik/uclar.ts
+files[21] apps/server/src/modules/kimlik/kanca.test.ts
+files[22] apps/server/src/modules/kimlik/ozetler.test.ts
+files[23] apps/server/src/modules/kimlik/yetki.test.ts
+files[24] apps/server/src/jobs/kimlik/index.ts
+files[25] apps/server/src/jobs/kimlik/kimlik-temizligi.ts
+files[26] apps/server/src/jobs/kimlik/giris-oturumu-temizligi.ts
+files[27] apps/server/src/jobs/kimlik/hesap-silme-yurutucu.ts
+files[28] apps/server/src/jobs/kimlik/inceleme-hesaplari-kurulumu.ts
+files[29] apps/server/src/jobs/kimlik/bekleyen-kayit-kapatma.ts
+files[30] apps/server/src/cli/yonetici-ekle.ts
+files[31] packages/contracts/src/kimlik.ts
+files[32] packages/core/src/kimlik/index.ts
+files[33] packages/core/src/kimlik/eposta.ts
+files[34] packages/core/src/kimlik/eposta.test.ts
+files[35] packages/core/src/kimlik/bekleme.ts
+files[36] packages/core/src/kimlik/bekleme.test.ts
+files[37] packages/core/src/kimlik/oturum-kurallari.ts
+files[38] packages/core/src/kimlik/oturum-kurallari.test.ts
+files[39] packages/core/src/kimlik/cihaz-etiketi.ts
+files[40] packages/core/src/kimlik/cihaz-etiketi.test.ts
+files[41] packages/core/src/kimlik/kayit-kodu.ts
+files[42] packages/core/src/kimlik/kayit-kodu.test.ts
+files[43] apps/server/test/features/kimlik/hoca-basvurusu.feature
+files[44] apps/server/test/features/kimlik/hoca-girisi.feature
+files[45] apps/server/test/features/kimlik/oturumlar.feature
+files[46] apps/server/test/features/kimlik/yetki.feature
+files[47] apps/server/test/features/kimlik/ogrenci-kaydi.feature
+files[48] apps/server/test/features/kimlik/ilk-kayit-teyidi.feature
+files[49] apps/server/test/features/kimlik/cihaz-degisimi.feature
+files[50] apps/server/test/features/kimlik/app-attest-yenileme.feature
+files[51] apps/server/test/features/kimlik/hesap-silme.feature
+files[52] apps/server/test/features/kimlik/yonetim.feature
+files[53] apps/server/test/features/kimlik/inceleme-hesaplari.feature
+files[54] apps/server/test/features/kimlik/ilk-yonetici.feature
+files[55] apps/server/test/features/kimlik/kimlik-isleri.feature
+files[56] apps/server/test/features/kimlik/gizlilik.feature
+files[57] apps/server/test/steps/kimlik/giris.steps.ts
+files[58] apps/server/test/steps/kimlik/ogrenci.steps.ts
+files[59] apps/server/test/steps/kimlik/cihaz.steps.ts
+files[60] apps/server/test/steps/kimlik/yonetim.steps.ts
+files[61] apps/server/test/steps/kimlik/silme.steps.ts
+files[62] apps/server/test/steps/kimlik/isler.steps.ts
+files[63] apps/server/test/support/kurucular/kimlik.ts
+files[64] docker/caddy/sayfalar/hesap-silme.html

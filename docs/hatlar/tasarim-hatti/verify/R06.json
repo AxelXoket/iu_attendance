@@ -1,0 +1,177 @@
+{
+ "id": "R06",
+ "checked": [
+  {
+   "finding": "R06-F01",
+   "verdict": "kısmen",
+   "note": "Ana iddia birebir doğru: rehber değişken yazı tipinin SDK 58 ve sonrasında desteklendiğini, öncesinde statik dosya kullanılacağını ('use static font files') söylüyor, fontVariationSettings için 'React Native 0.88 (Expo SDK 58) and later' şartını koyuyor; RN 0.87 Text Style Props sayfasında fontVariationSettings yok. Kanıttaki 'SDK 58'de bile Android yalnız wght eksenini okuyor' ayrıntısı eksik: wght okuma fontWeight ile kesit seçimi için geçerli ve Android 10 şartlı; aynı sayfa fontStyle italic için ital ekseninin Android 15 ve üstünde uygulandığını, SDK 58'de fontVariationSettings ile her eksenin iki platformda da (Android 8 ve üstü) ayarlanabildiğini yazıyor.",
+   "url_checked": "https://docs.expo.dev/develop/user-interface/fonts/"
+  },
+  {
+   "finding": "R06-F02",
+   "verdict": "doğrulandı",
+   "note": "Rehberde 'the recommended method', 'Fonts are available immediately when the app starts on a device', 'Fonts are consistently available across all devices where the app is installed', Expo Go'da çalışmadığı, Android'de dosya adının, iOS'ta dosyadaki adın aile adı olduğu, PostScript adı önerisi, Inter-Bold 700 ve Inter-BoldItalic 700 italic örneği, 'first-class support for all fonts listed in Google Fonts' ve Platform.select örneği (android 'Inter_900Black', ios 'Inter-Black') birebir var. SDK 57 font sayfası 'Use the object syntax within fonts to embed xml fonts with custom family name.' cümlesini ve android fontFamily/fontDefinitions örneğini içeriyor.",
+   "url_checked": "https://docs.expo.dev/versions/v57.0.0/sdk/font/"
+  },
+  {
+   "finding": "R06-F03",
+   "verdict": "kısmen",
+   "note": "Belge kısmı doğru: RN 0.87 Text Style Props fontVariant için yalnız small-caps, oldstyle-nums, lining-nums, tabular-nums, proportional-nums listeliyor; Inter sitesi ss02 'Disambiguation (with zero)', ss04 'Disambiguation (no zero)', cv05 'Lower-case L with tail', cv08 'Upper-case i with serif', zero ve tnum adlarını veriyor. Başlıktaki ve çıkarımdaki genelleme ise kaynak kodla çelişiyor: React Native 0.86-stable fontVariant için 'stylistic-one' ile 'stylistic-twenty' arasını kabul ediyor (Fabric conversions.h satır 405-443, primitives.h StylisticOne..StylisticTwenty, StyleSheetTypes.d.ts satır 538-561); Android bunları 'ss01'..'ss20' olarak uyguluyor (ReactTypefaceUtils.kt satır 73-92, 'stylistic-two' -> 'ss02'), iOS kStylisticAltTwoOnSelector ile (RCTFontUtils.mm satır 93-95). Inter dosyasında ss02 I -> I.1, l -> l.ss02, 0 -> zero.slash yapıyor; ss04 yalnız I ve l. Yani Inter'in ayırma seçenekleri uygulamada fontVariant: ['stylistic-two'] ile açılabilir; açılamayanlar yalnız tek başına zero, cv05 ve cv08.",
+   "url_checked": "https://raw.githubusercontent.com/facebook/react-native/0.86-stable/packages/react-native/ReactAndroid/src/main/java/com/facebook/react/views/text/ReactTypefaceUtils.kt"
+  },
+  {
+   "finding": "R06-F04",
+   "verdict": "doğrulandı",
+   "note": "fontTools 4.66.1 ile bağımsız ölçüm (6 Ekim 2026 indirmesi): sürüm 'Version 4.001;git-66647c0bb', opsz 14..32 (varsayılan 14), wght 100..900, UPM 2048, sxHeight 1118 (0.5459), sCapHeight/UPM 0.7275, hhea 1984/-494/0 (1.21 em), GSUB özellik listesi birebir aynı ve liga yok, rakam ilerlemeleri 1292, 833, 1249, 1265, 1323, 1215, 1270, 1159, 1267, 1270, fpgm yok, latn dil sistemleri dflt, CAT, MOL, ROM; dik 876,576 ve italik 906,596 bayt; METADATA lisansı OFL. github.com/rsms/inter/releases/latest v4.1'e yönleniyor; v4.0 notunda 'Six additional \"Display\" designs, assigned to an ...' ve 'UPM changed to 2048' var. Inter sitesi 'SIL Open Font License 1.1' ve 147 dil diyor. 14 sans arasında en yüksek x yüksekliği Inter'de.",
+   "url_checked": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
+  },
+  {
+   "finding": "R06-F05",
+   "verdict": "kısmen",
+   "note": "Doğru kısımlar: 18 dosyanın hepsinde 18 Türkçe karakter var; hiçbir dosyada büyük harf aksanı hhea ascender değerini aşmıyor; cedilla hhea descender altına yalnız Plus Jakarta Sans'ta iniyor (-230 ile -222); Inter'de en yüksek aksan 1930 ve en derin cedilla -429. Yanlış ayrıntı: 1930 İ noktasının değil Ğ'nin breve işaretinin tepesi (İ daha alçak) ve Türkçe harfler içinde en derin nokta cedilla değil ğ'nin kuyruğu (-442). Değmeme sınırı varsayılan kesitte (1930 + 442) / 2048 = 1.158, wght 500'de 1.160, wght 600'de 1.162 (opsz 14); 1.152 yalnız Ğ ile Ç çiftini hesaba katıyor. Önerilen en düşük oran 1.206 her iki değerin de üstünde.",
+   "url_checked": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
+  },
+  {
+   "finding": "R06-F06",
+   "verdict": "doğrulandı",
+   "note": "fontTools ile GSUB tarandı (tip 4, tip 7 içindeki tip 4, varsayılan açık ccmp, locl, liga, calt zinciri dahil): IBM Plex Sans (fi) ve Google Sans Flex (f_i) varsayılan liga içinde f+i taşıyor ve latn altında TRK yok; Geist, DM Sans, Hanken Grotesk, Instrument Sans, Manrope, Plus Jakarta Sans, Public Sans ve Roboto f+i taşıyor ve TRK var; Roboto'nun TRK kaydında locl yok. Inter, Figtree, Onest, Atkinson Hyperlegible Next ve dört mono ailede varsayılan f bağı yok (Inter'de yalnız ccmp içinde f + U+0307 birleştirmesi var, f+i değil). Ek bilgi: TRK kaydı olan ailelerde locl i harfini i.loclTRK yapıyor; Roboto'nun TRK kaydı ise f+i içermeyen ayrı bir liga kullanıyor.",
+   "url_checked": "https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf"
+  },
+  {
+   "finding": "R06-F07",
+   "verdict": "kısmen",
+   "note": "Sınır kutusu genişlikleri birebir: Inter I 0.093, l 0.088, tepeler 0.728; DM Sans 0.084/0.084; Google Sans Flex 0.085/0.085; Roboto 0.094/0.091; IBM Plex Sans 0.280/0.156, tepeler 0.698/0.740; Atkinson Hyperlegible Next 0.282/0.174; Geist 0.086/0.163; Hanken Grotesk 0.088/0.171; Public Sans 0.039/0.129 (varsayılanı wght 100). Gruptaki diğerleri: Instrument Sans 0.082/0.080, Onest 0.087/0.085, Plus Jakarta Sans 0.080/0.075, Figtree 0.064/0.060, Manrope 0.042/0.042. HN'de jccalhoun 'which is a deal breaker for me' ve 'they have options with disambiguation and curved tales on l' yazmış. Not: çıkarımdaki 'ayırma seçenekleri React Native stilinde açılamıyor' yanlış; RN 0.86'da fontVariant 'stylistic-two' Inter ss02'yi (I.1, l.ss02) açıyor (R06-F03 notu).",
+   "url_checked": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
+  },
+  {
+   "finding": "R06-F08",
+   "verdict": "doğrulandı",
+   "note": "Kontur sayıları birebir: Geist Mono, JetBrains Mono, IBM Plex Mono, Atkinson Hyperlegible Mono ve Atkinson Hyperlegible Next'te '0' 3, 'O' 2 kontur; kalan 13 dosyada ikisi de 2. Inter'de zero ve ss02 var; Geist ve Geist Mono'da zero yok. HN'de stronglikedan sıfırın büyük O'dan neden daha ayrışık olmadığını sormuş. Not: çıkarımdaki 'Inter tek başına yetmez' sonucu eksik; zero tek başına açılamasa da Inter ss02 sıfırı zero.slash yapıyor ve RN 0.86'da fontVariant 'stylistic-two' ile açılabiliyor.",
+   "url_checked": "https://raw.githubusercontent.com/google/fonts/main/ofl/geistmono/GeistMono%5Bwght%5D.ttf"
+  },
+  {
+   "finding": "R06-F09",
+   "verdict": "doğrulandı",
+   "note": "hmtx ve GSUB birebir: IBM Plex Sans (600), Hanken Grotesk (560), Roboto (1151) ve dört mono ailede rakamlar eşit genişlikte; Inter, Geist, Manrope, Plus Jakarta Sans, Instrument Sans, Figtree, Onest, Public Sans, Atkinson Hyperlegible Next ve Google Sans Flex'te rakamlar orantılı ve tnum var; DM Sans özellik listesi verilenle aynı, tnum ve pnum yok, rakamlar orantılı. Küçük ayrıntı: HN'de jaxn 'the tabular numbers option, and the disambiguation option' diye yazmış; işaretli sıfırdan değil ayırma seçeneğinden söz ediyor.",
+   "url_checked": "https://raw.githubusercontent.com/google/fonts/main/ofl/dmsans/DMSans%5Bopsz%2Cwght%5D.ttf"
+  },
+  {
+   "finding": "R06-F10",
+   "verdict": "doğrulandı",
+   "note": "OS/2 sxHeight/UPM değerleri birebir: Inter 0.5459, Manrope 0.54, Plus Jakarta Sans 0.536, Geist 0.53, Roboto 0.5283, Onest 0.527, DM Sans 0.526, Public Sans 0.517, IBM Plex Sans 0.516, Instrument Sans 0.51, Google Sans Flex 0.51, Figtree 0.5, Atkinson Hyperlegible Next 0.496, Hanken Grotesk 0.493; mono JetBrains Mono 0.55, Geist Mono 0.53, IBM Plex Mono 0.516, Atkinson Hyperlegible Mono 0.496. Her dosyada 'x' glifinin tepesi sxHeight ile aynı. 12, 13, 14 px değerleri ve Inter'in IBM Plex Sans'tan yüzde 5.8 (5.79) yüksek olması doğru. HN'de systemvoltage 'much higher x-heights than Inter' istemiş, mortenjorck 'This is rather overstating the shortcomings for small sizes' demiş.",
+   "url_checked": "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
+  },
+  {
+   "finding": "R06-F11",
+   "verdict": "doğrulandı",
+   "note": "6 Ekim 2026'da google/fonts main dalından indirilen 20 dosyanın bayt boyutları verilenlerle birebir aynı (Figtree 62,712; Public Sans 103,316; Inter 876,576; Google Sans Flex 4,153,392; Inter italik 906,596; IBM Plex Sans italik 599,624; mono dosyalar dahil).",
+   "url_checked": "https://raw.githubusercontent.com/google/fonts/main/ofl/figtree/Figtree%5Bwght%5D.ttf"
+  },
+  {
+   "finding": "R06-F12",
+   "verdict": "doğrulandı",
+   "note": "9to5Google 18 Kasım 2025 tarihli yazı: 'the next generation of Google's brand typeface', 'available under the Open Font License', 'Through the Google Fonts website, Google Sans Flex is now available for download'. Dosya ölçümü birebir: 'Version 4.005;[3fe7d0b9f]', altı eksen ve varsayılanları, latn dil sistemleri dflt, CAT, LTH, MOL, NLD, ROM (TRK yok), liga içinde f_i, I/l 0.085/0.085, 4,153,392 bayt, METADATA lisansı OFL. Not: METADATA date_added '2024-11-21' gösteriyor; herkese açılış tarihi için dayanak 9to5Google yazısı.",
+   "url_checked": "https://9to5google.com/2025/11/18/google-sans-flex-font-available/"
+  },
+  {
+   "finding": "R06-F13",
+   "verdict": "doğrulandı",
+   "note": "Next: 'Version 2.001', wght 200..800 (varsayılan 400), 114,552 bayt, tnum var, liga yok, TRK var, I 0.282, l 0.174, sıfır 3 kontur. Mono: 53,960 bayt, wght 200..800 (varsayılan 200), zero var, sıfır 3 kontur, calt ve liga yok. METADATA date_added Next 2025-01-07, Mono 2024-11-20, lisans OFL. x yüksekliği 0.496, adaylar içinde Hanken Grotesk'ten (0.493) sonra en düşük.",
+   "url_checked": "https://raw.githubusercontent.com/google/fonts/main/ofl/atkinsonhyperlegiblenext/METADATA.pb"
+  },
+  {
+   "finding": "R06-F14",
+   "verdict": "doğrulandı",
+   "note": "IBM Plex Sans 'Version 3.201', wght 100..700 (400), wdth 75..100 (100), 537,244 bayt, x 0.516, büyük harf 0.698, özellik listesi birebir, liga içinde fi, TRK yok, rakamlar eşit (600), fpgm var. IBM Plex Mono Regular 'Version 2.3', 135,580 bayt, x 0.516, büyük harf 0.698, fpgm var, sıfır 3 kontur. 18 dosya içinde fpgm yalnız IBM Plex Sans, IBM Plex Mono ve Roboto'da var.",
+   "url_checked": "https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf"
+  },
+  {
+   "finding": "R06-F15",
+   "verdict": "doğrulandı",
+   "note": "Geist 'Version 1.800', 169,056 bayt, wght 100..900 (400), latn dil sistemleri dflt, AZE, CAT, CRT, KAZ, MAH, MOL, NLD, ROM, TAT, TRK, liga içinde f+f, f+i, f+l. Geist Mono 'Version 1.701', 171,948 bayt, wght 100..900 (400), özellik listesi birebir, liga ve calt yok, rakamlar eşit (600), sıfır 3 kontur, l 2 kontur. İkisi de x 0.53, büyük harf 0.71. METADATA: Geist 2024-10-02, Geist Mono 2024-10-03, lisans OFL.",
+   "url_checked": "https://raw.githubusercontent.com/google/fonts/main/ofl/geistmono/METADATA.pb"
+  },
+  {
+   "finding": "R06-F16",
+   "verdict": "doğrulandı",
+   "note": "main dalında RCTAttributedTextUtils.mm satır 513-514 'case TextTransform::Uppercase: return [string uppercaseString];', satır 501 capitalizedString; TextTransform.kt satır 31 'TextTransform.UPPERCASE -> uppercase(Locale.getDefault())', satır 40 'replaceFirstChar { it.uppercaseChar() }'. Projenin sürümü olan 0.86-stable dalında aynı kod var (iOS satır 454 ve 466-467). Apple: 'This property performs the canonical (non-localized) mapping.' ve 'When working with text that's presented to the user, use localizedUppercase or uppercased(with:) instead.' Kotlin: 'Converts this character to upper case using Unicode mapping rules of the invariant locale.'",
+   "url_checked": "https://raw.githubusercontent.com/facebook/react-native/main/packages/react-native/ReactAndroid/src/main/java/com/facebook/react/views/text/TextTransform.kt"
+  },
+  {
+   "finding": "R06-F17",
+   "verdict": "doğrulandı",
+   "note": "IntlAPIs.md 'Supported on both platforms' bölümünde String.prototype altında localeCompare, toLocaleLowerCase, toLocaleUpperCase listeleniyor; gerekçe cümlesi birebir (yer kazanmak için platform olanaklarının kullanıldığı, bedelin 'some variance in behaviours across Android and iOS platforms' olduğu).",
+   "url_checked": "https://github.com/facebook/hermes/blob/main/doc/IntlAPIs.md"
+  },
+  {
+   "finding": "R06-F18",
+   "verdict": "doğrulandı",
+   "note": "MDN içeriği (güncel yol Web/CSS/Reference/Properties/text-transform) Türkçe dahil Türk dilleri cümlesini (i/İ ve ı/I eşleşmeleri), dilin 'lang' HTML ya da 'xml:lang' XML özniteliğiyle belirlendiğini, 'Support for language-specific cases varies between browsers' notunu ve büyük harfe çevrilmiş uzun metnin disleksi gibi bilişsel güçlüğü olanlarca zor okunabileceği cümlesini ('may be difficult for people with cognitive concerns') birebir içeriyor.",
+   "url_checked": "https://developer.mozilla.org/en-US/docs/Web/CSS/text-transform"
+  },
+  {
+   "finding": "R06-F19",
+   "verdict": "doğrulandı",
+   "note": "HIG JSON 'Large (default)' tablosu: Large Title 34/41, Title 1 28/34, Title 2 22/28, Title 3 20/25, Headline Semibold 17/22, Body 17/22, Callout 16/21, Subhead 15/20, Footnote 13/18, Caption 1 12/16, Caption 2 11/13; iOS varsayılan 17 pt, en küçük 11 pt; AX5 Body 53/62, Caption 2 40/48; 'avoid Ultralight, Thin, and Light font weights'; 'the system font dynamically adjusts tracking at every point size'.",
+   "url_checked": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/typography.json"
+  },
+  {
+   "finding": "R06-F20",
+   "verdict": "doğrulandı",
+   "note": "TypeScaleTokens.kt değerleri birebir (DisplayLarge 57/64 -0.2, TitleMedium 16/24 0.2 Medium, BodyLarge 16/24 0.5, BodyMedium 14/20 0.2, BodySmall 12/16 0.4, LabelLarge 14/20 0.1 Medium, LabelMedium 12/16 0.5 Medium, LabelSmall 11/16 0.5 Medium, diğerleri Regular). Dosyada ayrıca 'Emphasized' türevleri var; bulgu bunları anmıyor.",
+   "url_checked": "https://raw.githubusercontent.com/androidx/androidx/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens/TypeScaleTokens.kt"
+  },
+  {
+   "finding": "R06-F21",
+   "verdict": "doğrulandı",
+   "note": "styles.ts ve scale.ts birebir: label01 ve helperText01 scale01 1.33333 px(0.32), bodyShort01 1.28572 px(0.16), bodyLong01 1.42857, bodyShort02 1.375, bodyLong02 1.5, productiveHeading01..06 boyut, ağırlık ve satır değerleri, code01 ve code02, takma adlar (bodyCompact01, body01, headingCompact01, heading03); scale01 12, scale02 14, scale03 16, scale05 20, scale07 28, scale08 32, scale10 42 ve formül yorumu aynı.",
+   "url_checked": "https://raw.githubusercontent.com/carbon-design-system/carbon/main/packages/type/src/styles.ts"
+  },
+  {
+   "finding": "R06-F22",
+   "verdict": "doğrulandı",
+   "note": "Android 14 sayfası: 'Starting in Android 14, the system supports font scaling up to 200%', 'large text doesn't scale at the same rate as smaller text', lineHeight dp ya da px ise 'it doesn't scale and looks cramped', '4sp + 20sp might not equal 24sp'.",
+   "url_checked": "https://developer.android.com/about/versions/14/features#non-linear-font-scaling"
+  },
+  {
+   "finding": "R06-F23",
+   "verdict": "doğrulandı",
+   "note": "Text sayfası: allowFontScaling varsayılan true; maxFontSizeMultiplier 'null/undefined: inherit from the parent node or the global default (0)', '0: no max, ignore parent/global default', '>= 1' kuralı; dynamicTypeRamp değerleri ve varsayılan 'body'; MyAppText önerisi. Text Style Props: includeFontPadding (Android) varsayılan true.",
+   "url_checked": "https://reactnative.dev/docs/text"
+  },
+  {
+   "finding": "R06-F24",
+   "verdict": "doğrulandı",
+   "note": "Arşiv sayfası 'tracking = a + b × e(c × z)', a = -0.0223, b = 0.185, c = -0.1745 veriyor (ayrıca line height = 1.4 × z); güncel adres '404 not found ... This page used to exist, but is no longer.' diyor. Formülden hesaplanan 12, 14, 15, 16, 17, 22, 28, 34 değerleri birebir.",
+   "url_checked": "https://d.rsms.me/inter-website/v3/dynmetrics/"
+  },
+  {
+   "finding": "R06-F25",
+   "verdict": "doğrulandı",
+   "note": "Baymard, Edward Scott, 10 Mayıs 2022: 'The optimal line length for body text is 50-75 characters'; Emil Ruder için 50-60 karakter; WCAG 1.4.8 için '80 or fewer characters'.",
+   "url_checked": "https://baymard.com/blog/line-length-readability"
+  },
+  {
+   "finding": "R06-F26",
+   "verdict": "doğrulandı",
+   "note": "HN 28009042: 30 Temmuz 2021, 339 puan, ağaçta 95 yorum; captainmuon, fito ve petestaples alıntıları birebir. Pimp my Type 30 Temmuz 2024: 'But in headings it soon looks very generic or dull' ve Inter 4.0 için 'an additional display style, which is much more refined for larger sizes'. HN 39251203: 4 Şubat 2024, 3 puan, 1 yorum, dtagames 'Nothing looks bad in Inter. It's an easy win.'",
+   "url_checked": "https://news.ycombinator.com/item?id=28009042"
+  }
+ ],
+ "signals_checked": [],
+ "benchmarks_checked": [],
+ "recommendation_issues": [
+  {
+   "recommendation": "R06-K02",
+   "issue": "Gerekçedeki 'React Native'de Inter'in zero ve ayırma seçenekleri açılamıyor' cümlesi ve 'Inter zero ve ss02' alternatifinin reddi doğrulanan kaynakla çelişiyor: RN 0.86 fontVariant 'stylistic-two' değerini Android'de 'ss02', iOS'ta kStylisticAltTwoOnSelector olarak uyguluyor ve Inter ss02 I, l ve 0'ı ayırıyor (I.1, l.ss02, zero.slash); açılamayan yalnız tek başına zero. Geist Mono seçimi başka bir gerekçeyle (eşit genişlik, kod görünümü) savunulmalı ya da Inter ss02 statik dosyalarla cihazda denenip yeniden değerlendirilmeli."
+  },
+  {
+   "recommendation": "R06-K06",
+   "issue": "'satir-orani.alt-sinir' değeri 1.152 düşük: Türkçe harfler içinde en derin nokta ğ kuyruğu (-442), değmeme sınırı Inter 400'de 1.158, 500'de 1.160, 600'de 1.162 (opsz 14). Önerilen en düşük oran 1.206 yine üstte kaldığı için ölçek değişmez; sınır değeri 1.162 olarak düzeltilmeli."
+  },
+  {
+   "recommendation": "R06-K04",
+   "issue": "Öneri metnindeki 'Türkçe aksan sınırı 1.152' aynı hatayı taşıyor; doğru sınır 1.158 (400) ile 1.162 (600). 1.206 sınırın üstünde kaldığı için ölçek değerleri değişmez, yalnız sayı düzeltilmeli."
+  }
+ ]
+}

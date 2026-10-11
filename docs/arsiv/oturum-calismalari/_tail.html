@@ -1,0 +1,24 @@
+
+</div>
+<script>
+(function(){
+  var root = document.documentElement, btn = document.getElementById('themeBtn'), key = 'iu-ozet-tema';
+  function apply(t){ if(t){ root.setAttribute('data-theme', t); } else { root.removeAttribute('data-theme'); } }
+  try { apply(localStorage.getItem(key)); } catch(e) {}
+  btn.addEventListener('click', function(){
+    var dark = root.getAttribute('data-theme') ? root.getAttribute('data-theme') === 'dark'
+             : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = dark ? 'light' : 'dark';
+    apply(next);
+    try { localStorage.setItem(key, next); } catch(e) {}
+  });
+  var opened = [];
+  window.addEventListener('beforeprint', function(){
+    opened = [];
+    document.querySelectorAll('details:not([open])').forEach(function(d){ d.setAttribute('open',''); opened.push(d); });
+  });
+  window.addEventListener('afterprint', function(){ opened.forEach(function(d){ d.removeAttribute('open'); }); });
+})();
+</script>
+</body>
+</html>

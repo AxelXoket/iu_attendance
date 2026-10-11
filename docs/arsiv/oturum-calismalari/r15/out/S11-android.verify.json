@@ -1,0 +1,310 @@
+{
+ "verdicts": [
+  {
+   "id": "S11-F1",
+   "verdict": "CORRECTED",
+   "note": "Core facts hold against Google pages updated 2026-10-01: default 10,000 requests a day per Cloud project (standard token preparations count too), quota increase only if the app is available on Google Play and the Cloud project is linked in Play Console, PLAY_RECOGNIZED only for Play-distributed copies, closed-test lists of up to 200 x 2,000 users with per-tester opt-in. The recommendation (Play production as the main Android path, GitHub APK for phones without Google services, no student tester lists) passes the lenses. One inference is wrong and the quota argument is overstated, see correction.",
+   "correction": "'Off-Play copies cannot get PLAY_RECOGNIZED, so the app-not-modified check in line 78 needs Play' is wrong. Android key attestation, already in the plan (lines 589, 683), carries the package name and the SHA-256 digests of the app's signing certificates (attestation version 2 and up, Android 8+), with no daily quota. So the 10,000 cap only binds if Play Integrity stays the gate for GitHub installs, and past the cap the plan's existing path for unverifiable devices (lines 78, 214) applies instead of a hard stop. The quota part is medium, not high. Play-first still stands, on stronger grounds than the quota: no unknown-sources step, no Play Protect prompt, automatic updates, the 2027 verification rollout, and Samsung Auto Blocker (default on for Galaxy phones that shipped with One UI 6.1.1 or later), which only lets Play or Galaxy Store installs through.",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/google/play/integrity/setup",
+     "quote": "To be eligible for a quota increase, your app must be available on Google Play in addition to any other distribution channels.",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://developer.android.com/google/play/integrity/setup",
+     "quote": "Shared between classic requests and standard token preparations",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://source.android.com/docs/security/features/keystore/attestation",
+     "quote": "A set of SHA-256 digests of the app's signing certificates.",
+     "date": "2026-09-30"
+    },
+    {
+     "url": "https://source.android.com/docs/security/features/keystore/attestation",
+     "quote": "Present only in key attestation versions >= 2",
+     "date": "2026-09-30"
+    },
+    {
+     "url": "https://www.samsung.com/tr/support/mobile-devices/galaxy-cihazinizi-yeni-otomatik-engelleyici-ozelligi-ile-koruyun",
+     "quote": "One UI 6.1.1 ile piyasaya sürülen Galaxy cihazları için Otomatik Engelleyici özelliği varsayılan olarak Açık olarak ayarlanmıştır.",
+     "date": "2026-07-24"
+    }
+   ]
+  },
+  {
+   "id": "S11-F2",
+   "verdict": "CORRECTED",
+   "note": "Confirmed: new apps are enrolled by default in quantum-ready hybrid signing with Google-generated keys; the default can be changed only before a release rolls out on open testing or production; the signing key never changes for an app. The window warning is useful. Two parts are wrong or incomplete, see correction.",
+   "correction": "(1) 'To use one key across stores you must give your own key' is incomplete. The Play help page lists a second documented way: keep Google's key and publish the signed universal APK from Play Console on other channels. Missing the window therefore does not split Play and GitHub for good, so the severity is medium, not high. (2) The 'consider' wording about a separate upload key is in neither source. Reusing the app signing key as upload key is allowed, but Google states the keys 'should be different'. The finding's reasoning (the signing key already sits in EAS for GitHub builds, so a second key protects little) is sound, but the plan must say it chose against Google's advice. The lighter universal-APK option and the key-upgrade guardrail are listed as a miss on line 482.",
+   "evidence": [
+    {
+     "url": "https://support.google.com/googleplay/android-developer/answer/9842756?hl=en",
+     "quote": "You can either let Google generate your app signing key and download a signed, universal APK from the Play Console or the Play Developer API to distribute elsewhere, or you can generate the app signing key you want to use for all app stores and transfer a copy of it to Google when you configure Play App Signing.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://support.google.com/googleplay/android-developer/answer/9842756?hl=en",
+     "quote": "For maximum security, your upload key and app signing key should be different.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://developer.android.com/studio/publish/app-signing",
+     "quote": "If you do not generate a new upload key, you continue to use your app signing key as your upload key to sign each release.",
+     "date": "2026-03-06"
+    }
+   ]
+  },
+  {
+   "id": "S11-F3",
+   "verdict": "CONFIRMED",
+   "note": "Google's guide sends developers who distribute on and off Play to their existing Play Console account; the FAQ says Play App Signing apps are registered automatically; the ADC route needs an extra APK signed with the key carrying the challenge snippet; the Play fee is US$25 one-time. Line 859 should name Play Console. Holds under either signing option in S11-F2, since both use Play App Signing.",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/developer-verification/guides?hl=en",
+     "quote": "Use your existing Play Console account, where there will be new functionality to register your apps outside of Google Play and keys.",
+     "date": "2026-08-18"
+    },
+    {
+     "url": "https://developer.android.com/developer-verification/guides/faq",
+     "quote": "If you use Play App Signing, we have the necessary information to securely identify your ownership. Your eligible apps will be part of the automatic registration process.",
+     "date": "2026-09-30"
+    },
+    {
+     "url": "https://developer.android.com/developer-verification/guides/google-play-console",
+     "quote": "You can also use the Play Console to register apps you distribute outside of Google Play to ensure they remain installable on certified Android devices.",
+     "date": "2026-09-30"
+    },
+    {
+     "url": "https://support.google.com/googleplay/android-developer/answer/6112435?hl=en",
+     "quote": "There is a US$25 one-time registration fee",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S11-F4",
+   "verdict": "CONFIRMED",
+   "note": "Play forbids self-updating, and self-update is not a permitted use of REQUEST_INSTALL_PACKAGES. GitHub's /releases/latest/download/<name> link works for uploaded assets. Dropping the in-app installer removes a permission, a second variant and the APK hash from the version check. The branch condition needs a small fix (see recommendation_issues).",
+   "evidence": [
+    {
+     "url": "https://support.google.com/googleplay/android-developer/answer/16559646?hl=en",
+     "quote": "An app distributed via Google Play may not modify, replace, or update itself using any method other than Google Play's update mechanism.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://support.google.com/googleplay/android-developer/answer/12085295?hl=en",
+     "quote": "self update using any method other than Google Play's update mechanism or download harmful APKs",
+     "date": "enforced since 2022-07-11"
+    },
+    {
+     "url": "https://docs.github.com/en/repositories/releasing-projects-on-github/linking-to-releases",
+     "quote": "To link directly to a download of your latest release asset that was manually uploaded, the suffix is /releases/latest/download/asset-name.zip.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S11-F5",
+   "verdict": "CONFIRMED",
+   "note": "Obtainium v1.6.17 is the latest non-prerelease. Its GitHub source calls api.github.com, the token field has required: false, and on rate limit it throws with no fallback. GitHub's unauthenticated limit is 60 per hour per originating IP. Removing the link and keeping fixed file names is compact.",
+   "evidence": [
+    {
+     "url": "https://api.github.com/repos/ImranR98/Obtainium/releases/latest",
+     "quote": "\"published_at\": \"2026-09-13T18:08:26Z\"",
+     "date": "2026-09-13"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/ImranR98/Obtainium/main/lib/app_sources/github.dart",
+     "quote": "throw RateLimitError(remainingMinutes);",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+     "quote": "Unauthenticated requests are associated with the originating IP address, not with the user or application that made the request.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S11-F6",
+   "verdict": "CONFIRMED",
+   "note": "Apple says expired or revoked distribution certificates do not affect live apps while the membership is valid. If the Play-managed key option (miss on line 482) is chosen, the Android item also shrinks to an upload key that Play can reset.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/support/certificates/",
+     "quote": "If your Apple Developer Program membership is valid, your existing apps on the App Store won't be affected.",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S11-F7",
+   "verdict": "CORRECTED",
+   "note": "Free plan quota, low-priority queue and Starter price confirmed. The recommendation (Android development builds on the local machine, EAS quota kept for releases and iPhone, Starter only if needed) holds.",
+   "correction": "'Windows and WSL are not supported' is overstated. Expo says WSL can be used for local EAS builds but is not officially tested or supported. This changes nothing for iPhone, which needs macOS either way.",
+   "evidence": [
+    {
+     "url": "https://docs.expo.dev/build-reference/local-builds/",
+     "quote": "On Windows, you can use WSL for local EAS Builds. However, we do not officially test against this platform and do not support Windows for local builds.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://expo.dev/pricing",
+     "quote": "$19/month plus additional usage cost",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S11-F8",
+   "verdict": "CONFIRMED",
+   "note": "Releases need read access to the repository, so a private repository cannot serve students. GitHub sets no bandwidth limit. A separate public releases repository is the lightest fix.",
+   "evidence": [
+    {
+     "url": "https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases",
+     "quote": "Anyone with read access to a repository can view and compare releases",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases",
+     "quote": "There is no limit on the total size of a release, nor bandwidth usage",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  },
+  {
+   "id": "S11-F9",
+   "verdict": "CORRECTED",
+   "note": "Play rule confirmed: since 31 Aug 2026, new apps and updates must target API 36, and the policy requires an API level within one year of the latest major Android release. Expo SDK 57 targets 36. SDK 58 (npm tag 'next' 58.0.3, published 2026-10-03) also targets 36 and keeps Android 7+ and iOS 16.4+, so line 516 still holds after that upgrade.",
+   "correction": "Play does not turn a free choice into a yearly obligation. The iPhone path already forces one: since 28 April 2026, App Store Connect only accepts builds made with Xcode 26 and the iOS 26 SDK, and Apple raises this every spring. Play only adds the Android side. The recommendation (upgrade the Expo SDK at least once a year) is unchanged.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/news/upcoming-requirements/",
+     "quote": "Apps uploaded to App Store Connect must be built with Xcode 26 or later using an SDK for iOS 26, iPadOS 26, tvOS 26, visionOS 26, or watchOS 26.",
+     "date": "effective 2026-04-28"
+    },
+    {
+     "url": "https://developer.android.com/google/play/requirements/target-sdk",
+     "quote": "New apps and app updates must target Android 16 (API level 36) or higher",
+     "date": "2026-10-01"
+    },
+    {
+     "url": "https://docs.expo.dev/versions/v58.0.0",
+     "quote": "targetSdkVersion 36",
+     "date": "accessed 2026-10-05"
+    }
+   ]
+  }
+ ],
+ "recommendation_issues": [
+  {
+   "id": "S11-F1",
+   "problem": "The recommendation holds, but the reason it gives ('Play Integrity günde 10.000 istekle sınırlı ve bu sınır artırılamıyor, dönem başı kaydına yetmez') is its weakest argument. Key attestation, already in the plan, identifies the app with no quota, and the plan already flags devices it cannot verify. Rest the change on install friction and updates (no unknown-sources step, Samsung Auto Blocker on by default, no Play Protect prompt, automatic updates, 2027 verification). Also note, as a cross-slice item for line 78, that GitHub installs are checked by key attestation and Play Integrity serves Play installs."
+  },
+  {
+   "id": "S11-F2",
+   "problem": "Picks the heavier of Play's two documented ways to keep one signature, does not mention the other, and reuses the app signing key as upload key against Google's 'should be different' advice without saying so. With Play as the main path, keeping Google's key and putting Play's signed universal APK on GitHub removes the key that cannot be recovered from our side, removes the PEPK export step, and saves one Android build per release. Its cost is that GitHub depends on the Play account. If the own-key route is kept anyway, the plan needs the guardrail 'Play'in anahtar yükseltme önerisi kabul edilmez', because on Android 17+ a hybrid upgrade changes the app's signing identity."
+  },
+  {
+   "id": "S11-F4",
+   "problem": "The branch condition 'Google servisi olmayan telefonda' should be the install source: if Play Store installed the copy, open the Play page, otherwise open the GitHub link. A GitHub copy on a phone that has Google services, sent to the Play page, can only update there if the signatures match (S11-F2)."
+  }
+ ],
+ "checked_ok_disputes": [],
+ "misses": [
+  {
+   "plan_line": 476,
+   "plan_quote": "GitHub Releases sayfasından APK indirilir ve kurulur; telefonda \"bilinmeyen kaynaktan kurulum\" izni açılır.",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "Samsung's Auto Blocker is on by default on every Galaxy phone that shipped with One UI 6.1.1 or later. While it is on, only Galaxy Store and Play Store installs go through. A browser-downloaded APK is blocked even after the 'install unknown apps' permission is granted. The install steps for the GitHub APK, which line 36 makes the only Android path, never mention this, so students with newer Samsung phones get stuck at install. Under S11-F1 (Play as the main path) these phones install from Play and the problem goes away; it remains only for the GitHub instructions.",
+   "evidence": [
+    {
+     "url": "https://www.samsung.com/tr/support/mobile-devices/galaxy-cihazinizi-yeni-otomatik-engelleyici-ozelligi-ile-koruyun",
+     "quote": "One UI 6.1.1 ile piyasaya sürülen Galaxy cihazları için Otomatik Engelleyici özelliği varsayılan olarak Açık olarak ayarlanmıştır.",
+     "date": "2026-07-24"
+    },
+    {
+     "url": "https://www.samsung.com/ie/support/mobile-devices/protect-your-galaxy-device-with-the-new-auto-blocker-feature/",
+     "quote": "If you attempt to install apps from unknown or unauthorised sources, you may receive a pop-up alert, and Auto Blocker will prevent you from continuing with the installation.",
+     "date": "2026-07-22"
+    }
+   ],
+   "recommendation_tr": "Bu da Android'in ana yolunun Google Play olması için bir gerekçe: Samsung telefonlar uygulamayı Play'den kurar. GitHub kurulum yönergesine yine de bir adım eklenir: Samsung telefonda Ayarlar > Güvenlik ve gizlilik > Otomatik Engelleyici kapatılır, sonra APK kurulur."
+  },
+  {
+   "plan_line": 482,
+   "plan_quote": "Google Play de kullanılırsa aynı anahtar oraya yüklenir.",
+   "kind": "BETTER",
+   "severity": "medium",
+   "finding": "Play documents two ways to keep one signature on Play and outside it: give Play your own key, or keep Google's key and distribute the signed universal APK that Play Console produces. The plan and S11-F2 name only the first. With Play as the main path, the second is lighter. The app signing key, which cannot be recovered if lost, never sits with us; a lost upload key can be reset. There is no PEPK export step. The GitHub file is the binary Play signs, so each release needs one Android build instead of an AAB plus an APK. Play's default quantum-ready signing is kept. Its cost: the GitHub APK can only come out of Play Console, so losing the Play account also stops GitHub updates. If the own-key route is kept, the plan needs a guardrail. Google said in March 2026 it will prompt developers to upgrade signing keys at least every two years. On Android 17+, a hybrid upgrade works as a key rotation that makes the new post-quantum key the app's identity, and a GitHub APK signed only with the old key can then no longer update a Play install on those phones.",
+   "evidence": [
+    {
+     "url": "https://support.google.com/googleplay/android-developer/answer/9842756?hl=en",
+     "quote": "If you lose your upload key or suspect that it was compromised, you are not locked out of your app.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://support.google.com/googleplay/android-developer/answer/9006925?hl=en",
+     "quote": "You can distribute this APK on other app stores and distribution channels such as websites so that wherever you distribute your app, it's signed with the same key.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://blog.google/security/security-for-the-quantum-era-implementing-post-quantum-cryptography-in-android/",
+     "quote": "Google Play will also start prompting developers to upgrade their signing keys at least every two years.",
+     "date": "2026-03-25"
+    },
+    {
+     "url": "https://source.android.com/docs/security/features/apksigning/v3-2",
+     "quote": "The platform treats the hybrid block as an implicit key rotation. The platform appends the new classical key to the app's existing signing lineage as the next-to-last key, and treats the new PQC key as the app's current signing identity.",
+     "date": "2026-09-30"
+    },
+    {
+     "url": "https://source.android.com/docs/security/features/apksigning/v3-2",
+     "quote": "If a developer attempts to update a hybrid-signed app using only one of the hybrid keys as a single signer without a proper rotation, the update fails.",
+     "date": "2026-09-30"
+    }
+   ],
+   "recommendation_tr": "İmza yolunu bilerek seçip plana yazarım. Önerim: Play'in ürettiği anahtarı kabul ederim; GitHub'a Play Console'dan indirilen imzalı evrensel APK'yı koyarım. Böylece kaybolunca geri gelmeyen anahtar bende durmaz (yükleme anahtarı kaybolursa sıfırlanır) ve her sürümde tek Android derlemesi yeter. Bedeli: Play hesabı kapanırsa GitHub sürümü de güncellenemez. Kendi anahtarımı Play'e yüklemeyi seçersem, GitHub yolu sürdükçe Play'in anahtar yükseltme önerisini kabul etmem."
+  },
+  {
+   "plan_line": 485,
+   "plan_quote": "Kapalı test kanalı da eklenirse bilinmeyen kaynak izni ve tarama uyarısı olmaz, güncellemeler kendiliğinden gelir.",
+   "kind": "MISSING",
+   "severity": "low",
+   "finding": "The plan prepares a reviewer demo account only for Apple (line 493). Play review, which also covers closed-test releases, needs one too, and its rules are specific: the sign-in must be reusable, valid from any location, and must bypass one-time codes. The plan's teacher login is email-code only (line 69), release builds have no 'show code' setting (line 87), and a student account binds to one phone (line 84). A demo account that follows those rules cannot be reused across reviewers' devices, which is a common rejection cause.",
+   "evidence": [
+    {
+     "url": "https://support.google.com/googleplay/android-developer/answer/15748846?hl=en",
+     "quote": "Your sign-in details must be accessible at all times, reusable, and valid regardless of user location.",
+     "date": "accessed 2026-10-05"
+    },
+    {
+     "url": "https://support.google.com/googleplay/android-developer/answer/15748846?hl=en",
+     "quote": "if your app typically requires a 2-Step verification code or One-time password, make sure to provide reusable login credentials that can bypass these requirements.",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "iPhone için kurulan deneme hesabı ve her an açık deneme dersi Play incelemesinde de kullanılır. Deneme hoca hesabı için sunucuda sabit bir giriş kodu tanımlanır, deneme öğrenci hesabı tek telefon kuralından muaf tutulur. Bilgiler Play Console'daki uygulama erişimi (App access) alanına yazılır."
+  },
+  {
+   "plan_line": 857,
+   "plan_quote": "Android'de Google Play kapalı test kanalı da eklensin mi? Önerim: evet; GitHub APK yedek yol olarak kalır.",
+   "kind": "MISSING",
+   "severity": "low",
+   "finding": "The name and logo rule appears only under iPhone (line 499). Play review applies the same rule through its impersonation policy, so an app from an individual developer that carries the university's name or logo as if it were official can be rejected on Play too. This matters more once Play is the main Android path.",
+   "evidence": [
+    {
+     "url": "https://support.google.com/googleplay/android-developer/answer/9888374?hl=en",
+     "quote": "Don't imply that your app is related to or authorized by someone that it isn't.",
+     "date": "accessed 2026-10-05"
+    }
+   ],
+   "recommendation_tr": "Ad ve logo kuralı Android için de yazılır: izin yoksa Play'de de nötr ad ve simge kullanılır."
+  }
+ ],
+ "slice_verdict": "PASS",
+ "verdict_reason": "No high-severity finding is refuted or unverifiable. The two high findings (F1, F2) are CORRECTED: their core facts hold against Google pages updated 2026-09-30 and 2026-10-01, and both are downgraded to medium. F1's claim that the app check needs Play is wrong because key attestation carries the signing-certificate digests. F2 misses Play's documented universal-APK option. Tally: 5 CONFIRMED (F3, F4, F5, F6, F8), 4 CORRECTED (F1, F2, F7, F9), 0 REFUTED, 0 UNVERIFIABLE. All 24 checked_ok items were re-checked, including every version, date, limit and price: StatCounter CSV for Sept 2026 gives Android below 7 = 1.82% and iOS below 16.4 about 2.3% plus 0.08% other; Expo SDK 57 table; EAS pricing; developer-verification FAQ (2026-09-30); Obtainium API; GitHub limits; Apple fee. No disputes. Expo SDK 58 (npm 'next' 58.0.3, 2026-10-03, stable expected in October) keeps Android 7+ and iOS 16.4+, so line 516 survives the upgrade. Four misses, none high: Samsung Auto Blocker on by default blocks GitHub APK installs (medium, closed by F1's Play-first path); the lighter Play-signed universal APK option and the key-upgrade guardrail (medium); Play reviewer sign-in rules (low); the name and logo rule for Play (low). Accepted recommendations reduce moving parts overall."
+}

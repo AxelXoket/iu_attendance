@@ -1,0 +1,1268 @@
+[
+ {
+  "n": "I001",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D01",
+   "D03",
+   "D08",
+   "D09",
+   "D10"
+  ],
+  "decision": "Öğrenci kimliği tek kurala bağlandı (contracts.json ortak kural 'Öğrenci kimliği'): ogrenci_id hesap kimliğidir, ders içindeki öğrenci (ders, numara) ile anılır, yolda ve iş verisinde liste satırı kimliği taşınır, hesap ile numara arasında D01.ogrenciHesabiGetir toplu çağrısı kullanılır ve silinmiş hesabın kayıtları da sayılır. Çift anadal ikinci numarası D03-A02 sahip kararına bağlı kalır."
+ },
+ {
+  "n": "I002",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D07"
+  ],
+  "decision": "plan.html#gun-kenar-durumlar 'Değişim onaylanınca birlikte karara bağlanır' dediği için eski cihazın kayıtları açık talep süresince Beklemede kalır (D07-B13 kalır). Kötüye kullanım şöyle sınırlanır: gerçek öğrenci açık talebi /ben'de görür ve etkin cihazından POST /v1/kimlik/cihaz-degisimi/{talepId}/ret ile reddeder, talep 72 saatte düşer; ret ve düşme aynı işlemde D07.yenidenDegerlendir'i (CIHAZ_DEGISIMI_REDDEDILDI, DEGISIM_IPTAL) çağırır ve bekleyen kayıtlar hemen karara bağlanır."
+ },
+ {
+  "n": "I003",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D01",
+   "D02"
+  ],
+  "decision": "Deneme dersi itme modeliyle kurulur: D01'in inceleme_hesaplari_kurulumu işi (jobs/kimlik) tek işlemde hocayı kurar, D02.denemeDersiniKur(tx, hocaKisiId) ile dersi kurdurur ya da devrettirir ve dönen şubeye D03.denemeListesiniKur ile satırı kurdurur. D02'nin deneme_dersi_oturumlari yalnız oturum üretir; incelemeHesaplari dış yüzü yoktur."
+ },
+ {
+  "n": "I004",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02"
+  ],
+  "decision": "D02 dış yüzüne listeKaynagiKaydet(kaynak: { etkinSatirlar }) eklendi (contracts.json); D03 kendi eklentisinde yalnız etkinSatirlar ile kaydolur, D02 hazır olurken kaydı denetler. D02 D03'ü içe aktarmaz."
+ },
+ {
+  "n": "I005",
+  "verdict": "REJECT",
+  "targets": [
+   "D02"
+  ],
+  "decision": "Çekme modeli reddedildi; I003'teki itme modeli geçerlidir: tek işlemde kurulum yarım ders ya da listesiz deneme dersi bırakmaz ve inceleme hesabı kuralı D01'indir. D02 denemeDersiniKur(tx, hocaKisiId) dış yüzünü verir, D01.incelemeHesaplari okumaz."
+ },
+ {
+  "n": "I006",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02",
+   "D13",
+   "D15"
+  ],
+  "decision": "D02.donemArasiMi(tx, an?) dış yüzde kalır (contracts.json); D13 ve D15 onu içe aktarmaz, bileşim kökü (app.ts, server.ts) en düşük sürüm denetimine ve yayın penceresine parametre olarak verir."
+ },
+ {
+  "n": "I007",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02",
+   "D14"
+  ],
+  "decision": "takvim_oturumlarini_yenile gece onarımı 01:55 Europe/Istanbul'da kalır ve D14 çizelgesine satır olarak girer (03:00 ile 05:00 dışı, öbür işlerden en az 5 dakika uzak)."
+ },
+ {
+  "n": "I008",
+  "verdict": "CHANGE",
+  "targets": [
+   "D02",
+   "D04",
+   "D06"
+  ],
+  "decision": "D04 üretim dinleyicisini (tx, olay) => pencereleriHesapla(tx, olay.oturumlar) uyarlayıcısıyla kaydeder ve dinleyici yolunda surumAl çağırmaz; sürüm tek düzenekle gelir: D06.surumDamgasiIste (ortak kural 'Sürüm damgası'). D02'nin olay.surumleDamgala geri çağrısı kalkar, D02 dinleyicilerden sonra surumAl'ı bir kez çağırır."
+ },
+ {
+  "n": "I009",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D01",
+   "D02",
+   "D03",
+   "D04",
+   "D05",
+   "D07",
+   "D08",
+   "D09",
+   "D10",
+   "D11",
+   "D13"
+  ],
+  "decision": "D02'nin adları geçerlidir ('sahip', OTURUM_TURLERI, OTURUM_DURUMLARI, DEVAM_NEDENLERI, tarihten ve tarihe, oturumSayfasi, hocaninDersleri). Ortak Kimlik tipi roller: { rol, kapsamBirimId }[] taşıdığından dersYetkisi(tx, kimlik, dersId) üç parametreye iner, yoneticiKapsami ve çağıranın personelRolleri'nden kurduğu nesne kalkar."
+ },
+ {
+  "n": "I010",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02",
+   "D03"
+  ],
+  "decision": "D03 öğrenci kapsam kaynağında pasif satırın şubesini kapsamda tutar ve dersler ile birimleri D02.subeGetir ve dersGetir ile doldurur; D02'ye yalnız etkinSatirlar verir; liste yazarken D02 şube ve ders satırlarını subeGetir/dersGetir(..., { kilitle: 'paylasimli' }) ile FOR SHARE kilitler. Deneme listesinin şubesi D01'in çağrısından parametreyle gelir (I003)."
+ },
+ {
+  "n": "I011",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D01",
+   "D02",
+   "D03"
+  ],
+  "decision": "Beş ek de yapılır: D03 dış yüzüne denemeListesiniKur, ogrencininSatirlari ve dört parametreli muafIsaretle; D02'ye listeKaynagiKaydet ve kilitle: 'paylasimli' seçeneği (pasifleştirme ve arşiv önce FOR UPDATE alır, liste kaynağını kilitten sonra sorar); D02 dersGetir'deki sahipAtamaSurumu notu kalkar; D01-B19 kuralı 'açık dönemlerdeki bütün etkin satırlar eşleşmeli' olur. contracts.json güncellendi."
+ },
+ {
+  "n": "I012",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D03"
+  ],
+  "decision": "I001 kuralı: ders içinde iç kimlik liste satırıdır, hesaplar arası birleştirme numarayla; D03 liste değişikliği olayında her satır için satirId ile ogrenciNo'yu birlikte verir."
+ },
+ {
+  "n": "I013",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D03",
+   "D06"
+  ],
+  "decision": "Öğrenci kapsam kaynağını ('ogrenci_liste_kapsami') D03 kaydeder, personel kaynağını D02 (contracts.json karar 'Öğrenci kapsam kaynağı'). D03 teyidi bilmez; D06 imleçteki hesap özetine teyit durumunu katar, teyit değişince baştan indirme olur ve ad o indirmede iner."
+ },
+ {
+  "n": "I014",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D03",
+   "D04",
+   "D05",
+   "D06",
+   "D07",
+   "D08",
+   "D09",
+   "D11",
+   "D12",
+   "D14",
+   "D15"
+  ],
+  "decision": "Tek çağrı kuralı yerine beş katmanlı danışma kilidi kuralı kondu (contracts.json ortak kural 'Danışma kilidi katmanları'): 1 dogrulama:liste, 2 listeler:kova ve dogrulama:teyit, 3 yoklama:cift, projeksiyon, esitleme:kurulum_siniri, duzeltmeler:zincir, 4 dogrulama:sayac, 5 dogrulama:isaret; yeni anahtar yalnız daha yüksek katmanda beklenir, daha düşüğü danismaKilidiDene ile denenir. D03'ün iki tamsayılı kova kilidi 'listeler:kova:<kovaNo>' metin anahtarına geçer; satırlardan sonra iş kuyruğu ve öğrenci sürümü, en son genel sayaç."
+ },
+ {
+  "n": "I015",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D03",
+   "D07"
+  ],
+  "decision": "D01 ve D08 uyarlayıcıları önerildiği gibidir (bekleyenKayitlariEslestir(tx, subeId, { ogrenciNolari }), devamHesaplaIsiKoy(tx, dersId, null, 'LISTE', { tur: 'LISTE_SATIRI', id, donemId })). D07'nin KARAR uyarlayıcısı iş kuyruğa koymaz, kararı liste işleminin içinde yenidenDegerlendir(tx, { dersId, subeIdleri, ogrenciNolari }, 'LISTE_DEGISTI') ile verir: plan.html#kararlar-supheli-kayit kararı ilgili olayın işleminde ister ve katman kuralı bunu kilitlenmesiz yapar."
+ },
+ {
+  "n": "I016",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D04"
+  ],
+  "decision": "contracts.json'a işlendi: D04 dış yüzünde pencereDegistiDinleyicisiKaydet, istanbulTarihi, istanbulAni, istanbulGunSonuAni ve saatEklentisi; reads_from'dan D03 çıktı; oturumKapandi dinleyicilerinden D08 çıktı; oturum_pencereleri amacında kesinleşti yerine taşıma anı ve şubeler."
+ },
+ {
+  "n": "I017",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D04",
+   "D12"
+  ],
+  "decision": "Dosya haritasında her modülün apps/server/migrations/??????????????_<belirteç>_* globu var, D12'nin geniş globu kalktı; D12 klasör kuralının ve CI denetiminin sahibidir (A1). Göç dosyası spec dosya listesine değil iş paketine yazılır."
+ },
+ {
+  "n": "I018",
+  "verdict": "CHANGE",
+  "targets": [
+   "D02",
+   "D04",
+   "D05",
+   "D06",
+   "D07",
+   "D11",
+   "D13",
+   "D15"
+  ],
+  "decision": "Komşu beklentileri kabul edildi, iki ayrımla: belge ucu için D06'dan istenen ikinci çapa imza yardımcısı geri çekildi (belge ucu oturumla ve app.ts'in saatOznesiKur'uyla çalışır); D07 pencere sonucunu D04'ün bugünkü biçimiyle (ICINDE, DEGISIM_DILIMI, ESKI_PROGRAM, DISINDA, kayitAnindaSureSecildi) kullanır ve yenidenDegerlendir dış imzası değişmez, kesinti partileri D07'nin dinleyicisi içinde işlenir. Kodlar D04 sabitlerinden büyük harfle (BASKA_CIHAZ_GONDERDI, OKUTMA_YOLU) alınır."
+ },
+ {
+  "n": "I019",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02",
+   "D04",
+   "D06",
+   "D12"
+  ],
+  "decision": "D06 surumDamgasiIste(tx, damga) verir; işlemin sahibi son adımda surumAl'ı bir kez çağırır, sayaç bir kez artar ve bütün damgalar aynı sürümle yazılır; damgalı işlem surumAl'sız biterse D12.islemSonuKancasi denetimi işlemi geri alır. Gönderimde sahibi D06, üretimde D02'dir; PaketBaglami.surumlaDamgala aynı işleve giden kısayoldur."
+ },
+ {
+  "n": "I020",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D05"
+  ],
+  "decision": "apps/server/src/cli/yoklama-kaniti* globu D05'e eklendi; kanitCikar ve kayitlariKilitle contracts.json dış yüzünde; ogrencininKayitlari imzası (tx, ogrenciId, { surumden, surumeKadar })."
+ },
+ {
+  "n": "I021",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D05",
+   "D07"
+  ],
+  "decision": "D05 ile D07 sözleşmesi iki tarafta aynı yazılır: tipler D07'de, KayitTaslagi D05'te; kararHesapla yalnız okur ve kilitler, geçmiş kayıt eklendikten sonra kararGecmisineYaz ile (sira 1 = karar_surumu 1); App Attest sayacı ve iOS 27 alanları önerildiği gibi; D07 D05'i yalnız yaprak.ts'ten ya da eklenti seçeneğiyle kullanır."
+ },
+ {
+  "n": "I022",
+  "verdict": "CHANGE",
+  "targets": [
+   "D05",
+   "D06"
+  ],
+  "decision": "D06 ile öğe sözleşmesi kabul (ogrenciDurumuDegisti bigint döner, iki tür isleToplu ile, kayıt metni sırası beklentisi kalkar, yan etki belleği isleToplu çağrısına yerel). PaketBaglami'na kimlik: Kimlik | null eklenir ve D05 dersYetkisi'ne onu verir. Saklama için D06 'esitleme.karar_teslimleri' değil katalogdaki 'esitleme.donem_verisi' sınıfını kaydeder."
+ },
+ {
+  "n": "I023",
+  "verdict": "CHANGE",
+  "targets": [
+   "D04",
+   "D05"
+  ],
+  "decision": "D04 BASKA_CIHAZ_GONDERDI değerini (büyük harf, D04 sabiti), saatBelgesiVer amaç cümlesini ve 'tahminMs yalnız kaynak YOK iken boş' kuralını verir. Saklama sınıfı 'saat.pencere_degisiklikleri' değil katalogdaki 'saat.donem_verisi'dir."
+ },
+ {
+  "n": "I024",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D05",
+   "D07"
+  ],
+  "decision": "D07.kararDegistir ve yenidenDegerlendir hedef kayıtların çift kilitlerini D05.kayitlariKilitle ile tek çağrıda, sayaç, ortak sınır ve işaret kilitlerinden önce alır; ekleme yoluyla aynı sıra (katman 3, sonra 4 ve 5)."
+ },
+ {
+  "n": "I025",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D03",
+   "D04",
+   "D05",
+   "D06",
+   "D07",
+   "D08",
+   "D09",
+   "D10",
+   "D11",
+   "D12"
+  ],
+  "decision": "İnce sınıf adları ve modül kaydında oncekiSiniflar yoktur: tek kaynak D12'nin SAKLAMA_VERI_SINIFLARI kataloğudur (modül başına <belirteç>.donem_verisi ve kimlik.kisi_bagi), sıra kataloğun oncesinde listesinden gelir. D05 yalnız yoklama.donem_verisi işleyicisini kaydeder; başvuran sınıflar katalogda yoklamadan önce durur."
+ },
+ {
+  "n": "I026",
+  "verdict": "CHANGE",
+  "targets": [
+   "D05"
+  ],
+  "decision": "Ne bellek kümesi ne singletonKey: her devamHesaplaIsiKoy çağrısı bir iş satırı ekler, SAVEPOINT geri alınınca satır da gider, yeniden çağrı yenisini ekler; aynı (ders, öğrenci) işleri D08'in partisinde birleşir (D08'in bugünkü metni). D05'in testi bunu sınar."
+ },
+ {
+  "n": "I027",
+  "verdict": "CHANGE",
+  "targets": [
+   "D02",
+   "D05",
+   "D11"
+  ],
+  "decision": "Alan adı ve biçimi D11-A14'teki gibidir: D02.dersGetir DersBilgisi.sahiplikGecmisi: readonly { kisiId, baslangicAni, bitisAni | null }[]; oncekiSahipKisiIdleri kalkar. D05 önceki sahibin okutmasını okutma anı onun bitisAni'sinden önceyse kabul eder."
+ },
+ {
+  "n": "I028",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D05",
+   "D09"
+  ],
+  "decision": "sorun_bildirimi gövdesindeki kararSurumu tam sayıdır (JSON sayı, en az 1); D05, D06 ve D09 aynı tipi kullanır."
+ },
+ {
+  "n": "I029",
+  "verdict": "CHANGE",
+  "targets": [
+   "D05",
+   "D07",
+   "D12"
+  ],
+  "decision": "D05 hizalamasının (1) ile (6) maddeleri kabul; çift anahtar işlevi yoklamaCiftAnahtari(oturumId, ogrenciId) packages/contracts/src/yoklama.ts'ten dışa açılır. (7) saklama maddesi katalog kuralıyla değişti: dogrulama.donem_verisi katalogda yoklama.donem_verisi'nden önce durur, D05 kaydına sınıf listesi yazılmaz."
+ },
+ {
+  "n": "I030",
+  "verdict": "CHANGE",
+  "targets": [
+   "D04",
+   "D07"
+  ],
+  "decision": "Pencere hesabının tek sahibi D04'tür: D07 D04.pencereSonucu'nun bugünkü değerlerini (ICINDE, DEGISIM_DILIMI, ESKI_PROGRAM, DISINDA ve kayitAnindaSureSecildi) karara eşler, kendi eski program hesabını bırakır. pencereDegistiDinleyicisiKaydet contracts.json'da; oturumKapandi açıklaması 'D07 (güvenlik ağı yeniden değerlendirme, iş koymaz)'; kesintiAraliklari dönüşüne ulasmaAnlariGuvenilir eklenir."
+ },
+ {
+  "n": "I031",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D07",
+   "D13",
+   "D15"
+  ],
+  "decision": "D07 yayin-bilgisi.json'u yalnız D13.yayinBilgisi() ile okur; D13 yayinBilgisiSemasi'na iosDagitimTurleri ekler; D15 CI başlangıç kuralını, uyarı kataloğu örneklerini, ölçümü, dört ayarı ve iptal listesi adresini dışarı çıkış listesine ekler. packages/contracts packages/core'u içe aktarabilir, core contracts'ı çalışma zamanında içe aktarmaz (yalnız import type); bağımlılık satırı D13'ün packages/contracts/package.json dosyasındadır."
+ },
+ {
+  "n": "I032",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D01",
+   "D07"
+  ],
+  "decision": "D01 hizalaması kabul: meydan okuma ve bağlama düzeni, onay_alani nedeni, teyit anahtarı (dogrulama:teyit:<ogrenciId>, katman 2, D07'nin dogrulamaTeyitAnahtari işleviyle) yazmadan önce dışlayıcı, YenidenNeden sabitleri. cihazKanitAyrintilariniSil hesap silmede neyin silineceği sahibe sorulan D12-A01 cevaplanınca eklenir."
+ },
+ {
+  "n": "I033",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D07",
+   "D11"
+  ],
+  "decision": "D11 dış yüzüne gosterimKaydiDinleyicisiKaydet eklendi (iki aşamalı biçim, I051); D07 kaydolur ve oturumun QR kayıtlarını QR_GOSTERIM_KAYDI nedeniyle aynı işlemde yeniden değerlendirir. Doğrulanmış etiketi gelişte konur; D11 tablosundaki 'gecikme NORMAL ise Doğrulanmış' notu düzeltilir."
+ },
+ {
+  "n": "I034",
+  "verdict": "CHANGE",
+  "targets": [
+   "D02",
+   "D07"
+  ],
+  "decision": "Oturum alanları ve kilit adımı kabul: { ad: 'dogrulama.karar_kapanisi', sira: 10 }, D02 kayıtlı adımları kendi arşiv ve devam adımlarından önce çalıştırır. D02'nin saklama sınıfı yoktur (oturumlar silinmez), bu yüzden dogrulama.oturum_verisi isteği düşer."
+ },
+ {
+  "n": "I035",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D03",
+   "D07"
+  ],
+  "decision": "uyelikDenetle anı sözleşmedir: kaydın hesaplanan saati (SaatSonucu.aralik üst ucu, pay öğrenci lehine), saat kurulamadıysa oturum başlangıcı, ulaşma anı hiç. D03 liste yazmadan önce değişen şubelerin 'dogrulama:liste:<subeId>' anahtarlarını (katman 1) dışlayıcı alır; D07'nin dinleyicisi { ad: 'dogrulama', basamak: 'KARAR', isle }."
+ },
+ {
+  "n": "I036",
+  "verdict": "CHANGE",
+  "targets": [
+   "D07",
+   "D09",
+   "D12",
+   "D14"
+  ],
+  "decision": "D09 ile karar biçimi birleştirildi: YeniKarar { karar, beklenenKarar }, KararKaynagi { tur: 'HOCA', kisiId, olay, islemId } (olay KARAR_OLAYLARI'ndan, KARAR_DEGISTIR dahil), dönüş D09-B12'deki KararDegisimi; 200 öğelik istekte çift kilitleri baştan alınır. duzeltmeleriGetir zaten yaprak.ts'te; D12 denemeli kip danismaKilidiDene olarak gelir; saklama katalogla, D14'ün 05:15 satırı düşer; contracts.json dış yüz satırları hizalandı."
+ },
+ {
+  "n": "I037",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D08"
+  ],
+  "decision": "D01 D08'in reads_from listesine eklendi (contracts.json); D08 ogrenciHesabiGetir'i toplu { numaralar } ve { kisiIdler } biçimleriyle kullanır."
+ },
+ {
+  "n": "I038",
+  "verdict": "CHANGE",
+  "targets": [
+   "D02",
+   "D03",
+   "D05",
+   "D06",
+   "D08",
+   "D09",
+   "D12",
+   "D15"
+  ],
+  "decision": "Tetik çağrıları ve okumalar kabul, üç ayrımla: D06 ders başına sayı değil bekleyenYoklamaVar (boolean) verir ve toplu kurulumSonTemaslari ekler; D09 girdi kaynağı kaydetmez, D08 duzeltmeleriGetir ve acikSorunBildirimleri'ni D09'un yaprak.ts'inden içe aktarır ve devamGirdiKaynagiKaydet kalkar; D03'ten oncekiSiniflar istenmez, sıra katalogdadır. D02 denetlenecekDersler ekler, D05 karar ve sayılan değişiminde iş koyar, D15 DEVAM_SAYIM_TABANI ve uyarı kuralını ekler."
+ },
+ {
+  "n": "I039",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D03",
+   "D08"
+  ],
+  "decision": "Muaf ucunun yolu PUT /v1/devam/dersler/{dersId}/ogrenciler/{satirId}/muaf oldu (contracts.json); değer D03.muafIsaretle'nin aldığı liste satırı kimliğidir."
+ },
+ {
+  "n": "I040",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02",
+   "D06",
+   "D08"
+  ],
+  "decision": "Son gün ve kilit anı D02'nin kilit genel kaynağındaki birim dönemi satırıyla telefona iner (D02-B32); D06-B16'nın 'ders satırıyla' ifadesi buna çekilir. D08'in sunucu hesabı son güne ihtiyaç duymaz."
+ },
+ {
+  "n": "I041",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D08",
+   "D10"
+  ],
+  "decision": "D10 özet, hücre ve anlığı D08.dersSonuclari(tx, subeId, { an, hucreler: true }) ve oturumSonDurumlari(tx, subeId, { an }) ile aynı işlemde canlı alır; hesap bekleme alanı ve engeli kalkar, anlık devam_hesapla işlerini beklemez. KARAR BEKLİYOR nedeni dizidir; muaf ve telafi eksiği D08 satırından okunur (tek tanım D08-B15)."
+ },
+ {
+  "n": "I042",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02",
+   "D08"
+  ],
+  "decision": "Oran ucu PUT /v1/devam/yonetim/dersler/{dersId}/oranlar oldu; contracts.json'da D08 uçları, 'Oran ve muaf' kararı güncellendi, D02.oranlariYaz amacındaki yol düzelir; muaf ucu hocanın olduğu için yerinde kalır."
+ },
+ {
+  "n": "I043",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D05",
+   "D08",
+   "D09"
+  ],
+  "decision": "D09.sonDurumOnceligi girdisine SonDurumKaydi.sayimDisi ve SonDurumOturumu.kilitli eklenir; D05, D08, D10 ve telefon aynı işlevle aynı sonucu verir, D08 katmanı yalnız kapsam ve MUAF örtüsü kalır."
+ },
+ {
+  "n": "I044",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D09"
+  ],
+  "decision": "I001 kuralı: D09 düzeltmeyi liste satırıyla yazar; hesabı olmayan öğrencide hesap işini ders düzeyinde koyar (devamHesaplaIsiKoy(tx, dersId, null, neden))."
+ },
+ {
+  "n": "I045",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D02",
+   "D03",
+   "D04",
+   "D05",
+   "D06",
+   "D07",
+   "D08",
+   "D09",
+   "D10",
+   "D11",
+   "D13",
+   "D15"
+  ],
+  "decision": "İstekler kabul, D07 biçimi I036'daki birleşik biçimdir ve saklama katalogla yapılır. Bütün modüller için: dersId taşıyan denetim olayı birimId de taşır ve olay türleri sözleşme dosyasındaki <MODÜL>_DENETIM_OLAYLARI listesindedir (contracts.json ortak kural)."
+ },
+ {
+  "n": "I046",
+  "verdict": "CHANGE",
+  "targets": [
+   "D02",
+   "D08",
+   "D10"
+  ],
+  "decision": "(1) D08'in canlı oturumSonDurumlari'sı vardır ve imzası D08'inkidir (tx, subeId, { an, tarihten?, tarihe? }); satırlar satirId ve ogrenciNo taşır, D10 hücreleri oradan okur ve eşitlik her an geçerlidir. (2) Telafi eksiğinin tek tanımı D08-B15'tir, D10 yalnız gösterir; tanım farkı varsa sahibe sorulan D02-A02'ye gider. contracts.json'daki D10 notu düzeltildi, D02 metnindeki cümle değişir."
+ },
+ {
+  "n": "I047",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D03",
+   "D08",
+   "D10"
+  ],
+  "decision": "D10 anlık, rapor ve özet satırlarını liste_satiri_id ile anahtarlar; rapor yolu GET /v1/raporlar/ogrenciler/{satirId} oldu (contracts.json). D08 satırları satirId taşır (I046), D09 düzeltmeleri zaten liste_satiri_id taşır."
+ },
+ {
+  "n": "I048",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D09",
+   "D10"
+  ],
+  "decision": "packages/core/src/raporlar/degisim-sinifi.ts tek saf işlevdir (degisimSinifi), contracts.json D10 dış yüzünde; D09 sonradan değişenler listesinde aynısını kullanır."
+ },
+ {
+  "n": "I049",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D02",
+   "D03",
+   "D10",
+   "D12",
+   "D14"
+  ],
+  "decision": "(a) yol GET /v1/raporlar/yonetim/donem-sonu oldu; (b) çizelgede donem_kilidi 00:05 kalır, D10'un güvenlik ağı 00:25'e çekilir (D14'teki yer); (c) yalitim seçeneği var; (d) sıra ve süre kuralı D12 kataloğunda, D03'ten oncekiSiniflar istenmez; (e) kilitliBirimDonemleri { uygulanmis: true } süzgeci eklenir; (f) D10'un kilit adımı sira 20."
+ },
+ {
+  "n": "I050",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D02",
+   "D06",
+   "D11",
+   "D12",
+   "D13",
+   "D15"
+  ],
+  "decision": "Dinleyici düzeneği D01'in kimlikDinleyicileriniKur'udur ve abonelere dersler (D02) eklenir: { dersler, esitleme, projeksiyon, isletim }; D11 projeksiyonKimlikDinleyicisi'ni dışa verir, bileşim kökleri kurar. Olaylara göre iptal ve devir kuralı D11'in önerdiği gibidir."
+ },
+ {
+  "n": "I051",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D07",
+   "D11"
+  ],
+  "decision": "gosterimKaydiDinleyicisiKaydet iki aşamalıdır: D07 anahtarlar aşamasında kilitsiz okuyup gösterim bekleyen kayıtları ve D05 çift anahtarlarını döner, D11 onları kendi gösterim anahtarlarıyla tek danismaKilidi çağrısında (katman 3) alır; calistir aşamasında D07 yeni anahtar almaz, satırları FOR UPDATE okur ve QR_GOSTERIM_KAYDI ile yeniden değerlendirir."
+ },
+ {
+  "n": "I052",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D11",
+   "D12",
+   "D13",
+   "D15"
+  ],
+  "decision": "D13 kürsü kimliği ve adres kuralı, D15 projeksiyon ayar bölümü ve tek Aşama 2 QR bayrağı, kid deseni kabul. Saklamada projeksiyon.donem_verisi katalogda yoklama.donem_verisi'nden önce durur ve süresi yoklamanınkinden uzun olamaz (D12 açılışta denetler)."
+ },
+ {
+  "n": "I053",
+  "verdict": "CHANGE",
+  "targets": [
+   "D11",
+   "D12"
+  ],
+  "decision": "D12 danismaKilidi'ye anahtar başına kip verir (string | { anahtar, kip: 'paylasimli' }) ve beklemeyen danismaKilidiDene ekler; tek çağrı kuralı yerine katman kuralı geçerlidir. geriYuklemePencereleri(tx) D12 dış yüzüne eklendi, D11'e eklenti seçeneğiyle gelir."
+ },
+ {
+  "n": "I054",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D11",
+   "D14"
+  ],
+  "decision": "projeksiyon_bekleyen_yeniden_hesapla işi D11'e eklendi (contracts.json): gösterim ve öğrenci kaydı işlemi yeniden_hesap_bekliyor satırı bırakınca 5 saniye sonraya, stately, tekillikAnahtari oturum kimliği; 02:35 güvenlik ağı kalır."
+ },
+ {
+  "n": "I055",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02",
+   "D11"
+  ],
+  "decision": "D02.dersGetir DersBilgisi.sahiplikGecmisi: readonly { kisiId, baslangicAni, bitisAni | null }[] verir; D11 önceki sahibi yalnız dilim başı onun bitisAni'sinden önceyse aday sayar."
+ },
+ {
+  "n": "I056",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D07",
+   "D11"
+  ],
+  "decision": "Sınıf ve gerekçe eşlemesinin tek sahibi D07 karar.ts'tir: ANAHTAR_ELE_GECIRILDI İncelemede QR_ANAHTAR_ELE_GECIRILDI (yeni gerekçe), INDIRME_KAYDI_YOK İncelemede QR_ANAHTAR_IPTAL; değerler sahibe sorulan D07-A02 ve D11-A16 cevabıyla değişebilir. D07'nin testi D11 listelerini içe alıp her değerin eşlendiğini sınar."
+ },
+ {
+  "n": "I057",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D05",
+   "D06",
+   "D09",
+   "D11"
+  ],
+  "decision": "D06 OgeIsleyici'ye isteğe bağlı kilitAnahtarlari(tx, ogeler, baglam) kancası ekler ve paketin bütün gruplarının anahtarlarını kendi kurulum anahtarıyla tek danismaKilidi çağrısında (katman 3) alır; D05 kayıt anahtarlarına D11.qrKilitAnahtarlari'nı katar; D06 beklenenler listesinde D11 kaydı isleToplu ve ilkCapaVar true olur."
+ },
+ {
+  "n": "I058",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D12"
+  ],
+  "decision": "contracts.json'a işlendi: D12 dış yüzünde veritabaniKur ve Veritabani { islem, semaDurumu, kapat, db, havuz }, Islem tipi; reads_from'a bileşim kökü cli/geri-yukleme için D01; modül başına göç globu (A1)."
+ },
+ {
+  "n": "I059",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D13"
+  ],
+  "decision": "D13 app.ts'te ApiBagimliliklari.veritabani'ya Veritabani.db, islem'e Veritabani.islem verir ve islem seçeneklerini aynen iletir; SQLSTATE yedek tablosuna 55P03, 25P03, 57P01, 57P02 ve 08 sınıfı API_SUNUCU_YOGUN olarak; kök log cause ayrıntısı; veritabaniEklentisi öneksiz; kendi göçünde hedefli ON CONFLICT."
+ },
+ {
+  "n": "I060",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D14"
+  ],
+  "decision": "D14: isKuyruguKur Veritabani.db ile kurulur; worker.ts yoklama_saklama girişli ikinci Veritabani'yi saklamaVeritabani olarak verir ve dönen tanımları isTanimla'dan geçirir; pgboss yetkileri kur adımında; adres kilidi D12.danismaKilidi ile 'is-kuyrugu:eposta:<özet>' (katman 1) ve isteğe bağlı ek anahtarlar; makine işlerinin saatleri D12'den aynen."
+ },
+ {
+  "n": "I061",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D15"
+  ],
+  "decision": "D15: göç servisi sabit adresi, yoklama_saklama sırrı, compose.gelistirme.yaml (glob eklendi), yayın akışı notu, tam yedek eşiği 8 gün ve atlandi'nın eskime kuralına düşmesi, Biome grit eklentileri."
+ },
+ {
+  "n": "I062",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D01"
+  ],
+  "decision": "D01 her kimlik olayını yalnız iç kimlik, olay türü ve anla yapısal log satırı olarak da yazar; kimlik.kisi_bagi işleyicisi yoklama_saklama ile çalışır."
+ },
+ {
+  "n": "I063",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02",
+   "D12"
+  ],
+  "decision": "D02 kısıt adlarını kisitAdi ek biçimiyle verir (oturumlar_ders_id_tarih_deneme_uq, oturumlar_degismez_tg) ve dönem açılırken D12.donemBolumuAc(tx, donemId) çağırır; donemBolumuAc D12 dış yüzüne eklendi."
+ },
+ {
+  "n": "I064",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D01",
+   "D03",
+   "D04",
+   "D05",
+   "D06",
+   "D07",
+   "D08",
+   "D09",
+   "D10",
+   "D11",
+   "D12"
+  ],
+  "decision": "Saklama işleyicileri katalogdaki kendi sınıflarıyla (<belirteç>.donem_verisi) kaydolur, öneksiz adlar kalkar, yoklama_saklama ile çalışır ve saklamaIsleyicisiniCalistir ile sınanır. Çok kaynaklı işlemde anahtarlar katman başına tek çağrıda toplanır (D06 kancası, I057)."
+ },
+ {
+  "n": "I065",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D05",
+   "D08",
+   "D11",
+   "D15"
+  ],
+  "decision": "Zaman sütunları _ani soneki alır: yoklama_kayitlari.telefon_saati telefon_ani, makbuz_okutmalari.hoca_telefon_saati hoca_telefon_ani, gosterim_kayitlari.telefon_saati telefon_ani, D08'de hesaplandigi_an hesaplanma_ani, denetlendigi_an denetlenme_ani, devam_seviye_gecmisi.an degisim_ani; hassasiyet tabloYardimcilari.an (3)."
+ },
+ {
+  "n": "I066",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D06"
+  ],
+  "decision": "D06 hesaba bağlı satırları D01'in hesap_silindi olayında, kimlikDinleyicileriniKur'a esitleme abonesi olarak verilen esitlemeKimlikDinleyicisi ile siler; degisiklik_sayaci satırı göçte değil ilk kullanımda INSERT ... ON CONFLICT (id) DO NOTHING ile açılır."
+ },
+ {
+  "n": "I067",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D08",
+   "D10"
+  ],
+  "decision": "dersSonuclari, sonucuDegistirebilirMi, karar bekleyenler, rapor uçları ve anlık yazımı islem'i yalitim: 'repeatable_read' ile açar ya da öyle açılmış işlemde çağrılır; çağrılan işlev current_setting('transaction_isolation') ile denetleyebilir."
+ },
+ {
+  "n": "I068",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D06",
+   "D12",
+   "D13"
+  ],
+  "decision": "D12.islem geçici hataları GECICI_SQLSTATELER ile VERITABANI_KILITLENME, VERITABANI_HAVUZ_DOLU, VERITABANI_ERISILEMEZ ve VERITABANI_ZAMAN_ASIMI (57014 ve 25P04) kodlarına çevirir; bunlar ve VERITABANI_NESIL_BELIRSIZ http 503, bekleme { aralik: [15, 45] }, ortukKodlar'da; işletim kodları http null; zamanAsimiMs ağır rotada en çok 15000 ve kalanSureMs ile küçülür; D12-B06'daki 25 saniye cümlesi 20 saniyelik işleyici bütçesi olur."
+ },
+ {
+  "n": "I069",
+  "verdict": "CHANGE",
+  "targets": [
+   "D13",
+   "D15"
+  ],
+  "decision": "D15 eşleşmeleri kabul. dependency-cruiser kuralları ayrı yapılandırma dosyasında değil D13'ün sınır testinde (API ile, no-circular ve yaprak kuralı) durur; D15 paketi tam sürümle ekler ve kalite iş akışı testi koşar."
+ },
+ {
+  "n": "I070",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D02",
+   "D03",
+   "D04",
+   "D05",
+   "D06",
+   "D07",
+   "D08",
+   "D09",
+   "D10",
+   "D11",
+   "D13"
+  ],
+  "decision": "Birleşim kuralları contracts.json ortak kurallarına işlendi, bir ayrımla: eklenti adı 'eklenti' değil modül adıyla <ad>Eklentisi'dir (derslerEklentisi, saatEklentisi gibi, bugünkü adlar korunur). İki yönlü çiftler A2'deki yaprak kuralıyla bağlanır; D13'ün çiftler tablosu buna göre yazılır."
+ },
+ {
+  "n": "I071",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D02",
+   "D04",
+   "D05",
+   "D06",
+   "D07",
+   "D09",
+   "D10",
+   "D11",
+   "D13",
+   "D14"
+  ],
+  "decision": "Komşu eşleşmeleri kabul, bir ayrımla: IS_KUYRUGU_ kodlarından API isteğinde de doğabilenler (isGonder hataları) http 500 ve genel metinle, yalnız işçide doğanlar http null yazılır (ortak kural 'Birleşim'). D01'in kaynak dışı reddi 404 KIMLIK_BULUNAMADI, projeksiyon çerezi adla ayrılır."
+ },
+ {
+  "n": "I072",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D13"
+  ],
+  "decision": "apps/server/scripts/api/* globu D13'e eklendi, D13'ün jobs/api globu kalktı; iki CI betiği oraya taşınır, jobs/api/index.ts silinir, worker.ts jobs/api içe aktarmaz."
+ },
+ {
+  "n": "I073",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D01",
+   "D14"
+  ],
+  "decision": "D01 kod, başvuru kodu, başvuru silme kodu ve onay bekliyor e-postasından önce, kod üretmeden ve kendi işleminin ilk kilidi olarak epostaSiniriDenetle(tx, normalAdres, tur) çağırır; e-postayı cevap gittikten sonra gönderir, giriş bildirimi BASARISIZ ise denetime bildirim_gonderilemedi yazar; inceleme_hesaplari_kurulumu acilistaBirKez: true taşır."
+ },
+ {
+  "n": "I074",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D01",
+   "D02",
+   "D04",
+   "D06",
+   "D07",
+   "D08",
+   "D09",
+   "D10",
+   "D11",
+   "D14"
+  ],
+  "decision": "İş sahipleri pg-boss işlerini jobs/<modül>/index.ts'teki export const isler dizisinde isTanimla ile, KuyrukTanimi'ni modules/<ad>/ içinde tanımlar, çizelge kurallarına uyar ve her iş için D14'ün 'aynı veriyle iki kez çalışırsa' adımıyla senaryo yazar; altyapı işleri (D12 veritabaniIsleri, D15 isletimIsleri) worker.ts uyarlamasıyla istisnadır."
+ },
+ {
+  "n": "I075",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D12",
+   "D14"
+  ],
+  "decision": "D12: timezone 'UTC', üç uygulama rolü, db:migrate sırası (Drizzle, pg-boss migrate, worker kur), test sıfırlamasında pgboss'a yalnız isKuyrugunuBosalt ile dokunma, eposta_gonderimleri göçünün tablo haritası denetimi, veritabaniIsleri öğesinde isteğe bağlı sureAsimiSaniye ve bağlantı bütçesi satırı."
+ },
+ {
+  "n": "I076",
+  "verdict": "CHANGE",
+  "targets": [
+   "D13",
+   "D14"
+  ],
+  "decision": "app.ts kurucusu dinleme açmadan ve süreç türüyle çağrılır, zamanlayıcılar yalnız api'de kurulur. IS_KUYRUGU_HATA_KODLARI hataKodlariTanimla ile birleşir; http değeri I071'deki kurala göre koddan koda verilir."
+ },
+ {
+  "n": "I077",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D14",
+   "D15"
+  ],
+  "decision": "D15 compose, paket, Biome, ayar, server.ts açılış ve kapanış sırası, bağlantı bütçesi, devam tutarlılık uyarısı, haftalık özet ve test dünyası kancası isteklerini aynen uygular."
+ },
+ {
+  "n": "I078",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D08",
+   "D14"
+  ],
+  "decision": "devam_hesapla partiIsleyici ve parti { boyut: 50, esZamanli: 2 } ile, devam_tutarlilik_denetimi çıktı şemasıyla ve 05:35'te tanımlanır."
+ },
+ {
+  "n": "I079",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D14"
+  ],
+  "decision": "contracts.json'a işlendi: epostaSiniriDenetle(tx, adres, tur, s?), D14 reads_from'a D04, D13 ve worker.ts bileşim kökü için D15, apps/server/test/support/is-kuyrugu* globu."
+ },
+ {
+  "n": "I080",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D06",
+   "D07",
+   "D12",
+   "D13",
+   "D14",
+   "D15"
+  ],
+  "decision": "Eklemeler contracts.json'a işlendi (dış yüz, okuduklar bileşim kökü notuyla, dosya globları: .node-version, .gitignore, docker/isletim/*, apps/server/src/cli/olay*). İki ayrım: kimlik olayına bağlanma kimlikOlayiDinleyicisiKaydet ile değil kimlikDinleyicileriniKur'un isletim abonesiyle; KID_BILINMIYOR için 'anahtar emekli' gerekçesi reddedildi (D07-B19: belge çapa kurmaz, kayıt Saat doğrulanamadı yolundan gider)."
+ },
+ {
+  "n": "I081",
+  "verdict": "CHANGE",
+  "targets": [
+   "D13",
+   "D15"
+  ],
+  "decision": "app.ts isletimEklentisi'ni önerildiği gibi kaydeder; yalnız D01.kimlikOlayiDinleyicisiKaydet seçeneği kalkar, D15'in dinleyicisi uygulamaKur'daki kimlikDinleyicileriniKur çağrısına isletim abonesi olarak girer."
+ },
+ {
+  "n": "I082",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D14",
+   "D15"
+  ],
+  "decision": "worker.ts ayarlariYukle({ surec: 'isci' }) ve logOlustur ile açılır, isletimIsleri(bag)'i isTanimla'ya uyarlar ve isle'nin döndürdüğü küçük nesneyi iş çıktısı yazar; IsSagligi'na sonCikti, isletim_ozeti türü, deleteAllJobs ve çizelge güncellemesi."
+ },
+ {
+  "n": "I083",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D12",
+   "D15"
+  ],
+  "decision": "D12: olcum_ görünüm göçleri D15 belirteciyle ve başka tabloları okuyabilir (CI istisnası), yoklama_isci pg_monitor üyesi, makine işi başına YedekIsDurumu dosyası ve şeması, deneme geri yüklemesinde ayrı dosyadaki xprem ana anahtarı, OnCalendar'da Europe/Istanbul."
+ },
+ {
+  "n": "I084",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D06",
+   "D15"
+  ],
+  "decision": "PaketBaglami'na hesapSilinmis alanı eklenmez; telefon_sayaci govdeEnBuyukBayt 49152 ve ilkCapaVar false ile kaydolur."
+ },
+ {
+  "n": "I085",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D15"
+  ],
+  "decision": "D01 hesapSilindiMi(tx, kisiId) okuyucusunu (kişi satırı FOR SHARE) yaprak.ts'te verir ve inceleme işi sabit kodun varlığını ayarlar().kimlik.incelemeSabitKoduVar'dan okur; olay bağlantısı kimlikOlayiDinleyicisiKaydet değil kimlikDinleyicileriniKur aboneliğidir. Görünümün okuduğu sütun adları değişmez."
+ },
+ {
+  "n": "I086",
+  "verdict": "CHANGE",
+  "targets": [
+   "D07",
+   "D15"
+  ],
+  "decision": "'anahtar emekli' gerekçesi reddedildi (I080). Kabul edilenler: uyarı türleri dogrulama.* önekiyle, YenidenSuzgec.belgeKid ({ amac, kid }) ve YenidenNeden ANAHTAR_ELE_GECIRILDI; görünümün okuduğu oturum_isaretleri.gecerli ve kesinlesti_ani adları değişmez."
+ },
+ {
+  "n": "I087",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D09",
+   "D15"
+  ],
+  "decision": "olcum_telefonda_kayip duzeltmeler.tur, sebep_kodu ve olusturma_ani sütunlarını okur; D09 bu adları korur, değişecekse önce görünüm güncellenir."
+ },
+ {
+  "n": "I088",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D11",
+   "D15"
+  ],
+  "decision": "Projeksiyon yük senaryosu D15'in dosyasında; D11 kürsü tarayıcısını eşleştiren kurucuyu (support/kurucular/projeksiyon.ts) ve kodlar ucunun istek biçimini verir."
+ },
+ {
+  "n": "I089",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D05",
+   "D15"
+  ],
+  "decision": "olcum_ görünümleri yoklama_kayitlari.ilk_kesin_karar, etiket_* ve hesaplanan_ani sütunlarını okur; D05 bu adları korur, değişecekse önce görünüm güncellenir."
+ },
+ {
+  "n": "I090",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D15"
+  ],
+  "decision": "Telefon uygulaması bu haritanın dışında; kural D15'in sözleşme dosyasında (telefon_sayaci şeması, gunAtlanirMi) ve bölümündeki harita dışı istekler satırında durur, mobil tasarım oradan alır."
+ },
+ {
+  "n": "I091",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D15"
+  ],
+  "decision": "Panel bu haritanın dışında; ekran süresi kuralı D15'in ekranSureleriIstegi şemasında ve harita dışı istekler satırında durur."
+ },
+ {
+  "n": "I092",
+  "verdict": "CHANGE",
+  "targets": [
+   "D02",
+   "D04"
+  ],
+  "decision": "Olay biçimi ve sıra (satırlar, dinleyiciler, denetim, iş kuyruğu, sürüm) kalır; olay.surumleDamgala geri çağrısı kalkar, dinleyiciler D06.surumDamgasiIste kullanır (I008, I019)."
+ },
+ {
+  "n": "I093",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02"
+  ],
+  "decision": "Haftalık program kaydında başlamamış bugünkü oturumu BUGUNKU_OTURUM_KORUNDU uyarısıyla korumak doğru seçimdir: bütün kaydı reddetmek hocanın gelecek haftalarını da bekletirdi; tekil PATCH'in DERSLER_OTURUM_BASLAMIS reddi kalır."
+ },
+ {
+  "n": "I094",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02",
+   "D03",
+   "D06"
+  ],
+  "decision": "D02 yalnız personel kapsam kaynağını kaydeder; öğrenci kaynağı D03'ündür (I013). D06 beklentisi buna göre düzeltilir."
+ },
+ {
+  "n": "I095",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D03"
+  ],
+  "decision": "Bilgi notu: D03 tarafında açık iş yok; bekleyen işler I011 ile I015 kararlarıyla kapanır."
+ },
+ {
+  "n": "I096",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02",
+   "D03"
+  ],
+  "decision": "I011 ile aynı: contracts.json ve karşı spec ekleri yapılır; D02 FOR SHARE seçeneğini ekleyince şube pasifleştirme yarışı kapanır."
+ },
+ {
+  "n": "I097",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D03",
+   "D06"
+  ],
+  "decision": "I013 ile aynı: kaynak D03'te kalır, D06 teyit durumunu imleçteki hesap özetine katar."
+ },
+ {
+  "n": "I098",
+  "verdict": "CHANGE",
+  "targets": [
+   "D03",
+   "D07"
+  ],
+  "decision": "I015 ile aynı: D01 numara süzgeci ve D08 'LISTE' nedeni kabul; D07 KARAR'ı kuyruğa taşımaz, liste işleminde karar verir ve LISTE_DEGISTI nedenini ekler."
+ },
+ {
+  "n": "I099",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D03"
+  ],
+  "decision": "Pasif satırların mevcut GET ucunda bolum=PASIF, imlec ve adet ile sayfalanması kabul; ayrı uç gerekmez."
+ },
+ {
+  "n": "I100",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D07"
+  ],
+  "decision": "D07'nin sözleşme ve komşu istekleri I030, I031, I032, I035, I036 ve I033 kararlarıyla işlendi; contracts.json dış yüz satırları hizalandı."
+ },
+ {
+  "n": "I101",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D07",
+   "D12"
+  ],
+  "decision": "Üç sapma kabul: kararHesapla bağlam anahtarlarını beklemeden dener (katman kuralının istisna yolu), App Attest yenileme uyarısı yenileme işleminde sayılır, iOS 27 denetim kaydı cihaz satırındaki değer değişikliği başına bir kez yazılır."
+ },
+ {
+  "n": "I102",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D08"
+  ],
+  "decision": "I042 ile aynı: contracts.json'da oran ucu /v1/devam/yonetim/ altına taşındı."
+ },
+ {
+  "n": "I103",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D08"
+  ],
+  "decision": "I037 ile aynı: D01 D08'in reads_from listesine eklendi."
+ },
+ {
+  "n": "I104",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D09"
+  ],
+  "decision": "İş başlığının gunluk_inceleme_partileri içinde sira 0 BASLIK satırı olması kabul: tek tablo, tek yazar; ayrı başlık tablosu gerekmez."
+ },
+ {
+  "n": "I105",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D07",
+   "D09"
+  ],
+  "decision": "Kararı değiştirme mevcut POST /v1/duzeltmeler/incelemeler/kararlar ucunda KARAR_DEGISTIR bağlamıyla yapılır; D07 KARAR_OLAYLARI'na KARAR_DEGISTIR ekler (I036)."
+ },
+ {
+  "n": "I106",
+  "verdict": "CHANGE",
+  "targets": [
+   "D07",
+   "D09"
+  ],
+  "decision": "I045 ile aynı; D07'nin biçimi I036'daki birleşik biçimdir."
+ },
+ {
+  "n": "I107",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D09"
+  ],
+  "decision": "Bilgi notu: D09 üretici betikleri ile spec ve bölüm aynı tutulur; hizalama değişiklikleri de betik kaynağından üretilir."
+ },
+ {
+  "n": "I108",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D10"
+  ],
+  "decision": "I049 (a) ile aynı: dönem sonu raporu yolu GET /v1/raporlar/yonetim/donem-sonu oldu."
+ },
+ {
+  "n": "I109",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D02",
+   "D10"
+  ],
+  "decision": "I046 ile aynı: contracts.json'daki D10 notu düzeltildi, D02 donem_kilidi metnindeki cümle değişir."
+ },
+ {
+  "n": "I110",
+  "verdict": "CHANGE",
+  "targets": [
+   "D10",
+   "D14"
+  ],
+  "decision": "Kilit adımının işi kilit işleminde kuyruğa koyması kabul. Saat D14'teki yerdir: D10'un güvenlik ağı 00:40 değil 00:25 (donem_kilidi 00:05'ten 20 dakika sonra, sonra: donem_kilidi)."
+ },
+ {
+  "n": "I111",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D08",
+   "D10"
+  ],
+  "decision": "I046 ile aynı: D08'in canlı oturumSonDurumlari'sı var; D10 hücreleri ona taşır, eşitlik her an geçerli olur, oturum_son_durumlari okuma istisnası ve hucreHesapAni kalkar."
+ },
+ {
+  "n": "I112",
+  "verdict": "CHANGE",
+  "targets": [
+   "D08",
+   "D10"
+  ],
+  "decision": "M harfi D10'da tanımlanmaz: D08 packages/contracts/src/devam.ts'te DEVAM_SON_DURUMLARI (D09 SON_DURUMLAR artı MUAF) sabitini verir, D10 V, Y, G, B ve E'yi D09'dan, M'yi bu sabitten alır; dört ek rapor kodu D10'da kalır."
+ },
+ {
+  "n": "I113",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D10"
+  ],
+  "decision": "KuyrukTanimi'nin modules/raporlar/kuyruk.ts'te, yalnız veri şemasının packages/contracts/src/raporlar.ts'te olması D14 kuralına uyar."
+ },
+ {
+  "n": "I114",
+  "verdict": "CHANGE",
+  "targets": [
+   "D03",
+   "D10",
+   "D12"
+  ],
+  "decision": "I049 ve I046 ile aynı; D03'ten oncekiSiniflar istenmez (katalog), telafi D08-B15 tanımından okunur."
+ },
+ {
+  "n": "I115",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D11"
+  ],
+  "decision": "I054 ile aynı: ayrı iş contracts.json'a eklendi; güvenlik ağı 02:35'te kalır."
+ },
+ {
+  "n": "I116",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D11"
+  ],
+  "decision": "Çerez yenilemenin mevcut POST /v1/projeksiyon/eslestirme-kodu ucunda { gizliYenile: true } ile yapılması kabul; kalan risk sahibe sorulan D11-A12'dedir."
+ },
+ {
+  "n": "I117",
+  "verdict": "OWNER",
+  "targets": [
+   "D11"
+  ],
+  "decision": "Öğrenciyi suçlayıp suçlamamayı belirlediği için sahibe kalır (D11-A16). Öneri: indirme kaydı olmayan ama doğrulama kodu dersin hocasının anahtarıyla tutan kayıt, geri yükleme kayıp penceresi dışında da İncelemede kalsın (INDIRME_KAYDI_YOK, gerekçe QR_ANAHTAR_IPTAL); ret yalnız anahtar hiç bulunamazsa."
+ },
+ {
+  "n": "I118",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D11",
+   "D12"
+  ],
+  "decision": "I053 ile aynı: paylaşımlı kip geldi; öğrenci kayıtları gösterim anahtarını paylaşımlı, hoca yolu dışlayıcı alır."
+ },
+ {
+  "n": "I119",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D06",
+   "D11"
+  ],
+  "decision": "D11'in komşulara göre güncellemesi kabul; D06 beklenenlerindeki D11 kaydı isleToplu ve ilkCapaVar true olarak düzeltilir (I057)."
+ },
+ {
+  "n": "I120",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D12"
+  ],
+  "decision": "D12'nin komşu istekleri I058 ile I067 kararlarıyla işlendi; contracts.json değişiklikleri yapıldı."
+ },
+ {
+  "n": "I121",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D12"
+  ],
+  "decision": "Bilgi notu: D12-A05 sahibe açık nokta olarak kalır; panel oturumlarını kapatma ve iptallerin yeniden uygulanması karara bağlı."
+ },
+ {
+  "n": "I122",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D13"
+  ],
+  "decision": "I072 ile aynı: apps/server/scripts/api/* globu eklendi."
+ },
+ {
+  "n": "I123",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D14"
+  ],
+  "decision": "I079 ile aynı: D14 dış yüz satırı ve reads_from contracts.json'a işlendi."
+ },
+ {
+  "n": "A1",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D01",
+   "D02",
+   "D03",
+   "D04",
+   "D05",
+   "D06",
+   "D07",
+   "D08",
+   "D09",
+   "D10",
+   "D11",
+   "D12",
+   "D13",
+   "D14",
+   "D15"
+  ],
+  "decision": "Her modül yalnız apps/server/migrations/<14 haneli UTC>_<belirteç>_<açıklama>/ klasörlerini yazar (belirteç migration_dir'deki ad), dosya haritasında kendi globu vardır; klasör kuralı ve CI denetimi D12'nindir. Paralel çalışma: aynı aşamadaki paketler tablo paylaşmaz, drizzle-kit klasör biçiminde ortak dergi yoktur, snapshot zincirini ana dal belirler (birleşmeden önce yeniden dayan, araya göç girdiyse kendi klasörünü silip yeniden üret, birleştirme kuyruğu tek tek alır) ve D12'nin CI denetimi ad, zaman sırası, tablo sahipliği, ana dalda generate farksızlığı ve drizzle-kit check ile korur."
+ },
+ {
+  "n": "A2",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D02",
+   "D05",
+   "D06",
+   "D07",
+   "D08",
+   "D09",
+   "D12",
+   "D13",
+   "D15"
+  ],
+  "decision": "Dört çift yaprak dosyası kuralıyla döngüsüzdür: yaprak.ts başka modülden yalnız yaprak.ts içe aktarır; D02 D01'i yalnız kimlik/yaprak.ts'ten, D01 D02'yi yalnız dersler/yaprak.ts'ten; D07 D01 ve D05'i yalnız yaprak.ts ya da eklenti seçeneğiyle, D01 ve D05 D07'nin index.ts'ini; D08 D09'u yalnız duzeltmeler/yaprak.ts ve core üstünden, D09 D08'in index.ts'ini. Alt modülün üst modüle seslendiği yerde dinleyici kaydı (D01 kimlik olayları, D02, D03, D04, D11) kalır; jobs/ ve bileşim kökleri (app.ts, server.ts, worker.ts, cli/: yoklama-kaniti D05, esitleme- D06, geri-yukleme D12, anahtar-uret ve olay D15) çift saymaz, D13'ün sınır testi kuralı denetler."
+ },
+ {
+  "n": "A3",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D03"
+  ],
+  "decision": "muaf alanı D03'ün PATCH /v1/listeler/satirlar/{satirId} gövdesinde yoktur (katı şema, 400); muafı yalnız D08'in PUT /v1/devam/dersler/{dersId}/ogrenciler/{satirId}/muaf ucu D03.muafIsaretle(tx, satirId, muaf, b) ile yazar, değer (ders, numara) başına tek; sonuç birliğini D08 kendi koduna çevirir."
+ },
+ {
+  "n": "A4",
+  "verdict": "ACCEPT",
+  "targets": [
+   "D04",
+   "D08"
+  ],
+  "decision": "Üçü de ürün kararı değil, teknik.html cümlesinin uygulamasıdır, sahibe sorulmaz: chrony durum dosyası teknik.html#altyapi-sunucu-makinesi'deki NTP eşitleme ve izlemedir; giriş bildirimi teknik.html#sunucu-kimlik gereği kuyruksuz gider, yeniden deneme işi yoktur; yönetici uçları teknik.html#sunucu'daki /v1/<modül> kuralının /yonetim/ altıdır. D04-A08 kapanır; D08 ve D10 yolları taşındı."
+ },
+ {
+  "n": "A5",
+  "verdict": "CHANGE",
+  "targets": [
+   "D01",
+   "D02",
+   "D10"
+  ],
+  "decision": "Sıralama gerekmez: aksis_gun_sonu_anligi D08.dersSonuclari ve oturumSonDurumlari'nı aynı işlemde canlı okur ve kilit işleminin D07 kapanışını görür, devam_hesapla işlerini beklemez. D10'un kilit adımı (sira 20) işi kilit işleminde kuyruğa koyar; güvenlik ağı 00:25'te sonra: donem_kilidi ile çalışır; contracts.json notu düzeltildi, D02 metnindeki cümle değişir."
+ }
+]

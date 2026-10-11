@@ -1,0 +1,23 @@
+// kid pattern equals D15's, anchor value lists equal D04's constants (imported, never retyped)
+if (!komsu('D15').includes('^[a-z0-9-]{1,8}$')) errs.push('D15 kid pattern changed');
+for (const t of S.tables) for (const k of t.constraints) if (/kid ~/.test(k) && !k.includes("'^[a-z0-9-]{1,8}$'")) errs.push('kid check differs from D15: ' + k);
+const d04 = komsu('D04'), d06 = komsu('D06');
+if (!d04.includes('IlkCapaDurumu: ' + O.D04_ILK_CAPA_DURUMU.join(', '))) errs.push('D04 IlkCapaDurumu list differs');
+if (!d04.includes('IkinciCapaDurumu: ' + O.D04_IKINCI_CAPA_DURUMU.join(', '))) errs.push('D04 IkinciCapaDurumu list differs');
+if (!d04.includes("telefonBildirimi: " + O.D04_ILK_CAPA_BILDIRIMI.map(v => `'${v}'`).join(' | '))) errs.push('D04 telefonBildirimi list differs');
+if (!d04.includes("yokNedeni: " + O.D04_IKINCI_CAPA_YOK.map(v => `'${v}'`).join(' | '))) errs.push('D04 second-anchor missing-reason list differs');
+if (!/isleToplu\(tx: Islem, ogeler: readonly GelenOge<T>\[\], baglam: PaketBaglami\)/.test(d06) || !/ilkCapaVar: boolean/.test(d06)) errs.push('D06 OgeIsleyici signature changed');
+{ const f6 = fs.readFileSync(path.join(B, 'frag', 'D06.html'), 'utf8');
+  if (!/ilkCapa: IlkCapaAlanlari \| null; ulasmaAni: Date; ikinciCapa: IkinciCapaBaglami;/.test(f6)) errs.push('D06 GelenOge shape changed');
+  if (!/oturum: \{ girisOturumuId: GirisOturumuId;/.test(f6)) errs.push('D06 PaketBaglami.oturum shape changed'); }
+// interfaces settled by the architect: read from contracts.json (regenerated), not from neighbour specs that are being edited at the same time
+{ const ex = id => contracts.modules.find(m => m.id === id).exports.join('\n'), kurallar = contracts.shared_rules.join('\n'), notlar = id => (contracts.modules.find(m => m.id === id).notes || []).join('\n');
+  if (!ex('D01').includes('kimlikDinleyicileriniKur(aboneler: { dersler, esitleme, projeksiyon, isletim })')) errs.push('D01 kimlikDinleyicileriniKur subscriber set changed');
+  if (!/danismaKilidi\(tx, anahtarlar\): katmanlı, anahtar başına kip/.test(ex('D12')) || !ex('D12').includes('danismaKilidiDene(tx, anahtar)') || !ex('D12').includes('geriYuklemePencereleri(tx)')) errs.push('D12 lock or restore-window exports changed');
+  if (!/3 yoklama:cift, projeksiyon:\*, esitleme:kurulum_siniri, duzeltmeler:zincir; 4 dogrulama:sayac/.test(kurallar)) errs.push('lock layer of projeksiyon:* changed');
+  if (!/OgeIsleyici\.kilitAnahtarlari/.test(notlar('D06'))) errs.push('D06 kilitAnahtarlari hook missing from contracts');
+  if (!/kararAnahtarlari\(girdiler\)/.test(ex('D07'))) errs.push('D07 kararAnahtarlari export missing');
+  if (!/projeksiyon\.donem_verisi|<belirteç>\.donem_verisi \(saat, yoklama, esitleme, dogrulama, devam, duzeltmeler, raporlar, projeksiyon, listeler\)/.test(kurallar)) errs.push('retention class projeksiyon.donem_verisi missing from catalog rule');
+  if (!/esitleme, dogrulama ve projeksiyon yoklamadan önce/.test(kurallar)) errs.push('retention order of projeksiyon before yoklama changed');
+  if (!/dersId taşıyan olay birimId de taşır/.test(kurallar)) errs.push('audit birimId rule changed');
+  if (!ex('D13').includes('ogeTuruTanimla(tur, govde, s)')) errs.push('D13 ogeTuruTanimla missing'); }

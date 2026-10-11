@@ -1,0 +1,42 @@
+{
+ "name": "aksis_gun_sonu_anligi",
+ "schedule": "Her gün 00:40 Europe/Istanbul (cron '40 0 * * *', tz açıkça Europe/Istanbul, missed: once); D02'nin 00:05 donem_kilidi işinden sonra, gecelik pg_dump'tan (D14-B05 önerisi 02:15) önce, 03:00 ile 04:00 arası boş. Bekleyen şube kalırsa kendini 15 dakika sonrasına bir kez yeniden kuyruğa koyar (D14.isGonder, startAfter 900, tekil anahtar 'aksis_gun_sonu_anligi:tekrar'). Kuyrukta aynı anda tek iş, yeniden deneme ve ölü mektup D14 politikasıyla.",
+ "idempotency": "İş verisi boştur (iç kimlik bile taşımaz). Her şube kendi işleminde INSERT ... ON CONFLICT (sube_id) WHERE kaynak = 'GUN_SONU' DO NOTHING yazar; aynı girdiyle iki kez çalışan iş ikinci kez hiçbir şey yazmaz. Satırlar başlık eklendiyse aynı işlemde yazılır, yarım anlık kalmaz.",
+ "does": "Kilidi uygulanmış birim ve dönemlerde (D02.kilitliBirimDonemleri) gün sonu anlığı olmayan her şubeyi bulur (deneme dersi hariç; boş şube 0 satırlı anlık alır, tamlık denetimi basit kalır). Her şube için REPEATABLE READ işlem açar, D08.dersSonuclari hesabın bekliyor olduğunu söylüyorsa şubeyi atlar (contracts.json notu: kilidin kuyruğa koyduğu devam_hesapla işleri bitmeden anlık alınmaz), değilse GET ucundaki özet kurucunun aynısıyla özeti ve ozetOzeti'ni hesaplar, başlığı ve satırları yazar. Bir şubenin hatası ötekileri durdurmaz; iş sonunda hatalı şube varsa iş başarısız sayılır ve D14 politikasıyla yeniden dener. Log yalnız sayılar ve iç kimliklerle: alınan, bekleyen, hatalı şube sayısı ve süre. Yeniden kuyruğa koyma ayrı işlemde ve hata atılmadan önce yapılır. Kilit anından 6 saat sonra hâlâ bekleyen şube varsa iş hata koduyla biter; D14 politikasıyla yeniden dener, sonunda ölü mektup kuyruğuna düşer ve D15'in isletim_denetimi (D14.isSagligi) uyarı açar, böylece takılan şube sessiz kalmaz."
+}
+* D10.tables.0.columns.10.name :: kilit_ani
+
+* D10.tables.0.constraints.8 :: CHECK ((kaynak = 'HOCA_CIKTISI' AND alinma_ani < kilit_ani AND cevapsiz_oturum_sayisi = 0) OR (kaynak = 'GUN_SONU' AND alinma_ani >= kilit_ani AND NOT gecici)): aksis_ozet_anliklari_kaynak_alinma_ani_ck (gün sonu anlığı kilit uygulandıktan sonra alındığından geçici olamaz)
+
+* D10.endpoints.0.response.subeler :: Array<{ subeId, etiket, oturumlar: Oturum[], ogrenciler: DersRaporuSatiri[] }>
+
+* D10.endpoints.0.response.(tip) Oturum :: { oturumId, dersGunu: tarih, baslangicSaati: 'SS:DD' İstanbul, teoriSaat, uygulamaSaat, tur: NORMAL | TELAFI, yapildi: EVET | HAYIR | CEVAPSIZ, gondermeSuresiSonu: anlık, kafaSayisiIsareti: boolean } (yalnız iptal edilmemiş ve bitişi geçmiş oturumlar, ders günü ve başlangıca göre sıralı)
+
+* D10.endpoints.0.response.(tip) DersRaporuSatiri :: { listeSatiriId, ogrenciNo: metin, adSoyad, sira, kaynak: DOSYA | ELLE, muaf: boolean, eklenmeAni: anlık, pasifAni: anlık | null, hucreler: Hucre[] (oturumlar ile aynı sırada) } (etkin satırlar liste sırasıyla, listeden çıkarılanlar sonda; D10-A06)
+
+* D10.endpoints.1.response.dersler :: Array<{ dersId, kod, ad, subeId, subeEtiketi, listeSatiriId, muaf, pasifAni: anlık | null, oturumlar: OgrenciOturumu[] }>
+
+* D10.endpoints.1.response.(tip) OgrenciOturumu :: { oturumId, dersGunu, baslangicSaati, teoriSaat, uygulamaSaat, yapildi, teori: TurHucresi | null, uygulama: TurHucresi | null, kayit: { karar: KararKodu (D05 ve D07), onayBekliyor: boolean } | null } (kayit, D08 son durumunun dayandığı kayıttır; etiket ve gerekçe raporda yok)
+
+* D10.state_machines.1.transitions.0.by :: saat ve D02 donem_kilidi
+
+* D10.state_machines.2.transitions.2.by :: D02 donem_kilidi
+
+* D10.exports.0.signature :: aksisAnligiGetir(tx: Islem, subeId: string, tur: 'GUN_SONU' | 'SON_HOCA_CIKTISI' | 'TABAN'): Promise<AksisAnligi | null>
+
+* D10.tests.0.name :: Ders raporu satırları liste sırasıyla, sütunları biten oturumlarla gelir
+
+* D10.tests.0.asserts :: Dosya satırları sira ile, elle eklenen dosyadakilerden sonra, listeden çıkarılan en sonda pasifAni ile; sütunlar aralıktaki iptal edilmemiş ve bitişi geçmiş oturumlar (ders günü ve başlangıca göre). Gelecekteki ve iptal edilen oturum yok. Kontrol: aynı veride D02.oturumlariGetir beklenen oturum sayısını verir, rapor boş dönerse senaryo kırmızı.
+
+* D10.resolved_gaps.0.why :: Baskı örneği satır öğrenci, sütun oturum tarihi ve hücre harfi gösteriyor; özet teori ve uygulamayı ayrı saydığından (plan.html#devam-donem-sonu) tür bilgisi olmadan rapor toplamı özetle eşlenemez. Öğrenci raporu itirazda tek öğrencinin oturumlarını tek yerde verir.
+
+* D10.resolved_gaps.9.decision :: Tür başına telafi edilmeyen saat = bitişi geçmiş oturumlardan hoca iptali ve "yapılmadı" saatleri eksi yapılan telafi oturumlarının saatleri, en az 0; tatil ve taşınma iptali, sınav haftası sayılmaz. Sıfırdan büyükse özet dersIsaretleri.telafiEdilmeyenSaat ile işaretler. Telafi ile yapılmayan oturum arasında bağ gerekmez. Hangi iptalin borç doğurduğu D02-B15 kararına bağlıdır; karar değişirse yalnız telafi.ts içindeki seçim değişir.
+
+* D10.open_points.5.recommendation :: AKSİS özetinde yalnız etkin liste satırları (AKSİS listesinde olmayan öğrenci hocayı yanıltmasın); ders raporunda pasif öğrenci tablonun sonunda "listeden çıkarıldı (tarih)" işaretiyle, çıkarıldığı ana kadarki oturumlarıyla (itirazda kanıt kalsın, plan.html#hoca-liste-yukleme). Hesabı silinen öğrenci listede kaldığından normal satırdır (plan.html#kararlar-hesap-silme).
+
+* D10.open_points.9.recommendation :: D10'un beklediği: dersSonuclari(tx, subeId) => { hesapBekliyor: boolean; sayimTabani; oranlar: { teoriP, uygulamaP }; turler: { teori, uygulama }; satirlar: Array<{ listeSatiriId; muaf; teori | uygulama: { yapilanSaat, devamsizSaat (net), mazeretliSaat, yuzdeOnda | null, karar } | null; sonuc; kararBekliyor: { neden } | null; acikIsaretler: { kendiBeyaniOnayBekleyen, incelemede, beklemede } }> } ve her etkin liste satırı için bir satır (hesabı olmayan öğrenci dahil). oturum_son_durumlari satırında oturum, liste satırına bağlanabilen öğrenci, tür, son durum (KARAR_ACIK dahil), var, yok ve mazer
+
+* D10.consumes.1.uses :: dersGetir, dersYetkisi, subeGetir, dersSubeleri, oturumlariGetir({ subeId, baslangic, bitis }), birimDonemiGetir, takvimGetir, kilitDurumu, kilitliBirimDonemleri
+
+* D10.consumes.8.uses :: liste_satirlari (D03): sıra, numara, ad, kaynak, muaf, eklenme ve pasif anı; oturumlar, oturum_subeleri, dersler, subeler (D02): iş adayları ve aralık matrisi; oturum_son_durumlari (D08): hücreler; devam_sonuclari (D08): dönem sonu raporunda şimdiki Sonuç, tek küme sorgusuyla; oturum_isaretleri (D07): incelenmemiş kafa sayısı işareti; yoklama_kayitlari (D05) ve ogrenci_hesaplari (D01): kilitten ve tabandan sonra ulaşan kayıtlar ile öğrenci raporunun kayıt kararı; duzeltmeler (D09): tabandan sonraki düzeltmeler. Tipli okuma sahiplerin tablolar.ts tanımlarıyla, hepsi okunan-tablolar.ts dosyasınd
+

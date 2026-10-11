@@ -1,0 +1,13 @@
+const fs=require('fs');
+const A=fs.readFileSync(process.argv[2],'utf8');
+const body=s=>s.replace(/<!--[\s\S]*?-->/g,'');
+const ent=s=>s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"');
+const text=s=>ent(body(s).replace(/<[^>]+>/g,'\n')).replace(/[ \t]+/g,' ');
+const tA=text(A);
+const stem=w=>w.replace(/[’'].*$/,'').replace(/^[("“"«]+|[)"”»,.;:!?]+$/g,'');
+const tech=t=>new Set(t.split(/\s+/).map(stem).filter(w=>w.length>1&&(/^.+\p{Lu}/u.test(w)||/\d/.test(w)&&/\p{L}/u.test(w)||/\p{L}[@\/._+-]\p{L}|^@/u.test(w))));
+const proper=t=>{const s=new Set();for(const sen of t.split(/[.!?:;]\s+|\n/)){const ws=sen.trim().split(/\s+/);for(let i=1;i<ws.length;i++){const w=stem(ws[i]);if(/^\p{Lu}\p{Ll}+$/u.test(w))s.add(w)}}return s};
+const nums=t=>new Set(t.match(/\d+(?:[.,]\d+)*/g)||[]);
+console.log('TECH:',[...tech(tA)].join(' | '));
+console.log('PROPER:',[...proper(tA)].join(' | '));
+console.log('NUMS:',[...nums(tA)].join(' | '));

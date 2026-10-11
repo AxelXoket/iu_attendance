@@ -1,0 +1,617 @@
+{
+  "verdicts": [
+    {
+      "id": "S13-01",
+      "verdict": "CONFIRMED",
+      "note": "owasp.org/www-community/attacks/CSV_Injection now answers 308 to community.owasp.org/attacks/CSV_Injection. That page lists =, +, -, @, Tab, CR, LF and the full-width variants, carries the save-and-reopen warning and the tab-inside-the-quoted-field fix, and the GitHub history matches the dates in the finding (#1116 2025-08-01, #1193 and #1195 2026-01-28, #1196 2026-01-29). The same page also asks to handle field separators (, ;) and quotes inside the value, which the recommendation covers by quoting every cell. Independent check: SheetJS parses and writes CSV formulas as A1 strings, so a CSV writer passes '=' cells through unless the code escapes them. The rule only matters if CSV downloads stay (see S13-02).",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "https://community.owasp.org/attacks/CSV_Injection",
+          "quote": "Equals to (=), Plus (+), Minus (-), At (@), Tab (0x09), Carriage return (0x0D), Line feed (0x0A)",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://community.owasp.org/attacks/CSV_Injection",
+          "quote": "To reliably prevent formula execution in Microsoft Excel, prefix any cell starting with =, +, -, or @ with a tab character (0x09) inside the quoted field.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://community.owasp.org/attacks/CSV_Injection",
+          "quote": "You also need to take care of the field separator (e.g., ,, ;) and quotes (e.g., \", '), as attackers could use this to start a new cell and then have the dangerous character in the middle of the user input, but at the beginning of a cell.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://github.com/OWASP/www-community/commits/master/pages/attacks/CSV_Injection.md",
+          "quote": "Jan 29, 2026 Document Excel save/reopen behavior and Excel-resistant CSV injection (#1196); Jan 28, 2026 Fix CSV Injection mitigation to survive Excel save/reopen (#1195); Jan 28, 2026 Docs/csv injection double byte (#1193); Aug 1, 2025 Add line feed (0x0A) to CSV injection character escape list (#1116)",
+          "date": "2026-01-29"
+        },
+        {
+          "url": "https://docs.sheetjs.com/docs/csf/features/formulae",
+          "quote": "Format support table row: CSV / TXT | Parse yes | Write yes | Storage: A1-Style strings",
+          "date": "accessed 2026-10-05"
+        }
+      ]
+    },
+    {
+      "id": "S13-02",
+      "verdict": "CONFIRMED",
+      "note": "All facts verified. CLDR tr has decimal ',' and list ';'; Microsoft says Excel reads a .csv with the current default data settings and that a comma decimal forces a semicolon list separator; Excel strips leading zeros; OWASP says CSV escaping is not reliable after an Excel save and reopen. Plan line 443 already says reports are downloaded as Excel, so the change only removes the CSV half of line 465. A string cell in .xlsx is never evaluated as a formula when opened; a user who edits such a cell by hand can still turn it into one, which is outside the export.",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/main/cldr-json/cldr-numbers-full/main/tr/numbers.json",
+          "quote": "\"decimal\": \",\", \"group\": \".\", \"list\": \";\"",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://support.microsoft.com/en-us/office/import-or-export-text-txt-or-csv-files-5250ac4c-663c-47ce-937b-339e391393ba",
+          "quote": "When Excel opens a .csv file, it uses the current default data format settings to interpret how to import each column of data.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://support.microsoft.com/en-us/office/keeping-leading-zeros-and-large-numbers-1bf7b935-36e1-4985-842f-5dfa51f85fe7",
+          "quote": "Excel automatically removes leading zeros, and converts large numbers to scientific notation, like 1.23E+15, in order to allow formulas and math operations to work on them.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://community.owasp.org/attacks/CSV_Injection",
+          "quote": "Note: The above techniques are not reliable in Microsoft Excel after saving and re-opening the CSV file.",
+          "date": "accessed 2026-10-05"
+        }
+      ]
+    },
+    {
+      "id": "S13-03",
+      "verdict": "CORRECTED",
+      "note": "Core facts hold: SheetJS CE has write and writeFileXLSX, styling is a Pro feature, write-excel-file has one npm maintainer and majors 2.0.0 (2024-05-06), 3.0.0 (2026-02-23), 4.0.0 (2026-04-22). Three details are wrong or missing. (1) Column widths are a CE feature but are exported only when the write option cellStyles is true; without it they are dropped. (2) The cited Vite sentence ('Matched files are by default lazy-loaded via dynamic import...') is from the Glob Import section; the claim itself is right, Vite code-splits dynamic imports (Async Chunk Loading section). (3) SheetJS's own Vite demo was last tested on 2026-01-28 against Vite 7.3.1 and older, not Vite 8 with Rolldown, and SheetJS CE has had no release since v0.20.3 (2024-07-18) and no commit since 2026-02-09; the sustainable lens in the finding leaves this out.",
+      "correction": "SheetJS CE writes column widths only with write(..., { cellStyles: true }). SheetJS's Vite demo is verified only up to Vite 7.3.1 (tested 2026-01-28), so the plan needs one Vite 8 build check. SheetJS CE: last release v0.20.3 on 2024-07-18, last commit 2026-02-09.",
+      "evidence": [
+        {
+          "url": "https://docs.sheetjs.com/docs/csf/features/colprops",
+          "quote": "The `cellStyles` option must be set to `true` to export column properties:",
+          "date": "page updated 2026-08-03"
+        },
+        {
+          "url": "https://docs.sheetjs.com/docs/api/write-options",
+          "quote": "By default, SheetJS CE writers focus on data preservation. ... SheetJS Pro offers cell / text styling, conditional formatting and additional styling options.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://docs.sheetjs.com/docs/demos/frontend/bundler/vitejs",
+          "quote": "Tested deployments table: ViteJS 7.3.1, 6.4.1, 5.4.21, 4.5.14, 3.2.11, all dated 2026-01-28 (table transcription)",
+          "date": "2026-01-28"
+        },
+        {
+          "url": "https://git.sheetjs.com/sheetjs/sheetjs/tags",
+          "quote": "v0.20.3 2024-07-18 23:29:12 +00:00 (newest of 129 tags)",
+          "date": "2024-07-18"
+        },
+        {
+          "url": "https://registry.npmjs.org/write-excel-file",
+          "quote": "\"2.0.0\": \"2024-05-06T20:22:29.157Z\", \"3.0.0\": \"2026-02-23T19:13:38.209Z\", \"4.0.0\": \"2026-04-22T18:25:14.551Z\", \"4.1.1\": \"2026-06-08T04:57:35.177Z\"; maintainers: catamphetamine",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://vite.dev/guide/features",
+          "quote": "Vite automatically rewrites code-split dynamic import calls with a preload step",
+          "date": "accessed 2026-10-05"
+        }
+      ]
+    },
+    {
+      "id": "S13-04",
+      "verdict": "CONFIRMED",
+      "note": "Tags page: v0.20.3 (2024-07-18) is the newest of 129 tags. Repo page: latest commit 'sheet_to_html sanitize links option (fixes #3345)' on 2026-02-09. CDN package.json: xlsx 0.20.3, Apache-2.0. Docs strongly recommend vendoring. SheetJS's advisories page lists only CVE-2023-30533 and CVE-2024-22363, both fixed at or below 0.20.3, so no known advisory hits 0.20.3. The release-age point holds because pnpm's minimumReleaseAge is defined by registry publish time; the Dependabot point is inference (no Dependabot page names CDN tarballs), backed by SheetJS's own advice to watch the repo or RSS feed.",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "https://docs.sheetjs.com/docs/getting-started/installation/frameworks",
+          "quote": "For general stability, making a local copy of SheetJS modules (\"vendoring\") is strongly recommended. Vendoring decouples projects from SheetJS infrastructure.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://git.sheetjs.com/sheetjs/sheetjs",
+          "quote": "sheet_to_html sanitize links option (fixes #3345)",
+          "date": "2026-02-09"
+        },
+        {
+          "url": "https://cdn.sheetjs.com/advisories/",
+          "quote": "CVE-2023-30533 · CVE-2024-22363 (the only two advisories listed)",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://cdn.sheetjs.com/advisories/CVE-2024-22363.html",
+          "quote": "All versions of SheetJS CE through 0.20.1 are vulnerable",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://pnpm.io/settings/dependency-resolution",
+          "quote": "`minimumReleaseAge` defines the minimum number of minutes that must pass after a version is published before pnpm will install it.",
+          "date": "accessed 2026-10-05"
+        }
+      ]
+    },
+    {
+      "id": "S13-05",
+      "verdict": "CONFIRMED",
+      "note": "All five points verified. Two details sharpen it. SheetJS's raw option affects only HTML, CSV, PRN, DIF and RTF, so in .xlsx and .xls a number cell stays a number and flagging in the preview is the only defence, as the finding says. SheetJS documents type 'string' as 'only appropriate for UTF-8 text formats', which a TextDecoder result satisfies because it is already a JS string. A UTF-16 file decoded as windows-1254 cannot fail (its bytes are mostly ASCII and NUL), so the BOM check must come first.",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "https://encoding.spec.whatwg.org/",
+          "quote": "windows-1254 labels: \"cp1254\", \"csisolatin5\", \"iso-8859-9\", \"iso-ir-148\", \"iso8859-9\", \"iso88599\", \"iso_8859-9\", \"iso_8859-9:1989\", \"l5\", \"latin5\", \"windows-1254\", \"x-cp1254\"; BOM sniff: 0xEF 0xBB 0xBF UTF-8, 0xFE 0xFF UTF-16BE, 0xFF 0xFE UTF-16LE",
+          "date": "Last Updated 21 May 2026"
+        },
+        {
+          "url": "https://docs.sheetjs.com/docs/api/parse-options",
+          "quote": "The `codepage` option controls the encoding in BIFF2 - BIFF5 XLS files without `CodePage` records, some legacy formats including DBF, and in CSV files without BOM in `type: \"binary\"`.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://docs.sheetjs.com/docs/api/parse-options",
+          "quote": "The `raw` option affects the following formats: HTML, CSV, PRN, DIF, RTF. The `raw` option does not affect XLSX, XLSB, XLS and other file formats that support explicit value typing.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://docs.sheetjs.com/docs/api/parse-options",
+          "quote": "string: JS string (only appropriate for UTF-8 text formats)",
+          "date": "accessed 2026-10-05"
+        }
+      ]
+    },
+    {
+      "id": "S13-06",
+      "verdict": "CONFIRMED",
+      "note": "Vite 8 default target and the Chrome 109 cut-off for Windows 7 and 8/8.1 both verified. The same wording also sits at plan line 28. Vite also states it only transforms syntax and adds no polyfills, so the real floor is whatever the newest API used by any code needs; the listed versions are a minimum, not a promise.",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "https://vite.dev/config/build-options",
+          "quote": "['chrome111', 'edge111', 'firefox114', 'safari16.4', 'ios16.4']",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://support.google.com/chrome/a/answer/7100626?hl=en",
+          "quote": "Chrome 109 is the last version to support this operating system. Chrome 109 was released January 10, 2023.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://vite.dev/guide/build",
+          "quote": "Vite only handles syntax transforms and does not cover polyfills.",
+          "date": "accessed 2026-10-05"
+        }
+      ]
+    },
+    {
+      "id": "S13-07",
+      "verdict": "CONFIRMED",
+      "note": "Registry and docs agree: react-router 8.0.0 on 2026-06-17 and 8.4.0 on 2026-09-15, peer react >=19.2.7, engines node >=22.22.0; 68,636,492 downloads from 2026-09-27 to 2026-10-03 (all majors together); the docs site serves 8.4.0 and still describes declarative mode. Expo 57.0.26 bundles react 19.2.3 and the React Native renderer README forbids raising React alone. @tanstack/react-router is 1.170.41, peer react >=18, 25,609,219 weekly downloads.",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "https://remix.run/blog/react-router-v8",
+          "quote": "Node 22.22.0+ ... React 19.2.7+ ... Vite 7+ ... React Router v7 will continue to receive security updates, just like v6 (and Remix v2) did.",
+          "date": "2026-06-17"
+        },
+        {
+          "url": "https://registry.npmjs.org/react-router",
+          "quote": "\"peerDependencies\": { \"react\": \">=19.2.7\", \"react-dom\": \">=19.2.7\" }, \"engines\": { \"node\": \">=22.22.0\" }; \"8.0.0\": \"2026-06-17T19:19:11.383Z\", \"8.4.0\": \"2026-09-15T15:23:42.214Z\"",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://cdn.jsdelivr.net/npm/expo@57.0.26/bundledNativeModules.json",
+          "quote": "\"react\": \"19.2.3\"",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://cdn.jsdelivr.net/npm/react-native@0.86.3/Libraries/Renderer/README.md",
+          "quote": "you can't bump the version of React in your package.json to a later version, as you will still be using the older renderer",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://api.npmjs.org/downloads/point/last-week/@tanstack/react-router",
+          "quote": "\"downloads\": 25609219, \"start\": \"2026-09-27\", \"end\": \"2026-10-03\"",
+          "date": "2026-10-03"
+        }
+      ]
+    },
+    {
+      "id": "S13-08",
+      "verdict": "CONFIRMED",
+      "note": "The Compose list at line 714 has no web server. @fastify/static 10.1.5 (published 2026-09-26) belongs to the Fastify org and plugin 8.x and later target Fastify 5. Static files for a hoca and admin panel are light next to the phone traffic, so serving them from each API copy holds at the plan's scale. On one origin CORS is not used by the browser and the phone is not a browser, so dropping @fastify/cors is sound. Gaps in the recommendation are cache headers and chunk errors after a deploy (see recommendation_issues and the miss at line 706).",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "https://github.com/fastify/fastify-static",
+          "quote": "Plugin version | Fastify version: >=8.x | ^5.x",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://registry.npmjs.org/@fastify/static",
+          "quote": "\"latest\": \"10.1.5\"; \"10.1.5\": \"2026-09-26T07:38:36.557Z\"",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS",
+          "quote": "Browsers use CORS in APIs such as fetch() or XMLHttpRequest to mitigate the risks of cross-origin HTTP requests.",
+          "date": "page modified 2026-09-04"
+        }
+      ]
+    },
+    {
+      "id": "S13-09",
+      "verdict": "CONFIRMED",
+      "note": "Facts hold. The 2.5.8 text in the finding is paraphrased inside quote marks; the Recommendation reads 'The size of the target for pointer inputs is at least 24 by 24 CSS pixels, except when:'. WCAG2Mobile is a W3C Group Draft Note dated 06 May 2025, guidance rather than a standard. The React Native docs now describe 0.87; allowFontScaling still defaults to true.",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "https://www.w3.org/TR/WCAG22/",
+          "quote": "W3C Recommendation 12 December 2024",
+          "date": "2024-12-12"
+        },
+        {
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html",
+          "quote": "The size of the target for pointer inputs is at least 24 by 24 CSS pixels, except when:",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum.html",
+          "quote": "As with usernames and passwords, it must be possible for a user to at least paste the code (such as from a standalone third-party password manager, text message application, or software-based security key), and to allow user agents to fill in the fields automatically.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://html.spec.whatwg.org/multipage/form-control-infrastructure.html",
+          "quote": "one-time-code: One-time code used for verifying user identity",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://reactnative.dev/docs/text",
+          "quote": "allowFontScaling: Specifies whether fonts should scale to respect Text Size accessibility settings. Default: true",
+          "date": "accessed 2026-10-05 (docs for React Native 0.87)"
+        }
+      ]
+    },
+    {
+      "id": "S13-10",
+      "verdict": "CONFIRMED",
+      "note": "The Windows 11 table shows plugged-in screen off going from 10 to 5 minutes for both Modern Standby and S3 devices; the page does not say whether existing installs change, and lecture PCs are often set by IT, so the risk is real but unmeasured. Screen Wake Lock is Baseline 2025 newly available, secure context only, governed by the screen-wake-lock Permissions Policy; Firefox 114 to 125 (inside Vite's default floor) do not have it.",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "https://support.microsoft.com/en-au/windows/power-settings-in-windows-11-0d6a2b6b-2e87-4611-9980-ac9ea2175734",
+          "quote": "Plugged in, screen off: 10 min (original), 5 min (adjusted) (table transcription, same for Modern Standby and S3 devices)",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API",
+          "quote": "Secure context: This feature is available only in secure contexts (HTTPS), in some or all supporting browsers.",
+          "date": "page modified 2026-09-11"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/mdn/browser-compat-data/main/api/WakeLock.json",
+          "quote": "chrome 84, firefox 126, safari 16.4, safari_ios 18.4 (16.4 partial)",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://developer.mozilla.org/en-US/docs/Web/API/Element/requestFullscreen",
+          "quote": "Transient user activation is required. The user has to interact with the page or a UI element in order for this feature to work.",
+          "date": "accessed 2026-10-05"
+        }
+      ]
+    },
+    {
+      "id": "S13-11",
+      "verdict": "CONFIRMED",
+      "note": "Plan-internal check: line 221 defines five session outcomes plus course-level Muaf, line 379 says Görevli hours are not absence, line 465 offers only V and Y.",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "Her oturum için öğrencinin son durumu: Var, Yok, Görevli, Belgeli düzeltme ya da Elle eklendi. Ders düzeyinde ayrıca Muaf vardır.",
+          "date": "2026-10-04"
+        },
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "Durum işareti olarak V (var) ve Y (yok) kullanılır.",
+          "date": "2026-10-04"
+        }
+      ]
+    },
+    {
+      "id": "S13-12",
+      "verdict": "CONFIRMED",
+      "note": "BCD confirms page-margin boxes in Chrome 131 only (Edge mirrors Chrome), none in Firefox or Safari, while the @page size descriptor works in Chrome 15, Firefox 95 and Safari 18.2.",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "https://raw.githubusercontent.com/mdn/browser-compat-data/main/css/at-rules/page.json",
+          "quote": "page-margin boxes (bottom-center, top-center): chrome \"131\", firefox false, safari false; size: chrome \"15\", firefox \"95\", safari \"18.2\"",
+          "date": "accessed 2026-10-05"
+        }
+      ]
+    },
+    {
+      "id": "S13-13",
+      "verdict": "CONFIRMED",
+      "note": "MDN confirms dialog is Baseline widely available since March 2022 and that a modal dialog makes the rest of the page inert and moves focus to the first focusable element.",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/dialog",
+          "quote": "It's been available across browsers since March 2022. ... Modal dialog boxes block interaction with other UI elements, making the rest of the page inert.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/dialog",
+          "quote": "When using HTMLDialogElement.showModal() to open a <dialog>, focus is set on the first nested focusable element.",
+          "date": "accessed 2026-10-05"
+        }
+      ]
+    },
+    {
+      "id": "S13-14",
+      "verdict": "CONFIRMED",
+      "note": "Plan-internal check: line 820 names only reports and the AKSİS summary, while lines 439 to 455 and line 72 put list upload, schedules and approvals in the panel.",
+      "correction": "",
+      "evidence": [
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "Web paneli: raporlar ve AKSİS özeti.",
+          "date": "2026-10-04"
+        },
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "Öğrenci henüz hiçbir listede yoksa kayıt bekler, liste yüklenince kendiliğinden eşleşir.",
+          "date": "2026-10-04"
+        }
+      ]
+    }
+  ],
+  "recommendation_issues": [
+    {
+      "id": "S13-03",
+      "problem": "Folding writing into SheetJS removes write-excel-file (good on the compact lens) but leans harder on a project with no release since v0.20.3 (2024-07-18) and no commit since 2026-02-09. Plan line 741 already names fallbacks for risky packages; this one needs one too, for example read-excel-file 9.3.10 for reading (reads .xlsx only, not .xls), TextDecoder for CSV, write-excel-file for writing. The recommendation text should also say that column widths need write(..., { cellStyles: true }) and that one Vite 8 build of SheetJS is checked, since SheetJS's own Vite demo stops at Vite 7.3.1."
+    },
+    {
+      "id": "S13-04",
+      "problem": "'paket dosyası depoya konur' commits a binary tarball, which the owner's rules allow only as a deliberate, tracked artifact. Since pnpm 10.26 (2025-12-15) the integrity hash of an HTTP tarball dependency is computed and stored in the lockfile (https://pnpm.io/blog/releases/10.26: 'pnpm now computes the integrity hash for HTTP tarball dependencies when fetching them and stores it in the lockfile.'), so installing from https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz is already pinned and tamper-evident. Vendoring adds only independence from the CDN during install. Both are valid; the plan should name one on purpose."
+    },
+    {
+      "id": "S13-06",
+      "problem": "'Panel Chrome ve Edge 111, Firefox 114, Safari 16.4 ve üstünde çalışır' promises more than Vite gives: Vite lowers syntax only and adds no polyfills, so any newer API in our code or a library raises the floor. The text should read as a minimum target that is tested on the oldest browser, not a guarantee."
+    },
+    {
+      "id": "S13-07",
+      "problem": "recommendation_tr picks React Router 8 outright while open_questions leaves the router to the owner; the final text should carry one of them. The trade-off to state: React Router now ships a major each year (7.0.0 on 2024-11-22, 8.0.0 on 2026-06-17; v7 keeps security fixes; declarative mode is the smallest surface to migrate), TanStack Router has stayed on 1.x."
+    },
+    {
+      "id": "S13-08",
+      "problem": "Serving the panel from every API copy is compact and holds at this scale, but the recommendation leaves out cache rules (index.html no-cache, hashed assets long-lived) and chunk-load failures after a deploy, which S13-03's dynamic import and S13-07's router make likely, especially during a rolling deploy behind the load balancer. The SPA fallback must also leave missing /assets and /v1 paths as 404. See the miss at line 706."
+    },
+    {
+      "id": "S13-10",
+      "problem": "Vite 8's default floor includes Firefox 114 to 125, which have no Screen Wake Lock (Firefox 126+). The page must check that the API exists and still work without it; the recommendation does not say so."
+    }
+  ],
+  "checked_ok_disputes": [],
+  "misses": [
+    {
+      "plan_line": 706,
+      "plan_quote": "React 19 ve Vite 8, TanStack Query 5, aynı OpenAPI istemcisi.",
+      "kind": "MISSING",
+      "severity": "medium",
+      "finding": "Nothing says how panel files are cached or what happens after a deploy. Every Vite build gets new hashed chunk names. A hoca whose panel tab is already open then asks for chunks the new build no longer has (lazy routes, and SheetJS if it is loaded by dynamic import as S13-03 proposes), and the click fails. During a rolling deploy behind the load balancer (line 731) an old API copy can also receive a request for a chunk only the new build has. Vite documents both the failure and the fix: listen for vite:preloadError and reload, and send index.html with Cache-Control: no-cache. If the SPA fallback answers every unknown path with index.html, a missing script comes back as HTML instead of a 404.",
+      "evidence": [
+        {
+          "url": "https://vite.dev/guide/build",
+          "quote": "Vite emits `vite:preloadError` event when it fails to load dynamic imports. `event.payload` contains the original import error.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://vite.dev/guide/build",
+          "quote": "When a new deployment occurs, the hosting service may delete the assets from previous deployments. ... make sure to set `Cache-Control: no-cache` on the HTML file, otherwise the old assets will be still referenced.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://github.com/fastify/fastify-static",
+          "quote": "setHeaders: A function to set custom headers on the response. Alterations to the headers must be done synchronously. The function is called as fn(reply, path, stat).",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "Sunucu kendi içinde durum tutmadığı için aynı imajdan birden çok kopya, önünde yük dengeleyiciyle çalışabilir.",
+          "date": "2026-10-04"
+        }
+      ],
+      "recommendation_tr": "index.html önbelleğe alınmaz (Cache-Control: no-cache); /assets altındaki adı özetli dosyalar uzun süreli ve değişmez olarak önbelleğe alınır. Yayından sonra açık kalmış bir sekmede parça yüklenemezse (vite:preloadError) sayfa bir kez kendiliğinden yenilenir. Bulunamayan sayfa adresine index.html döner; /assets ve /v1 altında bulunamayan dosya 404 kalır."
+    },
+    {
+      "plan_line": 469,
+      "plan_quote": "Ekran okuyucu desteği, yazı boyutu ve kontrast ayarları.",
+      "kind": "MISSING",
+      "severity": "medium",
+      "finding": "The panel's page language is not stated, and Vite's React template starts with <html lang=\"en\">. Left as is, screen readers read the Turkish panel with English pronunciation (WCAG 2.2 SC 3.1.1, Level A, fails), and CSS text-transform: uppercase turns i into I instead of İ, because the browser takes case rules from the lang attribute. Script has the same trap: toLocaleUpperCase, toLocaleLowerCase and Intl calls without a locale use the browser's default locale, not the page language.",
+      "evidence": [
+        {
+          "url": "https://raw.githubusercontent.com/vitejs/vite/main/packages/create-vite/template-react-ts/index.html",
+          "quote": "<html lang=\"en\">",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/text-transform",
+          "quote": "In Turkic languages, like Turkish (tr), Azerbaijani (az), Crimean Tatar (crh), Volga Tatar (tt), and Bashkir (ba), there are two kinds of i, with and without the dot, and two case pairings: i/İ and ı/I. ... The language is defined by the lang HTML attribute or the xml:lang XML attribute.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/language-of-page.html",
+          "quote": "The default human language of each web page can be programmatically determined. ... Screen readers can load the correct pronunciation rules.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleUpperCase",
+          "quote": "toLocaleUpperCase() always uses the first locale in the list (or the default locale if the list is empty), even if this locale is not supported by the implementation.",
+          "date": "accessed 2026-10-05"
+        }
+      ],
+      "recommendation_tr": "Panel sayfasının dili Türkçe olarak işaretlenir (html lang=\"tr\"). Böylece ekran okuyucu Türkçe okur ve büyük harfe çevirmede i harfi İ olur. Kodda harf çevirme ve sıralama her yerde 'tr' verilerek yapılır."
+    },
+    {
+      "plan_line": 441,
+      "plan_quote": "Öğrenci listesini yükleme, listeye öğrenci ekleme ve listeden çıkarma.",
+      "kind": "MISSING",
+      "severity": "medium",
+      "finding": "The AKSİS summary lists students in list order (line 391) and the hoca copies its values into AKSİS by hand (line 34). Neither the list upload rules (lines 457 to 465) nor the list table in the data model (line 790) keep the row order of the uploaded file, so the server cannot rebuild that order later. Sorting by name with ICU tr-TR (line 624) or by number may not match the AKSİS screen, which slows the hand copy and invites typing a value into the wrong row, against the plan's 'Haksız devamsız: 0' target (line 838).",
+      "evidence": [
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "AKSİS özeti: Öğrenciler liste sırasıyla yer alır.",
+          "date": "2026-10-04"
+        },
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "Ders listeleri: hangi öğrenci hangi derste; aktif ya da pasif, muaf mı.",
+          "date": "2026-10-04"
+        },
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "AKSİS: Otomatik bağlantı yok. Hoca \"AKSİS özeti\" ekranına bakıp değerleri elle girer.",
+          "date": "2026-10-04"
+        }
+      ],
+      "recommendation_tr": "Liste yüklenirken dosyadaki satır sırası da saklanır. AKSİS özeti bu sırayla çıkar; sonradan elle eklenen öğrenci sona eklenir, yeni dosya yüklenince sıra yeni dosyaya göre güncellenir."
+    },
+    {
+      "plan_line": 437,
+      "plan_quote": "Web paneli · hoca (her tarayıcıda, internet gerekir)",
+      "kind": "RISK",
+      "severity": "medium",
+      "finding": "The panel will also be opened on shared lecture PCs. The plan keeps the hoca account off that PC for the projection page on purpose (line 241), but nothing stops a hoca from logging in to the panel there. Hoca sessions stay open up to 30 days with only an absolute limit (lines 69 and 586), so a session left on a lecture PC lets the next person at the desk approve or correct attendance under the hoca's name. The plan targets OWASP ASVS 5.0 level 2 (line 598), whose 7.3.1 asks for an inactivity timeout and 7.4.4 for visible logout on every authenticated page. Cross-slice with the login slice (line 69).",
+      "evidence": [
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "Oturum açık kalır ama en geç 30 günde bir yeniden kodla girilir.",
+          "date": "2026-10-04"
+        },
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "kürsü bilgisayarındaki panel bu kodla yalnız o dersin QR'ını sunucudan alıp tam ekran gösterir ve ders bitince kapanır. Bilgisayarda hocanın hesabı açılmaz.",
+          "date": "2026-10-04"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/OWASP/ASVS/master/5.0/en/0x16-V7-Session-Management.md",
+          "quote": "7.3.1 (L2) Verify that there is an inactivity timeout such that re-authentication is enforced according to risk analysis and documented security decisions.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/OWASP/ASVS/master/5.0/en/0x16-V7-Session-Management.md",
+          "quote": "7.4.4 (L2) Verify that all pages that require authentication have easy and visible access to logout functionality.",
+          "date": "accessed 2026-10-05"
+        }
+      ],
+      "recommendation_tr": "Panel oturumu bir süre işlem yapılmazsa kapanır (ör. 1 saat). Girişte 'ortak bilgisayar' seçilirse oturum tarayıcı kapanınca biter. Çıkış düğmesi her sayfada görünür."
+    },
+    {
+      "plan_line": 443,
+      "plan_quote": "Raporlar: ders, öğrenci ve tarih aralığı.",
+      "kind": "MISSING",
+      "severity": "low",
+      "finding": "Times are kept in UTC (line 623) but the panel's display zone is not set. In the browser, Intl.DateTimeFormat uses the computer's time zone unless one is given, and SheetJS writes JS dates so that they are right in the computer's local time. A hoca laptop or lecture PC set to another zone would show and export shifted lesson times.",
+      "evidence": [
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "Bütün zamanlar UTC olarak tutulur.",
+          "date": "2026-10-04"
+        },
+        {
+          "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat",
+          "quote": "The default is the runtime's time zone, the same time zone used by Date.prototype.toString().",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://docs.sheetjs.com/docs/csf/features/dates",
+          "quote": "If `UTC` is true, the dates will be correct when interpreted in UTC. By default, the dates will be correct when interpreted in local time.",
+          "date": "accessed 2026-10-05"
+        }
+      ],
+      "recommendation_tr": "Paneldeki ve Excel'deki bütün tarih ve saatler bilgisayarın saat dilimine göre değil, her zaman Europe/Istanbul'a göre gösterilir ve yazılır."
+    },
+    {
+      "plan_line": 461,
+      "plan_quote": "Başlık satırı Türkçe harf duyarlı bulunur.",
+      "kind": "RISK",
+      "severity": "low",
+      "finding": "Turkish lowercasing maps I to dotless ı (Unicode SpecialCasing, tr rule), so a header written without Turkish letters, such as OGRENCI NO, becomes 'ogrencı no' and never matches 'öğrenci no'. Text can also arrive decomposed (ş as s plus a combining cedilla), which does not compare equal to the composed letter. The real AKSİS header format is still an open question (line 867), so the matcher should accept both spellings.",
+      "evidence": [
+        {
+          "url": "https://www.unicode.org/Public/UCD/latest/ucd/SpecialCasing.txt",
+          "quote": "0049; 0131; 0049; 0049; tr Not_Before_Dot; # LATIN CAPITAL LETTER I",
+          "date": "2026-05-19"
+        },
+        {
+          "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/normalize",
+          "quote": "However, since the code points are different, string comparison will not treat them as equal.",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "Gerçek bir AKSİS liste örneği (isimler maskeli): sütun başlıkları, e-posta sütunu, ekle-bırak, çift anadal ve tekrar alınan dersler.",
+          "date": "2026-10-04"
+        }
+      ],
+      "recommendation_tr": "Başlık eşleştirmede iki taraf da önce NFC biçimine çevrilir, Türkçe kuralla küçültülür, sonra Türkçe harfler sadeleştirilir (ç c, ğ g, ı i, ö o, ş s, ü u olur). Böylece 'ÖĞRENCİ NO' da 'OGRENCI NO' da bulunur. Bu sadeleştirme yalnız başlık satırı içindir."
+    },
+    {
+      "plan_line": 447,
+      "plan_quote": "Projeksiyon sayfası (Aşama 2): eşleştirme koduyla açılır, yalnız QR'ı tam ekran gösterir.",
+      "kind": "MISSING",
+      "severity": "low",
+      "finding": "No library is named for drawing the QR, while every other device feature in the technology list has one. The hoca's phone must draw it offline (line 241) and the projection page, or the server if it sends a ready image, must draw it too, with the smallest version and low error correction (line 247). One pure JavaScript encoder shared by both keeps one code path. npm options differ in upkeep: qrcode 1.5.4 (last release 2024-08-05, two maintainers), lean-qr 2.7.4 (2026-09-07, one maintainer), qr 0.7.2 (2026-09-28, one maintainer, still 0.x). Cross-slice with the QR slice.",
+      "evidence": [
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "Kürsüde internet yoksa hocanın telefonu QR'ı internetsiz üretir.",
+          "date": "2026-10-04"
+        },
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "İçerik kısa tutulur, en küçük QR sürümü ve düşük hata düzeltme seçilir",
+          "date": "2026-10-04"
+        },
+        {
+          "url": "https://registry.npmjs.org/qrcode",
+          "quote": "\"1.5.4\": \"2024-08-05T21:52:58.518Z\"; maintainers: soldair, vigreco",
+          "date": "accessed 2026-10-05"
+        },
+        {
+          "url": "https://registry.npmjs.org/lean-qr",
+          "quote": "\"2.7.4\": \"2026-09-07T13:30:08.172Z\"; maintainers: davidje13",
+          "date": "accessed 2026-10-05"
+        }
+      ],
+      "recommendation_tr": "QR çizimi için tek bir saf JavaScript kütüphanesi seçilir; telefon ve projeksiyon sayfası aynı kodu kullanır. Kütüphane teknolojiler listesine yedeğiyle birlikte yazılır."
+    },
+    {
+      "plan_line": 709,
+      "plan_quote": "Okuma için SheetJS (kendi sitesinden; npm'deki xlsx paketi kullanılmaz), yazma için write-excel-file.",
+      "kind": "MISSING",
+      "severity": "low",
+      "finding": "Every other technology area in Kaynaklar has links (Benzer sistemler; Kurallar, internetsiz çalışma ve saat; Sunucu ve testler; Dağıtım ve cihazlar), but there is no web panel group. Nothing backs the SheetJS CDN rule, the CSV escaping rule (line 465), Vite 8 or the accessibility target. The stale npm xlsx package and its two advisories with no patched npm release are the reason for line 709 and deserve a link.",
+      "evidence": [
+        {
+          "url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html",
+          "quote": "<summary>Benzer sistemler</summary> ... <summary>Kurallar, internetsiz çalışma ve saat</summary> ... <summary>Sunucu ve testler</summary> ... <summary>Dağıtım ve cihazlar</summary>",
+          "date": "2026-10-04"
+        },
+        {
+          "url": "https://github.com/advisories/GHSA-5pgg-2g8v-p4x9",
+          "quote": "Affected versions: < 0.20.2. Patched versions: None",
+          "date": "2024-04-05"
+        }
+      ],
+      "recommendation_tr": "Kaynaklar'a 'Web paneli' grubu eklenir: SheetJS kurulum sayfası ve güvenlik duyuruları, OWASP CSV Injection, Vite 8 duyurusu, WCAG 2.2 ve Encoding Standard."
+    }
+  ],
+  "slice_verdict": "PASS",
+  "verdict_reason": "No finding in this slice is high severity, and none was refuted or left unverifiable. All 14 findings were re-checked against their cited source and at least one independent primary source: 13 CONFIRMED, 1 CORRECTED (S13-03: column widths need cellStyles: true, the lazy-load quote came from the glob-import section, SheetJS's Vite demo stops at Vite 7.3.1, and SheetJS CE has not released since 2024-07-18). All 17 checked_ok items held against the npm registry, MDN BCD, W3C and vendor pages. Eight misses were found, none high: four medium (chunk errors and cache headers after a deploy, missing lang=\"tr\", list row order for the AKSİS summary, panel sessions on shared lecture PCs) and four low (display time zone, ASCII headers and NFC, QR encoder, no panel sources in Kaynaklar)."
+}

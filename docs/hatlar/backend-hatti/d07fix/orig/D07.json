@@ -1,0 +1,1796 @@
+{
+  "id": "D07",
+  "module": "dogrulama",
+  "summary": "D07 (dogrulama) telefonun gerçek, uygulamanın bizim olduğunu kayıtta doğrulayan cihaz kanıtı denetimini, App Attest onay sayacını ve her yoklama kaydının yedi etiketini ve tek sunucu kararını (Var, Beklemede, İncelemede, Ret) veren karar motorunu tutar. Kararın tek yazarı D07'dir: ilk kararı kararHesapla ile verir, sonraki her geçişi kararDegistir ile yapar ve kayit_karar_gecmisi tablosuna yazar; kayıt satırındaki sütunları D07'nin verdiği değerle D05 yazar. Kural mantığı packages/core/src/dogrulama içinde saf fonksiyondur ve tek test tablosuyla denenir; saat D04'ün arayüzünden, cihaz, liste ve oturum bilgisi sahiplerinin dış yüzünden gelir. 2'lik ortak sınır, kafa sayısı karşılaştırması ve işareti, rastgele isim ve burada değil işaretleri, dönem kilidindeki karar kapanışı ve Google iptal listesi de bu modüldedir. Doğrulama sonucu yalnız etikettir; doğrulanamayan telefonun kaydı bu yüzden reddedilmez.",
+  "tables": [
+    {
+      "name": "cihaz_dogrulama_degerleri",
+      "purpose": "Cihaz bağlama, cihaz değişimi ve App Attest anahtar yenilemesinde kanıta konan tek kullanımlık, 5 dakikalık sunucu değerleri. Değerin kendisi saklanmaz; satır SHA-256 özetiyle bulunur, ilk tüketimde ya da süresi geçince silinir.",
+      "columns": [
+        {
+          "name": "deger_ozeti",
+          "type": "bytea",
+          "null": false,
+          "default": "",
+          "note": "Telefona verilen 32 baytlık değerin SHA-256 özeti; birincil anahtar. Telefon değeri geri getirir, sunucu özetle bulur."
+        },
+        {
+          "name": "amac",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "KAYIT, CIHAZ_DEGISIMI ya da ANAHTAR_YENILEME; değer yalnız bu amaçla tüketilir."
+        },
+        {
+          "name": "olusturma_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "D04.simdi() ile yazılır."
+        },
+        {
+          "name": "son_gecerlilik_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "olusturma_ani artı 5 dakika (DEGER_OMRU_MS)."
+        }
+      ],
+      "indexes": [
+        "cihaz_dogrulama_degerleri_son_gecerlilik_ani_idx (son_gecerlilik_ani): yeni değer verilirken süresi geçenlerin silinmesi"
+      ],
+      "constraints": [
+        "cihaz_dogrulama_degerleri_deger_ozeti_pk PRIMARY KEY (deger_ozeti)",
+        "cihaz_dogrulama_degerleri_deger_ozeti_ck CHECK (octet_length(deger_ozeti) = 32)",
+        "cihaz_dogrulama_degerleri_amac_ck CHECK (amac IN ('KAYIT','CIHAZ_DEGISIMI','ANAHTAR_YENILEME'))",
+        "cihaz_dogrulama_degerleri_son_gecerlilik_ani_ck CHECK (son_gecerlilik_ani > olusturma_ani)"
+      ]
+    },
+    {
+      "name": "cihaz_kanitlari",
+      "purpose": "Her cihaz bağlama, cihaz değişimi ve App Attest anahtar yenilemesinde alınan kanıtın ham hali, sunucunun okuduğu değerler ve sonucu (DOGRULANDI, DOGRULANAMADI, REDDEDILDI). Cihaz doğrulanmadı etiketinin ve ayrı oran ölçümünün dayanağı; iptal listesi bu satırlara işlenir.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "null": false,
+          "default": "uuidv7()",
+          "note": "Kanıt kimliği."
+        },
+        {
+          "name": "cihaz_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "cihazlar(id) (D01)."
+        },
+        {
+          "name": "anahtar_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Kanıtlanan anahtar: Android cihaz anahtarı ya da App Attest anahtarı, cihaz_anahtarlari(id) (D01). Kanıtsız telefonda bağlanan donanım anahtarı."
+        },
+        {
+          "name": "platform",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "ANDROID ya da IOS."
+        },
+        {
+          "name": "kanit_turu",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "ANDROID_ANAHTAR_KANITI, APP_ATTEST ya da KANITSIZ (Google servissiz Android, kanıtı isteğe bağlı Android 7, App Attest'i başarısız iPhone)."
+        },
+        {
+          "name": "amac",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "KAYIT, CIHAZ_DEGISIMI ya da ANAHTAR_YENILEME."
+        },
+        {
+          "name": "sonuc",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "DOGRULANDI, DOGRULANAMADI ya da REDDEDILDI (REDDEDILDI'nin bağlamaya etkisi D07-A01)."
+        },
+        {
+          "name": "gerekce_kodu",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "DOGRULANDI dışında zorunlu; kanıt gerekçe kataloğundan (ör. GUVENLIK_DUZEYI_YAZILIM, APP_ATTEST_GELISTIRME_ORTAMI)."
+        },
+        {
+          "name": "ham_kanit",
+          "type": "bytea",
+          "null": true,
+          "default": "",
+          "note": "Android sertifika zinciri (DER, sırayla) ya da App Attest kanıt nesnesi (CBOR) aynen; KANITSIZ'da boş. Hesap silmede silinip silinmeyeceği D07-A07."
+        },
+        {
+          "name": "seri_nolari",
+          "type": "text[]",
+          "null": false,
+          "default": "'{}'",
+          "note": "Zincirdeki sertifika seri numaraları (küçük harf onaltılık); iptal listesi denetimi için."
+        },
+        {
+          "name": "kanit_guvenlik_duzeyi",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Android attestationSecurityLevel: SOFTWARE, TRUSTED_ENVIRONMENT ya da STRONG_BOX."
+        },
+        {
+          "name": "anahtar_guvenlik_duzeyi",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Android keymasterSecurityLevel; aynı değerler."
+        },
+        {
+          "name": "dogrulanmis_acilis",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Android verifiedBootState: VERIFIED, SELF_SIGNED, UNVERIFIED ya da FAILED."
+        },
+        {
+          "name": "cihaz_kilitli",
+          "type": "boolean",
+          "null": true,
+          "default": "",
+          "note": "Android rootOfTrust.deviceLocked."
+        },
+        {
+          "name": "paket_adi",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Kanıttaki uygulama paket adı (Android)."
+        },
+        {
+          "name": "imza_ozeti",
+          "type": "bytea",
+          "null": true,
+          "default": "",
+          "note": "Kanıttaki imza sertifikası SHA-256 özeti (Android); birden çoksa eşleşen."
+        },
+        {
+          "name": "kok",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Zincirin bağlandığı kök: GOOGLE_RSA, GOOGLE_P384 ya da APPLE_APP_ATTEST; bağlanmadıysa boş."
+        },
+        {
+          "name": "app_attest_ortami",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "PRODUCTION ya da DEVELOPMENT; yalnız PRODUCTION doğrulanmış sayılır."
+        },
+        {
+          "name": "ios_acilis_dogrulama_turu",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "iOS 27 kanıt uzantısındaki açılış doğrulama türü (ham değer); iOS 26 ve öncesinde boş."
+        },
+        {
+          "name": "ios_paket_surumu",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "iOS 27 kanıt uzantısındaki paket sürümü (bundle version)."
+        },
+        {
+          "name": "ios_aykirilik",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "BEKLENMEYEN_DAGITIM_TURU ya da YAYIMLANMAMIS_PAKET_SURUMU; etiketi ve kararı değiştirmez."
+        },
+        {
+          "name": "iptal_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Zincirdeki bir seri numarası iptal listesinde ilk görüldüğü an; liste kalkınca boşalır."
+        },
+        {
+          "name": "iptal_durumu",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "REVOKED ya da SUSPENDED."
+        },
+        {
+          "name": "olusturma_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "D04.simdi()."
+        }
+      ],
+      "indexes": [
+        "cihaz_kanitlari_cihaz_id_olusturma_ani_idx (cihaz_id, olusturma_ani DESC): cihazın son kanıtı (cihazDogrulanmadiMi)",
+        "cihaz_kanitlari_anahtar_id_olusturma_ani_idx (anahtar_id, olusturma_ani DESC): imzalayan anahtarın kanıtı (etiket hesabı)",
+        "cihaz_kanitlari_seri_nolari_idx GIN (seri_nolari) WHERE platform = 'ANDROID' AND sonuc = 'DOGRULANDI': iptal listesi yeniden denetimi"
+      ],
+      "constraints": [
+        "cihaz_kanitlari_id_pk PRIMARY KEY (id)",
+        "cihaz_kanitlari_cihaz_id_fk FOREIGN KEY (cihaz_id) REFERENCES cihazlar (id)",
+        "cihaz_kanitlari_anahtar_id_fk FOREIGN KEY (anahtar_id) REFERENCES cihaz_anahtarlari (id)",
+        "cihaz_kanitlari_platform_ck CHECK (platform IN ('ANDROID','IOS'))",
+        "cihaz_kanitlari_kanit_turu_ck CHECK (kanit_turu IN ('ANDROID_ANAHTAR_KANITI','APP_ATTEST','KANITSIZ'))",
+        "cihaz_kanitlari_amac_ck CHECK (amac IN ('KAYIT','CIHAZ_DEGISIMI','ANAHTAR_YENILEME'))",
+        "cihaz_kanitlari_sonuc_ck CHECK (sonuc IN ('DOGRULANDI','DOGRULANAMADI','REDDEDILDI'))",
+        "cihaz_kanitlari_gerekce_kodu_ck CHECK (gerekce_kodu IS NULL OR gerekce_kodu IN (kanıt gerekçe kataloğu))",
+        "cihaz_kanitlari_sonuc_gerekce_kodu_ck CHECK ((sonuc = 'DOGRULANDI') = (gerekce_kodu IS NULL))",
+        "cihaz_kanitlari_kanit_turu_ham_kanit_ck CHECK (kanit_turu <> 'KANITSIZ' OR (ham_kanit IS NULL AND sonuc = 'DOGRULANAMADI'))",
+        "cihaz_kanitlari_iptal_ani_iptal_durumu_ck CHECK ((iptal_ani IS NULL) = (iptal_durumu IS NULL))",
+        "cihaz_kanitlari_iptal_durumu_ck CHECK (iptal_durumu IS NULL OR iptal_durumu IN ('REVOKED','SUSPENDED'))",
+        "cihaz_kanitlari_platform_ios_alanlari_ck CHECK (platform = 'IOS' OR (app_attest_ortami IS NULL AND ios_paket_surumu IS NULL AND ios_aykirilik IS NULL))",
+        "Düzey, açılış, kök, ortam ve aykırılık sütunlarında değer listesi CHECK'i (yukarıdaki notlardaki değerler)"
+      ]
+    },
+    {
+      "name": "app_attest_sayaclari",
+      "purpose": "App Attest anahtarı başına onay sayacı dizisi: her iPhone kaydının (anahtar, sıra numarası, sayaç) satırı ve kuralı geçip geçmediği. Anahtarın son sayacı en büyük sıra numaralı geçen satırdır; yenilenen anahtarın dizisi sıfırdan başlar, eski anahtarın satırları kalır. Açık anahtar cihaz_anahtarlari tablosundadır (D01).",
+      "columns": [
+        {
+          "name": "anahtar_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "App Attest anahtarı, cihaz_anahtarlari(id)."
+        },
+        {
+          "name": "sira_no",
+          "type": "bigint",
+          "null": false,
+          "default": "",
+          "note": "Kaydın cihazdaki sıra numarası (kayıt metninden)."
+        },
+        {
+          "name": "sayac",
+          "type": "bigint",
+          "null": false,
+          "default": "",
+          "note": "Onaydaki sayaç (authenticator data); kanıttaki ilk değer 0."
+        },
+        {
+          "name": "gecti",
+          "type": "boolean",
+          "null": false,
+          "default": "",
+          "note": "Sayaç komşu geçen onaylara göre kesin artıyor mu; false olan satır komşu denetimine girmez."
+        },
+        {
+          "name": "olusturma_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "D04.simdi(); saklama süresi bu anla uygulanır."
+        }
+      ],
+      "indexes": [
+        "app_attest_sayaclari_anahtar_id_sira_no_idx (anahtar_id, sira_no) INCLUDE (sayac) WHERE gecti: önceki ve sonraki geçen onayın bulunması"
+      ],
+      "constraints": [
+        "app_attest_sayaclari_anahtar_id_sira_no_pk PRIMARY KEY (anahtar_id, sira_no)",
+        "app_attest_sayaclari_anahtar_id_fk FOREIGN KEY (anahtar_id) REFERENCES cihaz_anahtarlari (id)",
+        "app_attest_sayaclari_sayac_ck CHECK (sayac >= 0)",
+        "app_attest_sayaclari_sira_no_ck CHECK (sira_no >= 0)"
+      ]
+    },
+    {
+      "name": "android_iptal_listesi",
+      "purpose": "Google'ın anahtar kanıtı iptal listesinin son başarılı çekilen kopyası; her satır bir sertifika seri numarası. Cihaz bağlamada ve günlük yeniden denetimde kullanılır. Son başarılı çekim anı en büyük son_gorulme_ani'dir.",
+      "columns": [
+        {
+          "name": "seri_no",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "Sertifika seri numarası, listedeki gibi küçük harf onaltılık."
+        },
+        {
+          "name": "durum",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "REVOKED ya da SUSPENDED; bilinmeyen durum REVOKED sayılır ve loglanır."
+        },
+        {
+          "name": "sebep",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Google'ın gerekçesi (ör. KEY_COMPROMISE); dış değer olduğu için CHECK yok, en çok 64 karakter."
+        },
+        {
+          "name": "ilk_gorulme_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Satırın ilk görüldüğü çekim anı."
+        },
+        {
+          "name": "son_gorulme_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Satırın göründüğü son başarılı çekim anı."
+        }
+      ],
+      "indexes": [
+        "android_iptal_listesi_son_gorulme_ani_idx (son_gorulme_ani): son başarılı çekim anı ve listede olmayanların silinmesi"
+      ],
+      "constraints": [
+        "android_iptal_listesi_seri_no_pk PRIMARY KEY (seri_no)",
+        "android_iptal_listesi_seri_no_ck CHECK (seri_no ~ '^[0-9a-f]{1,64}$')",
+        "android_iptal_listesi_durum_ck CHECK (durum IN ('REVOKED','SUSPENDED'))",
+        "android_iptal_listesi_sebep_ck CHECK (sebep IS NULL OR length(sebep) <= 64)",
+        "android_iptal_listesi_son_gorulme_ani_ck CHECK (son_gorulme_ani >= ilk_gorulme_ani)"
+      ]
+    },
+    {
+      "name": "ortak_sinir_sayaclari",
+      "purpose": "2'lik ortak sınırın (dönem, öğrenci, ders) başına kullanılan hakları ve hakkın kullanıldığı oturumlar. Satır SELECT ... FOR UPDATE ile kilitlenir; eşzamanlı iki işlem son hakkı birlikte alamaz.",
+      "columns": [
+        {
+          "name": "donem_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "donemler(id) (D02)."
+        },
+        {
+          "name": "ogrenci_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "kisiler(id) (D01)."
+        },
+        {
+          "name": "ders_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "dersler(id) (D02); teori ve uygulama birlikte sayılır."
+        },
+        {
+          "name": "kullanilan",
+          "type": "smallint",
+          "null": false,
+          "default": "0",
+          "note": "Hak kullanılan oturum sayısı; hiç azalmaz."
+        },
+        {
+          "name": "kullanilan_oturum_idleri",
+          "type": "uuid[]",
+          "null": false,
+          "default": "'{}'",
+          "note": "Hakkın kullanıldığı oturumlar; aynı oturumdaki ikinci kayıt yeni hak harcamaz."
+        },
+        {
+          "name": "son_degisim_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "D04.simdi()."
+        }
+      ],
+      "indexes": [
+        "Birincil anahtar dışında dizin yok; satır yalnız tam anahtarla okunur."
+      ],
+      "constraints": [
+        "ortak_sinir_sayaclari_donem_id_ogrenci_id_ders_id_pk PRIMARY KEY (donem_id, ogrenci_id, ders_id)",
+        "ortak_sinir_sayaclari_donem_id_fk, ortak_sinir_sayaclari_ogrenci_id_fk, ortak_sinir_sayaclari_ders_id_fk",
+        "ortak_sinir_sayaclari_kullanilan_ck CHECK (kullanilan >= 0)",
+        "ortak_sinir_sayaclari_kullanilan_oturum_idleri_ck CHECK (cardinality(kullanilan_oturum_idleri) = kullanilan)",
+        "Üst sınır (ORTAK_SINIR = 2) kodda tek sabittir; CHECK'e yazılmaz, testler sabiti içe alır."
+      ]
+    },
+    {
+      "name": "kayit_karar_gecmisi",
+      "purpose": "Her kaydın her karar geçişi (otomatik ya da hoca): önceki ve yeni karar, birincil ve uyan öbür gerekçeler, olay, kaynak, yapan. Güncel satır kayıt satırındaki kararın aynısıdır; Hedefler'deki ilk karar ilk_kesin satırından okunur. Kendi beyanı ve İncelemede onayları da burada (kayit_onayi buna katıldı).",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "null": false,
+          "default": "uuidv7()",
+          "note": "Satır kimliği."
+        },
+        {
+          "name": "donem_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Kaydın dönemi; (donem_id, kayit_id) yoklama_kayitlari'na başvurur."
+        },
+        {
+          "name": "kayit_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Kaydın kimliği (telefonun UUIDv7'si)."
+        },
+        {
+          "name": "oturum_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Kaydın oturumu (kayıttan kopya; oturum sorguları için)."
+        },
+        {
+          "name": "ogrenci_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Kaydın öğrencisi (kayıttan kopya; teyit ve çakışma sorguları için)."
+        },
+        {
+          "name": "kayit_ulasma_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Kaydın sunucuya ulaşma anı (kayıttan kopya); kesinleşme ve kesinti süzgeci."
+        },
+        {
+          "name": "sira",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Kaydın geçiş sırası; 1 ilk karar."
+        },
+        {
+          "name": "onceki_karar",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Önceki karar; ilk satırda boş."
+        },
+        {
+          "name": "yeni_karar",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "VAR, BEKLEMEDE, INCELEMEDE ya da RET."
+        },
+        {
+          "name": "gerekce_kodu",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Birincil gerekçe (gerekçe kataloğu); gerekçesiz Var'da boş."
+        },
+        {
+          "name": "ek_gerekceler",
+          "type": "text[]",
+          "null": false,
+          "default": "'{}'",
+          "note": "Uyan öbür gerekçeler."
+        },
+        {
+          "name": "olay",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "Geçişi doğuran olay (KAYIT_GELDI, TEYIT_VERILDI, KAFA_SAYISI_GELDI, HOCA_ONAYI ...)."
+        },
+        {
+          "name": "kaynak",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "OTOMATIK ya da HOCA; yeniden değerlendirme yalnız OTOMATIK güncel kararlara dokunur."
+        },
+        {
+          "name": "yapan_kisi_id",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "Hoca kaynaklı geçişte hoca, kisiler(id)."
+        },
+        {
+          "name": "islem_id",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "Toplu işlemin kimliği (D09 toplu onay, burada değil); aynı işlemin satırlarını gruplar."
+        },
+        {
+          "name": "ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Geçiş anı, D04.simdi()."
+        },
+        {
+          "name": "guncel",
+          "type": "boolean",
+          "null": false,
+          "default": "true",
+          "note": "Kaydın güncel kararı bu satır mı; yeni geçişte önceki satır false olur. Geçmişin değişen tek alanıdır: güncel kararı (bekleyen kararlar, oturum karşılaştırması, kesinti) D05'e süzgeç dış yüzü açtırmadan tek kısmi dizinle bulmayı sağlar."
+        },
+        {
+          "name": "ilk_kesin",
+          "type": "boolean",
+          "null": false,
+          "default": "false",
+          "note": "Beklemede dışındaki ilk karar satırı; kayıt başına en çok bir."
+        }
+      ],
+      "indexes": [
+        "kayit_karar_gecmisi_donem_id_kayit_id_guncel_uq UNIQUE (donem_id, kayit_id) WHERE guncel",
+        "kayit_karar_gecmisi_donem_id_kayit_id_ilk_kesin_uq UNIQUE (donem_id, kayit_id) WHERE ilk_kesin",
+        "kayit_karar_gecmisi_oturum_id_idx (oturum_id) INCLUDE (ogrenci_id, yeni_karar, kaynak, kayit_ulasma_ani) WHERE guncel: oturum karşılaştırması ve oturum yeniden değerlendirmesi",
+        "kayit_karar_gecmisi_ogrenci_id_kayit_ulasma_ani_idx (ogrenci_id, kayit_ulasma_ani) WHERE guncel: teyit, çakışma",
+        "kayit_karar_gecmisi_gerekce_kodu_oturum_id_idx (gerekce_kodu, oturum_id) WHERE guncel AND yeni_karar IN ('BEKLEMEDE','INCELEMEDE'): süreli ön koşullar ve kesinti"
+      ],
+      "constraints": [
+        "kayit_karar_gecmisi_id_pk PRIMARY KEY (id)",
+        "kayit_karar_gecmisi_donem_id_kayit_id_sira_uq UNIQUE (donem_id, kayit_id, sira)",
+        "kayit_karar_gecmisi_donem_id_kayit_id_fk FOREIGN KEY (donem_id, kayit_id) REFERENCES yoklama_kayitlari (donem_id, id)",
+        "kayit_karar_gecmisi_oturum_id_fk, kayit_karar_gecmisi_ogrenci_id_fk, kayit_karar_gecmisi_yapan_kisi_id_fk",
+        "kayit_karar_gecmisi_yeni_karar_ck CHECK (yeni_karar IN ('VAR','BEKLEMEDE','INCELEMEDE','RET'))",
+        "kayit_karar_gecmisi_onceki_karar_ck CHECK (onceki_karar IS NULL OR onceki_karar IN ('VAR','BEKLEMEDE','INCELEMEDE','RET'))",
+        "kayit_karar_gecmisi_gerekce_kodu_ck CHECK (gerekce_kodu IS NULL OR gerekce_kodu IN (gerekçe kataloğu))",
+        "kayit_karar_gecmisi_ek_gerekceler_ck CHECK (ek_gerekceler <@ ARRAY[gerekçe kataloğu])",
+        "kayit_karar_gecmisi_olay_ck CHECK (olay IN (olay listesi))",
+        "kayit_karar_gecmisi_kaynak_ck CHECK (kaynak IN ('OTOMATIK','HOCA'))",
+        "kayit_karar_gecmisi_kaynak_yapan_kisi_id_ck CHECK ((kaynak = 'HOCA') = (yapan_kisi_id IS NOT NULL))",
+        "kayit_karar_gecmisi_sira_onceki_karar_ck CHECK (sira >= 1 AND (sira = 1) = (onceki_karar IS NULL))",
+        "kayit_karar_gecmisi_ilk_kesin_ck CHECK (NOT (ilk_kesin AND yeni_karar = 'BEKLEMEDE'))"
+      ]
+    },
+    {
+      "name": "oturum_isaretleri",
+      "purpose": "Oturum düzeyindeki türlü işaretler (KAFA_SAYISI_ASIMI, Aşama 2'de QR_BELGESIZ_GOSTERIM): ilk çıkış anı, derste görülüp görülmediği, son karşılaştırma değerleri, kesinleşme ve D09'un toplu incelemesi. İşaret kayıt kararlarını değiştirmez.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "null": false,
+          "default": "uuidv7()",
+          "note": "İşaret kimliği (isaretIncelendi bununla çağrılır)."
+        },
+        {
+          "name": "donem_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "donemler(id); saklama ve listeleme."
+        },
+        {
+          "name": "oturum_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "oturumlar(id) (D02)."
+        },
+        {
+          "name": "tur",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "KAFA_SAYISI_ASIMI ya da QR_BELGESIZ_GOSTERIM. İkincisi Aşama 2'de, QR_GOSTERIM_KAYDI yeniden değerlendirmesinde D11.gosterimAraliklari geçerli saat belgesi olmadan gösterim bildirince yazılır."
+        },
+        {
+          "name": "gecerli",
+          "type": "boolean",
+          "null": false,
+          "default": "",
+          "note": "Son hesapta eşik hâlâ aşılıyor mu."
+        },
+        {
+          "name": "ilk_isaret_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Eşiğin ilk aşıldığı an: kafa sayısının girildiği an ile eşiği aşan kaydın ulaşma anının büyüğü."
+        },
+        {
+          "name": "derste",
+          "type": "boolean",
+          "null": false,
+          "default": "",
+          "note": "ilk_isaret_ani oturum bitişinden önce mi (derste bütün liste okunur, sonra toplu inceleme)."
+        },
+        {
+          "name": "son_kafa_sayisi",
+          "type": "integer",
+          "null": true,
+          "default": "",
+          "note": "Son hesaptaki kafa sayısı."
+        },
+        {
+          "name": "son_kayit_sayisi",
+          "type": "integer",
+          "null": true,
+          "default": "",
+          "note": "Son hesaptaki kayıt sayısı."
+        },
+        {
+          "name": "son_hesap_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Son hesabın anı."
+        },
+        {
+          "name": "kesinlesti_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Gönderme süresi bitince yazılır; sonra değerler değişmez."
+        },
+        {
+          "name": "incelendi_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "D09'un toplu incelemeyi kapattığı an."
+        },
+        {
+          "name": "inceleyen_kisi_id",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "İncelemeyi kapatan hoca, kisiler(id)."
+        }
+      ],
+      "indexes": [
+        "oturum_isaretleri_donem_id_tur_idx (donem_id, tur) WHERE gecerli AND incelendi_ani IS NULL: D09'un işaretli oturum listesi"
+      ],
+      "constraints": [
+        "oturum_isaretleri_id_pk PRIMARY KEY (id)",
+        "oturum_isaretleri_oturum_id_tur_uq UNIQUE (oturum_id, tur)",
+        "oturum_isaretleri_donem_id_fk, oturum_isaretleri_oturum_id_fk, oturum_isaretleri_inceleyen_kisi_id_fk",
+        "oturum_isaretleri_tur_ck CHECK (tur IN ('KAFA_SAYISI_ASIMI','QR_BELGESIZ_GOSTERIM'))",
+        "oturum_isaretleri_incelendi_ani_inceleyen_kisi_id_ck CHECK ((incelendi_ani IS NULL) = (inceleyen_kisi_id IS NULL))",
+        "oturum_isaretleri_son_kafa_sayisi_ck CHECK (son_kafa_sayisi IS NULL OR son_kafa_sayisi >= 0) ve aynısı son_kayit_sayisi için",
+        "oturum_isaretleri_tur_son_kafa_sayisi_ck CHECK (tur <> 'KAFA_SAYISI_ASIMI' OR (son_kafa_sayisi IS NOT NULL AND son_kayit_sayisi IS NOT NULL))"
+      ]
+    },
+    {
+      "name": "rastgele_isim_secimleri",
+      "purpose": "Rastgele isim seçimleri ve burada değil işaretleri; oturum ve öğrenci başına tek satır. Basışın tekrar anahtarını, işaretin yalnız seçilen öğrenciye ya da işaretli oturumda verilmesini ve aynı gün geri alınmasını sağlar.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "null": false,
+          "default": "uuidv7()",
+          "note": "Satır kimliği."
+        },
+        {
+          "name": "secim_id",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "İstemcinin her basışta ürettiği UUIDv7; işaretli oturumda seçimsiz işarette boş."
+        },
+        {
+          "name": "oturum_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "oturumlar(id)."
+        },
+        {
+          "name": "donem_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "donemler(id); saklama."
+        },
+        {
+          "name": "ogrenci_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "kisiler(id); numara ya da isim saklanmaz."
+        },
+        {
+          "name": "kaynak",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "RASTGELE_SECIM ya da ISARETLI_OTURUM."
+        },
+        {
+          "name": "sira",
+          "type": "smallint",
+          "null": true,
+          "default": "",
+          "note": "Basıştaki gösterim sırası (1 ile 3)."
+        },
+        {
+          "name": "secen_kisi_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Seçen ya da ilk işaretleyen hoca."
+        },
+        {
+          "name": "secim_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "D04.simdi()."
+        },
+        {
+          "name": "durum",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "SECILDI, SINIFTA_DEGIL ya da GERI_ALINDI."
+        },
+        {
+          "name": "isaretleyen_kisi_id",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "Burada değil diyen hoca; geri almayı yalnız o yapar."
+        },
+        {
+          "name": "isaret_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Son burada değil anı."
+        },
+        {
+          "name": "geri_alma_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Geri alma anı; yeniden işaretlenince boşalır."
+        }
+      ],
+      "indexes": [
+        "rastgele_isim_secimleri_secim_id_idx (secim_id) WHERE secim_id IS NOT NULL: aynı basışın tekrarı"
+      ],
+      "constraints": [
+        "rastgele_isim_secimleri_id_pk PRIMARY KEY (id)",
+        "rastgele_isim_secimleri_oturum_id_ogrenci_id_uq UNIQUE (oturum_id, ogrenci_id)",
+        "rastgele_isim_secimleri_oturum_id_fk, _donem_id_fk, _ogrenci_id_fk, _secen_kisi_id_fk, _isaretleyen_kisi_id_fk",
+        "rastgele_isim_secimleri_kaynak_ck CHECK (kaynak IN ('RASTGELE_SECIM','ISARETLI_OTURUM'))",
+        "rastgele_isim_secimleri_durum_ck CHECK (durum IN ('SECILDI','SINIFTA_DEGIL','GERI_ALINDI'))",
+        "rastgele_isim_secimleri_kaynak_secim_id_ck CHECK ((kaynak = 'RASTGELE_SECIM') = (secim_id IS NOT NULL AND sira IS NOT NULL))",
+        "rastgele_isim_secimleri_kaynak_durum_ck CHECK (kaynak = 'RASTGELE_SECIM' OR durum <> 'SECILDI')",
+        "rastgele_isim_secimleri_durum_isaret_ani_ck CHECK (durum = 'SECILDI' OR (isaret_ani IS NOT NULL AND isaretleyen_kisi_id IS NOT NULL))",
+        "rastgele_isim_secimleri_durum_geri_alma_ani_ck CHECK ((durum = 'GERI_ALINDI') = (geri_alma_ani IS NOT NULL))"
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/v1/dogrulama/deger",
+      "client": "telefon",
+      "auth": "Girişsiz (kimlik: yok), IP sınırlı. Değer tek başına yetki vermez; yalnız cihaz kanıtına konur ve D01'in kayıt, cihaz değişimi ya da App Attest yenileme isteğinde tüketilir.",
+      "request": {
+        "amac": "metin, zorunlu; KAYIT, CIHAZ_DEGISIMI ya da ANAHTAR_YENILEME (istekte kapalı enum)"
+      },
+      "response": {
+        "deger": "metin; 32 bayt güvenli rastgele değerin base64url hali (43 karakter); yalnız bu cevapta görünür, logda yok",
+        "sonGecerlilikAni": "metin; UTC ISO 8601, milisaniyeli, Z ile; veriliş anı artı 5 dakika"
+      },
+      "errors": [
+        "400 doğrulama hatası (D13 ortak zarf)",
+        "429 (D13 ortak, Retry-After)",
+        "503 SUNUCU_YOGUN"
+      ],
+      "idempotency": "Eş güçlü değil: her çağrı yeni değer üretir, telefon yeniden denemede yeni değer ister. Aynı işlemde süresi geçmiş en çok 100 satır silinir.",
+      "rate_limit": "Girişsiz IP sınıfı (D13.hizSinifi; başlangıç IP başına dakikada 3000, D13-B09). Gövde 64 KiB."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/dogrulama/oturumlar/{oturumId}/kafa-sayisi",
+      "client": "telefon, panel",
+      "auth": "Hoca oturumu (telefonda Bearer, panelde çerez ve Origin). Oturumun dersinin hocası olmalı (D02.dersYetkisi); değilse ya da oturum yoksa 404 DOGRULAMA_OTURUM_BULUNAMADI.",
+      "request": {
+        "oturumId": "yol; UUID"
+      },
+      "response": {
+        "oturumId": "UUID",
+        "kafaSayisi": "tam sayı | null",
+        "yapildi": "boolean | null; \"Ders yapıldı mı?\" cevabı (D02)",
+        "kayitSayisi": "tam sayı | null; kafa sayısı ya da yapılmadı cevabı gelmeden null",
+        "elleEklenenSayisi": "tam sayı | null; kayıt sayısının içindeki Elle eklendi düzeltmeli öğrenciler, aynı kurala bağlı",
+        "fark": "tam sayı | null; kayıt sayısı eksi kafa sayısı",
+        "isaret": "boolean; eşik aşılıyor mu (kesinleşmeden canlı hesap, sonra donmuş değer)",
+        "isaretAni": "metin | null; eşiğin ilk aşıldığı an",
+        "derste": "boolean | null; işaret oturum bitişinden önce mi çıktı",
+        "incelendi": "boolean; D09 toplu incelemeyi kapattı mı",
+        "kesinlesti": "boolean; gönderme süresi bitti mi",
+        "kesinlesmeAni": "metin; gönderme süresinin sonu (D06.gondermeSuresiSonu)",
+        "eksikOlabilir": "boolean; kesinleşmeden true, ekranda \"kayıtların bir kısmı henüz gelmemiş olabilir\""
+      },
+      "errors": [
+        "DOGRULAMA_OTURUM_BULUNAMADI (404)",
+        "401 ve 403 (D13 ortak)"
+      ],
+      "idempotency": "GET, veri değiştirmez; işaret satırını da yazmaz (yazma anları Durumlar ve kurallar bölümünde).",
+      "rate_limit": "Girişli oturum sınıfı (D13.hizSinifi; başlangıç oturum başına dakikada 120). Gövde 64 KiB."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/dogrulama/oturumlar/{oturumId}/rastgele-isim",
+      "client": "telefon",
+      "auth": "Hoca oturumu (telefonda Bearer, panelde çerez ve Origin). Oturumun dersinin hocası olmalı (D02.dersYetkisi); değilse ya da oturum yoksa 404 DOGRULAMA_OTURUM_BULUNAMADI.",
+      "request": {
+        "oturumId": "yol; UUID",
+        "secimId": "UUIDv7, zorunlu; istemci her basışta üretir, tekrar anahtarı"
+      },
+      "response": {
+        "secimId": "UUID",
+        "ogrenciler": "dizi, en çok 3 öğe: { ogrenciId: UUID, adSoyad: metin (liste satırındaki isim), ogrenciNo: metin }; aday kalmadıysa boş"
+      },
+      "errors": [
+        "DOGRULAMA_OTURUM_BULUNAMADI (404)",
+        "401 ve 403 (D13 ortak)",
+        "DOGRULAMA_OTURUM_IPTAL (409)",
+        "DOGRULAMA_OTURUM_GUNU_GECTI (409)",
+        "DOGRULAMA_DONEM_KILITLI (409)",
+        "DOGRULAMA_SECIM_KIMLIGI_CAKISIYOR (409)"
+      ],
+      "idempotency": "Aynı secimId aynı öğrencileri döndürür (rastgele_isim_secimleri.secim_id); oturum başına işlem kilidi iki basışın aynı öğrenciyi seçmesini önler.",
+      "rate_limit": "Girişli oturum sınıfı (D13.hizSinifi; başlangıç oturum başına dakikada 120). Gövde 64 KiB."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/dogrulama/oturumlar/{oturumId}/sinifta-degil",
+      "client": "telefon, panel",
+      "auth": "Hoca oturumu (telefonda Bearer, panelde çerez ve Origin). Oturumun dersinin hocası olmalı (D02.dersYetkisi); değilse ya da oturum yoksa 404 DOGRULAMA_OTURUM_BULUNAMADI.",
+      "request": {
+        "oturumId": "yol; UUID",
+        "ogrenciId": "UUID, zorunlu; öğrencinin iç kimliği (numara değil)"
+      },
+      "response": {
+        "ogrenciId": "UUID",
+        "durum": "SINIFTA_DEGIL (genişleyen enum)",
+        "isaretAni": "metin",
+        "kayitlar": "dizi: { donemId, kayitId, karar: RET, gerekce: YOKLAMADA_SINIFTA_DEGIL }"
+      },
+      "errors": [
+        "DOGRULAMA_OTURUM_BULUNAMADI (404)",
+        "401 ve 403 (D13 ortak)",
+        "DOGRULAMA_OGRENCI_KAYDI_YOK (404)",
+        "DOGRULAMA_OGRENCI_SECILMEDI (409)",
+        "DOGRULAMA_OTURUM_GUNU_GECTI (409)",
+        "DOGRULAMA_DONEM_KILITLI (409)"
+      ],
+      "idempotency": "Öğrenci zaten işaretliyse hiçbir şey yazmadan aynı cevap döner.",
+      "rate_limit": "Girişli oturum sınıfı (D13.hizSinifi; başlangıç oturum başına dakikada 120). Gövde 64 KiB."
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/dogrulama/oturumlar/{oturumId}/sinifta-degil/{ogrenciId}",
+      "client": "telefon, panel",
+      "auth": "Hoca oturumu ve oturumun dersinin hocası (değilse 404); ayrıca işareti koyan hoca olmalı (rastgele_isim_secimleri.isaretleyen_kisi_id).",
+      "request": {
+        "oturumId": "yol; UUID",
+        "ogrenciId": "yol; UUID"
+      },
+      "response": {
+        "ogrenciId": "UUID",
+        "durum": "GERI_ALINDI",
+        "kayitlar": "dizi: { donemId, kayitId, karar, gerekce }; geri gelen kararlar"
+      },
+      "errors": [
+        "DOGRULAMA_OTURUM_BULUNAMADI (404)",
+        "401 ve 403 (D13 ortak)",
+        "DOGRULAMA_ISARET_YOK (404)",
+        "DOGRULAMA_ISARETI_BASKA_HOCA_KOYDU (409)",
+        "DOGRULAMA_OTURUM_GUNU_GECTI (409)",
+        "DOGRULAMA_DONEM_KILITLI (409)"
+      ],
+      "idempotency": "Zaten geri alınmışsa aynı cevap döner.",
+      "rate_limit": "Girişli oturum sınıfı (D13.hizSinifi; başlangıç oturum başına dakikada 120). Gövde 64 KiB."
+    }
+  ],
+  "jobs": [
+    {
+      "name": "android_iptal_listesi_cek",
+      "schedule": "Her gün 05:40 Europe/Istanbul (cron 40 5 * * *, tz açık), missed: once, aynı anda tek (stately), 3 yeniden deneme artan aralıkla, süre aşımı 10 dakika.",
+      "idempotency": "Aynı liste iki kez işlenince tablo, kanıt satırları ve D01 sonuçları değişmez; iptal ve kalkma olayları yalnız durum değişince yazılır. İş verisi boştur.",
+      "does": "Google'ın anahtar kanıtı iptal listesini ayarlardaki adresten (https://android.googleapis.com/attestation/status) HTTPS ile, en çok 20 MiB ve 30 saniyede çeker, Zod ile denetler. Başarılıysa satırları ekler ya da günceller, bu çekimde olmayanları siler. Yeni iptal ya da askıya alma görülen seri numarasını taşıyan Android kanıtlarına iptal_ani ve iptal_durumu yazar, D01.cihazDogrulamaSonucunuYaz ile cihazı DOGRULANAMADI (IPTAL_LISTESINDE) yapar, dogrulama.cihaz_iptal_listesinde olayını yazar; askıya alma kalkınca tersini yapar. Çekim başarısızsa eski liste kalır; son başarılı çekim 7 günden eskiyse D15.uyariAc. Sonraki kayıtlar etkilenir, geçmiş etiketler değişmez."
+    },
+    {
+      "name": "bekleyen_kararlari_coz",
+      "schedule": "Her gün 04:50 Europe/Istanbul, gece inceleme sıralamasından (05:10) önce; missed: once, stately, 3 yeniden deneme, süre aşımı 30 dakika; her oturum kendi işleminde.",
+      "idempotency": "Yalnız güncel kararı süreli bir ön koşul bekleyen ya da karşılaştırması kesinleşmemiş, gönderme süresi bitmiş oturumlara dokunur; ikinci çalışma değiştirecek bir şey bulamaz. İş verisi boştur.",
+      "does": "Gönderme süresi biten oturumların kapanışı: (1) güncel kararı Beklemede QR_GOSTERIM_BEKLENIYOR olan kayıtları İncelemede QR_GOSTERIM_GELMEDI yapar (Aşama 2); (2) AYAR_KESINLESMEDI kaydı kalan oturumlar için pencere_beklemede_kesinlestir işini koyar; (3) CIHAZ_DEGISIMI_BEKLIYOR kayıtlarında talebi artık beklemeyen cihazları yeniden değerlendirir; (4) bitişi son 21 gün içinde olan, kafa sayısı girilmiş ve gönderme süresi bitmiş oturumların karşılaştırmasını kesinleştirir (kesinlesti_ani), eşik aşılmışsa işareti açar; 21 gün, 7 günlük süreye işçinin iki haftalık kesintisini ekler. Oturumlar kayit_karar_gecmisi'nin güncel Beklemede dizininden ve D02.oturumlariGetir'den, süre D06.gondermeSuresiSonu'ndan bulunur."
+    },
+    {
+      "name": "pencere_beklemede_kesinlestir",
+      "schedule": "Olayla: D04'ün oturum kapandı dinleyicisi (pencere değişikliği olan oturumlar) ve bekleyen_kararlari_coz koyar; singletonKey oturum kimliği, 3 yeniden deneme. İş verisi { oturumId }.",
+      "idempotency": "Oturumun pencereye bağlı otomatik kararlarını son pencere ve kesinleşme durumuyla baştan hesaplar; aynı girdiyle sonuç aynıdır, değişmeyen karara satır yazılmaz.",
+      "does": "yenidenDegerlendir(tx, { oturumId }, PENCERE_DEGISTI ya da AYAR_KESINLESTI): ayar kesinleşmemişse değişim dilimindeki otomatik kararları Beklemede AYAR_KESINLESMEDI yapar; kesinleşmişse (kafa sayısı geldi ya da gönderme süresi bitti) dilimdekileri Ret PENCERE_DISINDA, son pencerenin içine düşenleri Var yapar. Kafa sayısı geldiğinde aynı hesap kafa_sayisi öğesinin işleminde yapılır; iş, kafa sayısı gelmeyen ya da pencere değişikliği sonradan ulaşan oturumlar içindir."
+    }
+  ],
+  "state_machines": [
+    {
+      "name": "kayit_karari",
+      "states": [
+        "YOK",
+        "VAR",
+        "BEKLEMEDE",
+        "INCELEMEDE",
+        "RET"
+      ],
+      "transitions": [
+        {
+          "from": "YOK",
+          "to": "VAR",
+          "by": "kararHesapla (D05 gönderimi ya da makbuz okutması)",
+          "when": "Hiçbir Ret, Beklemede ya da İncelemede kuralı uymadı; Saat doğrulanamadı ya da Yedek kodlu kayıt ortak sınırdan hak aldıysa gerekçe ORTAK_SINIRLA_KABUL."
+        },
+        {
+          "from": "YOK",
+          "to": "BEKLEMEDE",
+          "by": "kararHesapla",
+          "when": "Ret kuralı yok, bir ön koşul eksik: TEYIT_BEKLIYOR, CIHAZ_DEGISIMI_BEKLIYOR, AYAR_KESINLESMEDI ya da QR_GOSTERIM_BEKLENIYOR."
+        },
+        {
+          "from": "YOK",
+          "to": "INCELEMEDE",
+          "by": "kararHesapla",
+          "when": "Ret ve Beklemede kuralı yok, bir şüphe kuralı uydu; son günden sonra ulaşan kayıt da SON_GUNDEN_SONRA ile buraya gelir."
+        },
+        {
+          "from": "YOK",
+          "to": "RET",
+          "by": "kararHesapla",
+          "when": "Bir Ret kuralı uydu (ör. LISTEDE_DEGIL, PENCERE_DISINDA, ULASMA_ANINI_ASIYOR); kayıt saklanır."
+        },
+        {
+          "from": "BEKLEMEDE",
+          "to": "VAR",
+          "by": "yenidenDegerlendir (OTOMATIK)",
+          "when": "Ön koşul geldi (teyit, cihaz değişimi onayı, ayarın kesinleşmesi, QR gösterim kaydı) ve başka kural uymadı."
+        },
+        {
+          "from": "BEKLEMEDE",
+          "to": "INCELEMEDE",
+          "by": "yenidenDegerlendir ya da bekleyen_kararlari_coz",
+          "when": "Ön koşul geldi ve bir şüphe kuralı uydu; ya da QR gösterim kaydı gönderme süresi sonuna kadar gelmedi (QR_GOSTERIM_GELMEDI)."
+        },
+        {
+          "from": "BEKLEMEDE",
+          "to": "RET",
+          "by": "yenidenDegerlendir",
+          "when": "Teyit reddedildi (TEYIT_REDDEDILDI), değişim reddedildi ya da düştü (CIHAZ_ONAYLANMADI), ayar kesinleşti ve kayıt pencere dışında (PENCERE_DISINDA) ya da başka bir Ret kuralı."
+        },
+        {
+          "from": "VAR",
+          "to": "BEKLEMEDE",
+          "by": "pencere_beklemede_kesinlestir",
+          "when": "Ders içi değişiklik ulaştı, otomatik Var kayıt değişim diliminde ve ayar kesinleşmedi (AYAR_KESINLESMEDI)."
+        },
+        {
+          "from": "VAR",
+          "to": "RET",
+          "by": "yenidenDegerlendir ya da pencere_beklemede_kesinlestir",
+          "when": "Otomatik Var kayıt: ayar kesinleşti ve kayıt son pencerenin dışında (PENCERE_DISINDA) ya da liste satırının tarihi kaydı dışarıda bıraktı (LISTEDE_DEGIL)."
+        },
+        {
+          "from": "RET",
+          "to": "VAR",
+          "by": "yenidenDegerlendir",
+          "when": "Otomatik Ret (PENCERE_DISINDA ya da LISTEDE_DEGIL): pencere uzatıldı ya da liste satırı eklendi veya düzeldi."
+        },
+        {
+          "from": "INCELEMEDE",
+          "to": "VAR",
+          "by": "yenidenDegerlendir (KESINTI_KAPANDI)",
+          "when": "SAAT_ESITLEMESI_BOZUK kayıt: kesinti kapandı, sapma eşiğin altında ve başka kural uymuyor."
+        },
+        {
+          "from": "INCELEMEDE",
+          "to": "RET",
+          "by": "yenidenDegerlendir (KESINTI_KAPANDI)",
+          "when": "SAAT_ESITLEMESI_BOZUK kayıt: kesinti kapandı, sapma eşiğin altında ve kayıt ulaşma anını aşıyor (ULASMA_ANINI_ASIYOR)."
+        },
+        {
+          "from": "INCELEMEDE",
+          "to": "VAR",
+          "by": "D09 onayı (kararDegistir, HOCA)",
+          "when": "Hoca onayladı (HOCA_ONAYLADI); SON_GUNDEN_SONRA kayıt onaylanamaz."
+        },
+        {
+          "from": "INCELEMEDE",
+          "to": "RET",
+          "by": "D09 reddi (kararDegistir, HOCA)",
+          "when": "Hoca reddetti (HOCA_REDDETTI)."
+        },
+        {
+          "from": "VAR",
+          "to": "VAR",
+          "by": "D09 Kendi beyanı onayı (kararDegistir, HOCA)",
+          "when": "Kendi beyanı etiketli otomatik Var kayıt onaylandı; karar aynı, gerekçe KENDI_BEYANI_ONAYLANDI."
+        },
+        {
+          "from": "VAR",
+          "to": "RET",
+          "by": "D09 Kendi beyanı reddi (kararDegistir, HOCA)",
+          "when": "Kendi beyanı etiketli kayıt reddedildi (KENDI_BEYANI_REDDEDILDI); son durum Yok."
+        },
+        {
+          "from": "VAR, RET",
+          "to": "RET, VAR",
+          "by": "D09 (kararDegistir, HOCA)",
+          "when": "Hoca kendi kararını kilitten önce değiştirdi: HOCA_ONAYLADI ile HOCA_REDDETTI, KENDI_BEYANI_ONAYLANDI ile KENDI_BEYANI_REDDEDILDI arasında iki yönde."
+        },
+        {
+          "from": "VAR, BEKLEMEDE, INCELEMEDE",
+          "to": "RET",
+          "by": "POST sinifta-degil (kararDegistir, HOCA)",
+          "when": "Burada değil (YOKLAMADA_SINIFTA_DEGIL)."
+        },
+        {
+          "from": "RET",
+          "to": "VAR, BEKLEMEDE, INCELEMEDE",
+          "by": "DELETE sinifta-degil",
+          "when": "Aynı gün geri alma: önceki hoca kararı geri gelir ya da otomatik karar güncel bağlamla yeniden hesaplanır."
+        },
+        {
+          "from": "VAR, BEKLEMEDE, INCELEMEDE, RET",
+          "to": "aynı (donar)",
+          "by": "donemKilidiKararKapanisi (D02 kilit işlemi)",
+          "when": "Birimin son günü bitti: geçiş yazılmaz, onaysız Kendi beyanı ve açık kararlar için denetim olayı yazılır; kilitten sonra hiçbir geçiş yoktur."
+        }
+      ]
+    },
+    {
+      "name": "oturum_isareti",
+      "states": [
+        "YOK",
+        "ACIK",
+        "KALKTI",
+        "INCELENDI",
+        "KESINLESTI"
+      ],
+      "transitions": [
+        {
+          "from": "YOK",
+          "to": "ACIK",
+          "by": "kafaSayisiOgesi, kararGecmisineYaz, kararDegistir ya da bekleyen_kararlari_coz",
+          "when": "Kafa sayısı girilmiş oturumda kayıt sayısı eşiği ilk kez aştı; ilk_isaret_ani ve derste yazılır."
+        },
+        {
+          "from": "ACIK",
+          "to": "KALKTI",
+          "by": "kararDegistir ya da kafaSayisiOgesi",
+          "when": "Kesinleşmeden önce fark eşiğin altına indi (burada değil, hoca reddi, kafa sayısı düzeltmesi); gecerli false, ilk işaret anı korunur."
+        },
+        {
+          "from": "KALKTI",
+          "to": "ACIK",
+          "by": "aynı yazma anları",
+          "when": "Fark yeniden eşiği aştı."
+        },
+        {
+          "from": "ACIK",
+          "to": "INCELENDI",
+          "by": "D09 isaretIncelendi",
+          "when": "Hoca oturumun kayıtlarını toplu inceledi; incelendi_ani ve inceleyen yazılır."
+        },
+        {
+          "from": "ACIK, KALKTI, INCELENDI",
+          "to": "KESINLESTI",
+          "by": "bekleyen_kararlari_coz",
+          "when": "Gönderme süresi bitti; son değerler o ana kadar ulaşmış kayıtlarla yazılır ve donar (kesinlesti_ani)."
+        }
+      ]
+    },
+    {
+      "name": "rastgele_isim_satiri",
+      "states": [
+        "YOK",
+        "SECILDI",
+        "SINIFTA_DEGIL",
+        "GERI_ALINDI"
+      ],
+      "transitions": [
+        {
+          "from": "YOK",
+          "to": "SECILDI",
+          "by": "POST rastgele-isim",
+          "when": "Öğrenci bu basışta seçildi (kaynak RASTGELE_SECIM, secim_id ve sira dolu)."
+        },
+        {
+          "from": "SECILDI",
+          "to": "SINIFTA_DEGIL",
+          "by": "POST sinifta-degil",
+          "when": "Hoca seçilen öğrenci için burada değil dedi; oturum günü bitmemiş."
+        },
+        {
+          "from": "YOK",
+          "to": "SINIFTA_DEGIL",
+          "by": "POST sinifta-degil",
+          "when": "Seçim yok ama oturumun kafa sayısı işareti geçerli (kaynak ISARETLI_OTURUM)."
+        },
+        {
+          "from": "SINIFTA_DEGIL",
+          "to": "GERI_ALINDI",
+          "by": "DELETE sinifta-degil",
+          "when": "Aynı gün, işaretleyen hoca geri aldı."
+        },
+        {
+          "from": "GERI_ALINDI",
+          "to": "SINIFTA_DEGIL",
+          "by": "POST sinifta-degil",
+          "when": "Aynı gün yeniden işaretlendi; geri_alma_ani boşalır."
+        }
+      ]
+    },
+    {
+      "name": "cihaz_dogrulama_degeri",
+      "states": [
+        "VERILDI",
+        "TUKETILDI",
+        "SURESI_GECTI"
+      ],
+      "transitions": [
+        {
+          "from": "VERILDI",
+          "to": "TUKETILDI",
+          "by": "dogrulamaDegeriniTuket (D01)",
+          "when": "İlk tüketimde satır silinir; amaç ya da süre tutmazsa değer yine yanar ve DOGRULAMA_DEGER_GECERSIZ döner."
+        },
+        {
+          "from": "VERILDI",
+          "to": "SURESI_GECTI",
+          "by": "POST /v1/dogrulama/deger (temizlik)",
+          "when": "5 dakika doldu; yeni değer verilirken aynı işlemde silinir."
+        }
+      ]
+    },
+    {
+      "name": "cihaz_kaniti",
+      "states": [
+        "DOGRULANDI",
+        "DOGRULANAMADI",
+        "REDDEDILDI",
+        "IPTAL_LISTESINDE"
+      ],
+      "transitions": [
+        {
+          "from": "(yok)",
+          "to": "DOGRULANDI, DOGRULANAMADI ya da REDDEDILDI",
+          "by": "cihazKanitiniDogrula",
+          "when": "Kayıt, cihaz değişimi ya da anahtar yenilemesinde ölçütlere göre; REDDEDILDI'nin bağlamaya etkisi D07-A01."
+        },
+        {
+          "from": "DOGRULANDI",
+          "to": "IPTAL_LISTESINDE",
+          "by": "android_iptal_listesi_cek",
+          "when": "Zincirdeki bir seri numarası listede göründü; iptal_ani yazılır, D01 sonucu DOGRULANAMADI olur, sonraki kayıtlar Cihaz doğrulanmadı."
+        },
+        {
+          "from": "IPTAL_LISTESINDE",
+          "to": "DOGRULANDI",
+          "by": "android_iptal_listesi_cek",
+          "when": "Askıya alma (SUSPENDED) listeden kalktı; iptal alanları boşalır, sonraki kayıtlar yeniden doğrulanmış."
+        }
+      ]
+    }
+  ],
+  "invariants": [
+    "Her yoklama kaydının tam bir güncel karar geçmişi satırı vardır; o satırın karar ve gerekçesi kayıt satırındakiyle aynıdır.",
+    "Kayıt kararı yalnız iki yoldan doğar: ilk karar kararHesapla ile, sonraki her geçiş kararDegistir ile; D05.kararSutunlariniYaz'ı yalnız D07 çağırır.",
+    "Kaynağı HOCA olan karara otomatik yeniden değerlendirme dokunmaz.",
+    "Kilitli birim-dönemin kayıtlarında hiçbir karar geçişi olmaz; birimin son gününden sonra ulaşan kayıt, Ret kuralı yoksa, İncelemede SON_GUNDEN_SONRA olarak donar.",
+    "Etiketler kayıt geldiği anda bilinen kanıt ve ayarla bir kez hesaplanır ve sonra değişmez.",
+    "Doğrulama sonucu yalnız etikettir: Cihaz doğrulanmadı ve İkinci profil kararı değiştirmez, hiçbir kayıt cihaz kanıtı yüzünden Ret almaz.",
+    "Ret kararlı kayıt silinmez; kanıt olarak saklanır.",
+    "Bir (dönem, öğrenci, ders) için ortak sınırdan en çok ORTAK_SINIR (2) oturumda, aynı oturumda en çok bir kez hak kullanılır; kullanılan hak geri verilmez.",
+    "Ortak sınırdan hak yalnız başka hiçbir kural uymayan, Var olacak Saat doğrulanamadı ya da Yedek kodlu kayıtta kullanılır.",
+    "Bir cihaz doğrulama değeri en çok bir kez tüketilir; 5 dakikadan eski ya da amacı uymayan değer kabul edilmez; değerin kendisi veritabanında ve logda yoktur.",
+    "Aynı App Attest anahtarıyla imzalı geçen onaylarda sayaç sıra numarasıyla kesin artar; artmayan kayıt reddedilmez, İncelemede SAYAC_ARTMADI olur.",
+    "Kafa sayısı ya da yapılmadı cevabı gelmeden D07 uçları oturumun kayıt sayısını döndürmez.",
+    "Gönderme süresi bittikten sonra karşılaştırma ve işaret donar; sonra gelen kayıt onları değiştirmez.",
+    "Burada değil yalnız o oturumda seçilmiş öğrenciye ya da işareti geçerli oturumdaki öğrenciye, oturum günü bitmeden verilir; geri alma yalnız işaretleyen hocanın, aynı gün içindedir.",
+    "Süresiz Beklemede yalnız TEYIT_BEKLIYOR'dur; öbür Beklemede gerekçeleri en geç gönderme süresinin sonunda çözülür.",
+    "Kural taşıyan her zaman D04.simdi() ile okunur; kural kodunda SQL now() ve Date.now() yoktur.",
+    "Loglarda, iş verisinde ve adres satırında öğrenci numarası, isim, doğrulama değeri ve anahtar yoktur; yalnız iç kimlik.",
+    "Ham kanıt değiştirilmez (hesap silmede yalnız D07-A07 kararıyla bütünüyle silinebilir); iptal listesi yalnız iptal_ani ve iptal_durumu alanlarını doldurur ya da boşaltır."
+  ],
+  "exports": [
+    {
+      "name": "dogrulamaDegeriniTuket",
+      "signature": "dogrulamaDegeriniTuket(tx: Tx, degerId: string, beklenenAmac: DogrulamaAmaci): Promise<{ tamam: true } | { tamam: false; kod: 'DOGRULAMA_DEGER_GECERSIZ' }>",
+      "purpose": "D01'in kayıt, cihaz değişimi ve App Attest yenileme işlemleri çağırır. degerId telefonun aldığı base64url değerin kendisidir; satır SHA-256 özetiyle bulunur ve her durumda silinir; süresi geçmiş ya da amacı uymayan değer DOGRULAMA_DEGER_GECERSIZ döner."
+    },
+    {
+      "name": "cihazKanitiniDogrula",
+      "signature": "cihazKanitiniDogrula(tx: Tx, kanit: CihazKaniti): Promise<KanitSonucu>",
+      "purpose": "Android anahtar kanıtını ve App Attest kanıtını tek arayüzün (CihazDogrulayici) arkasında doğrular, meydan okumayı değer, öğrenci numarası, isSystemUser ve Secure Enclave açık anahtarından yeniden kurar, cihaz_kanitlari satırını çağıranın işleminde yazar. Hata atmaz: REDDEDILDI de bir sonuçtur ve gerekçesiyle döner; telefona dönecek kod D01'in sözleşmesindedir (D07-A01). Sonucu D01 kendi cihazDogrulamaSonucunuYaz işleviyle cihaz satırına yazar."
+    },
+    {
+      "name": "appAttestSayaciniDenetle",
+      "signature": "appAttestSayaciniDenetle(tx: Tx, anahtarId: CihazAnahtariId, sayac: number, siraNo: bigint): Promise<'GECTI' | 'ARTMADI'>",
+      "purpose": "D05 App Attest onayı taşıyan her yeni kayıtta, kaydın geri dönüş noktası içinde çağırır. Anahtar kilidi altında aynı anahtarın bir önceki ve bir sonraki sıra numaralı geçen onayına bakar, boşluk kabul edilir, satırı yazar; aynı (anahtar, sıra) yeniden gelirse saklı sonucu döner."
+    },
+    {
+      "name": "kararHesapla",
+      "signature": "kararHesapla(tx: Tx, kayitTaslagi: KayitTaslagi, baglam: KararBaglami): Promise<KararSonucu>",
+      "purpose": "D05 yeni kaydı eklemeden önce çağırır. Bağlamı sahiplerinin dış yüzünden toplar, kararVer ile etiketleri, kararı, birincil ve öbür gerekçeleri, geç geldi işaretini hesaplar; Var olacak Saat doğrulanamadı ya da Yedek kodlu kayıtta ortak sınırdan hakkı aynı işlemde kullanır. Kayıt satırına yazmaz."
+    },
+    {
+      "name": "kararGecmisineYaz",
+      "signature": "kararGecmisineYaz(tx: Tx, kayitAnahtari: KayitAnahtari, karar: KararSonucu, kaynak: KararKaynagi): Promise<void>",
+      "purpose": "D05 kayıt satırını ekledikten hemen sonra, aynı geri dönüş noktasında çağırır; ilk geçmiş satırını (sira 1, guncel) yazar. Kafa sayısı girilmiş oturumda karşılaştırmayı yeniler, eşik ilk kez aşıldıysa işareti açar. Yalnız ilk karar içindir; ikinci çağrı tekil kısıta takılır."
+    },
+    {
+      "name": "kararDegistir",
+      "signature": "kararDegistir(tx: Tx, kayitAnahtari: KayitAnahtari, yeniKarar: YeniKarar, kaynak: KararKaynagi): Promise<KararDegisimi>",
+      "purpose": "İlk karardan sonraki her geçişin tek yolu: D09 onay ve retleri, burada değil ve yeniden değerlendirme bunu kullanır. Önce kayıt anahtarından türetilen işlem kilidini (pg_advisory_xact_lock) alır, sonra güncel geçmiş satırını okur; böylece aynı kayda eşzamanlı iki geçiş sıraya girer ve ikincisi birincinin sonucunu görür. Geçiş durum makinesinde yoksa DOGRULAMA_GECIS_GECERSIZ, beklenen eski karar güncel kararla aynı değilse DOGRULAMA_KARAR_DEGISTI, birim-dönem kilitliyse DOGRULAMA_DONEM_KILITLI, hoca dersin hocası değilse DOGRULAMA_YETKISIZ_HOCA döner. Sonra önceki satırı guncel = false yapar, yeni satırı yazar, D05.kararSutunlariniYaz ve D08.devamHesaplaIsiKoy'u aynı işlemde çağırır. Karar aynıysa yazmaz. Hoca kaynaklı geçişin denetim olayını çağıran yazar."
+    },
+    {
+      "name": "donemKilidiKararKapanisi",
+      "signature": "donemKilidiKararKapanisi(tx: Tx, birimId: BirimId, donemId: DonemId): Promise<{ onaysizKendiBeyani: number; kararsiz: number }>",
+      "purpose": "D02'nin donem_kilidi işlemi kilitAdimiKaydet ile kayıtlı adımı aynı işlemde çağırır. Kararları değiştirmez; onaysız Kendi beyanı için dogrulama.onaysiz_kilitlendi, açık Beklemede ve İncelemede için dogrulama.kararsiz_kilitlendi olayını oturum başına yazar."
+    },
+    {
+      "name": "yenidenDegerlendir",
+      "signature": "yenidenDegerlendir(tx: Tx, suzgec: YenidenSuzgec, neden: YenidenNeden): Promise<{ incelenen: number; degisen: number }>",
+      "purpose": "Bir olaydan sonra süzgece uyan kayıtların otomatik kararlarını aynı kurallarla baştan hesaplar, değişenleri kararDegistir yoluyla yazar. Hoca kararına, kilitli döneme ve etiketlere dokunmaz. Süzgeç: kayıt anahtarları, oturum, öğrenci ve şube, cihaz ya da gerekçe ve ulaşma aralığı."
+    },
+    {
+      "name": "oturumIsaretleri",
+      "signature": "oturumIsaretleri(tx: Tx, suzgec: IsaretSuzgeci): Promise<OturumIsareti[]>",
+      "purpose": "D09'un işaretli oturum listesi, D08 ve D10 okur: tür, geçerli mi, ilk işaret anı, derste mi, son karşılaştırma, kesinleşme ve inceleme bilgisi."
+    },
+    {
+      "name": "isaretIncelendi",
+      "signature": "isaretIncelendi(tx: Tx, isaretId: Uuid, hoca: { kisiId: KisiId }): Promise<OturumIsareti>",
+      "purpose": "D09'un toplu inceleme kapatma ucu çağırır; incelendi_ani ve inceleyen_kisi_id yazar. Zaten incelenmişse değiştirmeden döner; hoca dersin hocası değilse DOGRULAMA_YETKISIZ_HOCA."
+    },
+    {
+      "name": "cihazDogrulanmadiMi",
+      "signature": "cihazDogrulanmadiMi(tx: Tx, cihazId: CihazId): Promise<boolean>",
+      "purpose": "Cihazın son kanıtı DOGRULANDI değilse ya da iptal listesine düştüyse true; D09'un ilk kayıt teyidi listesi bu öğrencileri ayrı ve işaretli gösterir."
+    },
+    {
+      "name": "kafaSayisiOgesi",
+      "signature": "kafaSayisiOgesi(tx: Tx, oge: KuyrukOgesi<KafaSayisiGovdesi>): Promise<OgeSonucu>",
+      "purpose": "kafa_sayisi kuyruk öğesinin işleyicisi. Göndereni dersin hocası olarak doğrular, D02.kafaSayisiniYaz ile değeri ve yapıldı onayını yazdırır, denetim olayını yazar, aynı işlemde oturumun pencereye bağlı kararlarını son ayara göre çözer, karşılaştırmayı hesaplayıp işareti açar."
+    }
+  ],
+  "files": [
+    "apps/server/src/modules/dogrulama/index.ts",
+    "apps/server/src/modules/dogrulama/eklenti.ts",
+    "apps/server/src/modules/dogrulama/tablolar.ts",
+    "apps/server/src/modules/dogrulama/rotalar.ts",
+    "apps/server/src/modules/dogrulama/deger.ts",
+    "apps/server/src/modules/dogrulama/dogrulayici.ts",
+    "apps/server/src/modules/dogrulama/kanit-android.ts",
+    "apps/server/src/modules/dogrulama/kanit-app-attest.ts",
+    "apps/server/src/modules/dogrulama/kokler.ts",
+    "apps/server/src/modules/dogrulama/sayac.ts",
+    "apps/server/src/modules/dogrulama/baglam.ts",
+    "apps/server/src/modules/dogrulama/karar.ts",
+    "apps/server/src/modules/dogrulama/yeniden.ts",
+    "apps/server/src/modules/dogrulama/kafa-sayisi.ts",
+    "apps/server/src/modules/dogrulama/rastgele-isim.ts",
+    "apps/server/src/modules/dogrulama/kilit.ts",
+    "apps/server/src/modules/dogrulama/iptal-listesi.ts",
+    "apps/server/src/modules/dogrulama/yayin-bilgisi.ts",
+    "apps/server/src/modules/dogrulama/dinleyiciler.ts",
+    "apps/server/src/modules/dogrulama/saklama.ts",
+    "apps/server/src/jobs/dogrulama/index.ts",
+    "apps/server/src/jobs/dogrulama/android-iptal-listesi-cek.ts",
+    "apps/server/src/jobs/dogrulama/bekleyen-kararlari-coz.ts",
+    "apps/server/src/jobs/dogrulama/pencere-beklemede-kesinlestir.ts",
+    "apps/server/test/features/dogrulama/cihaz-dogrulama.feature",
+    "apps/server/test/features/dogrulama/karar-kurallari.feature",
+    "apps/server/test/features/dogrulama/ortak-sinir.feature",
+    "apps/server/test/features/dogrulama/bekleyen-kararlar.feature",
+    "apps/server/test/features/dogrulama/kafa-sayisi.feature",
+    "apps/server/test/features/dogrulama/rastgele-isim.feature",
+    "apps/server/test/features/dogrulama/donem-kilidi.feature",
+    "apps/server/test/features/dogrulama/iptal-listesi.feature",
+    "apps/server/test/features/dogrulama/hile-senaryolari.feature",
+    "apps/server/test/features/dogrulama/yetki.feature",
+    "apps/server/test/features/dogrulama/ornek-kanitlar.json",
+    "apps/server/test/steps/dogrulama/cihaz-dogrulama.steps.ts",
+    "apps/server/test/steps/dogrulama/karar.steps.ts",
+    "apps/server/test/steps/dogrulama/kafa-sayisi.steps.ts",
+    "apps/server/test/steps/dogrulama/rastgele-isim.steps.ts",
+    "apps/server/test/steps/dogrulama/isler.steps.ts",
+    "apps/server/test/support/kurucular/dogrulama.ts",
+    "packages/contracts/src/dogrulama.ts",
+    "packages/core/src/dogrulama/index.ts",
+    "packages/core/src/dogrulama/kodlar.ts",
+    "packages/core/src/dogrulama/sabitler.ts",
+    "packages/core/src/dogrulama/karar.ts",
+    "packages/core/src/dogrulama/gecisler.ts",
+    "packages/core/src/dogrulama/etiketler.ts",
+    "packages/core/src/dogrulama/ortak-sinir.ts",
+    "packages/core/src/dogrulama/kafa-sayisi.ts",
+    "packages/core/src/dogrulama/sayac.ts",
+    "packages/core/src/dogrulama/android-olcut.ts",
+    "packages/core/src/dogrulama/app-attest-olcut.ts",
+    "packages/core/src/dogrulama/meydan-okuma.ts",
+    "packages/core/src/dogrulama/karar-tablosu.ts",
+    "packages/core/src/dogrulama/karar.test.ts",
+    "packages/core/src/dogrulama/gecisler.test.ts",
+    "packages/core/src/dogrulama/ortak-sinir.test.ts",
+    "packages/core/src/dogrulama/kafa-sayisi.test.ts",
+    "packages/core/src/dogrulama/sayac.test.ts",
+    "packages/core/src/dogrulama/olcut.test.ts",
+    "packages/core/src/dogrulama/meydan-okuma.test.ts"
+  ],
+  "tests": [
+    {
+      "name": "Karar tablosu: her satır beklenen karar, gerekçe ve etiketleri verir",
+      "kind": "behavior",
+      "asserts": "packages/core/src/dogrulama/karar-tablosu.ts'deki tek tablo kararVer ile aynen sonuç verir; her gerekçe kodu ve her etiket en az bir satırda; telefon ve panel aynı tabloyu koşar."
+    },
+    {
+      "name": "Öncelik özelliği",
+      "kind": "property",
+      "asserts": "fast-check (10.000 deneme): rastgele uyan kural kümesinde karar en yüksek sınıftır (Ret, Beklemede, İncelemede, Var), birincil gerekçe sınıf içindeki ilk katalog kodudur, öbür uyanların hepsi ek gerekçelerdedir; son günden sonra Ret yoksa İncelemede SON_GUNDEN_SONRA."
+    },
+    {
+      "name": "Ortak sınır özelliği",
+      "kind": "property",
+      "asserts": "fast-check (10.000 deneme) rastgele kayıt dizilerinde (etiketli, etiketsiz, aynı oturuma tekrar, önce Beklemede) bir (dönem, öğrenci, ders) için ORTAK_SINIRLA_KABUL alan farklı oturum sayısı ORTAK_SINIR'ı geçmez, kullanilan azalmaz, aynı oturum ikinci hak harcamaz, başka kural uyan kayıt hak harcamaz."
+    },
+    {
+      "name": "Kafa sayısı eşiği",
+      "kind": "property",
+      "asserts": "0 ile 5000 arası her kafa sayısı ve 0 ile 6000 arası kayıt sayısı için isaret, d > 3 ve 1000d > 50K tanımıyla BigInt üzerinden karşılaştırılır; sınır örnekleri (K=60 ve kayıt 63, 64; K=0 ve kayıt 3, 4) tabloda ayrıca."
+    },
+    {
+      "name": "App Attest sayacı sıra numarasına göre",
+      "kind": "property",
+      "asserts": "Kesin artan (sıra, sayaç) dizisinin her varış permütasyonunda bütün onaylar geçer; diziye tek bir artmayan onay eklenince yalnız o onay ARTMADI olur, komşuları geçer; boşluklu dizi geçer."
+    },
+    {
+      "name": "Geçiş tablosu",
+      "kind": "behavior",
+      "asserts": "izinliGecis yalnız durum makinesindeki geçişlere izin verir: otomatik VAR'dan INCELEMEDE'ye, kaynağı HOCA olan karardan otomatik geçişe, etiketsiz kayda Kendi beyanı onayına ya da reddine izin yoktur ve kararDegistir bunlarda DOGRULAMA_GECIS_GECERSIZ döner; beklenen eski karar uymayınca DOGRULAMA_KARAR_DEGISTI; her izinli geçiş en az bir satırda denenir."
+    },
+    {
+      "name": "Meydan okuma metni bayt bayt sabit",
+      "kind": "contract",
+      "asserts": "meydanOkumaMetni sabit örnek girdilerde kayıtlı bayt dizisini (onaltılık) aynen üretir; telefon testleri aynı örnekleri koşar; alanların sırası değişirse kırmızı."
+    },
+    {
+      "name": "Android kanıt ölçütü tablosu",
+      "kind": "behavior",
+      "asserts": "Her ölçütün tek başına tutmadığı satır DOGRULANAMADI ve o ölçütün kodunu, hepsi tutunca DOGRULANDI, paket ya da imza tutmayınca REDDEDILDI verir; birden çoğu tutmayınca ilk sıradakinin kodu yazılır."
+    },
+    {
+      "name": "Kural saat okumaz",
+      "kind": "property",
+      "asserts": "Aynı girdi ve aynı simdi ile kararVer'in çıktısı sistem saati (vi.setSystemTime) ve TZ (UTC, Europe/Istanbul) değişse de aynıdır."
+    },
+    {
+      "name": "Değer tek kullanımlık ve 5 dakikalık",
+      "kind": "behavior",
+      "asserts": "Alınan değer ilk tüketimde kabul, ikincide DOGRULAMA_DEGER_GECERSIZ; sahte saat 5 dakika 1 milisaniye ilerleyince red, 4 dakika 59 saniyede kabul (pozitif kontrol); başka amaçla tüketme red ve değer yanar."
+    },
+    {
+      "name": "Süresi geçen değerler temizlenir",
+      "kind": "behavior",
+      "asserts": "Yeni değer verilirken süresi geçmiş satırlar silinir, süresi geçmemiş satır kalır (pozitif kontrol); bir çağrıda en çok 100 satır silinir."
+    },
+    {
+      "name": "Sahte doğrulayıcı: donanım anahtarı",
+      "kind": "behavior",
+      "asserts": "Sahte doğrulayıcı \"donanım anahtarı\" dönünce cihaz_kanitlari DOGRULANDI yazılır ve o cihazın kaydında etiket_cihaz_dogrulanmadi false olur."
+    },
+    {
+      "name": "Kanıtsız telefon bağlanır, kaydı sayılır",
+      "kind": "behavior",
+      "asserts": "Sahte doğrulayıcı \"doğrulanamadı\" dönünce bağlama sürer, kayıt Var ve etiket_cihaz_dogrulanmadi true; kayıt bu yüzden Ret ya da İncelemede almaz."
+    },
+    {
+      "name": "Gerçek doğrulayıcı kayıtlı örneklerle",
+      "kind": "contract",
+      "asserts": "ornek-kanitlar.json'daki kayıtlı Android zincirleri (TEE, StrongBox, yazılım anahtarı, kilidi açık önyükleyici, eski RSA kök, P-384 kök, yabancı kök) ve App Attest nesneleri (üretim, geliştirme, başka App ID) ağ açmadan beklenen sonuç ve gerekçeyi verir."
+    },
+    {
+      "name": "Geliştirme ortamı App Attest kanıtı",
+      "kind": "behavior",
+      "asserts": "aaguid appattestdevelop olan kanıt DOGRULANAMADI APP_ATTEST_GELISTIRME_ORTAMI; o cihazın kayıtları Cihaz doğrulanmadı etiketiyle sayılır."
+    },
+    {
+      "name": "iOS 27 beklenmeyen alanı",
+      "kind": "behavior",
+      "asserts": "Yayımlanmamış paket sürümü taşıyan kanıt etiketi ve kararı değiştirmez, ios_aykirilik yazılır, dogrulama.ios_beklenmeyen_alan denetime düşer; alan hiç gelmezse (iOS 26) olay yazılmaz (pozitif kontrol)."
+    },
+    {
+      "name": "İptal listesi ileriye etkilidir",
+      "kind": "behavior",
+      "asserts": "Liste cihazın zincirindeki seri numarasını içerince iptal_ani yazılır, sonra ulaşan kayıt Cihaz doğrulanmadı olur, önce ulaşmış kayıtların etiketleri ve kararları aynı kalır; askıya alma kalkınca sonraki kayıtlar yeniden doğrulanmış."
+    },
+    {
+      "name": "İptal listesi çekilemezse",
+      "kind": "behavior",
+      "asserts": "Sahte HTTP hata dönünce tablo değişmez; son başarılı çekim 7 gün 1 dakika önceyse D15.uyariAc çağrılır, 6 gün 23 saatte çağrılmaz (pozitif kontrol); 20 MiB'yi aşan cevap reddedilir."
+    },
+    {
+      "name": "İptal listesi işi iki kez",
+      "kind": "behavior",
+      "asserts": "Aynı listeyle iki çalışmada satırlar, kanıt satırları ve denetim olayları değişmez; ikinci çalışma olay yazmaz."
+    },
+    {
+      "name": "Listede olmayan derse yoklama",
+      "kind": "behavior",
+      "asserts": "Kayıt saklanır, gönderim sonucu kabul, karar Ret LISTEDE_DEGIL (önce kırmızı yazılır, Başlangıç (plan.html#baslangic)); liste satırı eklenince aynı işlemde yeniden karar Var."
+    },
+    {
+      "name": "Ulaşma anını aşan kayıt",
+      "kind": "behavior",
+      "asserts": "Eşitleme sağlıklıyken Ret ULASMA_ANINI_ASIYOR; eşitleme bozukken İncelemede SAAT_ESITLEMESI_BOZUK; kesinti sapma eşiğin altında kapanınca yeniden değerlendirilir, üstündeyse İncelemede kalır."
+    },
+    {
+      "name": "Teyit bekleyen öğrenci",
+      "kind": "behavior",
+      "asserts": "Teyitsiz öğrencinin kaydı Beklemede TEYIT_BEKLIYOR; teyit verilince aynı işlemde Var ve ilk_kesin satırı teyit anında yazılır; teyit reddinde Ret TEYIT_REDDEDILDI; ham kayıt kalır."
+    },
+    {
+      "name": "Ders içi erken kapatma",
+      "kind": "behavior",
+      "asserts": "Erken kapatma ulaşınca dilimdeki kayıtlar Beklemede AYAR_KESINLESMEDI, dilimden önceki kayıtlar Var kalır; kafa sayısı gelince aynı işlemde dilimdekiler Ret PENCERE_DISINDA; sonradan uzatma gelirse Ret'ler Var'a döner."
+    },
+    {
+      "name": "Kafa sayısı hiç gelmezse",
+      "kind": "behavior",
+      "asserts": "Gönderme süresi bitince bekleyen_kararlari_coz pencere_beklemede_kesinlestir işini koyar, iş son bilinen ayara göre karar verir; ikinci çalışma hiçbir şey değiştirmez."
+    },
+    {
+      "name": "Sayacı artmayan iPhone kaydı",
+      "kind": "behavior",
+      "asserts": "Sayaç önceki geçen onaydan büyük değilse kayıt saklanır, İncelemede SAYAC_ARTMADI, reddedilmez; aynı kayıt yeniden gelince sayaca bakılmadan zaten var."
+    },
+    {
+      "name": "Makbuzla sırasız gelen iPhone kayıtları",
+      "kind": "behavior",
+      "asserts": "Sıra 5 makbuzla, sıra 3 ve 4 telefondan sonra gelince hepsi geçer; eski anahtarla imzalı bekleyen kayıt anahtar yenilendikten sonra eski anahtarın dizisinde denetlenir."
+    },
+    {
+      "name": "2'lik ortak sınır uçtan uca",
+      "kind": "behavior",
+      "asserts": "Aynı derste iki Saat doğrulanamadı kaydı Var ORTAK_SINIRLA_KABUL, üçüncüsü İncelemede ORTAK_SINIR_ASILDI; aynı oturuma ikinci kayıt hak harcamaz; Kendi beyanı dersinde de aynı."
+    },
+    {
+      "name": "Son hak eşzamanlı alınamaz",
+      "kind": "behavior",
+      "asserts": "Aynı öğrencinin iki ayrı oturumuna ait iki etiketli kayıt iki bağlantıdan aynı anda gönderilince, hakkı 1 kalmışken yalnız biri Var alır, öbürü İncelemede."
+    },
+    {
+      "name": "Kendi beyanı",
+      "kind": "behavior",
+      "asserts": "Süre seçilmemiş derste kayıt Var ve etiket_kendi_beyani; toplu onay kararı değiştirmez, geçmişe KENDI_BEYANI_ONAYLANDI satırı yazılır; ret Ret KENDI_BEYANI_REDDEDILDI; kilitte onaysızlar için oturum başına dogrulama.onaysiz_kilitlendi."
+    },
+    {
+      "name": "Kafa sayısından önce sayı yok",
+      "kind": "behavior",
+      "asserts": "Kafa sayısı girilmeden karşılaştırma ucu kayitSayisi null döner; kafa sayısı öğesi ulaşınca aynı uç sayıyı döner (pozitif kontrol); yapılmadı cevabından sonra da döner; rastgele isim cevabında sayı alanı yoktur."
+    },
+    {
+      "name": "Kafa sayısı işareti ve derste",
+      "kind": "behavior",
+      "asserts": "Kayıt sayısı kafa sayısını eşiğin üstünde aşınca işaret satırı açılır; ilk işaret anı oturum bitişinden önceyse derste true, sonra gelen kayıtla aşılınca false; işaret hiçbir kaydın kararını değiştirmez."
+    },
+    {
+      "name": "Kesinleşmeden sonra gelen kayıt",
+      "kind": "behavior",
+      "asserts": "Gönderme süresi bittikten sonra gelen kayıt kendi kararını alır ve gec_geldi true; karşılaştırma ve işaret değişmez."
+    },
+    {
+      "name": "Rastgele isim seçimi",
+      "kind": "behavior",
+      "asserts": "Seçim yalnız güncel kararı Ret olmayan kaydı bulunan öğrencilerden ve tekrarsız yapılır; aynı secimId ikinci istekte aynı öğrencileri döndürür; aday kalmayınca boş liste."
+    },
+    {
+      "name": "Burada değil",
+      "kind": "behavior",
+      "asserts": "Seçilen öğrencinin o oturumdaki Ret olmayan bütün kayıtları Ret YOKLAMADA_SINIFTA_DEGIL olur, denetime kim ve ne zaman yazılır; seçilmemiş öğrenci DOGRULAMA_OGRENCI_SECILMEDI alır, aynı öğrenci işaretli oturumda kabul edilir (pozitif kontrol)."
+    },
+    {
+      "name": "Burada değil geri alma",
+      "kind": "behavior",
+      "asserts": "Aynı gün aynı hoca geri alınca hoca kaynaklı önceki karar geri gelir, otomatik önceki karar yeniden hesaplanır; ertesi gün DOGRULAMA_OTURUM_GUNU_GECTI, başka hoca DOGRULAMA_ISARETI_BASKA_HOCA_KOYDU."
+    },
+    {
+      "name": "Hatalı sürüm",
+      "kind": "behavior",
+      "asserts": "Hatalı ilan edilen sürümün başlangıçtan sonra ulaşan kaydı İncelemede HATALI_SURUM; başlangıçtan önce ulaşmış kayıt değişmez; başka sürüm etkilenmez (pozitif kontrol)."
+    },
+    {
+      "name": "Çakışan oturum",
+      "kind": "behavior",
+      "asserts": "Saatleri çakışan iki oturuma aynı öğrenciden gelen ikinci kayıt İncelemede CAKISAN_OTURUM, ilk kayıt Var kalır."
+    },
+    {
+      "name": "Eski cihaz ve silinen hesap",
+      "kind": "behavior",
+      "asserts": "Değişimle kapanan cihazın kapanmadan önce imzalanan kaydı normal karar, sonrası Ret ESKI_CIHAZ, saati belirsiz olanı İncelemede KAPANMIS_CIHAZ_SAAT_BELIRSIZ; silinen hesapta aynı kural HESAP_SILINMIS ile."
+    },
+    {
+      "name": "Kilit ve son gün",
+      "kind": "behavior",
+      "asserts": "Kilitli dönemde kararDegistir DOGRULAMA_DONEM_KILITLI döner, yeniden değerlendirme kayıtları atlar; son günden sonra ulaşan kayıt İncelemede SON_GUNDEN_SONRA; kilit işlemi geri alınırsa kilit olayları da yazılmamış olur."
+    },
+    {
+      "name": "Hoca kararı korunur",
+      "kind": "property",
+      "asserts": "fast-check durum makinesi testi Cucumber içinde (300 deneme): rastgele olay dizilerinde (teyit, liste, pencere, kafa sayısı, kesinti) kaynağı HOCA olan hiçbir karar otomatik olayla değişmez."
+    },
+    {
+      "name": "Geçmiş ile kayıt satırı aynı",
+      "kind": "property",
+      "asserts": "Aynı rastgele olay dizilerinin sonunda her kaydın güncel geçmiş satırı ile kayıt satırındaki karar ve gerekçe aynıdır; her kaydın tam bir güncel ve en çok bir ilk_kesin satırı vardır."
+    },
+    {
+      "name": "Uç yetkileri",
+      "kind": "contract",
+      "asserts": "Rota tablosundan üretilen senaryo: değer ucu kimliksiz 200; öbür dört uç kimliksiz 401, öğrenci oturumuyla 403, başka hocanın oturumunda 404 DOGRULAMA_OTURUM_BULUNAMADI."
+    },
+    {
+      "name": "Sözleşme ve genişleyen enum",
+      "kind": "contract",
+      "asserts": "Cevap şemalarında karar, gerekçe, etiket, durum ve hata kodu alanları x-extensible-enum taşır, enum anahtarı taşımaz; istek şemaları kapalıdır; her DOGRULAMA_ kodu en az bir senaryoda gerçekten döner."
+    },
+    {
+      "name": "kafa_sayisi kuyruk öğesi",
+      "kind": "behavior",
+      "asserts": "Dersin hocası olmayan gönderenin öğesi ret DOGRULAMA_YETKISIZ_HOCA; iptal oturumda ret; aynı öğe iki kez gelince D06 zaten var der ve değer bir kez yazılır; geçerli öğe dogrulama.kafa_sayisi_girildi yazar."
+    },
+    {
+      "name": "Kayıt başına sorgu bütçesi",
+      "kind": "load",
+      "asserts": "Sorgu sayan işlem sarmalayıcısıyla (Aşama 1): kararHesapla tek şubeli etiketsiz kayıtta en çok 10, en kötü durumda (üç şube, etiketli kayıt, aynı gün başka kayıt) en çok 16; kararGecmisineYaz en çok 3; appAttestSayaciniDenetle en çok 4 SQL ifadesi. Bütçe aşılırsa kırmızı. Ders çıkışı yük testinde (D15) karar yolu dahil gönderme ucunun süresi ayrıca raporlanır."
+    },
+    {
+      "name": "Mutasyon",
+      "kind": "mutation",
+      "asserts": "Haftalık Stryker koşusunda packages/core/src/dogrulama için kırma eşiği %90; kararVer, ortakSinirKarari, kafaSayisiKarsilastir ve sayacDenetle'de hayatta kalan mutant yok."
+    },
+    {
+      "name": "Kişisel veri sızmaz",
+      "kind": "behavior",
+      "asserts": "Senaryolardan sonra loglar ve pg-boss iş verisi taranır: öğrenci numarası, isim, doğrulama değeri ve anahtar yok; bilerek değer içeren bir log satırının süzgece takıldığı pozitif kontrol olarak görülür."
+    }
+  ],
+  "resolved_gaps": [
+    {
+      "gap": "D07-B01",
+      "decision": "Öncelik Ret, Beklemede, İncelemede, Var; sınıf içinde katalog sırası (Durumlar ve kurallar, Gerekçe kataloğu). Birincil gerekçe kayıt satırına, uyan öbürleri kayit_karar_gecmisi.ek_gerekceler'e yazılır. Tek istisna: birimin son gününden sonra ulaşan kayıtta Ret kuralı yoksa İncelemede SON_GUNDEN_SONRA, Beklemede kuralları uygulanmaz. Katalogda 41 kod var; Aşama 2 kodları baştan CHECK listesinde.",
+      "why": "Ret kesin geçersizliktir; Beklemede eksik ön koşuldur ve ön koşul gelince karar baştan hesaplandığından şüphe kuralları o anda uygulanır (Şüpheli kayıt (plan.html#kararlar-supheli-kayit)). Tek fonksiyon ve tek test tablosu telefon, sunucu ve panelin aynı kaydı aynı göstermesini sağlar (Otomatik kabul kuralı (plan.html#hile-otomatik-kabul-kurali)). Kilitten sonra hiçbir ön koşul çözülmeyeceği için Beklemede yerine donmuş İncelemede yazılır."
+    },
+    {
+      "gap": "D07-B02",
+      "decision": "Olay ve kapsam tablosu Durumlar ve kurallar bölümünde: teyit (öğrencinin kayıtları), cihaz değişimi onayı ya da reddi (iki cihazın kayıtları), liste değişikliği, pencere değişikliği ve ayarın kesinleşmesi (oturumun kayıtları), kafa sayısı (aynı işlemde), QR gösterim kaydı (Aşama 2), kesinti kapanışı. Hatalı sürüm ilanı yalnız sonra ulaşan kayıtları etkiler. Yeniden değerlendirme yalnız kaynağı OTOMATIK güncel kararlara dokunur; kaynak geçmiş satırında tutulur. Aynı olay iki kez işlenirse satır yazılmaz.",
+      "why": "Hocanın onayını otomatik hesap geri çevirirse hocanın işi kaybolur ve öğrenciye çelişkili bildirim gider. Kapsam olay başına sınırlı olunca işlem kısa kalır."
+    },
+    {
+      "gap": "D07-B03",
+      "decision": "İmzası doğrulanan ve biçimi geçerli her kayıt saklanır; kural ihlali (LISTEDE_DEGIL, ULASMA_ANINI_ASIYOR, PENCERE_DISINDA, OTURUM_IPTAL, ESKI_CIHAZ, HESAP_SILINMIS) Ret kararı ve gerekçe koduyla ifade edilir. Saklanmadan dönen gönderim reddi yalnız kimlik ve bütünlük hatalarıdır ve D05'indir: imza doğrulanmıyor, bozuk biçim, aynı kimliğe farklı içerik, başka öğrenciye bağlı cihaz. Davranış senaryolarında her ret beklentisinin biçimi ayrı yazılır.",
+      "why": "Ham kayıt kanıttır (Cihaz doğrulaması (plan.html#kararlar-cihaz-dogrulamasi)); öğrenci gerekçeli Ret'i makbuzda görüp sorun bildirebilir (Kayıt ve makbuz (plan.html#kararlar-kayit-ve-makbuz)); Hedefler paydası Ret kararlı kayıtların saklandığını varsayıyor (Hedefler (plan.html#hedefler)). Aynı soru D05-B05 ve D06-B05 ile sahibe gidiyor; D07 iki seçimde de çalışır (D07-A03)."
+    },
+    {
+      "gap": "D07-B04",
+      "decision": "Sayaç (dönem, öğrenci, ders) satırında, SELECT ... FOR UPDATE ile kilitli (yoksa önce ON CONFLICT DO NOTHING ile eklenir). Hak yalnız başka kural uymayan, Var olacak Saat doğrulanamadı ya da Yedek kodlu kayıtta kullanılır; iki etiketi taşıyan kayıt bir hak kullanır. Plan'daki \"toplam en çok 2'si\" oturum başına okunur: hak bir oturumda bir kez kullanılır (kullanilan_oturum_idleri), aynı oturumdaki ikinci kayıt o hakkı paylaşır ve devamı değiştirmez. Sıra varış sırasıdır; Beklemede kayıt hakkı beklemesi çözülünce kullanır. Verilen otomatik kabul geri alınmaz, sonradan Ret olan kayıt hakkı geri vermez. Ders düzeyidir (teori ve uygulama birlikte), Kendi beyanı dersinde de işler.",
+      "why": "Kararlar kayıt geldiğinde verilir; Var'dan İncelemede'ye dönüş öğrenciye çelişkili bildirim gönderir. Satır kilidi yalnız tek öğrencinin işlemlerini sıraya sokar, ders çıkışı yükünü etkilemez. Sınırın amacı saati kanıtlanamayan yoklamayla kazanılan devamı sınırlamaktır (Otomatik kabul kuralı (plan.html#hile-otomatik-kabul-kurali)); aynı oturumdaki ikinci kayıt devama bir şey eklemediği için ikinci hak harcatmak öğrenciyi boşuna cezalandırırdı, İncelemede'ye almak da hocaya boş iş çıkarırdı."
+    },
+    {
+      "gap": "D07-B05",
+      "decision": "Kayıt sayısı: oturumda güncel kararı Ret olmayan kaydı bulunan farklı öğrenciler ile etkin Elle eklendi düzeltmesi olan öğrencilerin birleşimi. d = kayıt sayısı eksi kafa sayısı; işaret d > 3 ve 1000 x d > 50 x kafa sayısı. Birlikte işlenen şubelerde oturum ve karşılaştırma tektir. İlk işaret anı eşiğin ilk aşıldığı an; derste, bu an oturum bitişinden önceyse. İşaret kararları değiştirmez. Kafa sayısı dönem kilidine kadar düzeltilebilir, her öğe denetime yazılır, karşılaştırma baştan hesaplanır.",
+      "why": "Tam sayı kuralı telefon, sunucu ve panelde aynı sonucu verir (Birim ve özellik testleri (teknik.html#testler-birim)). Hedefler işaretli oturumu İncelemede kararından ayrı sayıyor (Hedefler (plan.html#hedefler)); işaret kararı değiştirseydi iki ölçü karışırdı. Derste ve sonra ayrımı hocaya farklı iş verir (Kafa sayısı (plan.html#kararlar-kafa-sayisi))."
+    },
+    {
+      "gap": "D07-B06",
+      "decision": "D07'nin karşılaştırma ucu kafa sayısı ya da yapılmadı cevabı gelmeden kayitSayisi, elleEklenenSayisi ve fark alanlarını null döner; rastgele isim yalnız seçilen isimleri döner, aday sayısını döndürmez. Aynı kural D05'in oturum kayıt listesi ucu ve D09'un onay listeleri için hizalama isteği olarak yazıldı (D07-A04).",
+      "why": "Hoca kafa sayısını kayıt sayısını görmeden girer (Kafa sayısı (plan.html#kararlar-kafa-sayisi), Hoca ve yönetici (plan.html#hoca)). Yalnız istemci gizlerse sayı ağ cevabından okunur."
+    },
+    {
+      "gap": "D07-B07",
+      "decision": "Gönderim işlemi oturum satırına ya da oturum başına bir sayaç satırına yazmaz. Karşılaştırma okurken sayılır: kayit_karar_gecmisi'nin yalnız güncel satırlı oturum dizini üstünden. İşaret satırı yalnız şu anlarda yazılır: kafa sayısı geldiğinde, kafa sayısı girilmiş oturuma yeni kayıt geldiğinde eşik ilk kez aşılırsa (tek ekleme), karar değişikliği sayıyı değiştirdiğinde ve gece kesinleştirmesinde. GET ucu yazmaz; derste bilgisi zamanlardan türetilir.",
+      "why": "Ders çıkışında yüz öğrenci aynı oturuma gönderir; tek satırı güncellemek kilit sırası yaratır (Ölçeklenme yolu (plan.html#teknoloji-olceklenme-yolu)). D13'ün GET veri değiştirmez kuralı envanterdeki derste_goruldu yazımını engelliyordu."
+    },
+    {
+      "gap": "D07-B08",
+      "decision": "Sunucu seçer: her basışta RASTGELE_ISIM_ADEDI (3) öğrenci, crypto.randomInt ile, güncel kararı Ret olmayan kaydı bulunanlardan, o oturumda daha önce seçilenler hariç; aynı secimId aynı seçimi döndürür. Burada değil: seçilmiş öğrenciye ya da kafa sayısı işareti geçerli oturumdaki öğrenciye, oturumun İstanbul günü bitene kadar; öğrencinin o oturumdaki Ret olmayan bütün kayıtları Ret YOKLAMADA_SINIFTA_DEGIL. Aynı gün yalnız işaretleyen hoca geri alır; hoca kaynaklı önceki karar geri gelir, otomatik olan yeniden hesaplanır. İşaretleme çevrimiçidir, kuyruk öğesi yoktur; sonraki günlerde D09'un düzeltme yolu.",
+      "why": "Plan düğmenin internetsiz çalışmadığını söylüyor (Rastgele isim (plan.html#hile-rastgele-isim)) ve sözleşmede bu iş için kuyruk öğesi türü yok; envanterin \"kuyruktan gider\" önerisi bu yüzden alınmadı. Sunucu seçimi hocanın yönlendirmesini önler; geri alma yanlış duyulan isimde haksız Yok'u düzeltir."
+    },
+    {
+      "gap": "D07-B09",
+      "decision": "Android kanıtı DOGRULANDI için hepsi: zincir imzaları geçerli ve Google'ın iki kökünden birine bağlı, hiçbir seri numarası iptal listesinde değil, attestationChallenge beklenen meydan okuma özeti, kanıtlanan anahtar telefonun bağladığı anahtar, attestationSecurityLevel ve keymasterSecurityLevel TRUSTED_ENVIRONMENT ya da STRONG_BOX, verifiedBootState VERIFIED, deviceLocked true, paket adı ve imza özeti ayarlardakiyle aynı. İlk tutmayanın kodu yazılır; paket ya da imza tutmazsa REDDEDILDI (D07-A01). Okunan bütün değerler cihaz_kanitlari'na yazılır.",
+      "why": "Etiket kaydı reddetmediğinden sıkı ölçütün bedeli yalnız etikettir (Cihaz doğrulaması (plan.html#kararlar-cihaz-dogrulamasi)); kilidi açık telefonun doğrulanmış görünmesi başka telefona bağlı hesap engelini zayıflatır (Hile ve sınırlar (plan.html#hile)). Değerler saklandığından ölçüt değişirse yeniden değerlendirme yapılabilir; ayrı oran ölçümü gerekçe kodlarına dayanır (Hedefler (plan.html#hedefler))."
+    },
+    {
+      "gap": "D07-B10",
+      "decision": "POST /v1/dogrulama/deger 32 bayt güvenli rastgele değer verir; satır SHA-256 özetiyle, amaç ve 5 dakikalık sonla durur, ilk tüketimde silinir, süresi geçenler yeni değer verilirken en çok 100'er silinir. Meydan okuma metni packages/core/src/dogrulama/meydan-okuma.ts'deki sabit biçimdir; Android setAttestationChallenge'a ve iPhone attestKey clientDataHash'ine bu metnin SHA-256'sı girer. Uç girişsiz ve IP sınırlıdır; kanıtı D01'in kayıt, değişim ve yenileme istekleri taşır.",
+      "why": "Meydan okumasız kanıt başka telefona taşınıp tekrar oynatılabilir; isSystemUser ve Secure Enclave anahtarı kanıta bağlanmazsa yolda değiştirilebilir; kararı sunucunun gördüğü kanıt verir (Cihaz doğrulaması (plan.html#kararlar-cihaz-dogrulamasi)). Özetle saklama, sızan tablonun kullanılabilir değer vermemesini sağlar."
+    },
+    {
+      "gap": "D07-B12",
+      "decision": "app_attest_sayaclari her iPhone kaydının (anahtar, sıra numarası, sayaç, geçti) satırını tutar. Kural: aynı anahtarın sıra numarası daha küçük en yakın geçen satırının sayacından büyük ve daha büyük en yakın geçen satırının sayacından küçük; boşluk kabul; ilk onayın alt sınırı 0. Aynı anahtarın eşzamanlı onayları anahtardan türetilen işlem kilidiyle (pg_advisory_xact_lock) sıraya girer. Tutmayan satır gecti = false yazılır ve komşu denetimine girmez. Aynı (anahtar, sıra) yeniden gelirse saklı sonuç döner.",
+      "why": "Makbuz okutmayla sıra numarası büyük kayıt küçükten önce gelebilir (İmza doğrulama (teknik.html#sunucu-imza-dogrulama)); yalnız son sayaçla karşılaştırma geç gelen eski kaydı haksız işaretlerdi. Dizi anahtar başına olduğundan yenilenen anahtar sıfırdan başlar, eski anahtarın satırları bekleyen kayıtlar için kalır."
+    },
+    {
+      "gap": "D07-B13",
+      "decision": "İmzalayan cihazın durumu D01.cihazGetir'den okunur. Cihaz değişim onayı bekliyorsa Beklemede CIHAZ_DEGISIMI_BEKLIYOR; onayda normal kural, ret ya da düşmede Ret CIHAZ_ONAYLANMADI. Cihaz değişim ya da çıkışla kapanmışsa: kaydın saat aralığının üst ucu kapanma anından önceyse normal karar, alt ucu sonraysa Ret ESKI_CIHAZ, saat doğrulanamadıysa ya da aralık kapanma anını kesiyorsa İncelemede KAPANMIS_CIHAZ_SAAT_BELIRSIZ. Hesap silmeyle kapanan cihazda aynı kural HESAP_SILINMIS ile işler (D12-B18). Değişim sürerken etkin eski cihazın kayıtları normaldir.",
+      "why": "Eski telefonda bekleyen kayıtlar değişim onaylanınca birlikte karara bağlanır (Kenar durumlar (plan.html#gun-kenar-durumlar)): kapanmadan önce imzalanan kayıt normal kuralla değerlendirilir. Öğrencinin kendi eski cihazı başka öğrenciye bağlı cihaz değildir; o durum D05'in gönderim reddidir. D05-B17'nin \"kapanmadan sonraki kayıt saklanmadan ret\" önerisi sahibe giden D05-B05'e bağlı; D07 kayıt saklanırsa Ret verir."
+    },
+    {
+      "gap": "D07-B14",
+      "decision": "TEYIT_BEKLIYOR süresizdir, teyitle çözülür, kilitte donar. AYAR_KESINLESMEDI kafa sayısı geldiğinde aynı işlemde ya da gönderme süresi bitince son bilinen ayara göre Var ya da Ret PENCERE_DISINDA olur (D04-B03 ile aynı). QR_GOSTERIM_BEKLENIYOR (Aşama 2) gönderme süresi bitince İncelemede QR_GOSTERIM_GELMEDI. CIHAZ_DEGISIMI_BEKLIYOR talep onaylanınca ya da düşünce çözülür; gece işi talebi artık beklemeyen cihazları yakalar. Teyit reddi ve numara çakışmasında kaybeden hesabın kayıtları Ret TEYIT_REDDEDILDI.",
+      "why": "Bitmeyen Beklemede dönem sonu özetini KARAR BEKLİYOR ve geçici bırakır (Dönem sonu (plan.html#devam-donem-sonu)). Ayarda son kararı sunucu hocanın ayarına göre kendisi verir (Kararlar, Ders içinde değişiklik (plan.html#kararlar)), bu yüzden süre sonunda hocaya iş çıkarılmaz; QR beklemesinde ise gecikmenin dayanağı hiç gelmediği için hoca karar verir. Envanterin \"ikisi de İncelemede\" önerisi ayar için D04-B03 ile hizalandı."
+    },
+    {
+      "gap": "D07-B15",
+      "decision": "D04.pencereSonucu DEGISIM_DILIMI döner: kayıt planlanan ya da önceki bir pencere sürümünün içinde ama son pencerenin dışında (D07-A05). Ayar kesinleşmemişse (kafa sayısı gelmedi ve gönderme süresi bitmedi) karar Beklemede AYAR_KESINLESMEDI; kesinleşmişse Ret PENCERE_DISINDA. Değişiklik ulaşınca D04'ün oturum kapandı dinleyicisi pencere_beklemede_kesinlestir işini koyar ve dilimdeki önce Var almış otomatik kararlar da Beklemede'ye alınır; kafa sayısı gelince aynı işlemde son ayara göre karar verilir.",
+      "why": "Plan Beklemede'yi sunucu kararı olarak tanımlıyor ve kafa sayısını karar olayları arasında sayıyor (Kayıt etiketleri (plan.html#gun-kayit-etiketleri), Şüpheli kayıt (plan.html#kararlar-supheli-kayit)); hocanın kuyruğu sırayla gittiğinden kafa sayısı ulaştığında önceki ayar değişiklikleri de ulaşmıştır (Kayıt ve makbuz (plan.html#kararlar-kayit-ve-makbuz)). Pencere hesabı D04'ün, karar eşlemesi D07'nin."
+    },
+    {
+      "gap": "D07-B16",
+      "decision": "Birimin son günü bittikten (kilit anı) sonra ulaşan kayıt, Ret kuralı yoksa İncelemede SON_GUNDEN_SONRA alır ve donar: onay listeleri kapalı, sayım yalnız D09'un denetim kaydı bırakan düzeltmesiyle değişir; bu gerekçe açık işaret sayılmaz. 7 günden geç ama son günden önce gelen geçerli kayıt normal kararını alır ve gec_geldi işareti taşır; sonradan değişenler listesi D09'undur.",
+      "why": "Plan son günden sonra kaydın yalnız saklandığını, sayımın denetimli düzeltmeyle değiştiğini söylüyor (Gönderme süresi (plan.html#kararlar-gonderme-suresi)). Ret seçilmez, kayıt geçerli. Envanterin \"hoca onayı\" önerisi D09-B23'ün kilitten sonra onay listelerini kapatma önerisiyle çelişiyordu; düzeltme yolu ikisini birleştirir."
+    },
+    {
+      "gap": "D07-B17",
+      "decision": "Kilit adımı D02'nin donem_kilidi işleminde, aynı veritabanı işleminde çalışır (kilitAdimiKaydet). Kararlar o haliyle donar: onaysız Kendi beyanı sayılmış kalır ve oturum başına dogrulama.onaysiz_kilitlendi, açık İncelemede ve Beklemede sayılmadan kalır ve oturum başına dogrulama.kararsiz_kilitlendi yazılır. Kilitten sonra kararDegistir DOGRULAMA_DONEM_KILITLI döner, yeniden değerlendirme kilitli kayıtları atlar.",
+      "why": "Plan onaysız Kendi beyanının sayılmış haliyle kilitlendiğini ve denetime yazıldığını söylüyor (Kayıt etiketleri (plan.html#gun-kayit-etiketleri)); açık işaret kilidi durdurmaz, son günden sonrası düzeltmeyle (Gönderme süresi (plan.html#kararlar-gonderme-suresi)). Olay oturum başına yazılır ki büyük birimde tek işlem on binlerce denetim satırı yazmasın; olay kayıt kimliklerini taşır."
+    },
+    {
+      "gap": "D07-B18",
+      "decision": "Hatalı sürüm listesi yayin-bilgisi.json içindedir (CI yazar, şema D13'ün, D07 yalnız okur ve dosyanın değişim zamanına bakıp önbelleğe alır); her girdi platform, uygulama sürümü, isteğe bağlı updateId, başlangıç anı ve kısa gerekçe taşır. Kaydı üreten sürüm imzalı kayıt metninden okunur (D13-B29). Ulaşma anı başlangıçtan sonra olan eşleşen kayıt İncelemede HATALI_SURUM; önceki kayıtlar değişmez. Aynı dosya iOS 27 denetimi için yayımlanmış paket sürümlerini ve izinli dağıtım türlerini taşır (D07-A06).",
+      "why": "Plan kuralı o sürümün yeni kayıtları için koyuyor (Güncelleme ilkesi (plan.html#dagitim-guncelleme-ilkesi)) ve hatalı güncellemenin etkilediği kayıtların sunucuda görünmesini istiyor (Güncelleme (plan.html#dagitim-guncelleme)). İstek başlığı gönderen sürümü gösterir, kaydı üreteni değil; makbuz okutmada gönderen hocanın telefonudur."
+    },
+    {
+      "gap": "D07-B19",
+      "decision": "D05, D04'ün packages/core/src/saat fonksiyonlarıyla çapaları kurar ve kayıt satırına yazar; kararHesapla bu sonucu (DOGRULANDI, DOGRULANAMADI, CAPALAR_AYRISIYOR ya da ULASMA_ANINI_ASIYOR; alt ve üst sınır; telefon saati; eşitleme bozukken ulaştı mı) KayitTaslagi içinde alır, D04.pencereSonucu'nu kendisi çağırır. Eşleme: DOGRULANAMADI etiket ve ortak sınır; CAPALAR_AYRISIYOR İncelemede; ULASMA_ANINI_ASIYOR Ret, eşitleme bozukken İncelemede SAAT_ESITLEMESI_BOZUK; pencere sonucu öğrenci lehine payla (D04-B01). Saat doğrulanamadı kaydında pencereyi D04 telefon saatiyle denetler. Sebep D04'ün çapa durum sütunlarında kalır.",
+      "why": "Çapa ve pencere D04'ün, etiket ve karar D07'nin; aynı kural iki modülde yazılmaz (İkinci çapa (plan.html#gun-ikinci-capa), Zayıf nokta (plan.html#gun-zayif-nokta)). Android'de oran %2'yi aşarsa sebep ölçümle ayrılır; ölçüm tek sorguyla yapılır (Ölçüm (plan.html#kararlar-olcum))."
+    },
+    {
+      "gap": "D07-B20",
+      "decision": "Kendi beyanı etiketi kaydın saatinde geçerli olan ve kayıt geldiği anda bilinen ayara göre konur, sonra değişmez. Karar Var'dır, onaya kadar geçici sayılır. Onay kararDegistir ile Var'dan Var'a geçiştir (KENDI_BEYANI_ONAYLANDI, kaynak HOCA); ret Ret KENDI_BEYANI_REDDEDILDI, son durum Yok (D08). Hoca kilide kadar kendi kararını değiştirebilir, olayı D09 yazar. Onay bekleyen Kendi beyanı: etiket var, karar Var, gerekçe boş.",
+      "why": "Plan kararı Var, reddi Yok diye tanımlıyor (Kayıt etiketleri (plan.html#gun-kayit-etiketleri)). Etiketler kayıt geldiği andaki kanıtla bir kez hesaplanır (D07-B30); D04-B11'in \"son ayar\" önerisi etiketi sonradan değiştirmeyi gerektirdiği için alınmadı, son ayar karara pencere yoluyla yansır."
+    },
+    {
+      "gap": "D07-B21",
+      "decision": "Üyelik oturumun başladığı anda D03.uyelikDenetle ile oturumun şubelerinin her biri için sorulur; biri yeter. Değilse Ret LISTEDE_DEGIL, ham kayıt saklanır. Liste satırı eklenir, yeniden etkinleşir ya da tarihi değişirse D03 dinleyicisi aynı işlemde yenidenDegerlendir'i o öğrencilerin o şubedeki kayıtları için çağırır. Geç kayıtta önceki oturumların sayımı D08'indir.",
+      "why": "Yanlış dosya kayıt kaybettirmez (Hoca ve yönetici, Liste yükleme kuralları (plan.html#hoca)); sunucunun reddettiği kayıt liste düzelince geri gelmeseydi kaybettirirdi. Ret yalnız listesinde olmadığı derse yoklama içindir (Hile ve sınırlar (plan.html#hile))."
+    },
+    {
+      "gap": "D07-B22",
+      "decision": "Kayıt saatleri çakışan iki oturumda aynı öğrenciden ikinci ulaşan kayıt İncelemede CAKISAN_OTURUM; ilk ulaşan değişmez. Çakışma oturumların başlangıç ve bitişinden (D02) ve öğrencinin aynı gündeki güncel Ret olmayan kayıtlarından (kayit_karar_gecmisi) bulunur. D04-B24 ikinci kayda Ret ve kayıt saatine göre sıra öneriyor; sahip Ret derse yalnız katalogda bu kodun sınıfı değişir (D07-A03).",
+      "why": "Kural telefonda uygulanır; ikinci kayıt ancak değiştirilmiş uygulamadan ya da eski programdan gelir ve çift anadal ile yandal çakışmaları meşru olabilir (Kararlar, Çakışan dersler (plan.html#kararlar)). Varış sırası kararı sonradan çevirmez; kayıt saatine göre sıra, önce Var almış kaydı İncelemede'ye çevirmeyi gerektirirdi."
+    },
+    {
+      "gap": "D07-B23",
+      "decision": "android_iptal_listesi_cek her gün 05:40'ta çeker; başarısızsa son başarılı liste kullanılır, 7 günden eskiyse D15.uyariAc. Yeni iptal ya da askıya alma görülen seri numarasını taşıyan kanıtlara iptal_ani yazılır, D01 cihaz sonucu DOGRULANAMADI olur; o andan sonra ulaşan kayıtlar Cihaz doğrulanmadı, geçmiş kararlar ve etiketler değişmez; askıya alma kalkınca tersine döner. Kökler kokler.ts'de sabittir, değişiklik yeni sunucu sürümüyle gelir.",
+      "why": "Plan iptal listesi dışında Google'a sorulmamasını istiyor (Cihaz doğrulaması (plan.html#kararlar-cihaz-dogrulamasi)); kayıt başına canlı sorgu buna aykırı. 05:40, D14-B05'teki gece işleri sırasına uyar (03:00 ile 04:00 arası boş)."
+    },
+    {
+      "gap": "D07-B24",
+      "decision": "Karar telefona iki yoldan iner: gönderim cevabında kayıt başına karar ve gerekçe (D05 kararHesapla sonucunu döndürür) ve sonraki her değişiklikte öğrencinin kendi kayıtları indirmesi (D05 indirme kaynağı; sürümü D05.kararSutunlariniYaz içinde D06.ogrenciDurumuDegisti artırır). D07 ortak sayaç satırına yazmaz.",
+      "why": "Öğrenci kararı makbuzda görür (Kayıt ve makbuz (plan.html#kararlar-kayit-ve-makbuz)); sorun bildirme süresi kararın telefona ulaşmasıyla başlar. Sözleşme öğrencinin kendi durumunu GET /v1/esitleme/degisiklikler içinde indiriyor; öğrenci başına sürüm ders çıkışında sıcak satır yaratmaz."
+    },
+    {
+      "gap": "D07-B26",
+      "decision": "Yerleşim sözleşmeyle kesinleşti: ayrı modül apps/server/src/modules/dogrulama. Doğrulayıcı tek arayüzün (CihazDogrulayici) arkasında D07'de; D01 kayıt, değişim ve yenileme işlemlerinden cihazKanitiniDogrula'yı çağırır. Etiket ve karar kuralları packages/core/src/dogrulama'da saf fonksiyon; D05 gönderim işleminde çağırır. Kafa sayısı değeri ve yapıldı oturum satırında (D02.kafaSayisiniYaz); karşılaştırma, işaret ve rastgele isim D07'de.",
+      "why": "Modüller yalnız dış yüzle konuşur (Mimari (teknik.html#sunucu-mimari)); sözleşmenin modül kararı D07'yi ayrı alan modülü yaptı. Kafa sayısı sütunu veri modeli gereği oturumda kalır (Veri modeli (teknik.html#kod-veri-modeli))."
+    },
+    {
+      "gap": "D07-B27",
+      "decision": "Yapılmadı cevabı oturum düzeyindedir (D02'nin yapildi sütunu); kayıt kararları değişmez, sayım (D08) bu oturumu dışlar. Hoca sonra yapıldı derse hiçbir karar yeniden hesaplanmaz.",
+      "why": "Plan yapılmadı denen dersin kayıtlarının ve saatlerinin sayılmadığını söylüyor (Kararlar, Onaysız ders (plan.html#kararlar)); kararı değiştirmek fikir değişince geri almayı gerektirir ve kanıtı bulandırır."
+    },
+    {
+      "gap": "D07-B28",
+      "decision": "Yenileme ucu D01'indir (POST /v1/kimlik/cihaz/app-attest-yenile). Akış: telefon ANAHTAR_YENILEME değeri alır; D01 isteğin Secure Enclave imzasını doğrular, dogrulamaDegeriniTuket ve yeni anahtar satırından sonra cihazKanitiniDogrula'yı (ANAHTAR_YENILEME) çağırır. Yeni anahtarın sayaç dizisi sıfırdan başlar; eski anahtarın satırları kalır, bekleyen kayıtlar onlarla denetlenir. Günde birden fazla yenileme engellenmez; kanıt satırlarından sayılır ve D15'in uyarısına gider.",
+      "why": "Plan ve teknik yenilemeyi Secure Enclave imzasıyla aynı hesaba bağlıyor (Kenar durumlar (plan.html#gun-kenar-durumlar), Anahtar ve imza (teknik.html#telefon-anahtar-imza)); izlenmeyen sınırsız yenileme kötüye kullanımı görünmez kılar."
+    },
+    {
+      "gap": "D07-B29",
+      "decision": "İlk kesin karar kayit_karar_gecmisi'nde ilk_kesin = true satırıdır: Beklemede dışındaki ilk karar, bir kez yazılır (kısmi tekil dizin). Her geçiş (önceki, yeni, birincil ve ek gerekçeler, olay, kaynak, yapan, an) satır olarak kalır; güncel satır guncel = true. Kayda (dönem, kimlik) çiftiyle başvurur.",
+      "why": "Hedefler payı ilk kararı Var olan kayıtlarla tanımlıyor (Hedefler (plan.html#hedefler)); kayıt satırı yalnız güncel kararı tutar (Veri modeli (teknik.html#kod-veri-modeli)). Ölçüm ayrı ham olay tablosu olmadan kayıt ve geçmiş tablolarından tek sorguyla yapılır (Ölçüm (plan.html#kararlar-olcum), Dönem alanı (teknik.html#veritabani-donem-alani))."
+    },
+    {
+      "gap": "D07-B30",
+      "decision": "Etiketler kayıt geldiği andaki kanıt ve ayarla bir kez hesaplanır, değişmez; iptal listesi, anahtar yenilemesi ya da cihaz kaydındaki değişiklik yalnız sonraki kayıtları etkiler. Kararlar D07-B02'deki olaylarla değişebilir. Yeni etiket varsayılanı false olan yeni sütundur; eski kayıtlar false kalır.",
+      "why": "Etiketler sayımı belirlemez (Kayıt etiketleri (plan.html#gun-kayit-etiketleri)) ama ölçümler ve hocanın listesi onlara dayanır; geriye dönük değişen etiket ölçümleri ve itiraz kanıtını bozardı. Yeni sütun tabloyu yeniden yazmaz (Mimari (teknik.html#sunucu-mimari))."
+    }
+  ],
+  "contradictions_resolved": [
+    {
+      "id": "D07-C01",
+      "resolution": "Doğrulama sonucu ile bağlama ayrıldı: donanım kanıtı yoksa ya da ölçütü tutmuyorsa sonuç DOGRULANAMADI ve kayıtlar yalnız etiket alır (plan); kanıt geçerli ama paket adı, imza sertifikası ya da App ID bizim değilse sonuç REDDEDILDI döner ve bağlamanın reddi önerilir (teknik). Yoklama kaydı hiçbir durumda cihaz kanıtı yüzünden reddedilmez. Bağlamanın reddi plan'ın \"yalnız etiket\" cümlesini daralttığı için sahibin kararı: D07-A01."
+    },
+    {
+      "id": "D07-C02",
+      "resolution": "Sayaç anahtar başına bir dizidir (app_attest_sayaclari, her onay bir satır); veri modelindeki \"her anahtarın son sayacı\" bu dizinin en büyük sıra numaralı geçen satırıdır, \"eskisi de kalır\" korunur. Sıra numarasına göre denetim ile veri modeli birlikte tutar; teknik.html#kod-veri-modeli satırına \"sayaç dizisi\" sözcüğünün eklenmesi önerilir."
+    },
+    {
+      "id": "D07-C03",
+      "resolution": "Beklemede'nin dört sebebi var: TEYIT_BEKLIYOR, CIHAZ_DEGISIMI_BEKLIYOR, AYAR_KESINLESMEDI ve Aşama 2'de QR_GOSTERIM_BEKLENIYOR. plan.html#gun-kayit-etiketleri'deki tanım iki örnek sayıyor; katalog dördünü içerir, tanım satırına cihaz değişimi ve QR gösterim kaydının eklenmesi önerilir. Her sebebin bitişi D07-B14'te."
+    },
+    {
+      "id": "D07-C04",
+      "resolution": "Karşılaştırma ve işaret gönderme süresinin sonunda o ana kadar ulaşmış kayıtlarla kesinleşir ve donar (kesinlesti_ani). Sonra gelen geçerli kayıt kendi kararıyla sayılır (Gönderme süresi (plan.html#kararlar-gonderme-suresi)) ama karşılaştırmayı değiştirmez; D09'un sonradan değişenler listesinde görünür. İki cümle birlikte tutar."
+    },
+    {
+      "id": "D07-C05",
+      "resolution": "Play Integrity tasarlanmadı: Android doğrulaması donanım anahtar kanıtıdır (Cihaz doğrulaması (plan.html#kararlar-cihaz-dogrulamasi)). Gerekirse sonra eklenir: CihazKaniti birleşimine yeni bir kanıt türü ve cihaz_kanitlari.kanit_turu listesine yeni değer olarak, yalnız ekleyerek."
+    }
+  ],
+  "open_points": [
+    {
+      "id": "D07-A01",
+      "question": "(D07-B11) Android ya da iPhone kanıtı donanımca geçerli ama paket adı, imza sertifikası ya da App ID bizim değilse (sanal kopyalama, yeniden paketlenmiş uygulama) telefonun hesaba bağlanması reddedilsin mi, yoksa bağlanıp kayıtları Cihaz doğrulanmadı etiketiyle mi sayılsın?",
+      "recommendation": "Bağlama reddedilsin: kanıt uygulamanın bizim olmadığını olumlu biçimde gösteriyor, kanıtsız telefondan farklı bir durum ve \"değiştirilmiş uygulama cihaz doğrulamasıyla zorlaşır\" amacına uyuyor (Hile ve sınırlar (plan.html#hile)). D07 iki seçimde aynı kodla çalışır: cihazKanitiniDogrula REDDEDILDI döner, kararı D01'in kayıt ucu uygular; etiket seçilirse eşleme DOGRULANAMADI olur. Yoklama kaydı hiçbir seçimde reddedilmez.",
+      "needs_owner": true
+    },
+    {
+      "id": "D07-A02",
+      "question": "(D07-B25) Aşama 2'de bir ders ne zaman QR'lı sayılır ve QR sonuçları hangi karara eşlenir?",
+      "recommendation": "Derste hocanın açtığı QR'lı ayarı (D02 sütunu, gelecekteki oturumlara kopyalanır); o oturumda QR gösterim kaydı hiç yoksa oturum Aşama 1 kuralıyla değerlendirilir (D02-B47). Eşleme gerekçe kataloğundaki Aşama 2 kodlarıyla (D11-B23): MAC tutmayan, başka oturumun ya da yetkisiz anahtarın QR'ı ve 30 saniyeyi aşan gecikme Ret; 10 (yedek kodda 20) ile 30 saniye arası, önce okutulmuş, gösterim dışı, hoca saati yok ve anahtar iptal İncelemede; gösterim kaydı gelene kadar Beklemede (Değişme ve kabul (plan.html#asama23-degisme-ve-kabul)). İki çapası da eski QR kaydının 2'lik ortak sınıra sayılması önerilir (D11-B20). Aşama 1 kodu ayarı false varsayılanla taşır.",
+      "needs_owner": true
+    },
+    {
+      "id": "D07-A03",
+      "question": "Başka modüllerde sahibe giden şu kararlar D07'nin gerekçe sınıflarını değiştirir: D04-B02 (pencere dışı kayıt), D04-B03 (ders içi ayar değişikliği), D04-B24 (çakışan oturum), D05-B05 ve D06-B05 (gönderim reddi ile Ret), D09-B23 (kilitten sonra yazma), D09-B14 ve D01-B21 (teyit reddi), D12-B18 (silinen hesabın sonraki kaydı). Hangileri öneriyle kalsın?",
+      "recommendation": "Hepsi önerileriyle kalsın; D07 bu önerilerle tasarlandı ve sahip başka seçerse yalnız packages/core/src/dogrulama/kodlar.ts'deki sınıf ve öncelik değişir, tablo ya da uç değişmez. Tek fark D04-B24'te: D04 envanteri ikinci kayda Ret öneriyor, D07 İncelemede öneriyor (D07-B22 gerekçesi); sahip birini seçmeli.",
+      "needs_owner": true
+    },
+    {
+      "id": "D07-A04",
+      "question": "D05 ve D09 hizalaması: kayıt satırının karar sütunları, çağrı sırası ve sayıların gizlenmesi.",
+      "recommendation": "D05 yoklama_kayitlari'nda karar, gerekce_kodu, karar_ani, yedi etiket_* sütunu ve gec_geldi'yi tutar ve yalnız D07'nin verdiği değerle yazar; CHECK listeleri kodlar.ts'den türer. Kayıt başına sıra, kaydın geri dönüş noktası içinde: appAttestSayaciniDenetle (yalnız App Attest onayında), kararHesapla, satırın eklenmesi, kararGecmisineYaz, ilk karar için D08.devamHesaplaIsiKoy; sayılan kayıt dizinine takılan kayıt yeniden yazılırken bu sıra aynı geri dönüş noktasından baştan çağrılır, böylece ortak sınır hakkı iki kez sayılmaz. kararSutunlariniYaz sayılan kaydı yeniden seçer ve D06.ogrenciDurumuDegisti'yi çağırır. D05'in oturum kayıt listesi ucu ve D09'un onay listeleri kafa sayısı ya da yapılmadı cevabı gelmeden o oturumun sayılarını ve listesini döndürmez (D07-B06).",
+      "needs_owner": false
+    },
+    {
+      "id": "D07-A05",
+      "question": "D04 hizalaması: pencere sonucu ve dinleyiciler.",
+      "recommendation": "pencereSonucu(tx, kayitSaati, oturumId) şunları döner: sonuc ICINDE, DISINDA, DEGISIM_DILIMI (önceki bir pencere sürümünde, son pencerede değil) ya da ESKI_PROGRAM (yalnız program değişikliğinden önceki pencerede); sureSecildi (kaydın saatinde süre seçili miydi); ayarDegisikligiVar. oturumKapandiDinleyicisiKaydet dinleyicisi kapanan oturumlar için ve kapanmış pencere sonradan değişince { oturumId, degisiklikVar } ile çağrılır. kesintiKapandiDinleyicisiKaydet dinleyicisi { baslangic, bitis, sapmaEsigiAltinda } alır. D04 ESKI_PROGRAM döndürmezse eski programla çevrimdışı verilen kayıt DISINDA olur ve Ret alır; öğrenciyi kayırmak için değil, hocaya sormak için bu değer istenir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D07-A06",
+      "question": "D13 ve D15 hizalaması: yayin-bilgisi.json alanları, ayarlar ve dışarı çıkış.",
+      "recommendation": "yayin-bilgisi.json şemasına (packages/contracts/src/api.ts) eklemeyle: hataliSurumler [{ platform, uygulamaSurumu, guncellemeKimligi, baslangicAni, gerekce }], iosPaketSurumleri ve iosDagitimTurleri; CI yazar (D15). Ayarlar (D15.ayarlar): androidPaketAdi, androidImzaOzetleri, appAttestUygulamaKimligi, iptalListesiAdresi, yayinBilgisiYolu. Google iptal listesi adresi sunucunun dışarı çıkış listesine girer (D15-B10). packages/contracts/src/dogrulama.ts kod listelerini packages/core/src/dogrulama/kodlar.ts'den alır; paket bağımlılığı D15'in.",
+      "needs_owner": false
+    },
+    {
+      "id": "D07-A07",
+      "question": "D01 hizalaması: meydan okuma girdileri, çağrı sırası ve hesap silmede kanıt ayrıntıları.",
+      "recommendation": "Kayıt, değişim ve yenileme istekleri değeri, öğrenci numarasını, isSystemUser'ı ve Secure Enclave açık anahtarını taşır; D01 önce dogrulamaDegeriniTuket, sonra cihaz ve anahtar satırlarını yazar, sonra cihazKanitiniDogrula'yı çağırır ve sonucu cihazDogrulamaSonucunuYaz ile yazar. Teyit ve cihaz değişimi kararını yazan işlem aynı işlemde yenidenDegerlendir çağırır (D01-B23). D12-B20 (sahip) kanıt ayrıntılarının hesap silmede silinmesini kabul ederse D07 dış yüzüne eklemeyle cihazKanitAyrintilariniSil(tx, cihazId) eklenir ve D01'in silme işlemi aynı işlemde çağırır; karar gelene kadar ayrıntılar saklama süresine kadar kalır (Saklama süresi (plan.html#acik-saklama-suresi)).",
+      "needs_owner": false
+    },
+    {
+      "id": "D07-A08",
+      "question": "D11 hizalaması (Aşama 2): gösterim kaydı gelince QR kayıtlarının yeniden değerlendirilmesi.",
+      "recommendation": "D07 D11'i okur (qrSonucu, gosterimAraliklari); D11'in D07'yi çağırması sözleşmede olmayan iki yönlü bir çift olurdu. D11 dış yüzüne eklemeyle gosterimKaydiDinleyicisiKaydet(dinleyici) eklenir; D07 kaydolur ve oturumun QR kayıtları için yenidenDegerlendir'i QR_GOSTERIM_KAYDI nedeniyle çağırır.",
+      "needs_owner": false
+    },
+    {
+      "id": "D07-A09",
+      "question": "D02 hizalaması: oturum alanları ve süzgeç.",
+      "recommendation": "oturumGetir: dersId, donemId, birimId, durum (iptal dahil), tarih, baslangic, bitis, kafaSayisi, kafaSayisiAni, yapildi, şube kimlikleri ve Aşama 2'de QR ayarı. oturumlariGetir süzgeci: oturum kimlikleri, bitiş aralığı, kafa sayısı girilmiş mi. Böylece kararHesapla kayıt başına tek oturum okumasıyla yetinir ve sorgu bütçesi tutar.",
+      "needs_owner": false
+    }
+  ]
+}

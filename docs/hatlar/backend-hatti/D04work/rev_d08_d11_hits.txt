@@ -1,0 +1,162 @@
+D08.tables[0].columns[15].note: Son hesap anı (D04.simdi).
+
+D08.tables[0].columns[16].note: Satırın ilk yazıldığı an (D04.simdi).
+
+D08.tables[1].columns[22].note: Son hesap anı (D04.simdi).
+
+D08.tables[2].columns[14].note: Değişim anı (D04.simdi).
+
+D08.endpoints[0].response.hesapAni: metin; UTC ISO 8601 (D04.simdi)
+
+D08.invariants[11]: Kural kodunda SQL now() ve Date.now() yok; her an D04.simdi()'den, İstanbul günü dönüşümü D04'ün saat yardımcısından gelir.
+
+D08.tests[32].asserts: Sahte saat (D04) sonraki oturumun başlangıcından sonraya kurulunca sonraki_oturum_saati ve planli_kalan_saat değişir; veritabanı saati değişmeden sonuç saat arayüzüne uyar.
+
+D08.resolved_gaps[1].why: Planın "o türdeki saati" ifadesine uyar, karma ya da başka türdeki oturumu atlar; hesap anı D04.simdi()'den gelir (kural için SQL now() yok (teknik.html#testler-veritabani-sifirlama)).
+
+D08.resolved_gaps[7].why: Anlar timestamptz (Zaman ve sıralama (teknik.html#veritabani-donem-alani)); oturum başlangıcı D02'den gelir, pencere ayrıca okunmaz; iki kural da öğrenci lehine (D03-B11); varsayılan plandaki gibi (plan.html#devam) ekle-bırak.
+
+D11.summary: projeksiyon modülü Aşama 2 ve 3'ün sunucu parçasıdır: kürsüdeki projeksiyon sayfasının hocanın telefonuyla eşleşmesi, 5 saniyede bir dönen yoklama QR kodlarının sunucu saatiyle verilmesi, hoca telefonuna 5 günlük QR anahtarlarının indirilmesi ve hoca telefonunun QR gösterim kaydının ortak kuyruktan alınması. QR içeriği, doğrulama kodu (MAC), yedek kod, eşleştirme QR'ı ve Bluetooth kodu packages/core/src/projeksiyon içinde saf işlevdir; telefon ile sunucu aynı test vektörlerini koşar. D05 kaydın Aşama 2 ve 3 alanlarını qrKanitiniAyristir ile aynı işlemde bu modüle verir; modül kanıtı yoklama_kanitlari tablosuna yazar, gecikmeyi planın 10 ve 30 saniye kuralıyla ve D04'ün saat sonucuyla değerlendirir, sonucu D07'nin gerekçe kataloğundaki kodlarla qrSonucu üzerinden sunar. Karar, etiket ve 2'lik ortak sınır D07'nin, pencere ve saat payı D04'ün, kayıt D05'indir; bu modül yalnız kendi sekiz ta
+
+D11.tables[0].columns[4].note: D04 saat arayüzünden. Yeni tarayıcı tavanı ve gece temizliği bu sütuna bakar.
+
+D11.tables[1].columns[5].note: D04 saat arayüzünden.
+
+D11.tables[2].columns[7].note: Onay anı, D04 saat arayüzünden.
+
+D11.tables[2].columns[8].note: Kod verilebilen ilk dilim: onay anı ile pencere açılışının büyüğünün dilimi; yoklama hızı ölçüsünün başlangıcı. Kapanışta pencereyle hiç kesişmediği anlaşılırsa boşaltılır.
+
+D11.tables[2].columns[9].note: Kapanışta yazılır: bitiş ile son pencere kapanışının küçüğünün dilimi + 6 (30 saniyelik ön alım). Açıkken boştur; okuyan üst sınırı şimdiki andan hesaplar (GET uçları yazmaz).
+
+D11.tables[3].purpose: Yanlış eşleştirme kodu sayacı: hoca giriş oturumu başına 10 dakikalık sabit pencerede yanlış deneme sayısı. Sunucu kopyaları arasında kesin olması gerektiğinden PostgreSQL'de (plan.html#hile-rastgele-isim, plan.html#teknoloji-olceklenme-yolu).
+
+D11.tables[3].columns[1].name: pencere_ani
+
+D11.tables[3].columns[1].note: Sabit pencerenin başı: deneme anının 10 dakikaya aşağı yuvarlanmış UTC anı.
+
+D11.tables[3].indexes[0]: eslestirme_yanlis_denemeleri_giris_oturumu_id_pencere_ani_pk: PRIMARY KEY (giris_oturumu_id, pencere_ani)
+
+D11.tables[6].columns[13].note: Gösterimden önce alınan saat belgesi, aynen (D04 biçimi, en çok 110 karakter).
+
+D11.tables[6].columns[16].note: Belge yoksa telefonun bildirimi: ONCE_YENIDEN_BASLATMA, BELGE_7_GUNDEN_ESKI ya da BELGE_YOK (D04 değerleri).
+
+D11.tables[6].columns[20].note: İkinci çapa yoksa D04'ün yok nedeni (ör. SONRA_YENIDEN_BASLATMA, ESITLEME_BOZUK).
+
+D11.tables[6].columns[21].note: D04 saatSonucu çıktısındaki ilk çapa durumu; CHECK listesi D04'ün sözleşmesinden üretilir.
+
+D11.tables[6].columns[22].note: D04 saatSonucu çıktısındaki ikinci çapa durumu; aynı kaynak.
+
+D11.tables[7].columns[14].note: Öğrencinin kayıt anı tahmini (D04 saatSonucu.tahminMs); saat doğrulanamadıysa boş.
+
+D11.tables[7].columns[15].note: Öğrencinin payı (D04 saatSonucu.payMs; QR kuralıyla payı küçük çapa).
+
+D11.tables[7].columns[34].note: Satırın yazıldığı an (D04 saat arayüzü).
+
+D11.endpoints[1].response.kodlar: [{ dilim: integer, baslangicAni: UTC ISO ms, icerik: 41 rakam }]; yalnız BAGLI iken: şimdiki dilimden 6 dilim sonrasına kadar ve başlangıcı pencere kapanışından önce olanlar
+
+D11.endpoints[3].request.oturumId: uuid; hocanın kendi dersinin, iptal edilmemiş ve şimdi pencere açılışından 15 dakika önce ile ders bitişi arasında olan oturumu
+
+D11.endpoints[3].rate_limit: D13 oturum sınıfı (oturum başına dakikada 120) ve PostgreSQL'deki kesin sayaç: giriş oturumu başına 10 dakikalık pencerede 5 yanlış; aşılınca pencere bitene kadar 429, beklemeSaniye ve Retry-After pencerenin sonuna kadar.
+
+D11.jobs[0].schedule: Olayla (D14 çizelgesindeki olay satırı): D04.oturumKapandiDinleyicisiKaydet ile kayıtlı dinleyici (ad projeksiyon_baglanti_kapat) pencere kapanış geçişinde, onay ucu da her yeni bağlantıda aynı işlemde D14.isGonder ile koyar; baslamaAni ders bitiş anı (D04.pencereGetir.dersBitisAni), tekillikAnahtari oturum kimliği, kuyruk politikası stately, veri { oturumId }. sureAsimiSaniye 60, deneme 3.
+
+D11.jobs[0].does: Oturumun açık projeksiyon bağlantısını DERS_BITTI (bitiş anı ders bitişi) ya da OTURUM_IPTAL ile kapatır; son_dilim değerini yazar, pencereyle hiç kesişmeyen bağlantıda ilk_dilim ve son_dilim boşaltılır; her kapanış için D09.denetimeYaz ile projeksiyon.baglanti_kapandi. Pencere kapanınca bağlantı kapanmaz: pencere ders bitişine kadar yeniden açılırsa (D04-A02) kodlar yeniden eşleşmeden sürer.
+
+D11.state_machines[2].transitions[2].when: Onay pencere açılışından önce geldi.
+
+D11.state_machines[2].transitions[3].when: Onay pencere açıkken geldi.
+
+D11.state_machines[2].transitions[5].by: zaman ya da D04 pencere değişikliği
+
+D11.state_machines[2].transitions[6].by: D04 pencere değişikliği
+
+D11.state_machines[2].transitions[6].when: Pencere ders bitişinden önce uzatıldı ya da yeniden açıldı (D04-A02 onaylanırsa).
+
+D11.state_machines[2].transitions[7].by: D04.esitlemeSaglikliMi false
+
+D11.state_machines[2].transitions[8].by: D04.esitlemeSaglikliMi true
+
+D11.invariants[2]: Sunucu hiçbir cevapta başlangıcı şimdiden 30 saniyeden fazla ileride olan ya da pencere kapanışında veya sonrasında başlayan bir dilimin kodunu vermez; pencere dışında ve saat eşitlemesi bozukken hiç kod vermez.
+
+D11.invariants[11]: Bu modül yalnız kendi sekiz tablosuna yazar; her an D04 saat arayüzünden gelir, kural kodunda SQL now() ve Date.now() yoktur.
+
+D11.exports[0].signature: qrKanitiniAyristir(tx: Islem, kayit: QrKanitGirdisi): Promise<{ sonuc: QrSonucu | null; kaydet(): Promise<void> }>; QrKanitGirdisi = { donemId: DonemId; kayitId: KayitId; oturumId: OturumId; ogrenciId: KisiId; saat: SaatSonucu /* D04 core saatSonucu çıktısı */; alanlar: KayitKanitAlanlari /* packages/contracts/src/projeksiyon.ts: { qr?: string; yedekKod?: string; qrYetenegi?: boolean; bluetooth?: ...; konum?: ... } */ }
+
+D11.exports[3].purpose: D06.ogeTuruKaydet('gosterim_kaydi', ...) ile bu modülün eklentisinde kaydolur; gönderimin işleminde, öğe başına SAVEPOINT'te çalışır. Gövdeyi doğrular; hoca, dersin sahibi ya da önceki sahiplerinden (devir) biri olmalı ve (hoca, yuva, ilk dilimin günü) indirmesi bulunmalı; hoca saatini D04 saatSonucu ile iki çapadan kurar, satırı yazar, aynı oturum ve yuvadaki BEKLEMEDE kanıtları yeniden hesaplar, sonra gosterimKaydiDinleyicisiKaydet dinleyicilerini aynı işlemde çağırır. Sonuç KABUL, ZATEN_VAR, RET ya da TEKRAR_DENE ve gerekçe.
+
+D11.files[31]: packages/core/src/projeksiyon/kod-penceresi.ts
+
+D11.files[42]: packages/core/src/projeksiyon/kod-penceresi.test.ts
+
+D11.tests[1].asserts: Onaydan önce GET kodlar ESLESME_BEKLIYOR ve boş kod listesi; onaydan sonra pencere açıkken (kapanışa 30 saniyeden fazla varken) BAGLI ve ardışık 7 kod. Kontrol olarak aynı anda açılmış ikinci tarayıcı ESLESME_BEKLIYOR'da kalır ve kod almaz; çerezsiz istek PROJEKSIYON_TARAYICI_YOK (401).
+
+D11.tests[2].name: Sunucu 30 saniyeden ileri ve pencere dışında kod vermez
+
+D11.tests[2].asserts: Sahte saatle: pencere açılışından önce YOKLAMA_ACILMADI ve sonrakiIstekMs açılışa kalan süre; açılıştan sonra her kodun başlangıcı şimdi + 30 sn'yi ve pencere kapanışını aşmaz; kapanıştan sonra YOKLAMA_KAPANDI, liste boş ve bağlantı açık kalır. Kontrol: pencere içindeki istekte liste boş değildir.
+
+D11.tests[7].asserts: Aynı giriş oturumundan 5 yanlış koddan sonra 6. denemede doğru kod da 429 PROJEKSIYON_DENEME_SINIRI ve pencere sonuna kadar beklemeSaniye; sahte saat 10 dakika ilerleyince doğru kod kabul edilir. İki ayrı sunucu örneği (aynı veritabanı) sayacı paylaşır. Kontrol: 4 yanlıştan sonra doğru kod kabul edilir; başka giriş oturumunun sayacı etkilenmez.
+
+D11.tests[11].name: Bağlantı ders bitişinde kapanır, pencere kapanınca kapanmaz
+
+D11.tests[11].asserts: D04 pencere kapanış olayıyla iş ders bitişine konur; pencere kapanınca sayfa YOKLAMA_KAPANDI görür ve bağlantı açıktır; ders bitişinde iş DERS_BITTI yazar, son_dilim dolar; iş iki kez çalışınca ikincisi satır değiştirmez. Kontrol: iş ders bitişinden önce çalıştırılırsa bağlantıyı kapatmaz ve kendini yeniden koyar.
+
+D11.tests[30].name: Kod penceresi 30 saniye ve pencere sınırı
+
+D11.tests[30].asserts: fast-check, numRuns 10.000: rastgele an ve pencere için verilen her dilim başlangıcı en çok an + 30 sn ve pencere kapanışından küçük; an pencere içindeyse şimdiki dilim listededir; liste ardışık dilimlerdir ve en çok 7 eleman.
+
+D11.resolved_gaps[0].decision: Projeksiyona kod yalnız D04'ün penceresi açıkken verilir (açılıştan önce YOKLAMA_ACILMADI, kapanıştan sonra YOKLAMA_KAPANDI); hoca telefonu da QR'ı pencere içinde gösterir. QR pencereyi açmaz ve uzatmaz; pencere dışında okutulan geçerli QR'lı kaydın kararını pencere kuralı verir (D04.pencereSonucu, D07). Geç başlayan derste hoca süreyi değiştirir. Süre seçilmemiş dersteki Kendi beyanı sorusu D11-A03'te.
+
+D11.resolved_gaps[0].why: Tek doğruluk kaynağı pencere kalır; QR yalnız sınıfta bulunmayı kanıtlar (plan.html#tek-bakista). tasarim.html#scr-qr hocanın QR ekranında kalan pencere süresini gösteriyor.
+
+D11.resolved_gaps[1].decision: Onay ders oturumu başınadır. Onay pencere açılışından 15 dakika önce ile ders bitişi arasında verilir. Bağlantı pencere kapanınca kapanmaz, ders bitişinde (DERS_BITTI) ya da oturum iptalinde (OTURUM_IPTAL) kapanır; bu sayede pencere ders içinde yeniden açılırsa (D04-A02) yeniden eşleştirme gerekmez. Hocanın listesi: ders kodu ve adı, derslik, tarayıcı ve işletim sistemi türü, onay anı, durum, kapanma anı ve sebebi, son 24 saat. Son kod alma anı tutulmaz: GET uçları yazmaz (D13 kuralı), canlılık sayfanın kendi ekranında görünür.
+
+D11.resolved_gaps[1].why: Plan 'o ders için onaylar' ve 'derste aynı anda tek projeksiyon' diyor (plan.html#asama23-nereden-gosterilir); oturum başına bağlantı ortak kürsüde eski bağlantının başka hocanın dersinde kod göstermesini önler, okutma birkaç saniye sürer. Bağlantıyı pencereye değil derse bağlamak D04'ün yeniden açma önerisiyle uyumludur ve kod zaten yalnız pencere içinde verilir.
+
+D11.resolved_gaps[2].decision: 6 rakam (crypto.randomInt), 5 dakika, tarayıcı başına tek açık kod (yenisi eskisini YENILENDI yapar). Eşleştirme QR'ı IUY:E1:<6 rakam> (alfasayısal kip, sürüm 1). Kod açık saklanmaz: QR anahtar kaynağından ayrı HKDF etiketiyle türetilen anahtarla HMAC-SHA256 özeti; özet yalnız geçerlilik süresindeyken dolu ve tekil. Yanlış deneme giriş oturumu başına 10 dakikalık sabit pencerede 5; aşılınca pencere sonuna kadar 429. Sayaç PostgreSQL'de.
+
+D11.resolved_gaps[11].decision: Hoca telefonu giriş oturumuyla (Bearer) doğrulanır; donanım anahtarı ve cihaz kaydı yok. QR anahtar yuvası giriş oturumuna bağlıdır ve yenilemede devredilir (D01'in önerdiği olayla). Saat belgesinin öznesi hocada kişi kimliğidir (D04 kararı D04-B14): gösterim kaydının belgesi saatSonucu içindeki özne denetiminden { tur: personel, kisiId: hoca } ile geçer.
+
+D11.resolved_gaps[11].why: Plan hoca işlemleri için oturumu yeterli sayıyor (plan.html#kararlar-kayit-ve-makbuz); ek kayıt akışı Aşama 2'yi büyütür. D04 belgeyi kişiye bağladı ki derste internetsizken biten oturumun işleri çapasını yitirmesin; inventerdeki giriş oturumu öznesi önerisi buna göre düzeltildi.
+
+D11.resolved_gaps[12].why: Çalınan telefonda en çok 5 günlük anahtar kalır (plan.html#hile-ikinci-profil); Oturumlarım'dan kapatma QR'ı da kapatmazsa uyarı işe yaramaz. Olay sözleşmeye girene kadar planın kabul ettiği 5 günlük açık pencere geçerlidir.
+
+D11.resolved_gaps[13].decision: Her gösterim aralığı (açma ile kapama ya da yeniden başlatma arası) ve her tür (QR, YEDEK_KOD, BLUETOOTH) ayrı öğedir; kimlik telefonun UUIDv7'si, tekrar ZATEN_VAR, başka içerik RET. Alanlar: hoca, oturum, tür, yuva, etiket tabanı, süre, ilk ve son dilim, ilk çapa (belge, istek süresi, belgeden olaya süre ya da telefon bildirimi), Bluetooth dilimi ve referans konum. İkinci çapa D06 paketinin çapa bölümünden bağlamla gelir (D11-A09). Hoca saati D04 saatSonucu ile başlangıç ve bitiş olaylarında ayrı ayrı kurulur; düzeltme ikisinin ortalaması, pay büyüğü artı farkın yarısıdır.
+
+D11.resolved_gaps[13].why: Sunucu hoca payını bu kayıttan hesaplar (plan.html#asama23-degisme-ve-kabul); yeniden başlatma iç sayacı sıfırladığından tek bir belgeden geçen süre gösterimin tamamını kapsamayabilir. Öğrenci kaydındaki kuralla aynı hesap tek yerde (D04) kalır.
+
+D11.resolved_gaps[17].decision: Arama: dersin hocasının kaydın günü ve komşu günü için indirmesi olan atamaları, dilimler [t - p - 30 sn - 60 sn, t + p + 60 sn] aralığında (60 sn arama payı ayardan, hoca payı bilinmeden); saat doğrulanamadıysa bütün pencere. Tek eşleşme kullanılır; birden çok eşleşmede kayda en yakın dilim seçilir. Sınır: (öğrenci, oturum) için 3, (öğrenci, ders, dönem) için 10 yanlış yedek koddan sonra yeni yedek kodlu kayıtlar eşleştirilmeden YEDEK_KOD_SINIR. Sayım ayrı tablo açmadan yoklama_kanitlari'ndan, öğrenci başına danışma kilidi altında. Öğrenci aynı pencerede yeniden yazabilir; her deneme ayrı imzalı kayıttır (D05 cihaz başına oturumda 10 kayıt sınırı).
+
+D11.resolved_gaps[17].why: Telefon kodu internetsiz doğrulayamaz, yanlış kod ancak kayıt gelince görülür (plan.html#hile-rastgele-isim). Rastlantı olasılığı aday sayısı / 1.000.000: 3 atama ve 36 dilimde yaklaşık 1,1 x 10^-4, 15 dakikalık tam pencerede yaklaşık 5,4 x 10^-4; sınırlar bunu öğrenci başına keser.
+
+D11.resolved_gaps[20].decision: D04.esitlemeSaglikliMi() false iken projeksiyona kod verilmez, durum SUNUCU_SAATI_BOZUK; hoca QR'ı telefonundan gösterir (onun dilimleri eşitleme bozulmadan alınmış belgelere dayanır ve payı hesaba girer).
+
+D11.resolved_gaps[20].why: Eşitleme bozulunca yeni saat belgesi verilmiyor (plan.html#gun-ikinci-capa); projeksiyon kodları sunucu saatine dayanır ve onlara pay eklenmez. Durum D15'in chrony dosyasından D04 üzerinden okunur (sözleşme kararı 8).
+
+D11.open_points[6].recommendation: contracts.json D01 dış yüzüne D01-A14'teki kimlikOlayiDinleyicisiKaydet eklensin (yalnız ekleme, D02 ve D04'teki dinleyici deseni, sözleşme kararı 24). Bu modül kaydolur: giris_oturumu_yenilendi olayında etkin yuvanın giris_oturumu_id değerini yeni oturuma taşır; giris_oturumu_kapandi olayında neden cikis, kendisi_kapatti, yonetici, en_eski, pasif, olay_komutu ya da geri_yukleme ise ve hesap_silindi olayında yuvayı olay anıyla iptal eder; doğal süre bitişinde dokunmaz. Eklenene kadar iptal çalışmaz ve planın kabul ettiği 5 günlük açık pencere (plan.html#hile-ikinci-profil) geçerlidir; yenilenen oturum yeni rakam alır (9 rakam bunu taşır).
+
+D11.open_points[8].recommendation: D06 ogeTuruKaydet ile kaydolan işleyiciye öğeyle birlikte { kisiId, girisOturumuId, ulasmaAni, govdeMetni, ikinciCapa: { belge, istekSuresiMs, olaydanBelgeyeMs } | { yokNedeni } } versin; hoca telefonunun donanım anahtarı olmadığından (hoca işlemleri oturumla doğrulanır, plan.html#kararlar-kayit-ve-makbuz) personel oturumuyla gelen paketin imzasız çapa bölümünü kabul etsin. Bu, D04-A05'te D06'dan beklenenle aynıdır; öğrenci paketindeki imza kuralı değişmez. Plan gösterim kaydı için ikinci çapayı açıkça istiyor (plan.html#asama23-degisme-ve-kabul).
+
+D10.summary: Raporlar modülü hocanın panelindeki ders raporunu, öğrenci raporunu ve şube başına AKSİS özetini JSON olarak verir; Excel ve baskıyı panel aynı cevaptan ve ortak paketteki aynı biçim fonksiyonlarıyla üretir, sunucu dosya üretmez ve AKSİS'e hiçbir şey göndermez (plan.html#tek-bakista, teknik.html#panel-excel). Değer hesaplamaz: tür başına saatleri, onda bir birimli yüzdeyi, tür kararlarını, Sonuç'u ve KARAR BEKLİYOR'u D08.dersSonuclari'dan, oturum hücrelerini D08'in son durum tablosundan tek REPEATABLE READ, READ ONLY işlemde okur; kendisi yalnız sırayı, geçici nedenlerini, ders işaretlerini, çıktı engelini ve özetin özetini (SHA-256) kurar. Yazdığı tek şey AKSİS özetinin değişmez anlığıdır: hocanın dönem sonu penceresinde aldığı her Excel ya da baskı çıktısında (gördüğü özetle birebir aynıysa) ve kilit uygulandıktan sonra gece işinde şube başına bir kez; D09'un sonradan değişenler listes
+
+D10.tables[0].purpose: AKSİS özetinin değişmez anlığının başlığı. Kaynak HOCA_CIKTISI: hoca dönem sonu penceresinde (şubenin son oturumu bittikten sonra, kilit anından önce) Excel ya da baskı aldığında, gördüğü özetle sunucunun hesabı birebir aynıysa yazılır; her çıktı ayrı satırdır. Kaynak GUN_SONU: kilit uygulandıktan ve D08 hesabı güncellendikten sonra aksis_gun_sonu_anligi işi şube başına bir kez yazar. Taban kuralı (son hoca çıktısı, yoksa gün sonu) D10-A07'de. Yazıldıktan sonra değişmez.
+
+D10.tables[0].columns[10].note: Birim ve dönemin kilit anı (D02), anlık anındaki değer; pencere CHECK kısıtının dayanağı.
+
+D10.endpoints[2].response.sonOturumBitisAni: anlık | null (dönem sonu penceresinin başlangıcı)
+
+D10.endpoints[3].response.anlik: { anlikId, kaynak: 'HOCA_CIKTISI', alinmaAni } | null (201: anlık yazıldı; 200: aynı kimlikle zaten yazılmış ya da dönem sonu penceresi dışında anlık gerekmez)
+
+D10.tests[7].name: Dönem sonu penceresinde cevapsız oturum çıktıyı engeller
+
+D10.tests[9].name: Çıktı anlığı yalnız dönem sonu penceresinde yazılır
+
+D10.tests[11].asserts: Dönem sonu penceresinde D08 devam_hesapla işi kuyrukta beklerken GET hesapGuncel false ve cikti.engel HESAP_SURUYOR, POST 409 RAPORLAR_HESAP_SURUYOR; iş çalıştıktan sonra POST geçer ve anlık yazar. Kontrol: dönem içinde aynı durumda POST 200 alır, engel yoktur.
+
+D10.tests[14].asserts: aksisAnligiGetir TABAN: pencerede hoca çıktısı varsa en sonuncusu, yoksa GUN_SONU, ikisi de yoksa null; SON_HOCA_CIKTISI alinma_ani en büyük olanı verir; çağıranın işlemindeki yazılmamış ekleme görülür.
+
+D10.consumes[7].uses: saat (D04'ün saat arayüzü, parametreyle; D04 dış yüzü çağrılmaz), sunucu sürümü, isteğe bağlı rapor okuma havuzu
+
+D10.error_codes[7].ne: Dönem sonu penceresinde ya da kilitten sonra cevapsız "Ders yapıldı mı?" oturumu var; ayrıntı oturum kimlikleri, ders günleri ve başlangıç saatleri.
+
+D10.error_codes[8].ne: Dönem sonu penceresinde anlık yazılacakken D08 bu şubede hesabın güncel olmadığını söylüyor; birkaç saniye sonra yeniden denenir (Retry-After 5). Pencere dışında çıktıyı engellemez.
+

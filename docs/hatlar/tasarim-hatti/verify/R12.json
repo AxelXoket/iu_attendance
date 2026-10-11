@@ -1,0 +1,207 @@
+{
+ "id": "R12",
+ "checked": [
+  {
+   "finding": "R12-F01",
+   "verdict": "doğrulandı",
+   "note": "Duyuru 30 Haziran 2026: SDK 57'nin React Native'i 0.85'ten 0.86'ya çıkardığı ve React sürümünü değiştirmediği ('SDK 57 upgrades React Native from 0.85 to 0.86') (React 19.2); reanimated 4.3 ten 4.5 e, worklets 0.8 den 0.10 a, gesture-handler 2.31 den 2.32 ye. unpkg expo@57.0.26 bundledNativeModules.json içindeki 13 değerin hepsi birebir (react 19.2.3, react-native 0.86.3, reanimated 4.5.1, worklets 0.10.1, gesture-handler ~2.32.0, skia 2.6.2, lottie ~7.3.8, screens ~4.26.0, expo-router ~57.0.24, @expo/ui ~57.0.21, expo-haptics ~57.0.3, expo-font ~57.0.4, svg 15.15.4). v57 reanimated belgesi: kurulum npx expo install react-native-reanimated react-native-worklets, Babel eklentisi babel-preset-expo ile otomatik.",
+   "url_checked": "https://expo.dev/changelog/sdk-57.md"
+  },
+  {
+   "finding": "R12-F02",
+   "verdict": "doğrulandı",
+   "note": "Duyuru birebir: SDK 57'nin ilk sürümünün SDK 56'dan, react-native-worklets ya da react-native-reanimated kullanan uygulamada belleği çok artırabilen bir Hermes V1 geriletmesi devraldığı ve bunun expo@57.0.9'da giderildiği ('Increased memory usage with Hermes v1 is resolved in expo@57.0.9') (57.0.9 React Native i 0.86.2 ye çıkarıyor); \"expo@57.0.17 updates React Native to 0.86.3\" ve \"Increased startup time in development is resolved in expo@57.0.17\". npm: latest ve sdk-57 etiketi 57.0.26 (2026-09-29); 57.0.9 yayını 2026-07-29, 57.0.17 yayını 2026-08-26. Ayrıntı: açılış geriletmesi yalnız geliştirme sırasında; kullanıcıya dönük bellek düzeltmesi 57.0.9 da, 57.0.17 alt sınırı zararsız. npm next etiketi artık 58.0.4 (2026-10-05), açık sorudaki 58.0.3 bir sürüm geride.",
+   "url_checked": "https://expo.dev/changelog/sdk-57.md"
+  },
+  {
+   "finding": "R12-F03",
+   "verdict": "doğrulandı",
+   "note": "Sayfa: \"Reanimated 4 works only with the React Native New Architecture\", Reanimated 3 \"no longer actively maintained\". Ham HTML tablosu: 4.4.x RN 0.83-0.86, worklets 0.9.x ve 0.10.x; 4.5.x RN 0.83-0.86, worklets 0.10.x ve 0.11.x; 4.6.x RN 0.83-0.87, worklets 0.12.x (tabloda 4.7.x için RN 0.86-0.88 ve worklets 0.13.x ile npm de henüz olmayan bir 4.8.x satırı da var). npm latest 4.7.1 (2026-10-02), peer react-native \"0.86 - 0.88\", worklets \"0.13.x\"; 4.5.1 peer react-native \"0.83 - 0.86\", worklets \"0.10.x\". GitHub: 11020 yıldız (ungh aynası), varsayılan dalda son commit 2026-10-05 (commits.atom), açık 161 issue + 165 PR = 326, 2026-09-06 sonrası açılan 34, kapanan 73 (arama API). Hepsi birebir.",
+   "url_checked": "https://docs.swmansion.com/react-native-reanimated/docs/guides/compatibility/"
+  },
+  {
+   "finding": "R12-F04",
+   "verdict": "doğrulandı",
+   "note": "Hazır değerler linear, ease (varsayılan), ease-in, ease-out, ease-in-out, step-start, step-end. İmzalar ve örnekler birebir: cubicBezier(x1: number, y1: number, x2: number, y2: number), cubicBezier(0.25, 0.1, 0.5, 2); linear(0, [0.25, '75%'], 1); steps(4, 'jump-end'). Android, iOS, Web destekli. Dizi sırası transitionProperty dizisine karşılık geliyor, her özelliğe ayrı fonksiyon verilebiliyor.",
+   "url_checked": "https://docs.swmansion.com/react-native-reanimated/docs/css-transitions/transition-timing-function/"
+  },
+  {
+   "finding": "R12-F05",
+   "verdict": "doğrulandı",
+   "note": "\"By default all animations are configured with ReduceMotion.System\"; değerler System, Always, Never. Ayar açıkken withSpring ve withTiming \"return the toValue immediately\", withDelay \"initiates the next animation immediately\", \"entering, keyframe, and layout animations instantaneously reach their endpoints\", exiting ve shared transition lar \"are omitted\". useReducedMotion \"whether the reduced motion setting was enabled when the app started\" döndürüyor. withTiming(0, { reduceMotion: ReduceMotion.System }) örneği birebir.",
+   "url_checked": "https://docs.swmansion.com/react-native-reanimated/docs/guides/accessibility/"
+  },
+  {
+   "finding": "R12-F06",
+   "verdict": "doğrulandı",
+   "note": "Varsayılanlar birebir: damping 120, stiffness 900, duration 550, dampingRatio 1, mass 4, velocity 0, overshootClamping false, energyThreshold 6e-9; \"can't be used at the same time\" ve \"When used together duration and dampingRatio overrides stiffness and damping\". Eksik ayrıntı: duration algısal süredir, gerçek süre bunun 1.5 katıdır ('Actual duration is 1.5 times the value of perceptual duration'), yani 550 yazılınca hareket yaklaşık 825 ms sürer.",
+   "url_checked": "https://docs.swmansion.com/react-native-reanimated/docs/animations/withSpring/"
+  },
+  {
+   "finding": "R12-F07",
+   "verdict": "doğrulandı",
+   "note": "npm latest 3.3.0 (2026-09-11), legacy 2.33.0 (2026-09-14); Expo 57.0.26 sabiti ~2.32.0. GitHub 6788 yıldız (ungh), son commit 2026-10-05 (commits.atom), 2026-09-06 sonrası açılan 14, kapanan 10 (arama API). Açık issue ve PR sayısı (31) API sınırı yüzünden yeniden ölçülemedi.",
+   "url_checked": "https://registry.npmjs.org/react-native-gesture-handler"
+  },
+  {
+   "finding": "R12-F08",
+   "verdict": "doğrulandı",
+   "note": "npm latest 0.30.0 (2025-01-29), peer react-native-reanimated \"*\". GitHub 4553 yıldız (ungh), son commit 2025-03-11 (commits.atom), 2026-09-06 sonrası açılan issue 0 (arama API). Açık issue ve PR sayısı (44) yeniden ölçülemedi.",
+   "url_checked": "https://registry.npmjs.org/moti"
+  },
+  {
+   "finding": "R12-F09",
+   "verdict": "doğrulandı",
+   "note": "Belge: Expo UI'nin başka bir arayüz kütüphanesi olmadığı, Jetpack Compose ve SwiftUI yapı taşlarını React Native'e getirdiği ('Expo UI is not another UI library'); Universal grubu \"Cross-platform components that run on Android, iOS, and web\"; Compose DropdownMenu ve ModalBottomSheet, SwiftUI BottomSheet, ContextMenu ve Menu var; drop-in listesinde \"A bottom sheet compatible with @gorhom/bottom-sheet\" ve \"A menu compatible with @react-native-menu/menu\"; örnek proje \"production-ready Expo UI package available in SDK 56 and later\". universal.md de BottomSheet var, Menu veya ContextMenu yok. npm latest ve sdk-57 57.0.21 (2026-09-29).",
+   "url_checked": "https://docs.expo.dev/versions/v57.0.0/sdk/ui.md"
+  },
+  {
+   "finding": "R12-F10",
+   "verdict": "doğrulandı",
+   "note": "Belge birebir: presentation 'formSheet'; sheetAllowedDetents ekran yüksekliğinin kesirleri, örnek [0.25, 0.5, 1], ya da 'fitToContents' (\"you must provide explicit content sizing since flex: 1 is not supported\"); sheetInitialDetentIndex number veya 'last', varsayılan 0; sheetGrabberVisible yalnız iOS; sheetCornerRadius \"Corner radius of the sheet in pixels\"; sheetLargestUndimmedDetentIndex var. Android: \"Android supports a maximum of 3 detents\", \"Native stack headers and nested stack navigators are not supported inside form sheet screens\", form sheet ler platformun alt sheet davranışını kullanıyor; unstable_sheetFooter Android e özel deneysel. Sayfa react-native-screens ten söz etmiyor; ~4.26.0 sabiti bundledNativeModules.json da doğru.",
+   "url_checked": "https://docs.expo.dev/router/advanced/modals/"
+  },
+  {
+   "finding": "R12-F11",
+   "verdict": "doğrulandı",
+   "note": "npm latest 5.2.14 (2026-05-09); peer react-native-reanimated \">=3.16.0 || >=4.0.0-\", react-native-gesture-handler \">=2.16.1\" birebir. GitHub 9106 yıldız (ungh), son commit 2026-05-09 (commits.atom). Expo 57.0.26 listesinde yok. Açık issue ve PR (70) yeniden ölçülemedi.",
+   "url_checked": "https://registry.npmjs.org/@gorhom%2Fbottom-sheet"
+  },
+  {
+   "finding": "R12-F12",
+   "verdict": "doğrulandı",
+   "note": "npm latest 3.0.6 (2025-03-21); peer @react-native-menu/menu \"1.2.2\", react-native-ios-context-menu \"3.1.0\", react-native-ios-utilities \"5.1.2\" birebir. GitHub 2253 yıldız (ungh), son commit 2026-01-27 (commits.atom), 2026-09-06 sonrası kapanan issue 0 (arama API). Açık issue ve PR (49) yeniden ölçülemedi.",
+   "url_checked": "https://registry.npmjs.org/zeego"
+  },
+  {
+   "finding": "R12-F13",
+   "verdict": "kısmen",
+   "note": "Belge birebir: \"Guarantees no re-renders across the entire app\", yalnız JSI bağları, C++ ile yazılmış ayrıştırıcı, \"Leverages Nitro Modules under the hood\", \"9.5M+ downloads (1M+ every month)\". npm latest 3.5.0 (2026-10-05), react-native \">=0.81.0\"; GitHub 2960 yıldız, son commit 2026-10-05. Hatalı kısım: 3.5.0 peerDependenciesMeta da react-native-edge-to-edge ve react-native-reanimated optional; zorunlu peer ler react-native-nitro-modules ve @react-native/normalize-colors. Zorunlu ek yerel bağımlılık iki değil bir (Nitro Modules).",
+   "url_checked": "https://registry.npmjs.org/react-native-unistyles"
+  },
+  {
+   "finding": "R12-F14",
+   "verdict": "doğrulandı",
+   "note": "npm latest 4.2.7 (2026-09-14), rc 5.0.0-rc.0 (2026-09-13), latest peer tailwindcss \">3.3.0\" (rc peer i tailwindcss \">4.1.11\" ve react-native-css \"3.1.0-rc.0\"). react-native-css latest 3.0.7 (2026-04-09), rc 3.1.0-rc.0 (2026-09-13). GitHub 8107 yıldız, son commit 2026-09-15. Açık issue ve PR (59) yeniden ölçülemedi.",
+   "url_checked": "https://registry.npmjs.org/nativewind"
+  },
+  {
+   "finding": "R12-F15",
+   "verdict": "doğrulandı",
+   "note": "tamagui latest 2.7.7 (2026-08-15), beta 3.0.0-beta.1604.1 (2026-10-05); GitHub 14212 yıldız, son commit 2026-09-24 (commits.atom), 2026-09-06 sonrası açılan issue 11 (arama API). @shopify/restyle latest 2.4.5 (2025-03-19); GitHub 3424 yıldız, son commit 2026-09-29. Kapanan issue (8) ve açık sayılar (100, 39) yeniden ölçülemedi.",
+   "url_checked": "https://registry.npmjs.org/tamagui"
+  },
+  {
+   "finding": "R12-F16",
+   "verdict": "kısmen",
+   "note": "Belge: Final Community Group Report, 28 October 2025, \"This specification is considered stable\"; uzantılar .tokens ve .tokens.json, MIME application/design-tokens+json; duration value ve unit (\"ms\" veya \"s\"), örnek {\"value\": 100, \"unit\": \"ms\"}; cubicBezier dört sayı [P1x, P1y, P2x, P2y], x [0, 1], y herhangi bir gerçek sayı; transition duration, delay, timingFunction; dimension \"px\" veya \"rem\"; fontWeight [1, 1000] veya hazır ad; belgede spring hiç geçmiyor; $extensions için \"The reverse domain name notation is recommended\"; takma ad için Curly Brace Syntax bölümü var. Hatalı ayrıntı: spesifikasyondaki örnek anahtar \"org.example.toolname\" değil, \"org.example.tool-a\" ve \"org.example.tool-b\"; toolname belgede hiç geçmiyor. Asıl iddia (kararlı, tipler var, yay yok) birebir doğru. GitHub deposunun son commit i 2026-09-08 doğru.",
+   "url_checked": "https://www.designtokens.org/tr/2025.10/format/"
+  },
+  {
+   "finding": "R12-F17",
+   "verdict": "doğrulandı",
+   "note": "Final Community Group Report, 28 October 2025. 14 renk uzayı anahtarı birebir (srgb, srgb-linear, hsl, hwb, lab, lch, oklab, oklch, display-p3, a98-rgb, prophoto-rgb, rec2020, xyz-d65, xyz-d50). oklch: Lightness [0 - 1], Chroma [0 - Infinity] (\"in practice doesn't exceed 0.5\"), Hue [0 - 360); bileşen yerine \"none\" kullanılabiliyor; hex \"MUST be formatted in 6 digit CSS hex color notation\". Örnek 11 birebir: oklch [0.7016, 0.3225, 328.363], alpha 1, hex #ff00ff.",
+   "url_checked": "https://www.designtokens.org/tr/2025.10/color/"
+  },
+  {
+   "finding": "R12-F18",
+   "verdict": "doğrulandı",
+   "note": "Sayfa birebir: Style Dictionary 4'ten beri DTCG biçimini birinci sınıf destekliyor, ama 2025.10 biçimini henüz tam desteklemiyor, iş v5'te sürüyor ('the latest format 2025.10 does not have full support yet'). npm latest 5.6.0 (2026-10-03). GitHub 4853 yıldız (iddia 4852, bir günlük fark), son commit 2026-10-03 (commits.atom), açık 221 issue + 17 PR = 238, 2026-09-06 sonrası açılan 3, kapanan 1 (arama API).",
+   "url_checked": "https://styledictionary.com/info/dtcg/"
+  },
+  {
+   "finding": "R12-F19",
+   "verdict": "doğrulandı",
+   "note": "Belge: Terrazzo'nun DTCG token JSON'unu okuyup CSS, Sass ve JS/TS gibi her platform için kod ürettiği ('generates code for any platform'); entegrasyonlar CSS, CSS-in-JS, Sass, JS/TS, Storybook, Swift, Tailwind, Vanilla Extract, Custom; DTCG biçimini tam destekleyen tek araç olduğu, çözücüler ve öteki 2025.10 özelliklerinin 2.0'da geleceği ('the only tool that supports the full DTCG format'); \"check [file]: Validate a given tokens JSON meets the DTCG specification\"; lint ayrı bir komut. React Native geçmiyor. npm @terrazzo/cli latest 2.7.1 (2026-08-11); 2.0.0 2026-03-17 de çıktığı için belgedeki \"coming in 2.0\" cümlesi eskimiş. GitHub 467 yıldız (iddia 468), son commit 2026-09-22 (commits.atom), açık 44 issue + 24 PR = 68, 2026-09-06 sonrası açılan 15. Araştırmanın ölçemediği kapanan issue sayısı 1: 30 günde 15 açılan issue karşısında yalnız 1 kapanmış.",
+   "url_checked": "https://terrazzo.app/docs/"
+  },
+  {
+   "finding": "R12-F20",
+   "verdict": "doğrulandı",
+   "note": "Tailwind birebir: tema değişkenlerinin @theme ile tanımlanan ve hangi yardımcı sınıfların bulunacağını belirleyen özel CSS değişkenleri olduğu ('Theme variables are special CSS variables'); örnek --color-mint-500: oklch(0.72 0.11 178); token doğrudan bir yardımcı sınıfa karşılık gelecekse @theme, sıradan CSS değişkenleri için :root kullanılması ('Use @theme when you want a design token to map directly'). Vite birebir: \"Any CSS file ending with .module.css is considered a CSS modules file\". tailwindcss npm 4.3.3 (2026-07-16); GitHub 97772 yıldız (iddia 97775), son commit 2026-09-25.",
+   "url_checked": "https://tailwindcss.com/docs/theme"
+  },
+  {
+   "finding": "R12-F21",
+   "verdict": "doğrulandı",
+   "note": "Blog 9 Eylül 2026: View Transitions ve Fragment Refs \"now stable in React 19.3\"; <ViewTransition> öğelerin girişini, çıkışını, yer ve boyut değişimini tarayıcının View Transition API'siyle canlandırdığı ('lets you animate elements as they enter, exit, move, or resize'); \"updates not marked as Transitions don't trigger animations\"; tetikleyiciler startTransition, <Suspense> açılışı, useDeferredValue; \"By default, <ViewTransition> animates with a smooth cross-fade\"; View Transition Class ile CSS, onEnter, onExit, onShare, onUpdate ile Web Animations API; addTransitionType; \"Currently, <ViewTransition> only works in the DOM. We're working on support for React Native\". Blogda reduced motion geçmiyor. enter, exit, update, default prop adları blog metninde ayrıca görülmedi. npm react latest 19.3.0 (2026-09-09).",
+   "url_checked": "https://react.dev/blog/2026/09/09/react-19-3"
+  },
+  {
+   "finding": "R12-F22",
+   "verdict": "doğrulandı",
+   "note": "Yazı 16 Ekim 2025: \"Baseline Newly available as of October 14, 2025\", Firefox 144; startViewTransition ve view-transition-name, view-transition-class, view-transition-name: match-element, :active-view-transition. Ek: Firefox uygulaması view transition types içermiyor, types için transitionHelper öneriliyor; React addTransitionType ile türe göre seçilen animasyonlar Firefox ta çalışmayabilir.",
+   "url_checked": "https://web.dev/blog/same-document-view-transitions-are-now-baseline-newly-available"
+  },
+  {
+   "finding": "R12-F23",
+   "verdict": "doğrulandı",
+   "note": "Belge: tam motion bileşeni \"impossible for bundlers to tree shake it any smaller than 34kb\"; m ve LazyMotion ile \"just under 4.6kb\"; domAnimation +15kb, domMax +25kb; useAnimate mini 2.3kb (yalnız WAAPI), hybrid 17kb. Belge boyutların \"Rollup-generated bundles\" olduğunu söylüyor; araştırmadaki gzip nitelemesi kontrol edilen metinde görülmedi. npm motion latest 14.0.0 (2026-10-02); GitHub 33836 yıldız (iddia 33841), son commit 2026-10-05.",
+   "url_checked": "https://motion.dev/docs/react-reduce-bundle-size"
+  },
+  {
+   "finding": "R12-F24",
+   "verdict": "doğrulandı",
+   "note": "Sürüm sayfası: \"Dec 11, 2025 v1.0.0 Stable\", \"35 unstyled UI components. New @base-ui/react npm package\"; v1.8.0 Sep 4, 2026, v1.7.0 Aug 4, 2026, v1.6.0 Jun 18, 2026. npm @base-ui/react 1.8.0 (2026-09-04); @base-ui-components/react \"Package was renamed to @base-ui/react\" uyarısıyla deprecated. shadcn/ui birebir: \"Base UI is the default component library in shadcn/ui\", \"It's at 1.6.0 with 6M+ weekly downloads\", \"pick Base UI over Radix 2 to 1\", \"Radix is not being deprecated\", pnpm dlx shadcn init -b radix. GitHub 11072 yıldız (iddia 11069), son commit 2026-10-05, açık 324 issue + 123 PR = 447, 30 günde açılan 42, kapanan 35. Açık soru yanıtı: date-fns ve @date-fns/tz peerDependenciesMeta da optional.",
+   "url_checked": "https://base-ui.com/react/overview/releases"
+  },
+  {
+   "finding": "R12-F25",
+   "verdict": "doğrulandı",
+   "note": "radix-ui latest 1.6.7 (2026-07-24), react-aria-components latest 1.21.1 (2026-09-04), iki peer aralığı birebir. radix: 19360 yıldız, son commit 2026-10-05 (commits.atom), açık 208 issue + 158 PR = 366 (iddia 365, bir günlük fark). react-spectrum: 15916 yıldız, son commit 2026-10-03; açık sayı (613) yeniden ölçülemedi.",
+   "url_checked": "https://registry.npmjs.org/radix-ui"
+  },
+  {
+   "finding": "R12-F26",
+   "verdict": "doğrulandı",
+   "note": "lottie-react-native latest 7.5.0 ve next 8.0.0-rc.0 (2026-08-22), peer react \">=19.2\", react-native \">=0.84\"; rive-react-native 9.8.5 (2026-07-17); @rive-app/react-native 0.5.2 (2026-10-03), peer react-native-nitro-modules \">=0.35.10 <0.37\"; skia latest 2.14.0 (2026-10-01), Expo sabiti 2.6.2; Expo listesinde rive paketleri yok, react-native-svg 15.15.4 var. Yıldız ve son commit tarihleri birebir (lottie 17207 ve 2026-08-22, rive 785 ve 2026-09-10, rive nitro 154 ve 2026-10-05, skia 8656); Skia nın son commit tarihi Atom akışından okunamadı.",
+   "url_checked": "https://registry.npmjs.org/lottie-react-native"
+  },
+  {
+   "finding": "R12-F27",
+   "verdict": "doğrulandı",
+   "note": "Belge birebir: Android de \"Vibrator system service\", iOS 10+ Taptic Engine, web de Web Vibration API; VIBRATE izni otomatik; \"Android's Vibrator API is not recommended for implementing haptics feedback\", performAndroidHapticsAsync \"similar to iOS haptic feedback and does not require VIBRATE permission\"; AndroidHaptics.Confirm = \"confirm\" açıklaması birebir; Expo sabiti ~57.0.3. Eksik koşul: iOS ta Taptic Engine Low Power Mode ve ayardan kapatmanın yanında \"iOS Camera is active\" ve dikte açıkken de hiçbir şey yapmıyor.",
+   "url_checked": "https://docs.expo.dev/versions/v57.0.0/sdk/haptics.md"
+  },
+  {
+   "finding": "R12-F28",
+   "verdict": "doğrulandı",
+   "note": "Belge birebir: \"using the expo-font config plugin (recommended for Android and iOS)\", gömme \"more efficient than useFonts or loadAsync\", Android fontDefinitions örneği weight 800, Android'de dosya adının aile adı olduğu, iOS'ta aile adının her zaman yazı tipi dosyasından alındığı ('On Android, the file name becomes the font family name'), örnek kodda \"Use useFonts only if you can't use the config plugin\". Expo sabiti ~57.0.4.",
+   "url_checked": "https://docs.expo.dev/versions/v57.0.0/sdk/font.md"
+  },
+  {
+   "finding": "R12-F29",
+   "verdict": "doğrulandı",
+   "note": "Belge birebir: \"WOFF2 compresses 30% better than WOFF\", \"experts now recommend only using WOFF2\", \"Performance: Use font-display: optional\", \"Quickly display text and still use a web-font: Use font-display: swap\"; beş değer auto, block, swap, fallback, optional. npm @fontsource-variable/inter 5.3.0 (2026-07-19); GitHub 6168 yıldız, son commit 2026-10-05.",
+   "url_checked": "https://web.dev/articles/font-best-practices"
+  }
+ ],
+ "signals_checked": [],
+ "benchmarks_checked": [],
+ "recommendation_issues": [
+  {
+   "recommendation": "R12-K06",
+   "issue": "Expo haptics belgesine göre iOS ta Taptic Engine \"iOS Camera is active\" iken hiçbir şey yapmıyor. Öğrenci QR ı expo-camera ile okuduğu anda kamera hâlâ açıksa notificationAsync ile verilen onay iOS ta hissedilmez. Öneri, dokunsal onayın kamera kapandıktan sonra (başarı ekranına geçişte) verileceğini ya da iOS ta yalnız ekrandaki onaya güvenileceğini açıkça yazmalı."
+  },
+  {
+   "recommendation": "R12-K03",
+   "issue": "Yay alanı \"duration (ms)\" olarak yazılmış, ama Reanimated withSpring duration değeri algısal süre: \"Actual duration is 1.5 times the value of perceptual duration\" (550 yazılınca yaklaşık 825 ms). Yay süresi panelde gerçek süre olarak okunan DTCG duration tokenlarıyla paylaşılırsa telefondaki hareket 1.5 kat uzun sürer; yay tokenının adı ve açıklaması bunu belirtmeli, duration tokenlarına takma ad yapılmamalı."
+  },
+  {
+   "recommendation": "R12-K03",
+   "issue": "\"spesifikasyon örneği org.example.toolname\" notu yanlış: DTCG 2025.10 örneğindeki anahtarlar \"org.example.tool-a\" ve \"org.example.tool-b\"; ters alan adı önerisi doğru."
+  },
+  {
+   "recommendation": "R12-K04",
+   "issue": "Unistyles için \"react-native-nitro-modules ve react-native-edge-to-edge bağımlılığı getiriyor\" gerekçesi yarı yanlış: 3.5.0 da react-native-edge-to-edge ve react-native-reanimated optional peer, zorunlu ek yerel paket yalnız react-native-nitro-modules (bir de JS paketi @react-native/normalize-colors). Sıralama değişmeyebilir ama gerekçe düzeltilmeli."
+  },
+  {
+   "recommendation": "R12-K10",
+   "issue": "\"eski paket npm de kaldırılmış\" notu yanlış: @base-ui-components/react npm de duruyor, \"Package was renamed to @base-ui/react\" uyarısıyla kullanımdan kaldırılmış (deprecated); not buna göre düzeltilmeli."
+  },
+  {
+   "recommendation": "R12-K07",
+   "issue": "Terrazzo için araştırmanın ölçemediği yanıt hızı ölçüldü: 2026-09-06 sonrası 15 issue açılmış, yalnız 1 kapanmış (açık 44 issue, 24 PR). K07 nin gerekçesi bu bakım riskini yazmalı; Style Dictionary yedeği korunmalı ve telefon çıktısı ilk denemede doğrulanmalı."
+  }
+ ]
+}

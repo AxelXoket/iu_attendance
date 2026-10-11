@@ -1,0 +1,579 @@
+<section id="veritabani">
+  <h2>Veritabanı ve veri yaşam döngüsü <span class="tag mute">D12</span></h2>
+  <p>D12 veritabanının kendisini ve verinin ömrünü yönetir: PostgreSQL 18 kümesi ve kendi imajı, ayar dosyaları, roller ve şemalar, tek göç klasörünün kuralı ve CI denetimi, bağlantı havuzu ve işlem yardımcısı, nesil okuma, yedek, geri yükleme, saklama süresi işi ve test veritabanı. Alan tablosu tutmaz; yalnız göç defterinin (__drizzle_migrations), geri yükleme kayıtlarının ve saklama kanıtının sahibidir, tek ucu yöneticiye geri yüklemeleri listeler. Başka modül içe aktarmaz: modüller dış yüzünü çağırır ve saklama işleyicilerini ona kaydeder, bağlantı ayarlarını ve saati bileşim kökleri verir. Yedek ve geri yükleme işleri ana makinedeki zamanlayıcıyla pg-boss dışında çalışır, sonucunu D15'in okuduğu durum dosyasına yazar. Saklama süresi İÜ'den gelene kadar hiçbir kayıt silinmez: mekanizma baştan kurulur, süre ayarı boş kalır.</p>
+  <h3>Amaç ve sınırlar</h3>
+  <div class="rows">
+    <div class="row"><div class="k">Sahip olduğu</div><div>Üç tablo (<code>__drizzle_migrations</code>, <code>geri_yukleme_kayitlari</code>, <code>saklama_islemleri</code>), bir uç (<code>GET /v1/veritabani/yonetim/geri-yuklemeler</code>), sekiz iş. PostgreSQL kabı ve imajı, ayar dosyaları, roller, şemalar, kurulum adımı, tek göç klasörünün kuralı ve CI denetimi, havuz ve <code>islem</code>, nesil, yedek, geri yükleme, saklama mekanizması, test veritabanı ve sıfırlama.</div></div>
+    <div class="row"><div class="k">Sahip olmadığı</div><div>Alan tabloları ve onların göç içeriği (her göç alt klasörü adındaki modülün); <code>compose.yaml</code>, <code>apps/server/package.json</code> ve <code>/health/ready</code> (D15); <code>worker.ts</code> ve pgboss şeması (D14); giriş oturumları ve hesap silme akışı (D01); saklama süresinin kendisi (İÜ'nün cevabı).</div></div>
+    <div class="row"><div class="k">Konuşma yolu</div><div>D12 hiçbir modülü içe aktarmaz (<code>reads_from</code> boş). Modüller dış yüzünü çağırır ve saklama işleyicisini ona kaydeder; bağlantı ayarlarını ve saati bileşim kökleri verir. Uç rotası sözleşme dosyasından D13'ün rota tablosuna girer, eklentiyi <code>app.ts</code> kaydeder. Makine işlerinin sonucu D15'e durum dosyasıyla gider.</div></div>
+    <div class="row"><div class="k">Dayandığı kararlar</div><div><a href="teknik.html#veritabani">Veritabanı</a>, <a href="teknik.html#veritabani-donem-alani">Dönem alanı ve bağlantı havuzu</a>, <a href="teknik.html#veritabani-yedek">Yedek</a>, <a href="teknik.html#sunucu-mimari">Veritabanı erişimi ve göç akışı</a>, <a href="teknik.html#kod-veri-modeli">Veri modeli ve nesil</a>, <a href="teknik.html#testler-veritabani-sifirlama">Veritabanı sıfırlama</a>, <a href="teknik.html#altyapi-imaj">İmaj ve göç servisi</a>, <a href="plan.html#kararlar-hesap-silme">Hesap silme</a>, <a href="plan.html#gun-kenar-durumlar">Yedekten dönüş</a>, <a href="plan.html#teknoloji-olceklenme-yolu">Ölçeklenme yolu</a>.</div></div>
+  </div>
+  <details>
+    <summary>Dış yüz: contracts'taki altı giriş, yedi ek giriş ve sözleşme dosyası</summary>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Ad</th><th>İmza</th><th>Amaç</th></tr>
+      <tr><td>veritabani</td><td><code>veritabaniKur(ayar: VeritabaniAyari): Veritabani; interface VeritabaniAyari { adres: string; parola: string; rol: 'yoklama_api' | 'yoklama_isci' | 'yoklama_goc'; havuzBoyutu: number; havuzBeklemeMs?: number; uygulamaAdi: string; gocKlasoru?: string } interface Veritabani { islem: IslemYardimcisi; semaDurumu(): Promise&lt;SemaDurumu&gt;; kapat(): Promise&lt;void&gt; } type SemaDurumu = { hazir: boolean; neden: 'hazir' | 'ulasilamiyor' | 'geride' | 'nesil_belirsiz'; beklenenGoc: string; nesil: string | null }</code></td><td>Contracts'taki veritabani: bileşim kökü (server.ts, worker.ts, göç ve CLI girişleri) bir kez kurar, app.ts'e ve işlere parametre olarak verir. node-postgres havuzu ve Drizzle (casing snake_case); DATE ve TIME metin okunur; Drizzle istemcisi dışarı verilmez, her sorgu islem içinden geçer. semaDurumu D15'in /health/ready ucunun veritabanı yarısıdır.</td></tr>
+      <tr><td>islem</td><td><code>Veritabani.islem&lt;T&gt;(fn: (tx: Islem) =&gt; Promise&lt;T&gt;, secenek?: { saltOkunur?: boolean; zamanAsimiMs?: number; yenidenDene?: boolean }): Promise&lt;T&gt;</code></td><td>Contracts'taki islem(fn). READ COMMITTED işlem açar; saltOkunur'da BEGIN READ ONLY. zamanAsimiMs SET LOCAL statement_timeout verir: rol varsayılanının altına her işlemde inebilir, üstüne yalnız salt okunur işlemde ve en çok 20000 ms çıkar. 40P01 ve 40001'de fn'yi bir kez baştan çalıştırır. İşlemden çıkan veritabanı hatasını değer taşımayan VeritabaniHatasi'na çevirir (kod, SQLSTATE, kısıt, tablo). Dış yüzler tx'i parametre alır.</td></tr>
+      <tr><td>nesilOku</td><td><code>nesilOku(tx: Islem): Promise&lt;{ sistemKimligi: string; zamanCizelgesi: number; metin: string }&gt;</code></td><td>Veritabanı nesli: pg_control_system().system_identifier ve pg_control_checkpoint().timeline_id; zaman çizelgesi pg_walfile_name(pg_current_wal_lsn()) ile çapraz denetlenir, uyuşmazsa VERITABANI_NESIL_BELIRSIZ. D06 değişenler sorgusuyla aynı işlemde çağırır; metin '&lt;sistem&gt;.&lt;çizelge&gt;'. Yalnız birincil kümede çağrılır.</td></tr>
+      <tr><td>saklamaIsleyicisiKaydet</td><td><code>saklamaIsleyicisiKaydet(veriSinifi: string, isleyici: { islem: 'silme' | 'anonimlestirme'; oncekiSiniflar?: readonly string[]; partiIsle(b: { tx: Islem; sinirAni: Date; partiBoyutu: number }): Promise&lt;{ satirSayisi: number; donemId?: string; bitti: boolean }&gt; }): void</code></td><td>Modül saklama işleyicisini kendi kayıt işlevinde bildirir (işçide worker.ts'in çağırdığı modül kaydı). veriSinifi '&lt;modül&gt;.&lt;sınıf&gt;'; oncekiSiniflar bu sınıfa başvuran, önce işlenmesi gereken sınıflar. Aynı sınıfa farklı işleyici ya da bağımlılık döngüsü açılışta hata verir; aynı işleyicinin tekrar kaydı yok sayılır. İşleyici satırı kendi modülünün kodunda siler ya da anonimleştirir.</td></tr>
+      <tr><td>kisitAdi</td><td><code>kisitAdi(tablo: string, sutunlar: readonly string[], tur: 'pk' | 'fk' | 'uq' | 'ck' | 'idx'): string</code></td><td>Kısıt ve dizin adı &lt;tablo&gt;_&lt;sütunlar&gt;_&lt;tür&gt;; 63 baytı aşarsa gövde kısaltılır ve tam adın SHA-256 özetinin ilk 8 hanesi eklenir (&lt;gövde&gt;_&lt;özet&gt;_&lt;tür&gt;). Saf ve belirlenimci; tablo tanımında ve kısıt dalında aynı çağrı kullanılır.</td></tr>
+      <tr><td>testVeritabaniHazirla</td><td><code>testVeritabaniHazirla(secenek: { ustKullaniciAdresi: string; isciSayisi: number }): Promise&lt;void&gt;</code></td><td>Cucumber koordinatör kancasında bir kez (kanca dosyası D15'in): önceki koşudan kalan yoklama_test_* ve yoklama_sablon veritabanlarını WITH (FORCE) ile siler, şablonu db:migrate ile kurar, bağlantıyı kapatır, her işçiye yoklama_test_&lt;n&gt; kopyasını şablondan açar. postgres-test'e ulaşılamazsa VERITABANI_TEST_ULASILAMIYOR ve açık mesajla durur.</td></tr>
+      <tr><td>senaryoOncesiSifirla ve testVeritabaniAdi (ek, contracts listesine eklenir)</td><td><code>senaryoOncesiSifirla(gocAdresi: string): Promise&lt;void&gt;; testVeritabaniAdi(isciNo: number): string</code></td><td>Her senaryodan önce sahip rolle uygulama şemasındaki bütün tabloları tek TRUNCATE ... RESTART IDENTITY ile boşaltır, sütuna bağlı olmayan dizileri başa alır; drizzle ve pgboss şemalarına dokunmaz. İş kuyruğunu D15'in kancası D14 üzerinden deleteAllJobs ile temizler. testVeritabaniAdi işçi numarasından yoklama_test_&lt;n&gt; adını verir.</td></tr>
+      <tr><td>tabloYardimcilari (ek, contracts listesine eklenir)</td><td><code>tabloYardimcilari: { uygulama: PgSchema&lt;'uygulama'&gt;; kimlik(): PgUUIDBuilder; an(ad: string): PgTimestampBuilder; gun(ad: string): PgDateStringBuilder; saat(ad: string): PgTimeBuilder; durumKisiti(tablo: string, sutun: string, degerler: readonly string[]): CheckBuilder }</code></td><td>Her modülün tablolar.ts dosyası tabloyu uygulama şemasında ve ortak sütun kurallarıyla tanımlar: kimlik uuid ve uuidv7(), an timestamptz(3) mode date, gün date mode string, saat time mode string, durum CHECK'i sözleşme listesinden ve kisitAdi adıyla. durumKisiti listeyi şema testinin karşılaştıracağı kayda da yazar.</td></tr>
+      <tr><td>kisitIhlali (ek, contracts listesine eklenir)</td><td><code>kisitIhlali(hata: unknown): { sqlstate: string; kisit: string | null; tablo: string | null } | null</code></td><td>Drizzle'ın sardığı pg hatasından SQLSTATE, kısıt ve tablo adını çıkarır; SAVEPOINT yolunda hangi kısıta takıldığını bulmak için (D05). Değer döndürmez.</td></tr>
+      <tr><td>danismaKilidi (ek, contracts listesine eklenir)</td><td><code>danismaKilidi(tx: Islem, anahtarlar: readonly string[]): Promise&lt;void&gt;</code></td><td>Anahtarları sıralayıp her biri için pg_advisory_xact_lock(hashtextextended(anahtar, 0)) alır: sayaç ve en çok N kurallarında kilitlenmeyi önleyen sabit sıra. Anahtar biçimi '&lt;modül&gt;:&lt;kural&gt;:&lt;iç kimlikler&gt;'; numara ya da isim taşımaz.</td></tr>
+      <tr><td>veritabaniEklentisi (ek: uç sahibi her modül gibi)</td><td><code>veritabaniEklentisi: FastifyPluginAsync&lt;{ veritabani: Veritabani }&gt;</code></td><td>GET /v1/veritabani/yonetim/geri-yuklemeler rotasını sözleşmedeki rota listesinden kaydeder; app.ts /v1/veritabani önekiyle bir kez kaydeder.</td></tr>
+      <tr><td>veritabaniIsleri (ek: jobs/veritabani/index.ts)</td><td><code>veritabaniIsleri(bag: { veritabani: Veritabani; simdi: () =&gt; Date }): Array&lt;{ ad: 'saklama_suresi_isi' | 'donem_bolumu_denetimi'; cron: string; saatDilimi: 'Europe/Istanbul'; kacirilan: 'once'; isle(b: { isKimligi: string }): Promise&lt;void&gt; }&gt;</code></td><td>worker.ts toplar ve D14'ün isTanimla'sına uyarlar. Makine işleri (yedekler, deneme) pg-boss'ta değildir, burada yoktur.</td></tr>
+      <tr><td>Sözleşme dosyası (packages/contracts/src/veritabani.ts)</td><td><code>export const veritabaniRotalari: RotaTanimi[]; export const VERITABANI_HATA_KODLARI: Record&lt;VeritabaniHataKodu, { http: 400 | 503 | null }&gt;; export const GeriYuklemeListesiIstegi, GeriYuklemeListesiCevabi, YedekIsDurumu: z.ZodType; export const GERI_YUKLEME_YONTEMLERI, GERI_YUKLEME_GEREKCELERI, SAKLAMA_ISLEMLERI: readonly string[]</code></td><td>Uç şemaları ve rota beyanı (D13 birleştirir), hata kodları ve HTTP durumları (D13'ün kataloğu birleştirir; http null olanlar işletim kodudur), D15'in okuduğu yedek durum dosyasının şeması, CHECK listelerinin tek kaynağı.</td></tr>
+    </table></div>
+  </details>
+  <details>
+    <summary>Dosyalar: 82 dosya, hepsi D12'nin klasörlerinde</summary>
+    <ul>
+      <li><code>packages/contracts/src/veritabani.ts</code></li>
+      <li><code>apps/server/drizzle.config.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/index.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/baglanti.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/islem.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/hata.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/nesil.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/sema-durumu.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/kisit-adi.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/kilit.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/tablo-yardimcilari.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/tablolar.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/saklama/kayit.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/saklama/sureler.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/saklama/calistir.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/bolum/denetim.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/geri-yukleme/servis.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/geri-yukleme/eklenti.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/goc/calistir.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/goc/kurulum.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/goc/es-zamanli-dizin.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/goc/denetim.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/goc/tablo-haritasi.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/goc/ayarlar.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/goc/squawk.toml</code></li>
+      <li><code>apps/server/src/infra/veritabani/kisit-adi.test.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/nesil.test.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/saklama/kayit.test.ts</code></li>
+      <li><code>apps/server/src/infra/veritabani/goc/denetim.test.ts</code></li>
+      <li><code>apps/server/src/jobs/veritabani/index.ts</code></li>
+      <li><code>apps/server/src/jobs/veritabani/saklama-suresi.ts</code></li>
+      <li><code>apps/server/src/jobs/veritabani/donem-bolumu.ts</code></li>
+      <li><code>apps/server/src/cli/geri-yukleme.ts</code></li>
+      <li><code>apps/server/migrations/&lt;UTC zaman&gt;_veritabani_baslangic/migration.sql</code></li>
+      <li><code>apps/server/migrations/&lt;UTC zaman&gt;_veritabani_baslangic/snapshot.json</code></li>
+      <li><code>apps/server/migrations/&lt;UTC zaman&gt;_veritabani_islevler/migration.sql</code></li>
+      <li><code>apps/server/migrations/&lt;UTC zaman&gt;_veritabani_islevler/snapshot.json</code></li>
+      <li><code>apps/server/test/support/sifirlama.ts</code></li>
+      <li><code>apps/server/test/features/veritabani/sema-kurallari.feature</code></li>
+      <li><code>apps/server/test/features/veritabani/yetkiler.feature</code></li>
+      <li><code>apps/server/test/features/veritabani/goc-akisi.feature</code></li>
+      <li><code>apps/server/test/features/veritabani/goc-denetimi.feature</code></li>
+      <li><code>apps/server/test/features/veritabani/islem-ve-havuz.feature</code></li>
+      <li><code>apps/server/test/features/veritabani/nesil-ve-hazirlik.feature</code></li>
+      <li><code>apps/server/test/features/veritabani/zaman-tipleri.feature</code></li>
+      <li><code>apps/server/test/features/veritabani/saklama.feature</code></li>
+      <li><code>apps/server/test/features/veritabani/geri-yuklemeler-ucu.feature</code></li>
+      <li><code>apps/server/test/features/veritabani/test-sifirlama.feature</code></li>
+      <li><code>apps/server/test/features/veritabani/log-gizliligi.feature</code></li>
+      <li><code>apps/server/test/steps/veritabani/sema.adimlari.ts</code></li>
+      <li><code>apps/server/test/steps/veritabani/goc.adimlari.ts</code></li>
+      <li><code>apps/server/test/steps/veritabani/islem.adimlari.ts</code></li>
+      <li><code>apps/server/test/steps/veritabani/saklama.adimlari.ts</code></li>
+      <li><code>apps/server/test/steps/veritabani/geri-yukleme.adimlari.ts</code></li>
+      <li><code>apps/server/test/steps/veritabani/sifirlama.adimlari.ts</code></li>
+      <li><code>docker/postgres/Dockerfile</code></li>
+      <li><code>docker/postgres/compose.yaml</code></li>
+      <li><code>docker/postgres/postgresql.conf</code></li>
+      <li><code>docker/postgres/pg_hba.conf</code></li>
+      <li><code>docker/postgres/pgbackrest.conf</code></li>
+      <li><code>docker/postgres/.gitignore</code></li>
+      <li><code>docker/postgres/gelistirme-gizli-uret.sh</code></li>
+      <li><code>docker/postgres/surum-denetimi.sh</code></li>
+      <li><code>docker/postgres/geri-yukleme-kilavuzu.md</code></li>
+      <li><code>docker/postgres/yedek/ortak.sh</code></li>
+      <li><code>docker/postgres/yedek/pgbackrest.sh</code></li>
+      <li><code>docker/postgres/yedek/gecelik-dokum.sh</code></li>
+      <li><code>docker/postgres/yedek/geri-yukle.sh</code></li>
+      <li><code>docker/postgres/yedek/geri-yukleme-denemesi.sh</code></li>
+      <li><code>docker/postgres/yedek/compose.deneme.yaml</code></li>
+      <li><code>docker/postgres/yedek/yedek.env.ornek</code></li>
+      <li><code>docker/postgres/zamanlayici/iu-yoklama-pgbackrest-tam.service</code></li>
+      <li><code>docker/postgres/zamanlayici/iu-yoklama-pgbackrest-tam.timer</code></li>
+      <li><code>docker/postgres/zamanlayici/iu-yoklama-pgbackrest-fark.service</code></li>
+      <li><code>docker/postgres/zamanlayici/iu-yoklama-pgbackrest-fark.timer</code></li>
+      <li><code>docker/postgres/zamanlayici/iu-yoklama-pgbackrest-dogrulama.service</code></li>
+      <li><code>docker/postgres/zamanlayici/iu-yoklama-pgbackrest-dogrulama.timer</code></li>
+      <li><code>docker/postgres/zamanlayici/iu-yoklama-dokum.service</code></li>
+      <li><code>docker/postgres/zamanlayici/iu-yoklama-dokum.timer</code></li>
+      <li><code>docker/postgres/zamanlayici/iu-yoklama-geri-yukleme-denemesi.service</code></li>
+      <li><code>docker/postgres/zamanlayici/iu-yoklama-geri-yukleme-denemesi.timer</code></li>
+      <li><code>docker/postgres/zamanlayici/kur.sh</code></li>
+    </ul>
+  </details>
+  <h3>Tablolar</h3>
+  <p>Üçü de alan tablosu değildir. Göç defteri drizzle şemasında, öbür ikisi uygulama şemasındadır; ikisi de <code>@yalniz-ekleme</code> işaretlidir ve hiç silinmez.</p>
+  <details>
+    <summary>__drizzle_migrations: Drizzle'ın göç defteri, D12 yalnız okur</summary>
+    <p>Drizzle'ın uygulanan göç defteri; drizzle şemasında durur. Satırı yalnız Drizzle'ın göç çalıştırıcısı yazar (göç servisi, yoklama_goc rolüyle); D12 kodu yalnız okur: semaDurumu imajdaki son göçün özetini burada arar. Test sıfırlaması dokunmaz; ad kuralının tek istisnasıdır (kütüphane tablosu).</p>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Sütun</th><th>Tip</th><th>Boş olabilir</th><th>Varsayılan</th><th>Not</th></tr>
+      <tr><td><code>id</code></td><td><code>integer</code></td><td>hayır</td><td><code>nextval (serial)</code></td><td>Drizzle'ın serial birincil anahtarı; uygulanma sırası.</td></tr>
+      <tr><td><code>hash</code></td><td><code>text</code></td><td>hayır</td><td></td><td>Göç dosyasının SHA-256 özeti; Drizzle hesaplar. semaDurumu imajdaki son göçün özetini bu sütunda arar.</td></tr>
+      <tr><td><code>created_at</code></td><td><code>bigint</code></td><td>evet</td><td></td><td>Göç klasörünün zaman önekinden gelen milisaniye (folderMillis); Drizzle yazar.</td></tr>
+    </table></div>
+    <p>Dizinler:</p>
+    <ul>
+      <li>__drizzle_migrations_pkey: birincil anahtar dizini (adı PostgreSQL verir; kisitAdi kuralı dışında).</li>
+    </ul>
+    <p>Kısıtlar ve yetkiler:</p>
+    <ul>
+      <li>PRIMARY KEY (id).</li>
+      <li>Şemayı Drizzle belirler; 1.0 RC ek sütun getirirse defter olduğu gibi kabul edilir, D12 yalnız hash ve created_at okur.</li>
+      <li>Yetki: yoklama_api ve yoklama_isci yalnız SELECT (hazırlık denetimi); yazma yalnız yoklama_goc.</li>
+    </ul>
+  </details>
+  <details>
+    <summary>geri_yukleme_kayitlari: her gerçek dönüşün yöntemi, kayıp penceresi ve nesli</summary>
+    <p>Her gerçek geri yüklemenin ve nesli değiştiren büyük sürüm geçişinin kaydı: yöntem, gerekçe kodu, dönülen an, kayıp pencerenin sonu, önceki ve yeni nesil, süre. Satırı geri yükleme komutu (cli/geri-yukleme, yoklama_goc) dönüş doğrulandıktan sonra yazar; yönetici ucu listeler. Geri yükleme denemeleri buraya yazılmaz.</p>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Sütun</th><th>Tip</th><th>Boş olabilir</th><th>Varsayılan</th><th>Not</th></tr>
+      <tr><td><code>id</code></td><td><code>uuid</code></td><td>hayır</td><td><code>uuidv7()</code></td><td>Birincil anahtar; sunucu üretir.</td></tr>
+      <tr><td><code>yontem</code></td><td><code>text</code></td><td>hayır</td><td></td><td>pitr (pgBackRest ile zaman hedefli dönüş), dokum (pg_dump'tan yeni initdb kümesine), surum_gecisi (büyük sürüm geçişi); CHECK.</td></tr>
+      <tr><td><code>gerekce_kodu</code></td><td><code>text</code></td><td>hayır</td><td></td><td>donanim_arizasi, veri_bozulmasi, yanlis_islem, guvenlik_olayi, surum_gecisi, diger; CHECK. Serbest metin yok, kişisel veri girmesin diye.</td></tr>
+      <tr><td><code>hedef_ani</code></td><td><code>timestamptz(3)</code></td><td>hayır</td><td></td><td>Veritabanının döndürüldüğü an, kayıp pencerenin başı: PITR'de hedef an, dökümde dökümün başlama anı.</td></tr>
+      <tr><td><code>kayip_pencere_sonu</code></td><td><code>timestamptz(3)</code></td><td>hayır</td><td></td><td>Eski kümenin yazma kabul ettiği son an (olay anı); hedef_ani ile bu an arasında sunucuya yazılan her şey kayıptır. surum_gecisi'nde hedef_ani ile aynı.</td></tr>
+      <tr><td><code>yapilma_ani</code></td><td><code>timestamptz(3)</code></td><td>hayır</td><td></td><td>Satırın yazıldığı an; komut sunucunun NTP ile eşitlenen saatinden alır (kural taşımaz).</td></tr>
+      <tr><td><code>onceki_nesil</code></td><td><code>text</code></td><td>hayır</td><td></td><td>Dönüşten önceki nesil, '&lt;system_identifier&gt;.&lt;timeline_id&gt;' biçiminde metin.</td></tr>
+      <tr><td><code>yeni_nesil</code></td><td><code>text</code></td><td>hayır</td><td></td><td>Dönüşten sonraki nesil; nesilOku ile okunur.</td></tr>
+      <tr><td><code>sure_ms</code></td><td><code>integer</code></td><td>hayır</td><td></td><td>Trafiğin kapatıldığı andan açıldığı ana kadar geçen süre: ölçülen kurtarma süresi.</td></tr>
+    </table></div>
+    <p>Dizinler:</p>
+    <ul>
+      <li>geri_yukleme_kayitlari_id_pk: birincil anahtar dizini. Tablo çok küçük (yılda birkaç satır), ek dizin yok.</li>
+    </ul>
+    <p>Kısıtlar ve yetkiler:</p>
+    <ul>
+      <li>geri_yukleme_kayitlari_id_pk: PRIMARY KEY (id).</li>
+      <li>geri_yukleme_kayitlari_yontem_ck: yontem IN ('pitr','dokum','surum_gecisi').</li>
+      <li>geri_yukleme_kayitlari_gerekce_kodu_ck: gerekce_kodu IN ('donanim_arizasi','veri_bozulmasi','yanlis_islem','guvenlik_olayi','surum_gecisi','diger').</li>
+      <li>geri_yukleme_kayitlari_kayip_pencere_sonu_ck: kayip_pencere_sonu &gt;= hedef_ani.</li>
+      <li>geri_yukleme_kayitlari_onceki_nesil_ck ve geri_yukleme_kayitlari_yeni_nesil_ck: değer ~ '^[0-9]{1,20}[.][0-9]{1,10}$'.</li>
+      <li>geri_yukleme_kayitlari_onceki_nesil_yeni_nesil_ck: yeni_nesil &lt;&gt; onceki_nesil; nesil değişmeden dönüş kaydedilemez.</li>
+      <li>geri_yukleme_kayitlari_sure_ms_ck: sure_ms &gt;= 0.</li>
+      <li>Yetki: yoklama_api ve yoklama_isci yalnız SELECT; yazma yalnız yoklama_goc. Tablo yorumu @yalniz-ekleme.</li>
+    </ul>
+  </details>
+  <details>
+    <summary>saklama_islemleri: saklama süresi işinin silinmeyen kanıtı</summary>
+    <p>Saklama süresi işinin kanıtı: hangi veri sınıfında, hangi sınırla, hangi dönemde, kaç satır silindi ya da anonimleştirildi. Satırı yalnız saklama_suresi_isi yazar, işleyicinin partisiyle aynı işlemde ve yoklama_saklama rolüyle. Denetim kaydı da saklama kapsamında silinebildiğinden kanıt ayrı tabloda durur ve hiç silinmez.</p>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Sütun</th><th>Tip</th><th>Boş olabilir</th><th>Varsayılan</th><th>Not</th></tr>
+      <tr><td><code>id</code></td><td><code>uuid</code></td><td>hayır</td><td><code>uuidv7()</code></td><td>Birincil anahtar.</td></tr>
+      <tr><td><code>is_kimligi</code></td><td><code>uuid</code></td><td>hayır</td><td></td><td>pg-boss iş kimliği; aynı gecenin partilerini bağlar, yeniden denemede kaldığı partiden sürmeyi sağlar.</td></tr>
+      <tr><td><code>veri_sinifi</code></td><td><code>text</code></td><td>hayır</td><td></td><td>'&lt;modül&gt;.&lt;sınıf&gt;' biçiminde kayıtlı veri sınıfı (ör. yoklama.yoklama_kayitlari); CHECK biçim.</td></tr>
+      <tr><td><code>islem</code></td><td><code>text</code></td><td>hayır</td><td></td><td>silme, anonimlestirme, bolum_kaldirma; CHECK.</td></tr>
+      <tr><td><code>donem_id</code></td><td><code>uuid</code></td><td>evet</td><td></td><td>İşleyicinin bildirdiği dönem; dönemsiz sınıfta boş. Yabancı anahtar yok: kanıt satırı dönem satırından bağımsız kalır, D12 başka modülün tablosuna bağlanmaz.</td></tr>
+      <tr><td><code>saklama_suresi_ay</code></td><td><code>integer</code></td><td>hayır</td><td></td><td>O gece uygulanan süre (ay), saklama/sureler.ts'teki değer.</td></tr>
+      <tr><td><code>sinir_ani</code></td><td><code>timestamptz(3)</code></td><td>hayır</td><td></td><td>Saklama başlangıcı bu andan önce olan veri işlendi; işin saatinden süre çıkarılarak hesaplanır.</td></tr>
+      <tr><td><code>parti_no</code></td><td><code>integer</code></td><td>hayır</td><td></td><td>Aynı iş ve sınıf içinde 1'den başlayan parti sırası.</td></tr>
+      <tr><td><code>satir_sayisi</code></td><td><code>bigint</code></td><td>hayır</td><td></td><td>Partide işlenen satır sayısı.</td></tr>
+      <tr><td><code>tamamlandi</code></td><td><code>boolean</code></td><td>hayır</td><td><code>false</code></td><td>Sınıfın o gecelik son partisi.</td></tr>
+      <tr><td><code>calisma_ani</code></td><td><code>timestamptz(3)</code></td><td>hayır</td><td></td><td>Partinin yazıldığı an; iş bağlamındaki saatten (D04'ün saati, worker.ts verir).</td></tr>
+    </table></div>
+    <p>Dizinler:</p>
+    <ul>
+      <li>saklama_islemleri_id_pk: birincil anahtar dizini.</li>
+      <li>saklama_islemleri_is_kimligi_veri_sinifi_parti_no_uq: tekil; yeniden denemede çift kanıtı önler.</li>
+    </ul>
+    <p>Kısıtlar ve yetkiler:</p>
+    <ul>
+      <li>saklama_islemleri_id_pk: PRIMARY KEY (id).</li>
+      <li>saklama_islemleri_veri_sinifi_ck: veri_sinifi ~ '^[a-z][a-z0-9_-]*[.][a-z][a-z0-9_]*$'.</li>
+      <li>saklama_islemleri_islem_ck: islem IN ('silme','anonimlestirme','bolum_kaldirma').</li>
+      <li>saklama_islemleri_saklama_suresi_ay_ck: saklama_suresi_ay &gt; 0.</li>
+      <li>saklama_islemleri_parti_no_ck: parti_no &gt;= 1.</li>
+      <li>saklama_islemleri_satir_sayisi_ck: satir_sayisi &gt;= 0.</li>
+      <li>Yetki: yoklama_saklama INSERT ve SELECT; yoklama_api ve yoklama_isci yalnız SELECT; UPDATE ve DELETE kimseye verilmez. Tablo yorumu @yalniz-ekleme.</li>
+    </ul>
+  </details>
+  <h3>Uç noktalar</h3>
+  <div class="rows">
+    <div class="row"><div class="k">GET /v1/veritabani/yonetim/geri-yuklemeler</div><div>İstemci panel. Panel oturumu (çerez) ve yönetici rolü; kapsam fark etmez, tüm ya da birim kapsamlı her yönetici görür. Rota tablosundaki beyan: kimlik oturum, roller [yonetici]; denetimi D13'ün kök kancası yapar.</div></div>
+    <div class="row"><div class="k">İstek</div><div><code>imlec</code>: metin, isteğe bağlı; opak base64url, en çok 200 karakter; bir önceki cevabın sonrakiImlec değeri. İçinde yapilma_ani ve id var, kişisel veri yok.<br><code>adet</code>: tam sayı, isteğe bağlı; 1 ile 500 arası, varsayılan 100 (D13'ün ortak sayfalama kuralı).</div></div>
+    <div class="row"><div class="k">Tekrar ve sınır</div><div>GET; yan etkisi yok. Okuma salt okunur işlemde yapılır (islem, saltOkunur). Girişli uç sınıfı: oturum başına dakikada 120 (D13'ün başlangıç değeri).</div></div>
+    <div class="row"><div class="k">Hatalar</div><div>VERITABANI_IMLEC_GECERSIZ (400): imleç çözülemedi ya da biçimi tutmuyor; 400: adet aralık dışı, D13 doğrulama zarfı; 401: oturum yok, kapanmış ya da süresi dolmuş; kök kanca, kodlar D01 ve D13 kataloğunda; 403: rol yönetici değil; kök kanca; 429: hız sınırı; D13; VERITABANI_HAVUZ_DOLU (503); VERITABANI_ZAMAN_ASIMI (503); VERITABANI_ERISILEMEZ (503).</div></div>
+  </div>
+  <details>
+    <summary>Cevap: yeniden eskiye geri yüklemeler ve sonraki sayfanın imleci</summary>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Alan</th><th>Tip</th></tr>
+      <tr><td><code>ogeler</code></td><td>GeriYukleme[]; yapilmaAni azalan, eşitlikte id azalan sırada.</td></tr>
+      <tr><td><code>ogeler[].id</code></td><td>uuid</td></tr>
+      <tr><td><code>ogeler[].yontem</code></td><td>genişleyen enum: pitr, dokum, surum_gecisi</td></tr>
+      <tr><td><code>ogeler[].gerekceKodu</code></td><td>genişleyen enum: donanim_arizasi, veri_bozulmasi, yanlis_islem, guvenlik_olayi, surum_gecisi, diger</td></tr>
+      <tr><td><code>ogeler[].hedefAni</code></td><td>UTC ISO 8601 metin, milisaniyeli ve Z ile; kayıp pencerenin başı</td></tr>
+      <tr><td><code>ogeler[].kayipPencereSonu</code></td><td>UTC ISO 8601 metin; hedefAni ile bu an arasında yapılan panel işleri kayıptır ve yeniden yapılır</td></tr>
+      <tr><td><code>ogeler[].yapilmaAni</code></td><td>UTC ISO 8601 metin</td></tr>
+      <tr><td><code>ogeler[].oncekiNesil</code></td><td>metin</td></tr>
+      <tr><td><code>ogeler[].yeniNesil</code></td><td>metin</td></tr>
+      <tr><td><code>ogeler[].sureMs</code></td><td>tam sayı</td></tr>
+      <tr><td><code>sonrakiImlec</code></td><td>metin ya da null</td></tr>
+    </table></div>
+  </details>
+  <h3>İşler</h3>
+  <p>Saatler Europe/Istanbul. İki iş pg-boss'ta, işçide çalışır; altısı makine işidir: ana makinedeki systemd zamanlayıcısıyla, tek kilitte sırayla, API ve işçi düşmüşken de çalışır ve sonucunu <code>/var/lib/iu-yoklama/durum/veritabani/&lt;iş&gt;.json</code> dosyasına yazar (şema <code>YedekIsDurumu</code>, D15 okur ve uyarır). 03:00 ile 04:00 arası boş kalır (D14-B05), modüllerin temizlik işleri 04:00 ile 05:00 arasındadır.</p>
+    <div style="overflow-x:auto"><table>
+      <tr><th>İş</th><th>Nerede</th><th>Ne zaman</th></tr>
+      <tr><td><code>saklama_suresi_isi</code></td><td>pg-boss, işçi</td><td>Her gece 04:45</td></tr>
+      <tr><td><code>gecelik_pg_dump</code></td><td>ana makine, systemd</td><td>Her gece 02:15</td></tr>
+      <tr><td><code>xprem_birimi_yedegi</code></td><td>ana makine, systemd</td><td>gecelik_pg_dump bitince</td></tr>
+      <tr><td><code>pgbackrest_tam_yedek</code></td><td>ana makine, systemd</td><td>Pazar 01:00</td></tr>
+      <tr><td><code>pgbackrest_fark_yedek</code></td><td>ana makine, systemd</td><td>Pazartesi ile cumartesi 01:00</td></tr>
+      <tr><td><code>pgbackrest_dogrulama</code></td><td>ana makine, systemd; yayın betiği</td><td>Çarşamba 01:30; her yayında</td></tr>
+      <tr><td><code>geri_yukleme_denemesi</code></td><td>ana makine, systemd; elle</td><td>Ayın ilk cumartesisi 05:30</td></tr>
+      <tr><td><code>donem_bolumu_denetimi</code></td><td>pg-boss, işçi</td><td>Her gece 04:50</td></tr>
+    </table></div>
+  <details>
+    <summary>Her işin ne yaptığı, tekrar kuralı ve zamanlaması</summary>
+    <div style="overflow-x:auto"><table>
+      <tr><th>İş</th><th>Ne yapar</th><th>Tekrar</th><th>Zamanlama</th></tr>
+      <tr><td><code>saklama_suresi_isi</code></td><td>saklama/sureler.ts'te süresi yazılı her veri sınıfı için kayıtlı işleyiciyi bağımlılık sırasıyla çalıştırır: bir sınıfa başvuran sınıflar önce işlenir. Her parti ayrı kısa işlemdir: işlem SET LOCAL ROLE yoklama_saklama ile başlar, işleyici en çok 1000 satırı siler ya da anonimleştirir, kanıt satırı aynı işlemde saklama_islemleri'ne yazılır. Süresi yazılı ama işleyicisi kayıtlı olmayan sınıfta iş VERITABANI_SAKLAMA_ISLEYICI_YOK ile düşer ve D15 uyarır. Bir gecede en çok 30 dakika çalışır, kalan ertesi gece o gecenin sınırıyla sürer.</td><td>Sınır anı o gecenin saatinden hesaplanır; silinmiş ya da anonimleştirilmiş satır bir daha bulunmaz. Aynı iş kimliğiyle yeniden denemede parti numarası kaldığı yerden sürer; (is_kimligi, veri_sinifi, parti_no) tekil.</td><td>Her gece 04:45 Europe/Istanbul; pg-boss zamanlaması, işçide, kaçırılırsa açılışta bir kez (missed: once). Süre ayarı boşken, yani bugün, hiçbir satıra dokunmaz.</td></tr>
+      <tr><td><code>gecelik_pg_dump</code></td><td>Disk ön denetiminden sonra PostgreSQL kabının içinde, yerel soketten postgres kullanıcısıyla pg_dump -Fc ile yoklama ve xprem veritabanlarını, pg_dumpall --globals-only --no-role-passwords ile rolleri döker; her dosyayı pg_restore --list ile okur, nesli ve başlama anını yanına yazar; restic ile şifreli depoya gönderir (etiket dokum), forget --keep-daily 35 uygular (pazar günleri prune), yerel dosyaları siler ve sonucu durum dosyasına yazar. Yer yetmezse VERITABANI_YEDEK_DISK_YETERSIZ, döküm ya da gönderim hatasında VERITABANI_YEDEK_BASARISIZ.</td><td>Bütün makine işleri tek kilitte (flock) sırayla çalışır; döküm adı tarihlidir, aynı gün ikinci çalıştırma yeni restic anlık görüntüsü açar, öncekini bozmaz; 35 günlük saklama kuralı her çalıştırmada aynı sonucu verir.</td><td>Her gece 02:15 Europe/Istanbul; ana makinedeki systemd zamanlayıcısı (iu-yoklama-dokum.timer, Persistent=true), pg-boss dışında: API ve işçi düşmüşken de çalışır.</td></tr>
+      <tr><td><code>xprem_birimi_yedegi</code></td><td>xprem'in güncelleme dosyalarını tutan Compose birimini salt okunur bağlayıp aynı şifreli restic deposuna yedekler (etiket xprem), 35 gün saklar, sonucu durum dosyasına yazar. xprem veritabanı gecelik_pg_dump'ta ve pgBackRest'te zaten var.</td><td>restic içeriği tekilleştirir; değişmeyen dosya yeniden gönderilmez, aynı gece ikinci çalıştırma zararsızdır.</td><td>Her gece gecelik_pg_dump bitince aynı çalıştırmada (02:15 zinciri); döküm başarısız olsa da çalışır.</td></tr>
+      <tr><td><code>pgbackrest_tam_yedek</code></td><td>PostgreSQL kabında pgbackrest --stanza=yoklama --type=full backup çalıştırır (start-fast); pgBackRest ardından süresi dolan yedekleri ve WAL'ı kendisi siler. Üç tam yedek tutulur: PITR penceresi en az 14 gün. Sonuç durum dosyasına.</td><td>pgBackRest kendi kilidiyle tek yedek alır; aynı gün ikinci tam yedek zararsızdır, repo1-retention-full=3 fazlasını siler.</td><td>Pazar 01:00 Europe/Istanbul; systemd zamanlayıcısı (iu-yoklama-pgbackrest-tam.timer, Persistent=true).</td></tr>
+      <tr><td><code>pgbackrest_fark_yedek</code></td><td>Son tam yedekten bu yana fark yedeği (--type=diff); sonuç durum dosyasına.</td><td>Tam yedekle aynı kilit; önceki tam yedek yoksa pgBackRest kendiliğinden tam yedek alır.</td><td>Pazartesi ile cumartesi arası her gece 01:00 Europe/Istanbul; systemd zamanlayıcısı (iu-yoklama-pgbackrest-fark.timer).</td></tr>
+      <tr><td><code>pgbackrest_dogrulama</code></td><td>pgbackrest verify ile depodaki yedek ve WAL dosyalarının bütünlüğünü, pgbackrest check ile arşivin şu an çalıştığını denetler; hata VERITABANI_YEDEK_DOGRULAMA_BASARISIZ olarak durum dosyasına yazılır, D15 uyarır.</td><td>Salt okur; tekrar çalışması zararsızdır.</td><td>Çarşamba 01:30 Europe/Istanbul (fark yedeği sürüyorsa kilitte bekler); ayrıca her sunucu yayınında D15'in yayın betiği docker/postgres/yedek/pgbackrest.sh denetle komutunu çağırır.</td></tr>
+      <tr><td><code>geri_yukleme_denemesi</code></td><td>(1) Dün geceki dökümün başlama anına pgBackRest ile PITR dönüşü yapar ve aynı dökümü yeni initdb kümesine yükler; ikisinin süresini ölçer. (2) İki kümede neslin üretimden farklı olduğunu, pg_amcheck'in temiz geçtiğini ve tablo satır sayılarının uyuştuğunu denetler (tablo başına fark en çok 10 satır; farklar raporlanır). (3) PITR kümesinde bir API açar; yonetici-ekle ile açılan personel hesabına geçici posta kutusundan (Mailpit) gelen kodla D01'in uçlarından telefon oturumu açıp D06'nın indirme ucundan imleç alır; kümeyi pg_dump ile yeni bir initdb kümesine taşır, aynı oturum ve eski imleçle indirmenin baştan indir döndüğünü görür. (4) xprem birimini ve veritabanını geri getirip bir güncellemenin indiğini dener. (5) Raporu tarihli dosyaya, sonucu durum dosyasına yazar, projeyi siler. Uyuşmazlık VERITABANI_DENEME_UYUSMAZLIK.</td><td>Her deneme kendi Compose projesini (iu-yoklama-deneme), birimlerini ve ağını açar, sonunda siler. Üretim kümesine ve yedek deposuna yazmaz: deneme kümeleri archive_mode=off ile açılır.</td><td>Ayın ilk cumartesisi 05:30 Europe/Istanbul, her PostgreSQL büyük sürüm geçişinden önce ve elle. Hazırlık makinesi varsa orada (D15-B13), yoksa üretim makinesinde ayrı Compose projesinde; boş disk dökümün iki katı artı 10 GB değilse atlanır.</td></tr>
+      <tr><td><code>donem_bolumu_denetimi</code></td><td>uygulama şemasındaki bölünmüş tabloları katalogdan bulur; her birinin varsayılan bölümü boş olmalıdır, doluysa VERITABANI_BOLUM_VARSAYILAN_DOLU ile düşer ve D15 uyarır. Bölme yapıldığında yeni dönem bölümü dönem açılırken açılır (D12-B14); bu iş eksik kalan bölümü yakalayan güvenlik ağıdır.</td><td>Salt okur; aynı gece ikinci çalışma aynı sonucu verir.</td><td>Her gece 04:50 Europe/Istanbul; pg-boss, işçide, missed: once. Bölünmüş tablo yokken, yani bugün, hiçbir şey yapmaz.</td></tr>
+    </table></div>
+  </details>
+  <h3>Durumlar ve kurallar</h3>
+  <div class="rows">
+    <div class="row"><div class="k">PostgreSQL kabı</div><div>PostgreSQL 18.6, kendi imajı <code>iu-attendance-postgres:18.6-pgbackrest2.59.3</code> (<a href="teknik.html#veritabani-yedek">Yedek</a>). Servis tanımları D12'nin Compose parçasında: <code>docker/postgres/compose.yaml</code>; D15'in <code>compose.yaml</code> dosyası onu <code>include</code> ile bir kez alır, API, işçi, göç servisi ve xprem <code>veritabani</code> ağına katılır. Veri birimi <code>/var/lib/postgresql</code> yoluna bağlanır, adı <code>IU_POSTGRES_BIRIMI</code> değişkeninden gelir (döküm dönüşü yeni birim açar). initdb builtin C.UTF-8 (<a href="teknik.html#veritabani-donem-alani">Zaman ve sıralama</a>).</div></div>
+    <div class="row"><div class="k">Şemalar ve roller</div><div>Şemalar <code>uygulama</code>, <code>drizzle</code>, <code>pgboss</code>. Rolleri, veritabanlarını, eklentiyi ve varsayılan yetkileri kurulum adımı açar; parolalar Compose sırrıyla yalnız gereken servise (<a href="teknik.html#sunucu-ayarlar">Ayarlar</a>). Ayrıntı aşağıdaki tabloda.</div></div>
+    <div class="row"><div class="k">Ad ve sütun kuralları</div><div>Bağlayıcı ad kuralı; kısıt ve dizin adını yalnız <code>kisitAdi</code> verir. Kimlik <code>uuid</code> ve <code>uuidv7()</code>, an <code>timestamptz(3)</code>, gün <code>date</code>, saat <code>time</code>; durum metin ve adlı CHECK; etiket ayrı evet/hayır sütunu (<a href="teknik.html#sunucu-mimari">Veritabanı erişimi</a>, <a href="teknik.html#veritabani">Kısıtlar</a>). Yaşam sütunları <code>silinme_ani</code>, <code>pasif_ani</code>, <code>arsiv_ani</code>; kısmi dizin koşulu IS NULL. Yorum işaretleri <code>@yalniz-ekleme</code>, <code>@istemci-kimligi</code>, <code>@donem-bolunebilir</code>, <code>@dizinsiz-kabul</code>; şema testi bunlara bakar, ortak liste yok.</div></div>
+    <div class="row"><div class="k">Zaman</div><div>Sunucu ve roller UTC; an milisaniye hassasiyetli ve değeri saat arayüzünden gelir, kural için SQL <code>now()</code> yok; gün ve saat metin okunur; İstanbul gün sınırı SQL'de açık <code>AT TIME ZONE 'Europe/Istanbul'</code> ile; Türkçe sıralama yalnız sorguda ve dizinsiz (<a href="teknik.html#testler-veritabani-sifirlama">Saat ve sahteler</a>).</div></div>
+    <div class="row"><div class="k">İşlem ve hata</div><div>Her sorgu <code>islem</code> içinden geçer; READ COMMITTED; sayaç kurallarında <code>danismaKilidi</code> (sıralı anahtar); kilitlenmede tek yeniden deneme; dış yüz tx alır (<a href="teknik.html#sunucu-mimari">Mimari</a>). Havuz beklemesi 2 saniye, sonra 503. İşlemden çıkan hata yalnız SQLSTATE, kısıt ve tablo taşır; PostgreSQL logu terse ve parametresizdir (<a href="teknik.html#sunucu-ayarlar">Loglar</a>).</div></div>
+    <div class="row"><div class="k">Göç akışı</div><div>Tek klasör <code>apps/server/migrations/</code>; her göç <code>&lt;UTC zaman&gt;_&lt;modül&gt;_&lt;açıklama&gt;/</code> altında <code>migration.sql</code>, <code>snapshot.json</code> ve gerekirse <code>oncesi-concurrently.sql</code>. <code>db:migrate</code>: önce D12'nin <code>veritabani:goc</code> adımı (kurulum, CONCURRENTLY dizinler, Drizzle göçleri), sonra D14'ün pg-boss migrate ve kuyruk adımı; göç servisi, geliştirme ve test koordinatörü aynı betiği çalıştırır (<a href="teknik.html#altyapi-imaj">İmaj ve kapanış</a>). CI denetimi <code>veritabani:goc-denetimi</code>: ad ve modül, zaman sırası, yeniden üretme farkı, Squawk, katalog farkıyla sahiplik (tablonun sahibi tanımlandığı <code>tablolar.ts</code> klasöründen, işlevin sahibi ad önekinden okunur), deyim düzeyinde satır yazma yakalama, zaman aşımı ayarı; ayrıca <code>surum-denetimi.sh</code>. CONCURRENTLY adımı <code>db:migrate</code> içindedir, yayın betiği ayrıca çağırmaz.</div></div>
+    <div class="row"><div class="k">Nesil</div><div><code>nesilOku</code>: <code>system_identifier</code> ve <code>timeline_id</code>; zaman çizelgesi WAL dosya adıyla çapraz denetlenir (<a href="teknik.html#kod-veri-modeli">Veri modeli</a>, <a href="plan.html#kararlar-indirme">İndirme</a>). Geri yüklemede nesil değişmeden trafik açılmaz.</div></div>
+    <div class="row"><div class="k">Saklama</div><div>Kayıt deseni: modül <code>saklamaIsleyicisiKaydet</code> ile kaydolur, satırı kendi kodu siler ya da anonimleştirir, D12 kanıtı aynı işlemde yazar. Süreler <code>saklama/sureler.ts</code>'te ve bugün boş: hiçbir şey silinmez (<a href="plan.html#acik-saklama-suresi">Saklama süresi</a>, <a href="plan.html#kararlar-hesap-silme">Hesap silme</a>).</div></div>
+    <div class="row"><div class="k">Yedek</div><div>pgBackRest ile PITR, restic ile gecelik döküm ve xprem birimi; depolar sunucu dışında, yurt içinde, şifreli (<a href="teknik.html#veritabani-yedek">Yedek</a>, <a href="plan.html#teknoloji-sunucu-yeri">Sunucu yeri</a>); parolalar çevrimdışı yedeklenir (<a href="teknik.html#dagitim-ayrinti-korunacak-anahtarlar">Korunacak anahtarlar</a>, <a href="teknik.html#dagitim-ayrinti-guncelleme-sunucusu">xprem birimi</a>). Compose dosya sırlarında uid ve mode yok sayıldığından sır dosyaları makinede 0400 izinli durur, pgBackRest sırrı kap içindeki postgres kullanıcısına (uid 999) aittir.</div></div>
+    <div class="row"><div class="k">Geri yükleme</div><div>Yalnız işletmecinin SSH ile başlattığı <code>docker/postgres/yedek/geri-yukle.sh</code>; adımlar aşağıdaki durum makinesinde, kılavuz <code>docker/postgres/geri-yukleme-kilavuzu.md</code>. Telefonlar kuyruklarını yeniden gönderir, program ve listeler baştan iner (<a href="plan.html#gun-kenar-durumlar">Kenar durumlar</a>).</div></div>
+    <div class="row"><div class="k">Test veritabanı</div><div><code>postgres-test</code>: aynı imaj, tmpfs; fsync, synchronous_commit, full_page_writes ve archive_mode kapalı; <code>127.0.0.1:5433</code> (<a href="teknik.html#testler-veritabani-sifirlama">Veritabanı sıfırlama</a>). Koordinatörde <code>testVeritabaniHazirla</code>, her senaryodan önce <code>senaryoOncesiSifirla</code>; geliştirme ve CI sırlarını <code>gelistirme-gizli-uret.sh</code> üretir.</div></div>
+  </div>
+  <details>
+    <summary>Roller ve yetkiler: dört giriş rolü, bir geçiş rolü, süper kullanıcı</summary>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Rol</th><th>Giriş</th><th>Kim kullanır</th><th>Yetki ve ayar</th></tr>
+      <tr><td><code>postgres</code></td><td>yerel soket (peer); ağdan scram-sha-256, parolası yalnız göç servisinde</td><td>kurulum adımı, pgBackRest, gece dökümü, geri yükleme betiği</td><td>süper kullanıcı</td></tr>
+      <tr><td><code>yoklama_goc</code></td><td>ağ, scram-sha-256</td><td>göç servisi, test sıfırlaması, veri kurucular, cli/geri-yukleme</td><td>bütün nesnelerin sahibi; DDL; SECURITY DEFINER işlevlerin sahibi</td></tr>
+      <tr><td><code>yoklama_api</code></td><td>ağ, scram-sha-256</td><td>API kopyaları, yonetici-ekle</td><td>uygulama: SELECT, INSERT, UPDATE, DELETE (yalnız ekleme tablolarında UPDATE ve DELETE yok); drizzle: SELECT; pgboss: veri; nesil işlevleri EXECUTE; statement_timeout 5 s, lock_timeout 2 s, boşta işlem 30 s</td></tr>
+      <tr><td><code>yoklama_isci</code></td><td>ağ, scram-sha-256</td><td>işçi</td><td>API ile aynı; ayrıca pg_monitor ve yoklama_saklama üyeliği (INHERIT FALSE, SET TRUE); statement_timeout 5 dk, lock_timeout 30 s, boşta işlem 5 dk</td></tr>
+      <tr><td><code>yoklama_saklama</code></td><td>giriş yok</td><td>yalnız saklama_suresi_isi, işlem içinde SET LOCAL ROLE</td><td>uygulama: SELECT, UPDATE, DELETE; saklama_islemleri: INSERT</td></tr>
+      <tr><td><code>xprem</code></td><td>ağ, scram-sha-256</td><td>xprem</td><td>yalnız xprem veritabanının sahibi</td></tr>
+    </table></div>
+  </details>
+  <details>
+    <summary>Bağlantı bütçesi: 63 bağlantı, sınır 80, max_connections 100</summary>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Bileşen</th><th>Bağlantı</th></tr>
+      <tr><td>API kopyası, 2 kopya ve kopya başına 20</td><td>40</td></tr>
+      <tr><td>İşçi</td><td>5</td></tr>
+      <tr><td>xprem</td><td>10</td></tr>
+      <tr><td>Göç servisi</td><td>2</td></tr>
+      <tr><td>pgBackRest</td><td>2</td></tr>
+      <tr><td>Gece dökümü</td><td>1</td></tr>
+      <tr><td>Süper kullanıcıya ayrılan</td><td>3</td></tr>
+      <tr><td>Toplam (üçüncü API kopyasına yer var)</td><td>63</td></tr>
+    </table></div>
+  </details>
+  <details>
+    <summary>Compose parçasının iskeleti: postgres, postgres-test ve yedek servisleri</summary>
+    <pre><code># docker/postgres/compose.yaml (D12). D15'in compose.yaml dosyası: include: [docker/postgres/compose.yaml]
+services:
+  postgres:                    # profilsiz
+    build: .
+    image: iu-attendance-postgres:18.6-pgbackrest2.59.3
+    command: [postgres, -c, config_file=/etc/postgresql/postgresql.conf]
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_parolasi
+      POSTGRES_INITDB_ARGS: --locale-provider=builtin --builtin-locale=C.UTF-8 --locale=C.UTF-8 --encoding=UTF8
+    volumes:
+      - veri:/var/lib/postgresql
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+    secrets:
+      - postgres_parolasi
+      - { source: pgbackrest_gizli, target: /etc/pgbackrest/conf.d/gizli.conf }
+    shm_size: 256mb
+    ports: ["127.0.0.1:5432:5432"]
+    healthcheck: { test: [CMD, pg_isready, -h, /var/run/postgresql], interval: 5s, retries: 12 }
+    restart: unless-stopped
+    networks: [veritabani]
+  postgres-test:
+    profiles: [test]
+    build: .
+    image: iu-attendance-postgres:18.6-pgbackrest2.59.3
+    command: [postgres, -c, config_file=/etc/postgresql/postgresql.conf, -c, fsync=off,
+              -c, synchronous_commit=off, -c, full_page_writes=off, -c, archive_mode=off,
+              -c, shared_buffers=512MB, -c, logging_collector=on]
+    volumes: [{ type: tmpfs, target: /var/lib/postgresql, tmpfs: { size: 2147483648 } }]
+    ports: ["127.0.0.1:5433:5432"]
+  yedek:                       # tek seferlik: docker compose --profile yedek run --rm yedek ...
+    profiles: [yedek]
+    image: restic/restic:0.19.1
+    secrets: [restic_gizli]
+volumes:
+  veri: { name: "${IU_POSTGRES_BIRIMI:-iu-yoklama-postgres-veri}" }
+networks:
+  veritabani: { ipam: { config: [{ subnet: 172.30.12.0/24 }] } }
+secrets:                       # dosyalar ${IU_GIZLI_DIZIN} altında: postgres, yoklama_goc, yoklama_api,
+                               # yoklama_isci, xprem parolaları; pgbackrest_gizli; restic_gizli</code></pre>
+  </details>
+  <details>
+    <summary>Durum makineleri: göç adımı, saklama sınıfı, geri yükleme, hazırlık, yedek işi</summary>
+    <p><strong>goc_adimi (db:migrate içindeki D12 adımı: veritabani:goc)</strong>. Durumlar: <code>kurulum</code>, <code>es_zamanli_dizin</code>, <code>dizin_dogrulama</code>, <code>drizzle_goc</code>, <code>yeniden_deneme_bekliyor</code>, <code>tamam</code>, <code>durdu</code>.</p>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Nereden</th><th>Nereye</th><th>Kim</th><th>Ne zaman</th></tr>
+      <tr><td><code>kurulum</code></td><td><code>es_zamanli_dizin</code></td><td>göç servisi</td><td>Roller, veritabanları, şemalar, eklenti ve varsayılan yetkiler hazır; tekrar çalışınca değişiklik yok.</td></tr>
+      <tr><td><code>kurulum</code></td><td><code>durdu</code></td><td>göç servisi</td><td>Süper kullanıcı sırrı yok (VERITABANI_KURULUM_SIR_YOK) ya da bağlantı kurulamadı (VERITABANI_ERISILEMEZ).</td></tr>
+      <tr><td><code>es_zamanli_dizin</code></td><td><code>dizin_dogrulama</code></td><td>göç servisi</td><td>Bekleyen göçlerin oncesi-concurrently.sql dosyalarındaki her CREATE INDEX CONCURRENTLY IF NOT EXISTS işlem dışında, sırayla çalıştı.</td></tr>
+      <tr><td><code>dizin_dogrulama</code></td><td><code>drizzle_goc</code></td><td>göç servisi</td><td>Bu adımın açtığı her dizinde pg_index.indisvalid doğru.</td></tr>
+      <tr><td><code>dizin_dogrulama</code></td><td><code>es_zamanli_dizin</code></td><td>göç servisi</td><td>Geçersiz dizin DROP INDEX CONCURRENTLY ile silindi, bir kez yeniden açılacak.</td></tr>
+      <tr><td><code>dizin_dogrulama</code></td><td><code>durdu</code></td><td>göç servisi</td><td>İkinci açılışta da geçersiz (VERITABANI_GOC_GECERSIZ_DIZIN); yayın durur.</td></tr>
+      <tr><td><code>drizzle_goc</code></td><td><code>tamam</code></td><td>göç servisi</td><td>Bekleyen bütün göçler tek işlemde uygulandı; sıradaki adım D14'ün pg-boss migrate ve kuyruk adımı.</td></tr>
+      <tr><td><code>drizzle_goc</code></td><td><code>yeniden_deneme_bekliyor</code></td><td>göç servisi</td><td>lock_timeout ya da statement_timeout (55P03, 57014): bekleyen bütün göçler birlikte geri alındı.</td></tr>
+      <tr><td><code>yeniden_deneme_bekliyor</code></td><td><code>drizzle_goc</code></td><td>göç servisi</td><td>2, 4, 8, 16, 32 saniye bekleme; ilk denemeden sonra en çok 5 yeniden deneme.</td></tr>
+      <tr><td><code>yeniden_deneme_bekliyor</code></td><td><code>durdu</code></td><td>göç servisi</td><td>Beşinci yeniden deneme de zaman aşımına uğradı (VERITABANI_GOC_KILIT_ZAMAN_ASIMI); API ve işçi açılmaz.</td></tr>
+    </table></div>
+    <p><strong>saklama_sinifi (bir gecede bir veri sınıfı)</strong>. Durumlar: <code>suresiz</code>, <code>suresi_var</code>, <code>parti_isleniyor</code>, <code>tamamlandi</code>, <code>yarida_kaldi</code>, <code>basarisiz</code>.</p>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Nereden</th><th>Nereye</th><th>Kim</th><th>Ne zaman</th></tr>
+      <tr><td><code>suresiz</code></td><td><code>suresiz</code></td><td>saklama_suresi_isi</td><td>sureler.ts'te süre yok: sınıfa dokunulmaz, kanıt yazılmaz (bugünkü durum).</td></tr>
+      <tr><td><code>suresi_var</code></td><td><code>parti_isleniyor</code></td><td>saklama_suresi_isi</td><td>Süre var, işleyici kayıtlı, bu sınıfa başvuran sınıflar bu gece bitti.</td></tr>
+      <tr><td><code>suresi_var</code></td><td><code>basarisiz</code></td><td>saklama_suresi_isi</td><td>Süre var ama işleyici yok (VERITABANI_SAKLAMA_ISLEYICI_YOK).</td></tr>
+      <tr><td><code>parti_isleniyor</code></td><td><code>parti_isleniyor</code></td><td>saklama_suresi_isi</td><td>İşleyici bitmedi dedi; kanıt satırı aynı işlemde yazıldı, sonraki parti.</td></tr>
+      <tr><td><code>parti_isleniyor</code></td><td><code>tamamlandi</code></td><td>saklama_suresi_isi</td><td>İşleyici bitti dedi; son kanıt satırında tamamlandi doğru.</td></tr>
+      <tr><td><code>parti_isleniyor</code></td><td><code>yarida_kaldi</code></td><td>saklama_suresi_isi</td><td>30 dakikalık gece sınırı doldu; ertesi gece o gecenin sınırıyla sürer.</td></tr>
+      <tr><td><code>parti_isleniyor</code></td><td><code>basarisiz</code></td><td>saklama_suresi_isi</td><td>İşleyici hata attı: partinin işlemi geri alındı, kanıt yazılmadı, pg-boss yeniden dener.</td></tr>
+    </table></div>
+    <p><strong>geri_yukleme (gerçek dönüş: docker/postgres/yedek/geri-yukle.sh ve cli/geri-yukleme)</strong>. Durumlar: <code>olay</code>, <code>trafik_kapali</code>, <code>geri_yukleniyor</code>, <code>terfi_edildi</code>, <code>denetim_noktasi</code>, <code>nesil_dogrulandi</code>, <code>goc_uygulandi</code>, <code>kaydedildi</code>, <code>trafik_acik</code>, <code>durdu</code>.</p>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Nereden</th><th>Nereye</th><th>Kim</th><th>Ne zaman</th></tr>
+      <tr><td><code>olay</code></td><td><code>trafik_kapali</code></td><td>işletmeci (SSH)</td><td>Dönüş kararı: API, işçi ve xprem durdurulur; Caddy açık kalır, telefonlar 502 ya da 503 alıp bekler. Önceki nesil canlı kümeden okunur; küme açılmıyorsa sistem kimliği son dökümün yanındaki nesil dosyasından, zaman çizelgesi pgbackrest info'daki son arşivlenen WAL adından.</td></tr>
+      <tr><td><code>trafik_kapali</code></td><td><code>geri_yukleniyor</code></td><td>geri-yukle.sh</td><td>pitr: pgbackrest restore --type=time --target=&lt;an&gt; --target-action=promote --delta var olan birimde. dokum: boş yeni birim açılır ve IU_POSTGRES_BIRIMI ona çevrilir, initdb, kurulum adımı yalnız roller kipinde, pg_restore.</td></tr>
+      <tr><td><code>geri_yukleniyor</code></td><td><code>durdu</code></td><td>geri-yukle.sh</td><td>dokum yolunda hedef birim boş değil (VERITABANI_KUME_YENI_DEGIL) ya da geri yükleme hata verdi.</td></tr>
+      <tr><td><code>geri_yukleniyor</code></td><td><code>terfi_edildi</code></td><td>PostgreSQL</td><td>Kurtarma bitti, pg_is_in_recovery() yanlış.</td></tr>
+      <tr><td><code>terfi_edildi</code></td><td><code>denetim_noktasi</code></td><td>geri-yukle.sh</td><td>Kap içinden süper kullanıcıyla CHECKPOINT çalıştı.</td></tr>
+      <tr><td><code>denetim_noktasi</code></td><td><code>nesil_dogrulandi</code></td><td>cli/geri-yukleme dogrula</td><td>nesilOku iki kaynakta tutarlı ve önceki nesilden farklı.</td></tr>
+      <tr><td><code>denetim_noktasi</code></td><td><code>durdu</code></td><td>cli/geri-yukleme dogrula</td><td>Nesil aynı (VERITABANI_NESIL_DEGISMEDI) ya da belirsiz; trafik açılmaz.</td></tr>
+      <tr><td><code>nesil_dogrulandi</code></td><td><code>goc_uygulandi</code></td><td>göç servisi</td><td>db:migrate çalıştı; eski bir âna dönüldüyse sonraki göçler yeniden uygulandı.</td></tr>
+      <tr><td><code>goc_uygulandi</code></td><td><code>kaydedildi</code></td><td>cli/geri-yukleme kaydet</td><td>geri_yukleme_kayitlari satırı yazıldı.</td></tr>
+      <tr><td><code>kaydedildi</code></td><td><code>trafik_acik</code></td><td>geri-yukle.sh</td><td>İşçi, API ve xprem açılır; hemen ardından pgBackRest tam yedek (dokum ve surum_gecisi yolunda önce stanza-upgrade).</td></tr>
+    </table></div>
+    <p><strong>hazirlik (semaDurumu, D15 /health/ready ucunun veritabanı yarısı)</strong>. Durumlar: <code>ulasilamiyor</code>, <code>geride</code>, <code>nesil_belirsiz</code>, <code>hazir</code>.</p>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Nereden</th><th>Nereye</th><th>Kim</th><th>Ne zaman</th></tr>
+      <tr><td><code>ulasilamiyor</code></td><td><code>geride</code></td><td>semaDurumu</td><td>Bağlantı kuruldu ama imajdaki son göçün özeti defterde yok.</td></tr>
+      <tr><td><code>ulasilamiyor</code></td><td><code>hazir</code></td><td>semaDurumu</td><td>Bağlantı kuruldu, özet defterde, nesil tutarlı.</td></tr>
+      <tr><td><code>geride</code></td><td><code>hazir</code></td><td>göç servisi</td><td>Göç uygulandı; veritabanı imajdan ileride de olabilir (genişletme göçü), yine hazırdır.</td></tr>
+      <tr><td><code>hazir</code></td><td><code>nesil_belirsiz</code></td><td>semaDurumu</td><td>pg_control_checkpoint ile WAL dosya adındaki zaman çizelgesi farklı (terfiden hemen sonra).</td></tr>
+      <tr><td><code>nesil_belirsiz</code></td><td><code>hazir</code></td><td>PostgreSQL</td><td>Denetim noktası bitti, iki değer aynı.</td></tr>
+      <tr><td><code>hazir</code></td><td><code>ulasilamiyor</code></td><td>semaDurumu</td><td>Bağlantı hatası.</td></tr>
+    </table></div>
+    <p><strong>yedek_isi (makine işleri: pgBackRest, döküm, xprem birimi, deneme)</strong>. Durumlar: <code>bekliyor</code>, <code>kilit_bekliyor</code>, <code>calisiyor</code>, <code>basarili</code>, <code>basarisiz</code>, <code>atlandi</code>.</p>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Nereden</th><th>Nereye</th><th>Kim</th><th>Ne zaman</th></tr>
+      <tr><td><code>bekliyor</code></td><td><code>kilit_bekliyor</code></td><td>systemd zamanlayıcısı</td><td>Saat geldi ya da makine açılınca kaçırılan çalıştırma (Persistent=true).</td></tr>
+      <tr><td><code>kilit_bekliyor</code></td><td><code>calisiyor</code></td><td>ortak.sh</td><td>flock alındı; en çok 60 dakika beklenir.</td></tr>
+      <tr><td><code>kilit_bekliyor</code></td><td><code>atlandi</code></td><td>ortak.sh</td><td>60 dakikada kilit alınamadı.</td></tr>
+      <tr><td><code>calisiyor</code></td><td><code>basarili</code></td><td>ortak.sh</td><td>Komut 0 ile bitti ve doğrulama geçti.</td></tr>
+      <tr><td><code>calisiyor</code></td><td><code>basarisiz</code></td><td>ortak.sh</td><td>Komut hata verdi ya da doğrulama tutmadı; hata kodu durum dosyasına.</td></tr>
+      <tr><td><code>calisiyor</code></td><td><code>atlandi</code></td><td>ortak.sh</td><td>Disk ön denetimi tutmadı (VERITABANI_YEDEK_DISK_YETERSIZ).</td></tr>
+    </table></div>
+  </details>
+  <details>
+    <summary>Değişmezler: 20 kural, her biri bir testle korunur</summary>
+    <ol>
+      <li>Her alan tablosu ve D12 tablosu uygulama şemasındadır; public şemasında tablo yoktur; drizzle ve pgboss şemalarına yalnız kendi kütüphaneleri yazar.</li>
+      <li>Sunucunun ürettiği her kimlik uuid'dir ve varsayılanı açıkça uuidv7()'dir; telefonun ürettiği kimlik sütunu @istemci-kimligi yorumuyla işaretlidir, başka istisna yoktur.</li>
+      <li>Her an sütunu timestamptz(3)'tür ve varsayılanı yoktur: değer saat arayüzünden gelir, kural için SQL now() kullanılmaz.</li>
+      <li>PostgreSQL enum tipi yoktur; durum ve kod sütunları metin ve adlı CHECK'tir, CHECK'teki değerler sözleşmedeki listeyle birebir aynıdır.</li>
+      <li>Her kısıt ve dizin adını kisitAdi verir ve ad 63 baytı geçmez; Drizzle'ın kendiliğinden verdiği ad kullanılmaz.</li>
+      <li>Veritabanı builtin C.UTF-8 yereliyle açılır; tr-TR-x-icu kuralıyla dizin yoktur.</li>
+      <li>Göçler yalnız ileri gider; her göç klasörü &lt;UTC zaman&gt;_&lt;modül&gt;_&lt;açıklama&gt; adını taşır, yalnız adındaki modülün tablolarına dokunur, satır yazmaz ve SET LOCAL lock_timeout = '3s', SET LOCAL statement_timeout = '60s' ile başlar.</li>
+      <li>Uygulama rolleri (yoklama_api, yoklama_isci) DDL ve TRUNCATE yapamaz; @yalniz-ekleme yorumlu tablolarda UPDATE ve DELETE yetkileri yoktur.</li>
+      <li>Satır silen tek yol saklama işinin işlem içinde geçtiği yoklama_saklama rolüdür; bu rolün yetkisi yoklama_isci'ye kendiliğinden geçmez (INHERIT FALSE).</li>
+      <li>Bütün havuzların ve ayrılmış bağlantıların toplamı 80'i geçmez (max_connections 100).</li>
+      <li>Havuzda bekleme en çok 2 saniyedir; dolu havuz isteği askıda bırakmaz, VERITABANI_HAVUZ_DOLU (503) döner.</li>
+      <li>Veritabanı hatası loga ve cevaba yalnız SQLSTATE, kısıt ve tablo adıyla çıkar; sorgu metni, parametre ve DETAIL satırı hiçbir loga yazılmaz, PostgreSQL'in kendi logu dahil.</li>
+      <li>nesilOku iki kaynaktan okunan zaman çizelgesi aynı değilse değer döndürmez (VERITABANI_NESIL_BELIRSIZ).</li>
+      <li>Geri yükleme ancak yeni nesil öncekinden farklıysa kaydedilir ve trafik ancak bundan sonra açılır; pg_dump'tan dönüş yalnız boş yeni birimde, yeni initdb kümesine yapılır.</li>
+      <li>Yedekler sunucu makinesinde kalmaz: pgBackRest ve restic depoları sunucu dışında, yurt içinde ve şifrelidir; parola ve depo erişim bilgisi yalnız ilgili kaba verilir.</li>
+      <li>Geri yükleme denemesinin kümeleri WAL arşivlemez ve yedek deposuna yazmaz.</li>
+      <li>Saklama süresi yazılmamış veri sınıfında hiçbir satır silinmez ya da anonimleştirilmez; her saklama partisi ve kanıt satırı aynı işlemdedir, kanıtsız silme olmaz.</li>
+      <li>Test veritabanı yayın servisinden ayrıdır (postgres-test, tmpfs); dayanıklılık ayarları yalnız orada kapalıdır; testler yayındaki rollerle bağlanır, sıfırlama ve veri kurucular sahip rolle; işlem geri alma kullanılmaz.</li>
+      <li>Test sıfırlaması göç defterine ve pgboss şemasına dokunmaz; göç dosyası sabit satır eklemez, sabit satır gerektiren tablo satırını ilk kullanımda INSERT ... ON CONFLICT ile açar.</li>
+      <li>Kayıt başına büyüyen tablolar (@donem-bolunebilir) bütün tekil anahtarlarında donem_id taşır; ileride döneme göre bölme yeniden yazım istemez.</li>
+    </ol>
+  </details>
+  <h3>Hata kodları</h3>
+  <p>Kodlar <code>packages/contracts/src/veritabani.ts</code> içinde, <code>VERITABANI_</code> önekli; D13'ün kataloğu birleştirir. 503'lerde Retry-After ve hata zarfı D13'ündür. İşletim kodları HTTP'ye çıkmaz, çıkış kodu, log ve durum dosyasında görünür.</p>
+  <details>
+    <summary>29 satır: 8 kod istemciye görünür, beklenmeyen hata D13'ün 500'üne düşer, kalanı işletim, CI ve test kodu</summary>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Kod</th><th>HTTP ya da yer</th><th>Ne zaman</th></tr>
+      <tr><td><code>VERITABANI_HAVUZ_DOLU</code></td><td>503</td><td>Havuzda 2 saniye beklenip bağlantı alınamadı.</td></tr>
+      <tr><td><code>VERITABANI_ZAMAN_ASIMI</code></td><td>503</td><td>statement_timeout, lock_timeout ya da idle_in_transaction_session_timeout aşıldı (57014, 55P03, 25P03).</td></tr>
+      <tr><td><code>VERITABANI_KILITLENME</code></td><td>503</td><td>40P01 ya da 40001 tek yeniden denemeden sonra da sürdü.</td></tr>
+      <tr><td><code>VERITABANI_ERISILEMEZ</code></td><td>503</td><td>Bağlantı kurulamadı ya da koptu (08xxx, 57P01, 57P02, 57P03).</td></tr>
+      <tr><td><code>VERITABANI_BAGLANTI_SINIRI</code></td><td>503</td><td>Sunucu bağlantı sınırına ulaştı (53300).</td></tr>
+      <tr><td><code>VERITABANI_SALT_OKUNUR</code></td><td>503</td><td>Salt okunur olmayan işlemde küme yazma kabul etmiyor (25006, kurtarma sürerken).</td></tr>
+      <tr><td><code>VERITABANI_NESIL_BELIRSIZ</code></td><td>503</td><td>İki kaynaktan okunan zaman çizelgesi farklı (terfiden hemen sonra).</td></tr>
+      <tr><td><code>VERITABANI_IMLEC_GECERSIZ</code></td><td>400</td><td>Geri yükleme listesinin imleci çözülemedi.</td></tr>
+      <tr><td><code>Beklenmeyen veritabanı hatası</code></td><td>500 (D13: SUNUCU_HATASI)</td><td>Yakalanmayan kısıt ve başka hatalar; loga yalnız SQLSTATE, kısıt ve tablo adı çıkar.</td></tr>
+      <tr><td><code>VERITABANI_GOC_KILIT_ZAMAN_ASIMI</code></td><td>işletim</td><td>Göç 5 yeniden denemeden sonra da kilit ya da süre aşımına uğradı; yayın durur.</td></tr>
+      <tr><td><code>VERITABANI_GOC_GECERSIZ_DIZIN</code></td><td>işletim</td><td>CONCURRENTLY dizin ikinci açılışta da geçersiz.</td></tr>
+      <tr><td><code>VERITABANI_GOC_SAHIPLIK</code></td><td>işletim (CI)</td><td>Göç adındaki modülün olmayan bir nesneye dokunuyor.</td></tr>
+      <tr><td><code>VERITABANI_GOC_DML</code></td><td>işletim (CI)</td><td>Göç satır yazıyor.</td></tr>
+      <tr><td><code>VERITABANI_GOC_ZAMAN_ASIMI_AYARI</code></td><td>işletim (CI)</td><td>Göç SET LOCAL zaman aşımı satırlarıyla başlamıyor.</td></tr>
+      <tr><td><code>VERITABANI_GOC_SIRA</code></td><td>işletim (CI)</td><td>Yeni göçün zaman öneki ana daldaki son göçten eski.</td></tr>
+      <tr><td><code>VERITABANI_GOC_URETIM_FARKI</code></td><td>işletim (CI)</td><td>Şema değişmiş, göç üretilmemiş.</td></tr>
+      <tr><td><code>VERITABANI_SURUM_UYUSMAZ</code></td><td>işletim (CI)</td><td>Compose'daki imaj adı Dockerfile'daki sürümlerle uyuşmuyor.</td></tr>
+      <tr><td><code>VERITABANI_KURULUM_SIR_YOK</code></td><td>işletim</td><td>Kurulum adımı için gereken sır dosyası yok.</td></tr>
+      <tr><td><code>VERITABANI_NESIL_DEGISMEDI</code></td><td>işletim</td><td>Geri yüklemeden sonra nesil değişmedi; trafik açılmaz.</td></tr>
+      <tr><td><code>VERITABANI_KUME_YENI_DEGIL</code></td><td>işletim</td><td>Döküm dönüşünün hedef birimi boş değil.</td></tr>
+      <tr><td><code>VERITABANI_YEDEK_DISK_YETERSIZ</code></td><td>işletim</td><td>Döküm ya da deneme için boş yer yetmiyor; iş atlandı.</td></tr>
+      <tr><td><code>VERITABANI_YEDEK_BASARISIZ</code></td><td>işletim</td><td>Yedek komutu hata verdi.</td></tr>
+      <tr><td><code>VERITABANI_YEDEK_DOGRULAMA_BASARISIZ</code></td><td>işletim</td><td>pgbackrest verify ya da check başarısız.</td></tr>
+      <tr><td><code>VERITABANI_DENEME_UYUSMAZLIK</code></td><td>işletim</td><td>Geri yükleme denemesinde nesil, satır sayısı, imleç ya da xprem denetimi tutmadı.</td></tr>
+      <tr><td><code>VERITABANI_SAKLAMA_ISLEYICI_YOK</code></td><td>işletim</td><td>Süresi yazılı sınıfın işleyicisi kayıtlı değil.</td></tr>
+      <tr><td><code>VERITABANI_SAKLAMA_DONGU</code></td><td>işletim</td><td>Saklama işleyicilerinin bağımlılığında döngü.</td></tr>
+      <tr><td><code>VERITABANI_SAKLAMA_SINIF_IKI_KEZ</code></td><td>işletim</td><td>Aynı veri sınıfına farklı iki işleyici kaydedildi.</td></tr>
+      <tr><td><code>VERITABANI_BOLUM_VARSAYILAN_DOLU</code></td><td>işletim</td><td>Bölünmüş tablonun varsayılan bölümünde satır var.</td></tr>
+      <tr><td><code>VERITABANI_TEST_ULASILAMIYOR</code></td><td>test</td><td>postgres-test servisine ulaşılamıyor.</td></tr>
+    </table></div>
+  </details>
+  <h3>Testler</h3>
+  <p>Davranış senaryoları <code>apps/server/test/features/veritabani/</code> altında gerçek <code>postgres-test</code> veritabanında koşar; saf kurallar (kisitAdi, nesil kararı, saklama sırası, göç denetimi ayrıştırıcısı) Vitest ve fast-check ile. Yokluk iddia eden her test bir yer kontrolüyle önce varlığı gösterir.</p>
+  <details>
+    <summary>43 test: şema, yetki, göç, işlem, nesil, saklama, uç, sıfırlama, yedek, yük ve mutasyon</summary>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Test</th><th>Tür</th><th>Ne denetler</th></tr>
+      <tr><td>Şema: sunucu kimlikleri uuidv7() varsayılanlı</td><td><code>contract</code></td><td>Göçlerle kurulmuş test veritabanında uygulama şemasındaki her id sütununun varsayılanı uuidv7(); gen_random_uuid ya da varsayılansız id kırmızı, @istemci-kimligi yorumlu sütun (telefonun ürettiği kayıt kimliği) muaf. Yer kontrolü: işaretsiz bir test tablosu bilerek eklenince kırmızı.</td></tr>
+      <tr><td>Şema: an sütunları timestamptz(3) ve varsayılansız</td><td><code>contract</code></td><td>_ani ile biten her sütun timestamp with time zone, hassasiyeti 3, varsayılanı yok; now() ya da CURRENT_TIMESTAMP varsayılanı kırmızı.</td></tr>
+      <tr><td>Şema: enum yok, durum CHECK'leri sözleşmeyle aynı</td><td><code>contract</code></td><td>pg_type'ta uygulama şemasında enum yok; durumKisiti kaydındaki her adın CHECK tanımındaki değer kümesi sözleşme listesine eşit; fazla ya da eksik tek değer kırmızı.</td></tr>
+      <tr><td>Şema: yerel ve sıralama kuralı</td><td><code>contract</code></td><td>yoklama veritabanı builtin C.UTF-8 ile açılmış (pg_database.datlocprovider b, datlocale C.UTF-8); hiçbir dizin tr-TR-x-icu kuralını kullanmıyor.</td></tr>
+      <tr><td>Şema: kısıt ve dizin adları</td><td><code>contract</code></td><td>uygulama şemasındaki her kısıt ve dizin adı kisitAdi biçiminde (&lt;tablo&gt;_..._&lt;pk|fk|uq|ck|idx&gt; ya da özetli kısa biçim) ve 63 baytı geçmiyor.</td></tr>
+      <tr><td>Şema: bölünebilir tablolarda donem_id</td><td><code>contract</code></td><td>@donem-bolunebilir yorumlu her tablonun her tekil dizini ve kısıtı donem_id sütununu içeriyor; yalnız kimliğe tekil kısıt kırmızı.</td></tr>
+      <tr><td>Şema: public'te tablo yok, dizinsiz yabancı anahtar bilerek kabul</td><td><code>contract</code></td><td>public şemasında tablo yok; dizinsiz her yabancı anahtar ya bir dizinin önünde ya da @dizinsiz-kabul yorumlu.</td></tr>
+      <tr><td>Yetki: yalnız ekleme tabloları</td><td><code>behavior</code></td><td>@yalniz-ekleme yorumlu her tabloda yoklama_api ve yoklama_isci UPDATE ve DELETE denemesi 42501 alır; INSERT ve SELECT geçer (yer kontrolü).</td></tr>
+      <tr><td>Yetki: uygulama rolleri DDL ve TRUNCATE yapamaz</td><td><code>behavior</code></td><td>yoklama_api ile CREATE TABLE, ALTER TABLE ve TRUNCATE 42501 alır; yeni tabloya varsayılan SELECT, INSERT, UPDATE, DELETE kendiliğinden gelir.</td></tr>
+      <tr><td>Yetki: saklama rolü yalnız SET ROLE ile</td><td><code>behavior</code></td><td>yoklama_isci @yalniz-ekleme tablosundan doğrudan silemez; aynı işlemde SET LOCAL ROLE yoklama_saklama sonrası siler; işlem bitince yetki kalmaz.</td></tr>
+      <tr><td>Yetki: nesil işlevleri uygulama rolüyle çalışır</td><td><code>behavior</code></td><td>yoklama_api ile nesilOku değer döndürür; değer pg_control_system ve pg_control_checkpoint çıktısıyla aynı.</td></tr>
+      <tr><td>Göç: kilit varken 3 saniyede düşer, birlikte geri alınır, yeniden denenir</td><td><code>behavior</code></td><td>Başka oturum göçün dokunduğu tabloda kilit tutarken iki bekleyen göçten ikincisi 3 saniyede 55P03 alır ve ikisi de defterde yoktur (birlikte geri alındı); bekleme sırası 2, 4, 8, 16, 32 saniye olarak sahte uykudan okunur, kilit bırakılınca ikisi birlikte uygulanır; hiç bırakılmazsa 5. yeniden denemeden sonra VERITABANI_GOC_KILIT_ZAMAN_ASIMI.</td></tr>
+      <tr><td>Göç: geçersiz CONCURRENTLY dizini bir kez yeniden açılır</td><td><code>behavior</code></td><td>Yinelenen değerli tabloda tekil CONCURRENTLY dizin geçersiz kalınca adım onu DROP INDEX CONCURRENTLY ile siler ve bir kez yeniden açar; değerler düzeltilmişse geçerli olur, düzeltilmemişse VERITABANI_GOC_GECERSIZ_DIZIN ile durur.</td></tr>
+      <tr><td>Göç denetimi: sahiplik</td><td><code>behavior</code></td><td>adı _dersler_ olan bir göç listeler tablosuna sütun eklerse katalog farkı denetimi VERITABANI_GOC_SAHIPLIK verir; kendi tablosuna eklerse geçer (yer kontrolü).</td></tr>
+      <tr><td>Göç denetimi: satır yazan göç</td><td><code>behavior</code></td><td>UPDATE, DELETE ya da INSERT içeren göç, etkilenen satır sıfır olsa da deyim düzeyindeki tetikleyiciyle yakalanır ve VERITABANI_GOC_DML verir.</td></tr>
+      <tr><td>Göç denetimi: zaman aşımı satırları</td><td><code>behavior</code></td><td>Göçün ilk iki deyimi çalıştıktan sonra current_setting('lock_timeout') 3s ve current_setting('statement_timeout') 1min değilse VERITABANI_GOC_ZAMAN_ASIMI_AYARI.</td></tr>
+      <tr><td>Göç denetimi: sıra ve yeniden üretme</td><td><code>behavior</code></td><td>Ana daldaki en son göçten eski zaman önekli yeni klasör VERITABANI_GOC_SIRA verir; tablolar.ts değişip göç üretilmemişse drizzle-kit generate yeni klasör üretir ve VERITABANI_GOC_URETIM_FARKI verir.</td></tr>
+      <tr><td>Kurulum adımı tekrar çalıştırılabilir</td><td><code>behavior</code></td><td>Kurulum iki kez arka arkaya çalışınca ikincisi hiçbir nesneyi değiştirmez (katalog aynı); sır dosyasındaki parola değişince yeni parolayla giriş açılır, eskisiyle kapanır.</td></tr>
+      <tr><td>Sürüm denetimi</td><td><code>behavior</code></td><td>docker/postgres/compose.yaml'daki imaj adı FROM satırındaki PostgreSQL sürümüyle ya da Dockerfile'daki pgbackrest paketinin ana sürümüyle uyuşmazsa surum-denetimi.sh VERITABANI_SURUM_UYUSMAZ ile kırmızı; uyuşunca yeşil.</td></tr>
+      <tr><td>Hazırlık: geride değil, ileride hazır</td><td><code>behavior</code></td><td>İmajdaki son göç defterde yoksa semaDurumu hazır değil ve neden geride; defterde ve sonrasında başka göç varsa hazır.</td></tr>
+      <tr><td>Nesil kararı</td><td><code>property</code></td><td>fast-check, 10000 deneme: kontrol dosyası ve WAL adı çizelgeleri eşitse değer döner, farklıysa her zaman VERITABANI_NESIL_BELIRSIZ; metin her zaman '&lt;sistem&gt;.&lt;çizelge&gt;' biçiminde.</td></tr>
+      <tr><td>Havuz dolu: 2 saniyede 503</td><td><code>behavior</code></td><td>Havuz boyutu kadar işlem açıkken gelen istek 2 ile 2,5 saniye arasında VERITABANI_HAVUZ_DOLU alır; işlemler kapanınca sonraki istek geçer.</td></tr>
+      <tr><td>Zaman aşımı ve salt okunur</td><td><code>behavior</code></td><td>pg_sleep(6) yoklama_api ile VERITABANI_ZAMAN_ASIMI alır; saltOkunur ve zamanAsimiMs 8000 ile aynı sorgu geçer; yazan işlemde 5000'in üstü ve her işlemde 20000'in üstü reddedilir; zamanAsimiMs 1000 ile pg_sleep(2) zaman aşımı alır; salt okunur işlemde INSERT reddedilir.</td></tr>
+      <tr><td>Kilitlenmede tek yeniden deneme</td><td><code>behavior</code></td><td>Ters sırada iki satır kilitleyen iki işlemden 40P01 alan fn bir kez baştan çalışır ve başarır; zorla ikinci kez kilitlenen VERITABANI_KILITLENME alır.</td></tr>
+      <tr><td>Danışma kilidi sırası</td><td><code>behavior</code></td><td>Aynı iki anahtarı ters sırada veren eşzamanlı 100 işlem çiftinde hiç 40P01 yok (anahtarlar sıralanır).</td></tr>
+      <tr><td>Log gizliliği</td><td><code>behavior</code></td><td>Bilerek tekil kısıt ihlali yaptırılan senaryoda pino kaydı ve postgres-test'in log dosyası hata kodunu ve kısıt adını içerir (yer kontrolü), ihlal edilen değeri ve sorgu parametresini içermez.</td></tr>
+      <tr><td>An gidiş dönüşü</td><td><code>property</code></td><td>fast-check, 1000 deneme: 1970 ile 2100 arası rastgele milisaniyeli an yazılıp okununca aynı; koşu TZ=UTC ve TZ=Europe/Istanbul ile iki kez.</td></tr>
+      <tr><td>Gün metni</td><td><code>property</code></td><td>fast-check: rastgele YYYY-MM-DD gün yazılıp okununca aynı metin, iki saat diliminde de; Date nesnesi hiç dönmez.</td></tr>
+      <tr><td>kisitAdi</td><td><code>property</code></td><td>fast-check: çıktı her zaman 63 bayt ya da kısa, ASCII, türle biter; aynı girdi aynı ad; farklı uzun girdiler farklı ad (özet).</td></tr>
+      <tr><td>Saklama: süre yokken dokunmaz</td><td><code>behavior</code></td><td>sureler.ts boşken iş çalışır, kayıtlı işleyici hiç çağrılmaz, satır sayıları önce ve sonra aynı (yer kontrolü: satırlar vardı), saklama_islemleri boş.</td></tr>
+      <tr><td>Saklama: sınır saatten, kanıt aynı işlemde</td><td><code>behavior</code></td><td>Süre 12 ay yazılınca işleyici sahte saatten 12 ay önceki sınırla çağrılır; her parti için kanıt satırı yazılır; işleyici hata atınca partinin silmesi de kanıtı da geri alınır, yeniden denemede kaldığı partiden sürer.</td></tr>
+      <tr><td>Saklama: bağımlılık sırası</td><td><code>property</code></td><td>fast-check: rastgele bağımlılık grafiğinde her sınıf, oncekiSiniflar'ındaki her sınıftan sonra işlenir; döngülü grafik kayıtta VERITABANI_SAKLAMA_DONGU verir.</td></tr>
+      <tr><td>Saklama: işleyicisiz süre</td><td><code>behavior</code></td><td>Süresi yazılı ama işleyicisi olmayan sınıfta iş VERITABANI_SAKLAMA_ISLEYICI_YOK ile düşer, hiçbir sınıfa dokunmadan önce.</td></tr>
+      <tr><td>Uç: yönetici listeyi yeniden eskiye alır</td><td><code>behavior</code></td><td>Üç kayıtlı geri yüklemede yönetici adet 2 ile iki öğe ve imleç, imleçle kalan tek öğeyi alır; tekrar ve atlama yok; cevap sözleşme şemasına uyar.</td></tr>
+      <tr><td>Uç: yetki ve imleç hataları</td><td><code>behavior</code></td><td>Yönetici olmayan hoca 403, oturumsuz istek 401, bozuk imleç 400 VERITABANI_IMLEC_GECERSIZ, adet 501 400 alır.</td></tr>
+      <tr><td>Geri yükleme kaydı aynı nesli kabul etmez</td><td><code>behavior</code></td><td>onceki_nesil ile yeni_nesil aynı satır CHECK ihlaliyle reddedilir; cli/geri-yukleme kaydet bu durumda VERITABANI_NESIL_DEGISMEDI ile çıkar.</td></tr>
+      <tr><td>Senaryo öncesi sıfırlama</td><td><code>behavior</code></td><td>Satırlı tablolar ve ilerlemiş diziler sıfırlamadan sonra boş ve başta; drizzle defterindeki ve pgboss şemasındaki satır sayısı değişmemiş (yer kontrolü: sıfırlamadan önce ikisi de doluydu).</td></tr>
+      <tr><td>Test veritabanı ulaşılamıyor</td><td><code>behavior</code></td><td>postgres-test kapalıyken testVeritabaniHazirla VERITABANI_TEST_ULASILAMIYOR ve servisi açan komutu yazan mesajla durur, senaryo koşmaz.</td></tr>
+      <tr><td>Yedek durum dosyası</td><td><code>contract</code></td><td>Her makine işinin yazdığı dosya YedekIsDurumu şemasına uyar; başarısız iş sonuc basarisiz ve hata koduyla yazılır; dosya yarım kalmaz (geçici dosya ve rename).</td></tr>
+      <tr><td>Geri yükleme denemesi</td><td><code>behavior</code></td><td>Ayda bir gerçek yedekten: PITR ve döküm dönüşünde nesil üretimden farklı, pg_amcheck temiz, satır sayıları uyuşuyor, eski imleç baştan indir alıyor, xprem güncellemesi iniyor; dolu birime döküm dönüşü VERITABANI_KUME_YENI_DEGIL ile duruyor. Süreler rapora yazılır.</td></tr>
+      <tr><td>Ders çıkışı yükünde havuz</td><td><code>load</code></td><td>D15'in k6 ders çıkışı testinde havuz bekleme p99 2 saniyenin altında, VERITABANI_HAVUZ_DOLU oranı yüzde 1'in altında, pg_stat_activity bağlantı sayısı 80'i geçmiyor.</td></tr>
+      <tr><td>Şema denetimleri bozulunca kırmızı</td><td><code>mutation</code></td><td>Her şema denetimi için bir kez: uuidv7 yerine gen_random_uuid, timestamptz yerine timestamp, enum tipi, CHECK listesine fazla değer, tr-TR-x-icu dizini, 64 baytlık ad, uygulama rolüne UPDATE yetkisi; her biri ilgili senaryoyu kırmızıya çevirir, sonra özgün baytlar md5 denetimiyle geri yazılır.</td></tr>
+      <tr><td>Koruma kodu bozulunca kırmızı</td><td><code>mutation</code></td><td>saklama işinin süre yoksa dokunma koşulu, nesilOku'nun çapraz denetimi, havuz bekleme süresi ve hata temizliği tek tek kaldırılınca ilgili senaryo kırmızıya döner.</td></tr>
+    </table></div>
+  </details>
+  <h3>Netleştirilenler</h3>
+  <p>Envanterdeki 35 boşluğun ve 5 çelişkinin her biri ya bir kararla ya da bir açık noktayla kapandı; ürün kararı gerektirenler aşağıdaki açık noktalara bağlıdır.</p>
+  <details>
+    <summary>Boşluklar: D12-B01 ile D12-B35 arası, karar ve gerekçe</summary>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Boşluk</th><th>Karar</th><th>Neden</th></tr>
+      <tr><td><code>D12-B01</code></td><td>Bağlayıcı ad kuralı uygulanır: ASCII Türkçe snake_case, tablo çoğul, birincil anahtar id uuid DEFAULT uuidv7(), yabancı anahtar &lt;tekil_ad&gt;_id, an &lt;ad&gt;_ani timestamptz(3), yaşam sütunları silinme_ani, pasif_ani, arsiv_ani. Kısıt ve dizin adını yalnız kisitAdi(tablo, sutunlar, tur) verir: &lt;tablo&gt;_&lt;sütunlar&gt;_&lt;pk|fk|uq|ck|idx&gt;; 63 baytı aşan ad gövdeden kısaltılır ve tam adın SHA-256 özetinin ilk 8 hanesi eklenir. Kod kısıt dalını aynı çağrıyla kurar; şema testi katalogdaki her adı denetler. uygulama şemasındaki işlev adları sahibi modülün adıyla başlar (ör. veritabani_degismez_sutun); göç denetimi işlevin sahibini bu önekten okur.</td><td>Kısıt adı kod dalını belirliyor (sayılan kayıt dizinine takılan kayıt sayılmayan kayıt olarak yeniden yazılıyor) ve loglardaki tek tanıtıcı; Drizzle'ın ürettiği adlar sürümle kayabilir. Özetli kısaltma iki uzun adın aynı 63 bayta düşmesini önler.</td></tr>
+      <tr><td><code>D12-B02</code></td><td>Üç şema: uygulama (bütün alan tabloları ve D12 tabloları), drizzle (göç defteri), pgboss (D14'ün kütüphanesi). Kurulum adımı üçünü yoklama_goc sahipliğinde açar ve varsayılan yetkileri şema başına verir; public'te tablo olmaz, rollerin search_path'i uygulama. Test sıfırlaması yalnız uygulama şemasını boşaltır.</td><td>Tek TRUNCATE listesi ve tek varsayılan yetki kuralı; modül sınırı kodda Biome ile korunuyor, modül başına şema modüller arası yabancı anahtarları ve raporları zorlaştırır.</td></tr>
+      <tr><td><code>D12-B03</code></td><td>Giriş rolleri: yoklama_goc (bütün nesnelerin sahibi; göç servisi, test sıfırlaması, veri kurucular, geri yükleme komutu), yoklama_api ve yoklama_isci (uygulama şemasında varsayılan SELECT, INSERT, UPDATE, DELETE; drizzle'da SELECT; pgboss'ta veri yetkisi; TRUNCATE ve DDL yok; @yalniz-ekleme tablolarda UPDATE ve DELETE sahibinin göçünde geri alınır), xprem (yalnız kendi veritabanı). Giriş yetkisiz yoklama_saklama: uygulama şemasında SELECT, UPDATE, DELETE ve saklama_islemleri'ne INSERT; yoklama_isci'ye INHERIT FALSE, SET TRUE ile verilir, yalnız saklama işi SET LOCAL ROLE ile geçer. yoklama_isci'ye pg_monitor (D15'in veritabanı ölçüleri). pgBackRest ve gece dökümü kap içinden, yerel soketten postgres kullanıcısıyla. Rol ayarları: yoklama_api statement_timeout 5 s, lock_timeout 2 s, idle_in_transaction_session_timeout 30 s; yoklama_isci 5 dk, 30 s, 5 dk; hepsinde timezone UTC. yonetici-ekle yoklama_api ile bağlanır. Parolalar Compose sırrıyla yalnız ilgili servise.</td><td>Denetim tablosunun korunması (teknik.html#veritabani-donem-alani) ve kod hatası bile bozuk veri yazdıramaz kuralı rolle güvenceye alınır; saklama silmesi uygulama rolünün günlük yetkisine girmez (D12-C04). Kuyruklar yayın adımında sahip rolle açıldığından (D14-B04) çalışan rollere DDL gerekmez.</td></tr>
+      <tr><td><code>D12-B04</code></td><td>Kurulum adımı (goc/kurulum.ts, veritabani:goc'un ilk adımı) yalnız göç servisine verilen süper kullanıcı parolasıyla tekrar çalıştırılabilir: rolleri yoksa açar, parolalarını sır dosyasından yeniler; yoklama (sahibi yoklama_goc, builtin C.UTF-8) ve xprem (sahibi xprem) veritabanlarını açar; pg_stat_statements eklentisini kurar; üç şemayı ve varsayılan yetkileri verir; pg_control_system, pg_control_checkpoint, pg_current_wal_lsn ve pg_walfile_name için yoklama_api ve yoklama_isci'ye EXECUTE verir; rol üyeliklerini kurar. Dökümden dönüşte yalnız roller kipinde çalışır, şemaları pg_restore kurar.</td><td>pg_dump dönüşü her zaman yeni initdb kümesine yapıldığından (teknik.html#kod-veri-modeli) rol ve eklenti her dönüşte yeniden kurulmalı; göç adımı tek yerde (teknik.html#altyapi-imaj). Resmî imajın başlangıç betikleri yalnız boş birimde çalışır, Dockerfile'a pgbackrest dışında ek konmuyor. Açık EXECUTE yetkisi D06-B20'nin yetki kaygısını sürüm varsayılanından bağımsız kapatır.</td></tr>
+      <tr><td><code>D12-B05</code></td><td>docker/postgres/postgresql.conf ve pg_hba.conf depoda, Compose ile salt okunur bağlanır; ALTER SYSTEM kullanılmaz. Başlangıç (8 GB, 4 çekirdek): max_connections 100, shared_buffers 2GB, effective_cache_size 4GB, work_mem 16MB, maintenance_work_mem 512MB, max_wal_size 4GB, min_wal_size 1GB, checkpoint_timeout 15min, random_page_cost 1.1, effective_io_concurrency 200, wal_compression zstd, jit off, archive_mode on, archive_command pgbackrest --stanza=yoklama archive-push %p, archive_timeout 300, shared_preload_libraries pg_stat_statements, track_io_timing on, timezone ve log_timezone UTC, password_encryption scram-sha-256, log_min_duration_statement 500ms, log_lock_waits on, log_autovacuum_min_duration 1s, log_temp_files 10MB, log_error_verbosity terse, log_min_error_statement panic, log_parameter_max_length 0, log_parameter_max_length_on_error 0. pg_hba: yerel soket yalnız postgres (peer); Compose veritabanı ağının sabit alt ağından yoklama_api, yoklama_isci, yoklama_goc yoklama'ya, xprem xprem'e ve postgres her ikisine, hepsi scram-sha-256; geri kalanı reject. Süper kullanıcının parolası yalnız göç servisine verilir, ağdan yalnız kurulum adımı girer. shm_size 256mb. Değerler yük testinden sonra düzeltilip teknik.html'e yazılır.</td><td>Arşiv ayarı olmadan pgBackRest çalışmaz, yük testi de varsayılanı ölçer. Log ayarları PostgreSQL'in kendi logunun da değer taşımamasını sağlar: terse DETAIL satırını (anahtar değerlerini) atar, parametreler loga girmez (teknik.html#sunucu-ayarlar). Süper kullanıcı ağdan yalnız veritabanı ağından girer ve parolası yalnız kurulum adımını çalıştıran göç servisinde durur; envanterdeki yalnız yerel soket önerisi kurulumun göç servisinde çalışmasıyla bağdaşmıyordu (açık nokta D12-A07'de belgeye yazılır).</td></tr>
+      <tr><td><code>D12-B06</code></td><td>Sunucu ve roller timezone UTC. An sütunları timestamptz(3), Drizzle'da mode date: veritabanı değeri milisaniyeye yuvarlar, Date'e çevirmede kayıp olmaz, JSON'a toISOString ile çıkar. Gün date ve saat time Drizzle'da mode string; havuz DATE ve TIME tiplerini metin okur, sürecin saat dilimi devreye girmez. İstanbul gün sınırı SQL'de açıkça AT TIME ZONE 'Europe/Istanbul' ile yazılır, oturum ayarına dayanılmaz. Gidiş dönüş özellik testi TZ=UTC ve TZ=Europe/Istanbul ile koşar.</td><td>Kaygı mikro saniye kaybı ve sürecin saat dilimine bağlı gün kaymasıydı: timestamptz(3) mikro saniyeyi baştan yok eder, metin okunan date kaymayı yok eder. timestamptz için mode string yerine date seçildi, çünkü PostgreSQL'in metin biçimini istemcide Date.parse ile okumak standartta tanımsız.</td></tr>
+      <tr><td><code>D12-B07</code></td><td>node-postgres ve Drizzle'ın node-postgres sürücüsü; API'de pg-boss işi çağıranın işleminde gönderir (D14-B02). Bağlantı bütçesi, D15-B17 ve D14-B10 ile aynı başlangıç: API kopyası başına 20 (2 kopya 40), işçi 5, xprem 10, göç servisi 2, pgBackRest 2, gece dökümü 1, süper kullanıcıya ayrılan 3: toplam 63, üst sınır 80. Havuzda bekleme 2 saniye, sonra VERITABANI_HAVUZ_DOLU (503). Rol süreleri D12-B03'te; islem saltOkunur ve zamanAsimiMs ile rapor sorgusunda süreyi en çok 20 saniyeye çıkarır, Fastify'ın 25 saniyelik istek süresinin altında (D13-B26). Değerler yük testinden sonra kesinleşir.</td><td>pg-boss node-postgres üstüne kurulu, aynı işlem doğrudan paylaşılır. Bütçe üçüncü bir API kopyasına yer bırakır; 80 sınırı D15'in yüzde 80 uyarı eşiğiyle aynı (D15-B20).</td></tr>
+      <tr><td><code>D12-B08</code></td><td>Varsayılan READ COMMITTED. Sayaç ve en çok N kuralları anahtar başına danismaKilidi(tx, anahtarlar) ile (sıralı, işlem sonuna kadar) ya da sayaç satırında SELECT ... FOR UPDATE ile korunur; paketteki kayıtlar yazmadan önce (donem_id, id) sırasına dizilir. Gönderim işlemi telefona inen tablolara ve sürüm sayacı satırına yazmaz (D06-B19 ile aynı). 40P01 ve 40001'de islem fn'yi 50 ile 150 ms rastgele bekleyip bir kez baştan çalıştırır, sonra VERITABANI_KILITLENME (503); fn veritabanı dışında yan etki yapmaz. Gönderme ucunun eşzamanlı durum makinesi testi (teknik.html#testler-kalite) kuralı dener.</td><td>SERIALIZABLE ders çıkışı yükünde yeniden deneme fırtınası yapar; sabit kilit sırası kilitlenmeyi yapısal olarak önler, tek yeniden deneme kalan nadir yarışı karşılar.</td></tr>
+      <tr><td><code>D12-B09</code></td><td>Her göç dosyası SET LOCAL lock_timeout = '3s' ve SET LOCAL statement_timeout = '60s' ile başlar; uzun doğrulama göçü süreyi kendi satırında açıkça uzatır. Zaman aşımında bekleyen bütün göçler birlikte geri alınır; adım 2, 4, 8, 16, 32 saniye bekleyerek en çok 5 kez baştan dener, sonra VERITABANI_GOC_KILIT_ZAMAN_ASIMI ile durur. Dolu tablonun var olan sütununa dizin: göç klasöründe oncesi-concurrently.sql (yalnız CREATE INDEX CONCURRENTLY IF NOT EXISTS satırları); adım bunları bütün bekleyen göçlerden önce, işlem dışında, sırayla çalıştırır, indisvalid'e bakar, geçersizi DROP INDEX CONCURRENTLY ile silip bir kez yeniden açar, yine geçersizse durur; aynı dizin migration.sql'de IF NOT EXISTS ile ve hemen üstündeki squawk-ignore yorumuyla durur. Yeni tabloya ya da aynı yayında eklenen sütuna dizin normal göçte açılır. NOT VALID ile VALIDATE, doldurma ve NOT NULL geçişi ayrı yayınlarda; doldurma sahibinin pg-boss işiyle küçük partilerde. Göç satır yazmaz. Elle SQL drizzle-kit generate --custom --name=&lt;modül&gt;_&lt;açıklama&gt; ile ayrı göç dosyasında. Squawk sürümü tam sabit, assume_in_transaction açık, ayarı goc/squawk.toml.</td><td>Kısa kilit beklemesi kilit kuyruğunu büyütmez, yeniden deneme kısa süren bir kilidi aşar. Envanterin önerdiği ayrı migrations-concurrent klasörü D12'nin dosya alanı dışında kalıyordu; dizin onu isteyen göçün yanında durunca sahiplik denetimi tek klasörü okur. Tek işlemde NOT VALID ile VALIDATE birleşirse tablo kilidi doğrulama boyunca sürer.</td></tr>
+      <tr><td><code>D12-B10</code></td><td>semaDurumu açılışta imajdaki göç klasörünü drizzle-orm/migrator'ın readMigrationFiles işleviyle okur ve son göçün özetini beklenen değer yapar. Hazır: veritabanına ulaşılıyor, beklenen özet drizzle.__drizzle_migrations'ta var (sonrası da olabilir) ve nesil iki kaynakta tutarlı; değilse neden ulasilamiyor, geride ya da nesil_belirsiz. D15'in /health/ready ucu bunu çağırır; ayrı şema sürümü tablosu yok.</td><td>Genişlet ve daralt yönteminde veritabanı imajdan ileride olabilir ve kopya o durumda hazır sayılmalı (D15-B41 aynı kuralı istiyor); özet Drizzle'ın kendi işleviyle hesaplanınca göç çalıştırıcısıyla hep aynı kalır.</td></tr>
+      <tr><td><code>D12-B11</code></td><td>Göçlerle kurulmuş test veritabanında katalog üzerinde koşan şema testi (features/veritabani/sema-kurallari.feature, yetkiler.feature): kimlik sütunları uuidv7() (@istemci-kimligi yorumlu sütun muaf); an sütunları timestamptz(3) ve varsayılansız; enum yok; her durum CHECK'i durumKisiti kaydındaki sözleşme listesiyle aynı; builtin C.UTF-8 ve tr-TR-x-icu dizini yok; adlar kisitAdi kuralına uyuyor ve 63 baytı geçmiyor; @donem-bolunebilir tablolarda her tekil anahtarda donem_id; public'te tablo yok; @yalniz-ekleme tablolarda uygulama rollerinin UPDATE ve DELETE yetkisi yok; uygulama rollerinin TRUNCATE ve DDL yetkisi yok; dizinsiz yabancı anahtar ya dizinli ya @dizinsiz-kabul yorumlu; nesil işlevleri uygulama rolüyle çağrılabiliyor. Her denetim bir kez bilerek bozulup kırmızıya döndüğü görülerek kabul edilir.</td><td>Belgelerdeki veritabanı kuralları ancak katalogdan okunarak korunur. İşaretler tablo ve sütun yorumunda durduğundan 15 modülün ortak bir listeyi düzenlemesi gerekmez.</td></tr>
+      <tr><td><code>D12-B12</code></td><td>Tek veritabanı, tek uygulama şeması, RLS yok. Birim kimliği birimler, bölümler, dersler ve birim dönemi tablolarında (D02); alt tablolar birimi derse ya da oturuma bağlanarak bulur, ölçüm yavaşlık gösterirse birim kopyalanır. Yetki uygulamada (D01).</td><td>RLS her sorguda oturum değişkeni ister ve ölçeklenme yolunun ilk adımı olan PgBouncer işlem kipinde bu değişken kaybolabilir; birim başına şema çift anadal öğrencisini ve birimler arası raporu böler.</td></tr>
+      <tr><td><code>D12-B13</code></td><td>Dönem genel akademik dönemdir (D02-B08 ile aynı), birim tarihleri ve kilit birim dönemi satırında. Oturum satırının donem_id'si değişmez: D12 genel tetikleyici işlevi uygulama.veritabani_degismez_sutun()'u sağlar (değişen sütunda hata, CONSTRAINT olarak tetikleyici adı), D02 kendi göçünde oturumlar.donem_id için bağlar. Kaydın dönemi her zaman oturum satırından okunur (D05).</td><td>Bölme tek anahtarla olur; tekrar gönderme anahtarının parçası olan dönem iki gönderimde farklı türeyemez, hedefli ON CONFLICT çakışmayı her zaman görür.</td></tr>
+      <tr><td><code>D12-B14</code></td><td>Bugünkü karar korunur: bölme yok. Tetikleyici sıra değil eşiktir: yoklama_kayitlari ve dizinlerinin 100.000 kayıt başına ölçülen boyutundan hesaplanan bir yıllık boyut sunucu belleğini aşınca ya da saklama süresi yazılınca, hangisi önce gelirse. Yöntem: LIST (donem_id) bölünmüş yeni ana tablo açılır, eski tablo önceden doğrulanmış CHECK (dönem listesi) ile tek bölüm olarak ATTACH edilir (yeniden yazım yok), varsayılan bölüm boş kalır. Yeni dönemin bölümü dönem açılırken açılır: o göçle D12'nin dış yüzüne donemBolumuAc(tx, donemId) eklenir ve D02 çağırır; donem_bolumu_denetimi gece varsayılan bölümün boş olduğunu denetler. Dönem silme DETACH PARTITION CONCURRENTLY ve DROP ile, yoklama_goc sahipliğindeki SECURITY DEFINER işlevle. Aynı yol @donem-bolunebilir işaretli öbür tablolara da açıktır (ör. gonderim_defteri).</td><td>600 ile 900 baytlık imzalı metin ve yılda en az 8,4 milyon kayıtla bellek eşiği PgBouncer'dan önce gelebilir; saklama süresi dolan dönemi silmek bölümle tek komut, bölmesiz tabloda milyonlarca satırlık DELETE ve şişme.</td></tr>
+      <tr><td><code>D12-B15</code></td><td>İlk dizin listesi davranış senaryoları ve k6 ders çıkışı yük testi koşarken pg_stat_statements'tan çıkarılır; kuralın gerektirdiği kısmi tekil dizinler baştan. Yabancı anahtar dizini yalnız sorgu gerektiriyorsa açılır; dizinsiz yabancı anahtar @dizinsiz-kabul yorumuyla bilerek kabul edilir ve şema testi listeler. Her dönem sonunda kullanılmayan dizinler pg_stat_user_indexes'ten gözden geçirilir. BRIN yok.</td><td>Ana satırlar silinmediğinden (arşiv, pasif, silindi işareti) yabancı anahtar dizininin silme maliyetini düşürme gerekçesi yok; gereksiz dizin her yazmayı yavaşlatır.</td></tr>
+      <tr><td><code>D12-B16</code></td><td>Yaşam döngüsü boş olabilen timestamptz(3) sütunlarıyla: silinme_ani, pasif_ani, arsiv_ani; an hem işaret hem kanıttır, kısmi dizin koşulları IS NULL. Kişi, ders, liste satırı, oturum, yoklama kaydı, düzeltme, sorun bildirimi ve denetim satırı fiziksel silinmez. Fiziksel silinenler: modüllerin kendi geçici verisi (kendi temizlik işleriyle), hesap silmede giriş alanları (D01) ve saklama süresi dolan veri (saklama_suresi_isi). Telefona inen tablolarda silindi işareti bu sütunlardan türer (D06).</td><td>Ortak biçim olmazsa kısmi tekil dizin koşulları, indirme süzgeçleri ve saklama işi her tabloda başka kural izler.</td></tr>
+      <tr><td><code>D12-B17</code></td><td>Kontratla D01'e geçti: istek ve sıra D01'in hesap_silme_istekleri tablosunda, yürütme hesap_silme_yurutucu işinde. D12'nin payı veri kuralıdır: neyin fiziksel silindiği, neyin kaldığı (açık nokta D12-A01) ve silinen verinin yedeklerden en geç 35 günde çıkması (D12-B25).</td><td>Silmenin akışı hesabın sahibi modülde, verinin ömrü D12'de; tek yazar kuralı.</td></tr>
+      <tr><td><code>D12-B18</code></td><td>Veri tarafı: silinen hesabın cihaz açık anahtarları, anahtar türü, App Attest son sayaçları ve son sıra numarası kalır; geç ulaşan imzalı kayıt doğrulanabilir ve kanıt olarak saklanır. Karar kuralı D07'nindir; D12'nin önerisi: hesaplanan saati silme anından önce olan kayıt normal kurallarla karara bağlanır, sonrası ret ve hesap silinmiş gerekçe kodu, saati doğrulanamayan İncelemede.</td><td>Plan yalnız silmeden sonra üretilen yeni kaydı yasaklıyor (plan.html#kararlar-hesap-silme); silme öğrencinin aleyhine sonuç doğurmamalı (plan.html#hedefler, Haksız devamsız 0).</td></tr>
+      <tr><td><code>D12-B19</code></td><td>Kişi satırı fiziksel silinmez ve yeniden açılabilir: silinmiş öğrenci aynı numarayla yeniden kaydolunca aynı satırın silinme_ani boşaltılır, teyit beklemeye döner, yeni cihaz ve oturum bağlanır. Tekil numara dizininin koşulu teyitli ve silinme_ani boş. Akışı D01 yazar; teyide kadar eski geçmiş telefona inmez (D06 süzgeci).</td><td>Eski kayıtlar aynı iç kimlikte kaldığından devam hesabı kesintisiz kalır (D08); dizin koşulu D12-C03'teki ihlali kaldırır.</td></tr>
+      <tr><td><code>D12-B20</code></td><td>D12'nin kuralı: kanıt ve devam kararı için gereken kalır, giriş ve iletişim verisi silinir; fiziksel silme sahibi modülün kodunda olur. Alan alan liste ve silme ekranı metni ürün kararıdır: açık nokta D12-A01.</td><td>Silme ekranı mağaza beyanıdır (plan.html#kararlar-hesap-silme); tutulan veri kullanıcıya söylenmeden kalamaz.</td></tr>
+      <tr><td><code>D12-B21</code></td><td>Ürün kararı: açık nokta D12-A02 (öneri: dersler yöneticiye devredilir, silme engellenmez, arşiv dönem kilidinde).</td><td>Plan metni dersleri arşivlenir diyor; değişiklik planı değiştirir.</td></tr>
+      <tr><td><code>D12-B22</code></td><td>Mekanizma karara bağlandı: saklama_suresi_isi her gece çalışır; süreler veri sınıfı başına ay olarak apps/server/src/infra/veritabani/saklama/sureler.ts'te durur ve bugün boştur, hiçbir sınıf silinmez; sınır işin saatinden süre çıkarılarak bulunur; modül kendi verisinin saklama başlangıcını (birim döneminin kilit anı) kendisi uygular; kanıt saklama_islemleri'nde. Hangi sınıfa ne süre, başlangıç ve etkin olmayan hesap kuralı açık nokta D12-A03.</td><td>plan.html#acik-saklama-suresi: süre gelene kadar kayıt silinmez; mekanizmanın baştan kurulması buna engel değil, bölme ve anonimleştirme bu karara göre tasarlanır.</td></tr>
+      <tr><td><code>D12-B23</code></td><td>Anonimleştirme kişiye bağın koparılmasıdır: kişi satırındaki ve liste satırındaki öğrenci numarası ve isim silinir (sahip modüllerin işleyicileri, D01 ve D03); iç kimlikler, imzalı ham kayıt, imza ve sayımlar kalır. Kayıt metni numara ve isim taşımaz, öğrenciyi iç kimlikle taşır (D05-B01 önerisiyle aynı); cihaz açık anahtarı cihaz satırında kalır.</td><td>İmzalı metin değişemez; metinde kişisel veri olsaydı anonimleştirme ancak kanıtı silmekle olurdu (plan.html#kararlar-kayit-ve-makbuz).</td></tr>
+      <tr><td><code>D12-B24</code></td><td>Kontratla karara bağlandı: gecici_veri_temizligi kalktı, her modül kendi geçici verisini kendi işiyle siler (kimlik_temizligi, giris_oturumu_temizligi, projeksiyon_eslestirme_temizle, eposta_gonderim_temizligi; pg-boss işleri pgboss_bakimi). D12'nin ortak kuralı: temizlik işleri 04:00 ile 05:00 arasında, iki kez çalışınca aynı sonucu verir, silinen satır sayısını iç kimlikle loglar; süreyi sahibi koyar. Envanterdeki süreler sahiplere öneridir: giriş kodu 24 saat, biten oturum 30 gün, kayıt ve eşleştirme kodu geçersizlikten 7 gün sonra, telefon sayacı 13 ay.</td><td>Kesen modül alan tablosu yazmaz; tek temizlik işi on tabloya yazınca tek yazar kuralı bozulurdu.</td></tr>
+      <tr><td><code>D12-B25</code></td><td>pgBackRest: pazar 01:00 tam, öteki geceler 01:00 fark; repo1-retention-full=3 (sayı): PITR penceresi en az 14 gün, en eski yedek en çok 21 gün; çarşamba 01:30 verify, her yayında check. pg_dump her gece 02:15, restic'te 35 gün. Dönem sonu uzun döküm yok. Başarısız ya da 26 saatten eski yedek durum dosyası üzerinden D15'in uyarısına gider.</td><td>Sayım tabanlı saklamada 2 tam yedek ancak 7 günü garanti eder, 14 gün için 3 gerekir. Uzun süreli döküm silinen hesabın giriş verisini yıllarca taşırdı; 35 gün sınırı silme ekranında yazılabilecek bir süre verir (D12-A01).</td></tr>
+      <tr><td><code>D12-B26</code></td><td>Araç restic 0.19.1 (Temmuz 2026 sürümü; son 12 ayda sürüm ölçütü sağlanıyor, plan.html#teknoloji-surdurulebilirlik); imaj sürümü tam sabit, D12'nin Compose parçasında yedek profilindeki tek seferlik servis. Çalıştırma ana makinedeki systemd zamanlayıcısıyla, pg-boss dışında: pg_dump -Fc (yoklama, xprem) ve pg_dumpall --globals-only --no-role-passwords PostgreSQL kabının içinden yerel soketle; restic döküm klasörünü ve xprem birimini şifreli depoya gönderir; yerel döküm silinir. restic parolası ve depo erişim bilgisi yalnız yedek servisine verilir; parola pgBackRest parolası gibi çevrimdışı yedeklenir. Sırlar Compose dosya sırrı olarak bağlandığından (uid ve mode yok sayılır) makinedeki dosyalar 0400 izinli durur; pgBackRest sırrı kap içindeki postgres kullanıcısına (uid 999) ait olur.</td><td>İş API ve işçi düşmüşken de çalışmalı ve depo parolası onlara verilmemeli; restic kendi şifrelemesiyle S3 ve SFTP'nin ikisini de destekler, saklama kuralı yerleşik.</td></tr>
+      <tr><td><code>D12-B27</code></td><td>Yapılandırma iki türe de hazır yazılır (pgbackrest.conf'ta repo1-type, restic depo adresi); seçim ürün ve kurum kararıdır: açık nokta D12-A04.</td><td>Cevap BİDB'den gelir (plan.html#acik).</td></tr>
+      <tr><td><code>D12-B28</code></td><td>Ayın ilk cumartesisi 05:30, her büyük sürüm geçişinden önce ve elle. Yer: hazırlık makinesi varsa orası (D15-B13), yoksa üretim makinesinde ayrı Compose projesi; ayrı birim ve ağ, deneme kabına 1,5 çekirdek ve 2 GB bellek sınırı, boş disk dökümün iki katı artı 10 GB değilse atlanır. Adımlar ve kabul ölçütü işin tanımında; süre ölçülür, kurtarma süresi olarak teknik.html'e yazılır ve D15-B39'daki hedefle karşılaştırılır. Sonuç durum dosyasına ve tarihli rapora.</td><td>Kurtarma süresi de boyut gibi tahmin edilmez, ölçülür; deneme gerçek yedekten yapılmazsa yedeğin açıldığı bilinmez.</td></tr>
+      <tr><td><code>D12-B29</code></td><td>archive-async=y ve archive-push-queue-max=20GiB: depo ulaşılmazsa WAL en çok 20 GiB birikir, sonra pgBackRest WAL'ı düşürür, PITR o aralıkta kopar ama veritabanı çalışır; telefonlar işleri dönem kilidine kadar sakladığından kayıp telefonda durur (plan.html#gun-kenar-durumlar). Arşiv gecikmesi pg_stat_archiver'dan, disk doluluğu makineden D15'in eşikleriyle uyarır (D15-B20); depo dönünce hemen tam yedek alınır.</td><td>100 GB diskin dolması PostgreSQL'i durdurur ve gönderimi düşürür; arşivin kopması yalnız PITR'yi daraltır.</td></tr>
+      <tr><td><code>D12-B30</code></td><td>D12'nin payı: geri-yukle.sh API'yi, işçiyi ve xprem'i durdurur; nesil doğrulanıp göç uygulanmadan trafik açılmaz; cli/geri-yukleme kayıp pencereyi geri_yukleme_kayitlari'na yazar, yönetici ucu gösterir. Kayıp penceredeki iptallerin (oturum kapatma, hesap silme, cihaz değişimi, yöneticinin hesap kapatması) yeniden uygulanması, panel oturumlarının kapatılması ve hocalara gösterim D01'in tabloları ve ürün kararıdır: açık nokta D12-A05.</td><td>Giriş oturumları ve iptaller D01'in tabloları; D12 başka modülün tablosuna yazamaz.</td></tr>
+      <tr><td><code>D12-B31</code></td><td>Gönderim protokolüne eklenecek imzalı ulaşma makbuzu ürün kararıdır: açık nokta D12-A06; biçim D05 ve D06'nın. D12 tarafındaki iş hazır: kayıp pencere geri_yukleme_kayitlari'nda.</td><td>Gönderim cevabının ve yeniden gönderimin biçimini değiştirir (plan.html#kararlar-kayit-ve-makbuz).</td></tr>
+      <tr><td><code>D12-B32</code></td><td>İkisi birden: nesilOku zaman çizelgesini pg_control_checkpoint'ten ve pg_walfile_name(pg_current_wal_lsn()) değerinin ilk 8 hanesinden okur, uyuşmazsa VERITABANI_NESIL_BELIRSIZ (503) atar ve semaDurumu hazır demez; geri yükleme ve terfi betiği trafik açılmadan CHECKPOINT çalıştırır. İleride okuma kopyası gelirse nesilOku yalnız birincilde çağrılır (pg_walfile_name kurtarmada çalışmaz).</td><td>Denetim dosyasındaki zaman çizelgesi ilk denetim noktasına kadar eski kalabilir (D06-B20); WAL dosya adı terfiden hemen sonra yeni çizelgeyi gösterir. Betik adımı unutulsa da çapraz denetim eski imleçle değişiklik atlanmasını önler.</td></tr>
+      <tr><td><code>D12-B33</code></td><td>pg_dump'tan yeni sürümün initdb kümesine, yeni birimde dönüş (her ay denenen yol); dönem arasında, en düşük sürümün yükseltildiği pencerede (plan.html#dagitim-guncelleme-ilkesi). Ardından pgbackrest stanza-upgrade ve hemen tam yedek, geri_yukleme_kayitlari'na surum_gecisi satırı. Veri büyüyüp kesinti uzarsa pg_upgrade --link yeniden değerlendirilir. 19 çıkınca hemen geçilmez.</td><td>Nesli kesin değiştirir (telefonlar bir kez baştan indirir) ve her ay denenen yoldur; resmî imajda pg_upgrade iki sürümün ikili dosyalarını aynı kapta ister.</td></tr>
+      <tr><td><code>D12-B34</code></td><td>Sıfırlama sahip rolle uygulama şemasındaki bütün tabloları tek TRUNCATE ... RESTART IDENTITY ile boşaltır ve sütuna bağlı olmayan dizileri ALTER SEQUENCE ... RESTART ile başa alır. Göçle eklenen sabit satır yoktur: göç dosyası satır yazmaz; sabit satır gerektiren tablo (ör. D06'nın degisiklik_sayaci) satırını ilk kullanımda INSERT ... ON CONFLICT ile kendisi açar. Yayın, geliştirme ve test böylece aynı başlar.</td><td>Ortak tohum işlevi modüllerin satırlarını D12'ye yazdırırdı (tek yazar kuralı); göçteki satır da her sıfırlamada kaybolurdu.</td></tr>
+      <tr><td><code>D12-B35</code></td><td>Testlerde API ve işçi yayındaki rollerle (yoklama_api, yoklama_isci) bağlanır; sıfırlama ve veri kurucular yoklama_goc ile. Bir senaryo uygulama rolünün @yalniz-ekleme tablosunu güncelleyemediğini ve silemediğini gösterir; yetki bilerek verilince kırmızıya döndüğü bir kez görülür.</td><td>Sahip rolle bağlanan test yetki hatasını ilk kez yayında gösterir ve denetim tablosunun koruması hiç denenmemiş olur.</td></tr>
+    </table></div>
+  </details>
+  <details>
+    <summary>Çelişkiler: D12-C01 ile D12-C05 arası, nasıl çözüldü</summary>
+    <div style="overflow-x:auto"><table>
+      <tr><th>Çelişki</th><th>Çözüm</th></tr>
+      <tr><td><code>D12-C01</code></td><td>teknik.html'deki eşik tetikleyicidir; plan.html'deki büyüdükçe sırasıyla listesi beklenen sıradır, önkoşul değildir: bölme bellek eşiği ya da saklama süresi gelince PgBouncer ve okuma kopyasından önce de yapılabilir (D12-B14). Plan cümlesine eşiklere göre ifadesinin eklenmesi D12-A07'de sahibin onayına sunulur.</td></tr>
+      <tr><td><code>D12-C02</code></td><td>Hesap silmede oturum satırlarının silinmesi mi kapatılması mı, iki rol için tek kural olarak D12-A01'e bağlandı; öneri: iki rolde de satır silinir, giriş olayları denetim kaydında kalır. Karar verilene kadar D01 iki belgenin ortak paydasını uygular: silinen hesabın hiçbir oturumu hiçbir istekte geçerli değildir.</td></tr>
+      <tr><td><code>D12-C03</code></td><td>Tekil numara dizininin koşulu teyitli ve silinme_ani boş; yeniden kayıt aynı kişi satırını geri açar (D12-B19). Silinmiş satır dizine girmediğinden yeni teyit ihlal üretmez.</td></tr>
+      <tr><td><code>D12-C04</code></td><td>Silinmez günlük işletme içindir: uygulama rolleri denetim ve düzeltme tablolarında silemez ve güncelleyemez; saklama süresi dolunca silme ya da anonimleştirme yalnız saklama_suresi_isi içinde, yoklama_saklama rolüne geçilerek ve kanıtı saklama_islemleri'ne yazılarak yapılır. teknik.html cümlesinin bu istisnayla yazılması D12-A07'de.</td></tr>
+      <tr><td><code>D12-C05</code></td><td>Planın kendiliğinden değişir cümlesi teknik'in işletim kuralı uygulanınca doğrudur ve D12 kuralı zorunlu kılar: dökümden dönüş yalnız boş yeni birimde yeni initdb kümesine (geri-yukle.sh dolu birimde VERITABANI_KUME_YENI_DEGIL ile durur); geri_yukleme_kayitlari aynı nesli kabul etmez (CHECK); nesil değişmeden trafik açılmaz; terfi gecikmesini nesilOku'nun çapraz denetimi kapatır (D12-B32). Plan cümlesine koşulun eklenmesi D12-A07'de.</td></tr>
+    </table></div>
+  </details>
+  <h3>Açık noktalar</h3>
+  <div class="callout warn">
+    <ul>
+      <li><strong>D12-A01</strong> <span class="tag warn">sahip</span> Hesap silmede alan alan ne silinir, ne kalır; oturum satırları iki rolde silinir mi kapatılır mı; silme ekranına hangi satırlar eklenir? (D12-B20, D12-C02) Öneri: Silinir: iki rolde de giriş oturumu satırları (giriş olayları denetim kaydında kalır), giriş kodları, e-posta, telefon sayaçları, cihazın etkin işareti ve kanıt ayrıntıları (güvenlik düzeyi, doğrulanmış açılış, model; kayıtlardaki etiket sütunları kanıtı taşır), öğrencinin kayıtta yazdığı isim. Kalır: kişi satırı (iç kimlik, rol, öğrenci numarası; hocada ad-soyad ve bölüm, denetim kaydındaki kim okunur kalsın diye), cihaz açık anahtarları ve anahtar türü, App Attest son sayaçları ve son sıra numarası, liste satırları, yoklama kayıtları, düzeltmeler, sorun bildirimleri, onaylar ve denetim kaydı. Silme ekranına sorun bildirimlerin, hocada adın ve bölümün, ayrıca silinen veriler yedeklerden en geç 35 günde çıkar satırı eklenir. Uygulaması D01'in (D01-B34 ile birlikte).</li>
+      <li><strong>D12-A02</strong> <span class="tag warn">sahip</span> Hoca hesabı dönem içinde silinirse etkin dersleri ne olur? (D12-B21) Öneri: Giriş bilgileri hemen silinir; etkin dersler yöneticinin sahipsiz dersler listesine düşer, yönetici D02'nin devir ucuyla başka hocaya devreder, arşiv dönem kilidinde olur; öğrencilerin yoklaması ve hakları kesilmez, mağaza şartı karşılanır. Plan ve ekran metni dersleri yöneticiye devredilir, dönem sonunda arşivlenir olur.</li>
+      <li><strong>D12-A03</strong> <span class="tag warn">sahip</span> Saklama süresi hangi veri sınıflarına ne kadar uygulanır, saat ne zaman başlar; hiçbir ders listesinde olmayan öğrencinin süresiz oturumu ne olur? (D12-B22) Öneri: Süre veri sınıfı başına (yoklama kayıtları, düzeltmeler, sorun bildirimleri, denetim kaydı, liste satırları, kişi bağı); saat birim döneminin kilidinden başlar ve hesap durumuna bakmadan o dönemin bütün verisine uygulanır; süre dolunca silme ya da kişi bağının koparılması (D12-B23). Hiçbir ders listesinde olmadan iki dönem geçen öğrencinin oturumu kapanır, cihaz etkinliği kalkar, yeniden gelirse cihaz değişimi akışı (D01). Süreler İÜ'nün kayıt saklama politikasından ya da Öğrenci İşleri'nden gelir (plan.html#acik-saklama-suresi); gelene kadar sureler.ts boş kalır.</li>
+      <li><strong>D12-A04</strong> <span class="tag warn">sahip</span> Yedek deposu S3 uyumlu depo mu, SFTP ile başka makine mi? (D12-B27) Öneri: BİDB nesne deposu verebiliyorsa S3 uyumlu depo; değiştirilemez kilit (object lock) varsa saklama süresine uygun açılır, sunucu ele geçirilirse yedeklerin silinmesini zorlaştırır. Vermezse BİDB'de ayrı makineye SFTP. pgBackRest ve restic yapılandırması ikisine de hazır.</li>
+      <li><strong>D12-A05</strong> <span class="tag warn">sahip</span> Geri yüklemeden sonra kayıp penceredeki iptaller (oturum kapatma, hesap silme, cihaz değişimi, yöneticinin hesap kapatması) nasıl yeniden uygulanır, panel oturumları kapatılır mı, hocalar kayıp pencereyi nereden görür? (D12-B30) Öneri: D01 bu iptallerin her birini veritabanı dışına da yapısal log satırı olarak bırakır (yalnız iç kimlik ve olay türü); D01'in komutu dönüşten sonra hedef andan sonraki iptalleri yeniden uygular. Panel oturumları kapatılır (en çok 24 saatlik oldukları için ucuz); telefon oturumları kapatılmaz, hoca derste girişsiz kalmasın. Hocalar için bütün personele açık bir uç (GET /v1/veritabani/geri-yuklemeler/son) eklenir ve panel üst bilgide son dönüşün kayıp penceresini gösterir; bugün yalnız yönetici ucu var.</li>
+      <li><strong>D12-A06</strong> <span class="tag warn">sahip</span> Geri yüklemede ulaşma anı kaybolan kayıt yeniden gönderilince gönderme süresi hangi ana göre işler? (D12-B31) Öneri: Sunucu kabul cevabında kayıt kimliğini ve ulaşma anını saat belgesindeki HMAC yöntemiyle ve anahtar kimliğiyle imzalı kısa ulaşma makbuzu olarak döner; telefon saklar ve yeniden gönderimde ekler. Eski anahtarlar dönem kilidine kadar saklandığından dönüşten sonra doğrulanır, ulaşma anı makbuzdan alınır. Biçim D05 ve D06'nın; amaç sunucunun arızasının öğrenciyi devamsız bırakmaması (plan.html#hedefler).</li>
+      <li><strong>D12-A07</strong> <span class="tag warn">sahip</span> D12'nin kararları için plan.html ve teknik.html'de hangi cümleler güncellenir? Öneri: teknik Yedek: kopyalama aracı restic, yedek profili, 3 tam yedek ve 35 günlük döküm, dönem sonu uzun döküm yok. teknik Korunacak anahtarlar: restic parolası. teknik Denetim kaydı: uygulama silemez, saklama işi yoklama_saklama rolüyle siler ya da anonimleştirir (D12-C04). teknik Veritabanı erişimi: CONCURRENTLY dosyası göç klasöründe (D12-B09). teknik Ayarlar: süper kullanıcı ağdan yalnız veritabanı ağından ve kurulum adımı için (D12-B05). plan Ölçeklenme yolu: sıra eşiklere göre (D12-C01). plan İndirme: dönüş kurala uygun yapıldığında nesil kendiliğinden değişir (D12-C05).</li>
+    </ul>
+  </div>
+</section>

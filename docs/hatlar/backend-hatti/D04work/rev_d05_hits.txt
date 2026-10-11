@@ -1,0 +1,80 @@
+D05.tables[0].columns[15].name: ilk_capa_durumu
+
+D05.tables[0].columns[15].note: İlk çapanın sonucu; değerler D04'ün (packages/contracts/src/saat.ts), CHECK oradan üretilir.
+
+D05.tables[0].columns[16].name: ikinci_capa_durumu
+
+D05.tables[0].columns[16].note: İkinci çapanın sonucu; okutma yolunda ve paketi başka cihaz gönderdiğinde KURULMADI. Değerler D04'ün.
+
+D05.tables[0].columns[17].name: kayit_ani_alt
+
+D05.tables[0].columns[17].note: Kaydın saat aralığının alt ucu (D04 kuralı); saat çapayla kurulamadıysa boş.
+
+D05.tables[0].columns[18].name: kayit_ani_ust
+
+D05.tables[0].columns[19].note: Kaydın gösterilen ve pencerede kullanılan saati (D04 kuralı); saat çapayla kurulamadıysa telefon saati.
+
+D05.tables[0].columns[20].note: Saatin dayandığı kaynak (iki çapa, ilk çapa, ikinci çapa ya da telefon saati); değerler D04'ün saat sonucundan.
+
+D05.tables[0].columns[21].name: pay_ms
+
+D05.tables[0].columns[21].note: Uygulanan saat payı, milisaniye (D04).
+
+D05.tables[0].columns[22].note: D04.pencereSonucu cevabı (pencerenin içinde, dışında, sınırda); değerler D04'ün.
+
+D05.tables[0].columns[23].note: Saat doğrulanamadıysa sebep kodu (D04 değerleri); Saat doğrulanamadı oranı platforma göre buradan sayılır.
+
+D05.tables[0].columns[24].name: esitleme_bozukken_ulasti
+
+D05.tables[0].columns[24].note: Sunucu saat eşitlemesi bozukken ulaştı (D04.esitlemeSaglikliMi); D04'ün yeniden değerlendirme işi bu kayıtları bulur.
+
+D05.tables[0].columns[29].note: Hocanın telefonundaki okutma anının alt ucu (öğenin çapalı işlem anı, D04 kuralı); yalnız OKUTMA yolunda.
+
+D05.tables[0].columns[30].note: Okutma anının üst ucu; kayıt saati bunu paydan fazla aşamaz (kuralı D04 ve D07 uygular).
+
+D05.tables[0].constraints[7]: CHECK (kayit_ani_alt IS NULL) = (kayit_ani_ust IS NULL) AND kayit_ani_alt <= kayit_ani_ust
+
+D05.tables[0].constraints[10]: CHECK değer listeleri (enum değil, metin ve CHECK): imza_turu, gelis_yolu (D05); karar, gerekce_kodu, karar_kaynagi, ilk_kesin_karar (D07 sabitleri); ilk_capa_durumu, ikinci_capa_durumu, saat_kaynagi, pencere_sonucu, saat_sebebi (D04 sabitleri). Liste sahibinde değişince bu tabloya göçü D05 yazar; D12'nin şema testi kaymayı yakalar.
+
+D05.tables[1].columns[10].note: Okutma anı aralığının alt ucu (öğenin çapalı işlem anı, D04 kuralı).
+
+D05.queue_items[0].baglam.paketImzali: boolean: ikinci çapa bölümü imzalı mı
+
+D05.queue_items[0].baglam.ikinciCapa: öğe için çapa (belge, istek süresi, kayıttan bu yana geçen süre) ya da yokluk nedeni (D04 değerleri)
+
+D05.queue_items[0].sonuc.ulasmaBelgesi: string | null (KABUL ve ZATEN_VAR'da: D04 saat belgesi; özne kaydın cihazı, tek kullanımlık değer zarfın SHA-256 özetinin ilk 16 baytı; eşitleme bozukken boş)
+
+D05.queue_items[0].errors[14]: IKINCI_CAPA_GEREKLI
+
+D05.queue_items[1].baglam.islemAni: öğenin çapalı işlem anı: okutma anı (alt, üst; D04 kuralıyla D06 taşır)
+
+D05.state_machines[0].transitions[7].when: Kendi cihazından gelen, ilk çapası bozuk kayıt imzasız pakette (IKINCI_CAPA_GEREKLI).
+
+D05.tests[20].name: İlk çapası bozuk kayıt imzasız pakette
+
+D05.tests[20].asserts: TEKRAR_DENE IKINCI_CAPA_GEREKLI ve satır yok; aynı kayıt imzalı pakette KABUL.
+
+D05.tests[22].asserts: Kayıt saklanır, ikinci_capa_durumu KURULMADI, kararı D07 verir.
+
+D05.resolved_gaps[0].decision: Kayıt metni UTF-8 JSON nesnesinin dolgusuz base64url metnidir. v1 alanları: tur ('kayit'), v (1), id (UUIDv7), cihaz, anahtar (cihaz_anahtarlari.id), sira, oturum, ogrenci (iç kimlik; numara ve isim yok), belge (saat belgesi aynen), belgeIstegiMs, belgedenKayitMs, ilkCapa, telefonSaati, saatDilimi, uygulamaSurumu, runtimeSurumu, guncellemeKimligi. Dönem metne yazılmaz, oturumdan bulunur. Şema packages/contracts/src/yoklama.ts'te (z.object; bilinmeyen alan atılır, kayıt reddedilmez), kodlama packages/core/src/yoklama'da telefonla ortak. Aşama 2 ve 3 alanları (qr, yedekKod, Bluetooth, konum) isteğe bağlı alan olarak eklenir; v yalnız bir alanın anlamı değişirse artar ve sunucu bildiği her v'yi okumayı sürdürür. Saat alanlarının anlamı D04'ündür.
+
+D05.resolved_gaps[5].decision: Öğe sonucu: sonuc, gerekceKodu, ulasmaAni, karar, kararGerekcesi, kararAni, etiketler, sayilan, degisiklikSurumu (64 bit metin), ulasmaBelgesi (D12-B31). ZATEN_VAR saklı ulaşma anını ve güncel kararı taşır; RET yalnız gerekçe taşır. Kayıt satırına karar_ani eklendi: ilk kararda ulaşma anı, sonra D07'nin saat arayüzünden okuduğu an. Ulaşma anını D06 paket başına bir kez saat arayüzünden okur, D05 paketteki her kayda aynen yazar. Kayıt düzeyinde TEKRAR_DENE D05'ten yalnız BICIM_SURUMU_BILINMIYOR ve IKINCI_CAPA_GEREKLI için, zaman aşımında D06'nın öğe SAVEPOINT yolundan gelir. Değerler x-extensible-enum.
+
+D05.resolved_gaps[9].decision: Okutma yolunda ikinci çapa kurulmaz: saat ilk çapadan kurulur (ikinci_capa_durumu KURULMADI); ilk çapa bozuksa kayıt Saat doğrulanamadı olur (D07). Öğenin çapalı işlem anı okutma anı olarak okutma_ani_alt ve okutma_ani_ust'e yazılır ve kayıt saatine üst sınır olarak D04 ve D07 kuralına verilir. Öğrencinin telefonu sonra gönderse de kayıt değişmez, ZATEN_VAR alır.
+
+D05.resolved_gaps[14].decision: contracts.json ve D06-B07 ile çözüldü: sıra numarası kurulum başına bütün kuyruk öğelerinin tek, hiç sıfırlanmayan sayacıdır; 'son sıra' D06'nın kesintisiz su seviyesidir ve boşluk ölçümü D06'nın sira_boslugu_raporu işindedir. D05 kaydın kendi imzalı sırasını saklar ve (dönem, cihaz, sıra) tekilliğini korur; öğe sırası metindeki sıradan farklıysa kayıt reddedilmez, log satırıyla izlenir.
+
+D05.resolved_gaps[16].decision: İmzası geçerli ve anahtarı metindeki öğrencinin cihazına ait her kayıt cihazın durumu ne olursa olsun saklanır; kararı D07 verir (değişim bekliyorsa Beklemede; onaydan sonra doğrulanmış saati etkinlik bitişinden sonraysa Ret; saati doğrulanamıyorsa İncelemede; D07-B13). Metindeki cihaz paketi gönderen cihaz değilse (yedekten dönen kayıtlar) ikinci çapa kullanılmaz; gönderen cihaz aynı öğrencinin değilse RET GONDEREN_UYUSMUYOR.
+
+D05.resolved_gaps[21].decision: Başka alanın D05'e bıraktığı biçim. KABUL ve ZATEN_VAR sonucuna ulaşma belgesi eklenir: D04.saatBelgesiVer ile, özne kaydın cihazı ve tek kullanımlık değer zarfın SHA-256 özetinin ilk 16 baytı. Telefon ilk aldığı belgeyi kaydın yanında saklar ve yeniden gönderimde öğe gövdesinde yollar. Kayıt sunucuda yoksa (yedekten dönüş) ve belge D04.saatBelgesiDogrula ile geçerli, öznesi kaydın cihazı, değeri bu zarfın özetiyse ulasma_ani belgenin anıdır; değilse paketin ulaşma anı. Kayıt varsa belge yok sayılır.
+
+D05.resolved_gaps[21].why: PITR en çok 5 dakikalık WAL penceresini geri alır (teknik.html#veritabani); o pencerede ulaşmış kayıt yeniden gönderilince ulaşma anı geç yazılırsa gönderme süresi ve birimin son günü kuralı öğrencinin aleyhine işleyebilir (plan.html#kararlar-gonderme-suresi). Yeni anahtar ya da tablo gerekmez: D04'ün belge biçimi ve anahtar listesi kullanılır, eski anahtarlar dönem kilidine kadar kalır.
+
+D05.contradictions_resolved[1].resolution: D06'nın kesintisiz su seviyesiyle (D06-B07) kalkar: su seviyesi yalnız gönderen kurulumun kendi öğeleriyle ilerler; hocanın okuttuğu kayıt öğrencinin su seviyesini ilerletmez, öğrencinin telefonu kaydı yine gönderir ve ZATEN_VAR alır. Yedekten dönüşte hem öğrencinin hem hocanın telefonu su seviyesinden sonrasını yeniden gönderir, makbuzlu kayıt kaybolmaz.
+
+D05.open_points[4].question: D06 ile öğe sözleşmesi kabul ediliyor mu: (1) ogrenciDurumuDegisti öğrencinin yeni sürümünü (bigint) döner; (2) öğe bağlamı ulasmaAni, kurulumId, gonderenCihazId, paketImzali, öğe için ikinci çapa sonucu, kişi (giriş oturumu doğrulandıysa) ve öğenin çapalı işlem anını taşır; (3) D05 işleyicisi veritabanı hatası yakalamaz, D06'nın öğe SAVEPOINT'i beklenmeyen kısıt hatasını RET'e, kilit ve sorgu zaman aşımını TEKRAR_DENE'ye çevirir; (4) yoklama_kaydi öğesinin öğe kimliği kayıt kimliğidir; (5) öğeler kilitten önce sabit sıraya dizilir (D12-B08).
+
+D05.open_points[7].question: D04 ile ulaşma belgesi sözleşmesi kabul ediliyor mu: saatBelgesiVer özne olarak kaydın cihazını ve tek kullanımlık değer olarak zarf özetinin ilk 16 baytını alır, saatBelgesiDogrula belgenin anını, öznesini ve değerini döner; eşitleme bozukken belge verilmez ve alan boş kalır (D12-B31).
+
+D05.open_points[7].recommendation: Kabul edilsin; D04'ün durumsuz belgesi zaten 'sunucu bu anı bu değer için gördü' demektir, yeni anahtar ya da tablo gerekmez.
+

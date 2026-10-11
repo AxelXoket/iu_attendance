@@ -1,0 +1,89 @@
+{
+ "id": "D04",
+ "instructions": [
+  {
+   "refs": [
+    "I016"
+   ],
+   "do": "D04-A05'i kapat: contracts.json güncellendi (dış yüzde pencereDegistiDinleyicisiKaydet, istanbulTarihi, istanbulAni, istanbulGunSonuAni, saatEklentisi; reads_from'da D03 yok; oturumKapandi dinleyici listesinde D08 yok; oturum_pencereleri amacında taşıma anı ve şubeler, kesinleşmeyi D07 izler). Dış yüz imzalarında anlar Date, çekirdekte UTC milisaniye. spec.exports'ta birleşik girişleri tek adlara böl (simdi, istanbulTarihi, istanbulAni, istanbulGunSonuAni, pencereDegistiDinleyicisiKaydet, saatSonucu, capaAraligi, pencereHesapla, pencereIcindeMi, pencereDurumu, belgeCoz, belgeImzaGirdisi ve sabitler ayrı ayrı)."
+  },
+  {
+   "refs": [
+    "I017",
+    "A1"
+   ],
+   "do": "D04-A06'yı kapat: dosya haritasında apps/server/migrations/??????????????_saat_* globu D04'ündür; göç klasörü <14 haneli UTC>_saat_<açıklama>/ (migration.sql, snapshot.json) spec dosya listesine değil iş paketine yazılır; klasör kuralı ve CI denetimi D12'nindir."
+  },
+  {
+   "refs": [
+    "I018",
+    "I023"
+   ],
+   "do": "D04-A09'u kapat. Sonuçlar: D02 olaya subeIdleri, onceki.yoklamaSuresiDk ve an ekler; D05 kayıt satırına saat sonucu sütunlarını D04 sabitlerinden CHECK ile ekler; D06 IkinciCapaBaglami.yokNedeni'ni D04 sabitlerinden alır; D07 pencere sonucunu bugünkü biçimiyle kullanır, kesinti partilerini kendi dinleyicisinde işler (yenidenDegerlendir dış imzası değişmez); D11 ve D13 kabul; D15 kid deseni ve dört SAAT_ESITLEME_ ayarı ile saat.pencere_kapanamadi uyarısı. Belge ucu için D06'dan istenen ikinci çapa imza yardımcısı geri çekildi: belge ucu kimlik ['oturum'] ile çalışır, özneyi app.ts'in saatOznesiKur'u verir. IKINCI_CAPA_YOK_NEDENLERI sabitine BASKA_CIHAZ_GONDERDI (paketi kaydın cihazı göndermedi) ve OKUTMA_YOLU eklenir; KURULMADI kalkar. saatBelgesiVer amacına 'yalnız saat çapası içindir; ulaşma kanıtı ya da makbuz olarak kullanılamaz' cümlesi; saatSonucu'nda tahminMs yalnız kaynak YOK iken boştur."
+  },
+  {
+   "refs": [
+    "I019",
+    "I008",
+    "I092"
+   ],
+   "do": "D04-A10'u kapat. Sürüm damgası (I019): D06.surumDamgasiIste(tx: Islem, damga: (surum: bigint) => Promise<void>): void (modules/esitleme/yaprak.ts) damgayı işleme bağlar; işlemin sahibi son adımda D06.surumAl(tx)'ı bir kez çağırır, sayaç bir kez artar ve bütün bekleyen damgalar aynı sürümle çağrılır; damga yalnız işlemde zaten kilitli satırları günceller; surumAl çağrılmadan biten damgalı işlem D12.islemSonuKancasi denetimiyle hata verir ve geri alınır. PaketBaglami.surumlaDamgala aynı işleve giden kısayoldur. D04 için: D02 üretim dinleyicisini (tx, olay) => pencereleriHesapla(tx, olay.oturumlar) uyarlayıcısıyla kaydet (OturumUretimOgesi OturumPlani'nın üst kümesi); dinleyici ve gönderim yolunda surumAl çağırma, pencere satırlarının sürümünü D06.surumDamgasiIste ile bırak (gönderimde baglam.surumlaDamgala aynı işleve gider); D04'ün kendi işlemlerinde (oturum_pencere_kapat, kesinti kapanışı, doğrudan çağrılar) damgadan sonra son adımda D06.surumAl'ı bir kez çağır."
+  },
+  {
+   "refs": [
+    "I030"
+   ],
+   "do": "pencereSonucu biçimi D04'ün bugünkü biçimidir ve tek sahibi D04'tür: sonuc 'ICINDE' | 'DEGISIM_DILIMI' | 'ESKI_PROGRAM' | 'DISINDA', kayitAnindaSureSecildi, ayarDegisikligiVar, pencere, eskiProgram; D07 eski program hesabını bırakır ve bunu kullanır. kesintiAraliklari dönüş öğelerine ulasmaAnlariGuvenilir: boolean | null ekle (açık kesintide null, kapanınca KesintiKapandiOlayi ile aynı değer). oturumKapandiDinleyicisiKaydet açıklaması: 'D07 (güvenlik ağı yeniden değerlendirme, iş koymaz) ve D11 (projeksiyon_baglanti_kapat)'. pencereDegistiDinleyicisiKaydet'e D07 { ad: 'dogrulama.pencere_degisti', calistir } ile kaydolur ve kararı aynı işlemde verir; kesintiKapandi dinleyicisi partili imzayla kalır."
+  },
+  {
+   "refs": [
+    "A4"
+   ],
+   "do": "Açık nokta D04-A08'i kapat (mimar kararı A4): ürün kararı değildir; teknik.html#altyapi-sunucu-makinesi sunucunun saatinin NTP ile eşitlenip izlendiğini söyler, chrony durum dosyası bunun uygulamasıdır ve süreç içi SNTP ölçümü yoktur. resolved_gaps'e bu gerekçeyle yaz; teknik.html'de değişiklik gerekmez."
+  },
+  {
+   "refs": [
+    "I064",
+    "I025",
+    "I023"
+   ],
+   "do": "Saklama: yalnız D12 kataloğundaki 'saat.donem_verisi' sınıfı için tek işleyici kaydet (saklamaIsleyicisiKaydet); öneksiz ya da ince sınıf adı (ör. 'yoklama_kayitlari', 'hesap_silme', 'aksis_ozet_anliklari', '<modül>.<tablo>') ve kayıtta oncekiSiniflar listesi yoktur, sıra kataloğun oncesinde listesinden gelir. İşleyici yoklama_saklama girişiyle açılan işlemde yalnız kendi tablolarında SELECT, UPDATE ve DELETE yapar; testi D12.saklamaIsleyicisiniCalistir ile yazılır. 'yoklama_kayitlari' ve 'saat.pencere_degisiklikleri' adları kalkar."
+  },
+  {
+   "refs": [
+    "I071"
+   ],
+   "do": "POST /v1/saat/belge rota beyanı: hiz 'saat', kimlik ['oturum'], kimlikKaynaklari ['bearer']; SAAT_ESITLEME_BOZUK bekleme { sabit: 60 }; özne app.ts'in saatOznesiKur(kimlik) işlevinden. pencere_suresi ve erken_kapatma gövde şemaları packages/contracts/src/saat.ts'te D13.ogeTuruTanimla ile dışa verilir."
+  },
+  {
+   "refs": [
+    "I014"
+   ],
+   "do": "Danışma kilidi katmanları (contracts.json ortak kural): 1 dogrulama:liste, devam:hesap, is-kuyrugu:eposta, isletim:*; 2 listeler:kova, dogrulama:teyit; 3 yoklama:cift, projeksiyon:*, esitleme:kurulum_siniri, duzeltmeler:zincir; 4 dogrulama:sayac; 5 dogrulama:isaret. Tek genel sıra vardır, önce katman sonra anahtar metni: D12.danismaKilidi(tx, anahtarlar) bir çağrıdaki anahtarları bu sırayla alır; bir işlem birden çok kez çağırabilir ama yeni her anahtar işlemin tuttuğu bütün anahtarlardan sonra gelir; işlemin zaten tuttuğu anahtarı yeniden istemek işlemsizdir; sırada geride kalan yeni anahtar yalnız D12.danismaKilidiDene(tx, anahtar) ile alınır (beklemez, false dönerse çağıran TEKRAR_DENE döner ya da işi yeniden dener). Çok öğeli işlem öğelerin anahtarlarını saf anahtar işlevleriyle (D05 yoklamaCiftAnahtari, D07 kararAnahtarlari, dogrulamaTeyitAnahtari, dogrulamaListeAnahtari, D03 listeKovaAnahtari, D11 qrKilitAnahtarlari) baştan toplar ve tek çağrıda alır. Anahtar biçimi string ya da { anahtar, kip: 'paylasimli' }. Elle pg_advisory_xact_lock yazılmaz. Sıra: danışma anahtarları, satırlar, iş kuyruğu (D14.isGonder) ve öğrenci sürümü (D06.ogrenciDurumuDegisti), en son genel sayaç (D06.surumAl, bir kez). D04 için: D04 danışma anahtarı almaz; pencereSonucu pencere satırını FOR KEY SHARE ile kayıt satırı ve öğrenci sürümü kilitlerinden önce okur, çok oturumlu grupta oturum kimliği sırasıyla."
+  },
+  {
+   "refs": [
+    "I009"
+   ],
+   "do": "D02.dersYetkisi(tx, kimlik: Kimlik, dersId): Promise<'sahip' | 'yonetici' | null> (yoneticiKapsami parametresi yok; yönetici kapsamı kimlik.roller'dan okunur). Çağırdığın her yerde üç parametreyle çağır, YoneticiKapsami ya da personelRolleri'nden kurulan nesne kalkar; durum, tür ve neden değerlerini D02'nin sözleşme sabitlerinden (OTURUM_TURLERI, OTURUM_DURUMLARI, IPTAL_NEDENLERI) içe aktar, yeniden yazma."
+  },
+  {
+   "refs": [
+    "I074"
+   ],
+   "do": "İşler (I074): her pg-boss işi jobs/<modül>/index.ts'teki export const isler dizisinde D14.isTanimla ile tanımlıdır; KuyrukTanimi modules/<ad>/ içindedir; zamanlama D14 çizelge kurallarına uyar (03:00 ile 05:00 arası günlük iş yok, en az 5 dakika aralık); her iş için D14'ün adımıyla 'aynı veriyle iki kez çalışırsa' senaryosu vardır. Uymayan satırı düzelt."
+  },
+  {
+   "refs": [
+    "I045"
+   ],
+   "do": "Denetim (I045): dersId taşıyan her denetim olayı birimId de taşır; olay türleri sözleşme dosyasında SAAT_DENETIM_OLAYLARI listesindedir ve D09.denetimOlaylariniKaydet ile kaydolur."
+  },
+  {
+   "refs": [
+    "I070"
+   ],
+   "do": "Birleşim (I070): index.ts saatEklentisi adlı Fastify eklentisini ve EklentiTemelSecenekleri'ni ({ surec }) genişleten seçenek tipini dışa verir (spec.exports'a 'saatEklentisi' adıyla); eklenti altyapıyı seçenekten alır, kayıt sırasında veritabanına dokunmaz, zamanlayıcıyı yalnız surec 'api' iken kurar, dinleyici kayıtlarını her süreçte yapar; rotalar yalnız D13.rotalariKaydet ile; setErrorHandler ve setNotFoundHandler yok; hata kodu öneki modül adının büyük harfi; kaynak düzeyi ret 404 <MODÜL>_BULUNAMADI, rota düzeyi rol reddi API_ROL_YETKISIZ."
+  }
+ ]
+}

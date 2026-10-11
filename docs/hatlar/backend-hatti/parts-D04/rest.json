@@ -1,0 +1,233 @@
+{
+  "entities": [
+    {
+      "name": "oturum_pencereleri",
+      "purpose": "Her oturumun geçerli yoklama penceresi: planlanan ve son açılış, kapanış anları, süre ayarı, kapandı ve kesinleşti bilgisi. Oturumla bire bir; telefona oturumla birlikte iner. teknik.html bu alanları oturum satırında sayıyor; ayrı tablo modül sınırını korumak için önerildi (D04-C04, D04-B10, D04-B28).",
+      "key_fields": [
+        "donem_id",
+        "oturum_id",
+        "planlanan_acilis_ani",
+        "planlanan_kapanis_ani",
+        "acilis_ani",
+        "kapanis_ani",
+        "sure_dk (null: ders boyunca, Kendi beyanı)",
+        "kapandi",
+        "ayar_kesinlesti_ani",
+        "degisiklik_surumu",
+        "silindi"
+      ],
+      "proposed_owner": "D04"
+    },
+    {
+      "name": "pencere_degisiklikleri",
+      "purpose": "Ders içi süre değişikliği ve erken kapatma geçmişi; pencere her değişiklikte bu geçmişten baştan hesaplanır (D04-B05). Kuyruktan gelen tekrar aynı kimlikle tek kalır.",
+      "key_fields": [
+        "id (telefonun ürettiği UUIDv7, tekrar gönderme anahtarı)",
+        "donem_id",
+        "oturum_id",
+        "hoca_id",
+        "tur (sure_degisikligi, erken_kapatma)",
+        "yeni_sure_dk",
+        "basma_ani_alt",
+        "basma_ani_ust",
+        "saat_dogrulandi",
+        "kaynak (telefon, panel)",
+        "giris_oturumu_id",
+        "cihaz_sira_no",
+        "saat_belgesi (aynen)",
+        "ulasma_ani",
+        "uygulandi_mi"
+      ],
+      "proposed_owner": "D04"
+    },
+    {
+      "name": "saat_belgesi",
+      "purpose": "Sunucunun HMAC'le doğruladığı kısa saat kaydı (veritabanında ayrı tablo değil, kayıt ve paket içinde aynen taşınır). Önerilen sabit ikili biçim D04-B12'de.",
+      "key_fields": [
+        "surum",
+        "kid",
+        "ozne_turu (ogrenci_cihazi, hoca_giris_oturumu)",
+        "ozne_id",
+        "tek_kullanimlik_deger (16 bayt)",
+        "sunucu_saati_ms (UTC)",
+        "hmac_sha256"
+      ],
+      "proposed_owner": "D04"
+    },
+    {
+      "name": "saat_esitleme_kesintileri",
+      "purpose": "Sunucu saat eşitlemesinin bozuk olduğu aralıklar; bu aralıkta belge verilmez ve ulaşma denetimi ret yerine İncelemede verir. Kesinti bitince etkilenen kayıtları bulmak için (D04-B18, D04-B19).",
+      "key_fields": [
+        "id",
+        "baslangic",
+        "bitis",
+        "olculen_sapma_ms",
+        "olcum_kaynagi"
+      ],
+      "proposed_owner": "D04"
+    },
+    {
+      "name": "yoklama_kayitlari",
+      "purpose": "Kayıt tablosu D05'in; D04 yalnız saat sütunlarının anlamını tanımlar: iki çapanın sonucu, kaydın saat aralığı, pencere sonucu ve not alanları. Oranlar bu sütunlardan tek sorguyla hesaplanır (D04-K43).",
+      "key_fields": [
+        "ilk_capa_durumu (gecerli, once_yeniden_baslatma, belge_7_gunden_eski, belge_yok, gecersiz_belge)",
+        "ikinci_capa_durumu (gecerli, sonra_yeniden_baslatma, kurulmadi, gecersiz_belge)",
+        "kayit_ani_alt",
+        "kayit_ani_ust",
+        "pay_ms",
+        "pencere_sonucu (icinde, disinda, sinirda, belirsiz)",
+        "telefon_saati",
+        "telefon_saat_dilimi",
+        "ulasma_ani",
+        "esitleme_bozukken_ulasti"
+      ],
+      "proposed_owner": "D05"
+    },
+    {
+      "name": "ikinci_capa_paketi",
+      "purpose": "Gönderim paketindeki ikinci çapa kanıtı: gönderimden hemen önce alınan belge ve her kayıt için kayıttan bu yana geçen süre; paket cihaz anahtarıyla imzalı. Paket D06'nın, alanların anlamı D04'ün.",
+      "key_fields": [
+        "saat_belgesi",
+        "belge_istek_suresi_ms",
+        "kayit_kimligi",
+        "kayittan_cevaba_gecen_ms ya da ikinci_capa_yok_nedeni",
+        "paket_imzasi"
+      ],
+      "proposed_owner": "D06"
+    },
+    {
+      "name": "dersler",
+      "purpose": "Ders tablosu D02'nin; D04'ü ilgilendiren alan, yeni açılan oturumlara uygulanan varsayılan yoklama süresi (D04-B07, D04-B10).",
+      "key_fields": [
+        "ders_id",
+        "varsayilan_yoklama_suresi_dk (null: ders boyunca)"
+      ],
+      "proposed_owner": "D02"
+    }
+  ],
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/v1/saat/belge",
+      "client": "telefon",
+      "purpose": "Tek kullanımlık değeri alıp saat belgesi döner; Bearer oturum anahtarıyla (öğrenci cihazı ya da hoca giriş oturumu), durumsuz, veritabanına yazmaz, hız sınırı cihaza ya da oturuma bağlı; eşitleme bozukken belge vermez ve bunu ayrı hata koduyla söyler (D04-B13).",
+      "proposed_owner": "D04"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/dersler/{dersId}/yoklama-suresi",
+      "client": "panel",
+      "purpose": "Dersin varsayılan yoklama süresini (ya da ders boyunca) ayarlar; ders ayarı D02 modülünde, kayıttan sonra D04 dış yüzünü çağırıp yalnız henüz açılmamış oturumların penceresini yeniden hesaplatır ve değişiklik sürümünü artırır (D04-B10, D04-B28).",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/pencereler/{oturumId}/sure",
+      "client": "telefon",
+      "purpose": "Ders içi süre değişikliği; ortak kuyruktan kimlik, sıra numarası ve saat belgesiyle gelir, tekrar aynı kimlikle tek kalır; ulaşınca pencere ve etkilenen kararlar aynı işlemde yeniden hesaplanır (D04-K06, D04-B04).",
+      "proposed_owner": "D04"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/pencereler/{oturumId}/erken-kapat",
+      "client": "telefon",
+      "purpose": "Erken kapatma; süre değişikliğiyle aynı kurallar, kapanış anı basma anının üst sınırı (D04-B04). Panelden de çağrılması D04-B09'a bağlı.",
+      "proposed_owner": "D04"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/pencereler/{oturumId}",
+      "client": "panel",
+      "purpose": "Oturumun geçerli penceresi, planlanan pencere, değişiklik geçmişi ve beklemede kalan kayıt sayısı; saatler İstanbul saatiyle gösterilmek üzere UTC metin olarak döner.",
+      "proposed_owner": "D04"
+    }
+  ],
+  "jobs": [
+    {
+      "name": "oturum_pencere_kapat",
+      "schedule": "her dakika (pg-boss zamanlaması), kaçırılırsa açılınca bir kez",
+      "purpose": "Kapanış anı geçmiş ve kapandı bayrağı düşmemiş oturumları tek sorguyla kapatır, her biri için \"oturum kapandı\" olayını kuyruğa koyar; kararlar bayrağa değil anlara dayandığından gecikme zararsız, iki kez çalışması sonucu değiştirmez (D04-K56, D04-B22).",
+      "proposed_owner": "D04"
+    },
+    {
+      "name": "saat_esitleme_denetimi",
+      "schedule": "her dakika, her API sürecinde (süreç içi zamanlayıcı); kesinti kaydı işçi üzerinden",
+      "purpose": "Yurt içi NTP sunucularına SNTP sorusuyla sapmayı ölçer; eşik aşılınca ya da 5 dakika ölçüm alınamayınca belge vermeyi durdurur, kesinti başlangıç ve bitişini yazar, uyarı üretir (D04-B18).",
+      "proposed_owner": "D04"
+    },
+    {
+      "name": "pencere_beklemede_kesinlestir",
+      "schedule": "olayla (oturumun kafa sayısı ulaşınca) ve gecelik süpürme (gönderme süresi biten oturumlar için)",
+      "purpose": "Ders içi ayarı değişen oturumda Beklemede kalan kayıtlara son pencereye göre kendiliğinden karar verdirir (D04-B03); karar kuralı D07'nin, tetik ve pencere hesabı D04'ün.",
+      "proposed_owner": "D07"
+    },
+    {
+      "name": "esitleme_sonrasi_yeniden_degerlendir",
+      "schedule": "olayla (eşitleme kesintisi kapanınca)",
+      "purpose": "Kesinti aralığında ulaşıp ulaşma denetimi yüzünden İncelemede kalan kayıtları ölçülen sapma eşiğin altındaysa aynı kurallarla yeniden değerlendirir (D04-B19).",
+      "proposed_owner": "D04"
+    }
+  ],
+  "depends_on": [
+    "D01",
+    "D02",
+    "D12",
+    "D13",
+    "D14",
+    "D15"
+  ],
+  "touches_other_domains": [
+    {
+      "domain": "D01",
+      "what": "Saat belgesi ucu öğrenci oturum anahtarı ya da hoca giriş oturumuyla doğrulanır; belgenin öznesi öğrencide cihaz, hocada giriş oturumu (D04-B14). Pencere değişikliği uçları yalnız dersin hocasına açık."
+    },
+    {
+      "domain": "D02",
+      "what": "Oturum üretimi yerel program saatini Europe/Istanbul ile UTC anlara çevirir ve D04'ün pencere hesabını çağırır; telafi, iptal ve saat değişikliği pencereyi yeniden hesaplatır (D04-B21, D04-B23); çakışan ders tespiti program verisinden (D04-B24); dönem kilidi tarihi eski saat belgesi anahtarının saklanma süresini belirler (D04-B20)."
+    },
+    {
+      "domain": "D05",
+      "what": "İmzalı kayıt metni ilk saat belgesini aynen, istek süresini, cevaptan kayda geçen süreyi, ilk çapa durumunu ve not olarak telefon saati ile saat dilimini taşır (D04-B16); kayıt tablosunda saat sütunları (D04 tanımlar); ulaşma anı Saat arayüzünden yazılır ve makbuz yolunda hocanın gönderiminin ulaştığı andır."
+    },
+    {
+      "domain": "D06",
+      "what": "Gönderimden hemen önce belge isteği, paketin cihaz anahtarıyla imzalanması ve kayıt başına geçen süre (ikinci çapa); her isteğe isteğe bağlı tek kullanımlık değer başlığı ve cevaplara belge iliştirme; eşitleme bozukken yalnız ikinci çapa isteyen kayıtların bekletilmesi; oturum pencereleri ve değişiklikleri değişenler indirmesiyle telefona iner; hocanın kuyruk işlerinin sırası."
+    },
+    {
+      "domain": "D07",
+      "what": "D04 pencere sonucunu (içinde, dışında, sınırda, belirsiz) ve çapa durumlarını üretir; Saat doğrulanamadı etiketi, 2'lik ortak sınır, iki çapa ayrışınca İncelemede, ulaşma anını aşan kayda Ret ya da eşitleme bozukken İncelemede, pencere dışı ve ders içi değişiklik yüzünden Beklemede kararları D07'de verilir (D04-B02, D04-B03)."
+    },
+    {
+      "domain": "D08",
+      "what": "Süre seçilmeyen derste Kendi beyanı kayıtlar onaya kadar geçici sayılır; hangi kaydın Kendi beyanı olduğu oturumun son pencere ayarından gelir (D04-B11)."
+    },
+    {
+      "domain": "D09",
+      "what": "Pencere değişiklikleri kim, ne zaman bilgisiyle denetim kaydına girer; değişiklik sonrası Var'dan Ret'e dönen kayıtlar sonradan değişenler listesine düşer (D04-B26); \"oturum kapandı\" olayı Ders yapıldı mı sorusunu ve sorun bildirimi süresini besler."
+    },
+    {
+      "domain": "D10",
+      "what": "Raporlarda oturum saatleri İstanbul saatiyle; ders içi değişiklik yüzünden Beklemede kayıt varken özet geçici kalır."
+    },
+    {
+      "domain": "D11",
+      "what": "Aşama 2'de hoca telefonu QR zaman dilimini saat belgesi ve iç sayaçtan hesaplar; QR kaydında iki çapadan payı küçük olanın kullanılması ve gecikme sınırları D04'ün aralık fonksiyonlarını kullanır; QR anahtarı saat belgesi anahtarıyla paylaşılmaz."
+    },
+    {
+      "domain": "D12",
+      "what": "Anlar timestamptz, program saati yerel time; kural için SQL now() yok; yeni tablolar oturum_pencereleri, pencere_degisiklikleri, saat_esitleme_kesintileri dönem alanıyla."
+    },
+    {
+      "domain": "D13",
+      "what": "Tek kullanımlık değer ve saat belgesi için ortak başlık adları, belge verilemediğinde hata kodu, çapa durumları ve pencere sonucu için x-extensible-enum; saat belgesi biçimi packages/contracts'ta."
+    },
+    {
+      "domain": "D14",
+      "what": "oturum_pencere_kapat ve beklemede kesinleştirme işleri pg-boss'ta; Saat arayüzü ile pg-boss TestClock tek nesneden yürür."
+    },
+    {
+      "domain": "D15",
+      "what": "Makinede NTP (chrony) eşitlemesi ve eşitleme uyarısı; saat belgesi anahtarı ve kid listesi Compose secrets ile, çevrimdışı yedekli; yük testi saat belgesi ucunu içerir (20.000 telefon 1 dakikada)."
+    }
+  ]
+}

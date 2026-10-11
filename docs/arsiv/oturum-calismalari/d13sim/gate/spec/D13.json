@@ -1,0 +1,1952 @@
+{
+  "id": "D13",
+  "module": "api",
+  "summary": "api modülü sunucunun dış yüzünü tek yerde toplar: rota tablosunun biçimi ve kaydı, kök kancalar (istek kimliği, istemci başlıkları, köken denetimi, oturum kancasının bağlanması, hız sınıfları, aşırı yük), tek hata zarfı ve hata kataloğu, ortak sözleşme tipleri ve telefonla panelin paylaştığı fetch yardımcısı. Bileşim kökü app.ts bu modülündür: uygulamaKur uygulamayı süreç türüne göre (api, isci, belge) kurar, api ve isci süreçlerinde kimlik olaylarının dört abonesini eklentilerden önce kurar, altyapıyı ve bütün modül eklentilerini (<ad>Eklentisi, öneksiz) parametreyle bağlar, hiçbir zaman dinleme açmaz; infra/api hiçbir modülü çalışma anında içe aktarmaz, oturum doğrulama (D01), saat ve saat belgesi (D04) ve dönem arası bilgisi (D02) ona app.ts'ten işlev olarak gelir. İsteğin kimliği tek tiptir (Kimlik, packages/contracts/src/ortak/kimlik.ts); değişim bekleyen telefonun kısıtlı oturumu kökte yalnız izinli dört rotaya girer. Tek tablosu istemci_surum_esikleri, imajdaki yayin-bilgisi.json dosyasından alınan en düşük sürüm kararlarının ve hatalı sürüm listelerinin yalnız eklenen tarihçesidir; GET /v1/surum cevabını bu tarihçeden verir ve en düşük sürümü yalnız ortak dönem arasında yükseltir. Sunucu hiçbir isteği istemci sürümüne göre reddetmez, kayıt gönderme ucu hiçbir sürüme kapanmaz. OpenAPI belgesi yalnız kırılma denetimi için üretilir; her uygulama sürümünün belgesi kuyruk öğesi gövdeleriyle birlikte saklanır ve CI her değişiklikte oasdiff ile karşılaştırır; giriş, sürüm, saat belgesi ve gönderim yolları bütün saklı sürümlere karşı denetlenir. Modüller arası içe aktarma kuralını (yaprak dosyası, döngüsüzlük) D13'ün sınır testi dependency-cruiser API'siyle denetler; iki CI betiği apps/server/scripts/api/ altındadır.",
+  "tables": [
+    {
+      "name": "istemci_surum_esikleri",
+      "purpose": "Yayın bilgisi dosyasındaki her platform ve kanal girdisi için en düşük sürüm kararının ve o dosyanın platforma ait hatalı sürüm ve iOS listelerinin yalnız eklenen tarihçesi. GET /v1/surum, enDusukSurumDenetle ve yayinBilgisi() geçerli değeri buradan okur; dönem içi yükseltme koruması, kopyaların aynı kaydı aynı karara bağlaması ve geri alınmış imajın kayıtlı kararı ya da hatalı sürüm ilanını geri çevirememesi buna dayanır. Kişisel veri yoktur, saklama işleyicisi gerekmez. Tablo uygulama şemasında, tanımı apps/server/src/infra/api/tablolar.ts; göçü apps/server/migrations/<14 haneli UTC>_api_<açıklama>/ klasöründe (migration.sql ve snapshot.json; göç kuralı goc alanında ve bölümün Göç satırında, A1).",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "null": false,
+          "default": "uuidv7()",
+          "note": "Birincil anahtar; dışa açık jeton olarak kullanılmaz."
+        },
+        {
+          "name": "platform",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "android ya da ios; CHECK listesi packages/contracts/src/api.ts PLATFORMLAR ile aynıdır (D12 şema testi karşılaştırır)."
+        },
+        {
+          "name": "kanal",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "play, github, appstore ya da testflight; platformla uyumlu çift ayrı CHECK ile korunur (android: play, github; ios: appstore, testflight)."
+        },
+        {
+          "name": "dosya_sirasi",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Yayın bilgisi dosyasının sira alanı; CI her yayında artırır. Kayıtlı en büyük sıradan küçük sıralı dosya hiçbir kararı değiştirmez."
+        },
+        {
+          "name": "dosya_ozeti",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "Dosya baytlarının SHA-256 özeti, 64 küçük onaltılık karakter. Aynı sıra farklı özetle gelirse ilk kayıt geçerli kalır, hata loglanır."
+        },
+        {
+          "name": "en_son_surum",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "Kanalın en yeni uygulama sürümü, MAJOR.MINOR.PATCH (her bölüm en çok 4 rakam)."
+        },
+        {
+          "name": "istenen_en_dusuk_surum",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "Dosyadaki en düşük sürüm; en_son_surum'dan büyük olamaz (dosya şeması denetler)."
+        },
+        {
+          "name": "uygulanan_en_dusuk_surum",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "Bu karardan sonra geçerli en düşük sürüm. uygulandi kararında istenen değerin aynısı, ertelendi kararında önceki geçerli değer."
+        },
+        {
+          "name": "karar",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "uygulandi ya da ertelendi (CHECK; liste packages/contracts/src/api.ts ESIK_KARARLARI ile aynı)."
+        },
+        {
+          "name": "magaza_baglantisi",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "Güncelleme ekranının açacağı https adresi: Play sayfası, App Store sayfası, GitHub son sürüm bağlantısı ya da TestFlight."
+        },
+        {
+          "name": "gecis_baglantisi",
+          "type": "text",
+          "null": true,
+          "default": "NULL",
+          "note": "Yalnız testflight kanalında: listelenmeyen App Store'a geçiş bağlantısı; telefon yalnız gönderilmemiş kaydı yokken gösterir (plan.html#dagitim-deneme)."
+        },
+        {
+          "name": "kademeler",
+          "type": "jsonb",
+          "null": false,
+          "default": "'[]'::jsonb",
+          "note": "Yalnız github kanalında kademeli duyuru takvimi [{baslangic, yuzde}] (dosya şemasından geçmiş biçimde); öteki kanallarda boş dizi. Yüzde, başlangıcı geçmiş son adımın yüzdesidir; dizi boş değilse ve hiçbir adımın başlangıcı gelmemişse yüzde 0 (kademe başlamadan hiçbir kurulum duyuru almaz); dizi boşsa yüzde 100."
+        },
+        {
+          "name": "hatali_surumler",
+          "type": "jsonb",
+          "null": false,
+          "default": "'[]'::jsonb",
+          "note": "Dosyanın bu platforma ait hatalı sürüm girdileri [{platform, uygulamaSurumu, guncellemeKimligi, baslangicAni, gerekce}] (yayinBilgisiSemasi'ndan geçmiş biçimde). Aynı sıradaki bütün satırlarda aynıdır; platformun geçerli listesi o platformun en büyük dosya_sirasi'lı satırından okunur, karar ertelendi olsa da (erteleme yalnız en düşük sürümü bekletir)."
+        },
+        {
+          "name": "ios_paket_surumleri",
+          "type": "jsonb",
+          "null": false,
+          "default": "'[]'::jsonb",
+          "note": "Yalnız ios satırlarında dolu: yayımlanmış iOS paket sürümleri (D07'nin iOS 27 denetimi); android satırlarında boş dizi. Geçerli liste hatali_surumler ile aynı kuralla seçilir."
+        },
+        {
+          "name": "ios_dagitim_turleri",
+          "type": "jsonb",
+          "null": false,
+          "default": "'[]'::jsonb",
+          "note": "Yalnız ios satırlarında dolu: izinli dağıtım türleri (D07); android satırlarında boş dizi. Geçerli liste hatali_surumler ile aynı kuralla seçilir."
+        },
+        {
+          "name": "karar_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Kararın verildiği an; D04'ün saat arayüzünden gelir, SQL now() kullanılmaz."
+        }
+      ],
+      "indexes": [
+        "istemci_surum_esikleri_id_pk: PRIMARY KEY (id)",
+        "istemci_surum_esikleri_platform_kanal_dosya_sirasi_karar_uq: UNIQUE (platform, kanal, dosya_sirasi, karar). Kopyalar aynı kararı iki kez ekleyemez (INSERT ... ON CONFLICT (platform, kanal, dosya_sirasi, karar) DO NOTHING; hedefsiz ON CONFLICT yazılmaz). Geçerli karar bu dizinle bulunur: WHERE platform = $1 AND kanal = $2 ORDER BY dosya_sirasi DESC, (karar = 'uygulandi') DESC LIMIT 1; aynı sırada uygulandi her zaman ertelendi'nin önüne geçer, böylece iki kopyanın yarışı sonucu değiştirmez.",
+        "istemci_surum_esikleri_platform_dosya_sirasi_idx: (platform, dosya_sirasi DESC). Platformun geçerli hatalı sürüm ve iOS listeleri: WHERE platform = $1 ORDER BY dosya_sirasi DESC LIMIT 1."
+      ],
+      "constraints": [
+        "istemci_surum_esikleri_platform_ck: CHECK (platform IN ('android', 'ios'))",
+        "istemci_surum_esikleri_kanal_ck: CHECK (kanal IN ('play', 'github', 'appstore', 'testflight'))",
+        "istemci_surum_esikleri_platform_kanal_ck: CHECK ((platform = 'android' AND kanal IN ('play', 'github')) OR (platform = 'ios' AND kanal IN ('appstore', 'testflight')))",
+        "istemci_surum_esikleri_karar_ck: CHECK (karar IN ('uygulandi', 'ertelendi'))",
+        "istemci_surum_esikleri_karar_uygulanan_en_dusuk_surum_ck: CHECK ((karar = 'uygulandi') = (uygulanan_en_dusuk_surum = istenen_en_dusuk_surum))",
+        "istemci_surum_esikleri_dosya_sirasi_ck: CHECK (dosya_sirasi > 0)",
+        "istemci_surum_esikleri_dosya_ozeti_ck: CHECK (dosya_ozeti ~ '^[0-9a-f]{64}$')",
+        "istemci_surum_esikleri_en_son_surum_ck: CHECK (en_son_surum ~ '^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$')",
+        "istemci_surum_esikleri_istenen_en_dusuk_surum_ck: CHECK (istenen_en_dusuk_surum ~ '^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$')",
+        "istemci_surum_esikleri_uygulanan_en_dusuk_surum_ck: CHECK (uygulanan_en_dusuk_surum ~ '^[0-9]{1,4}\\.[0-9]{1,4}\\.[0-9]{1,4}$')",
+        "istemci_surum_esikleri_magaza_baglantisi_ck: CHECK (magaza_baglantisi ~ '^https://' AND char_length(magaza_baglantisi) <= 500)",
+        "istemci_surum_esikleri_gecis_baglantisi_ck: CHECK (gecis_baglantisi IS NULL OR (kanal = 'testflight' AND gecis_baglantisi ~ '^https://' AND char_length(gecis_baglantisi) <= 500))",
+        "istemci_surum_esikleri_kademeler_ck: CHECK (jsonb_typeof(kademeler) = 'array' AND (kanal = 'github' OR kademeler = '[]'::jsonb))",
+        "istemci_surum_esikleri_hatali_surumler_ck: CHECK (jsonb_typeof(hatali_surumler) = 'array' AND jsonb_array_length(hatali_surumler) <= 100)",
+        "istemci_surum_esikleri_ios_listeleri_ck: CHECK (jsonb_typeof(ios_paket_surumleri) = 'array' AND jsonb_typeof(ios_dagitim_turleri) = 'array' AND (platform = 'ios' OR (ios_paket_surumleri = '[]'::jsonb AND ios_dagitim_turleri = '[]'::jsonb)))",
+        "Yazma kuralı: satırlar yalnız eklenir (INSERT ... ON CONFLICT (platform, kanal, dosya_sirasi, karar) DO NOTHING; hedefsiz ON CONFLICT başka bir tekillik ihlalini, birincil anahtar dahil, sessizce yutacağı için yazılmaz); uygulama kodu UPDATE ve DELETE çalıştırmaz."
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/surum",
+      "client": "telefon",
+      "auth": "Girişsiz: rota tablosunda kimlik girissiz, hız sınıfı girissiz. Oturum aranmaz, Bearer ve çerez okunmaz. Telefon günde en çok bir kez, güncelleme sorgusuyla aynı anda çağırır (plan.html#dagitim-guncelleme).",
+      "request": {
+        "X-Platform (başlık)": "metin, zorunlu: android | ios",
+        "X-Kanal (başlık)": "metin, zorunlu: play | github (android), appstore | testflight (ios); platformla uyumsuz çift 400 API_ISTEK_GECERSIZ (alanlar: baslik x-kanal)",
+        "X-Uygulama-Surumu (başlık)": "metin, zorunlu: MAJOR.MINOR.PATCH, her bölüm en çok 4 rakam",
+        "X-Kurulum-Kimligi (başlık)": "metin, isteğe bağlı: UUIDv7, bir uygulama kopyasında bir hesabın kurulum kimliği (D06-B08). Telefon girişten önce bu başlığı göndermez (henüz hesap yok); yoksa ya da bozuksa telefon github kademesinin dışında sayılır: guncellemeVar yalnız kademe yüzdesi 100 iken true olur. guncellemeGerekli ve öteki alanlar başlıktan bağımsızdır, en düşük sürüm kararı girişten önce de iner",
+        "X-Guncelleme-Kimligi (başlık)": "metin, isteğe bağlı: UUID; yalnız istek loguna yazılır",
+        "gövde, sorgu, yol parametresi": "yok"
+      },
+      "response": {
+        "enSonSurum": "metin (MAJOR.MINOR.PATCH)",
+        "enDusukSurum": "metin; uygulanan en düşük sürüm (ertelenmiş yükseltme burada görünmez)",
+        "guncellemeVar": "boolean; telefon kademe içindeyse ve enSonSurum istemci sürümünden büyükse true",
+        "guncellemeGerekli": "boolean; istemci sürümü enDusukSurum'dan küçükse true (kademeden bağımsız)",
+        "magazaBaglantisi": "metin (https adresi)",
+        "gecisBaglantisi": "metin ya da null (yalnız testflight)"
+      },
+      "errors": [
+        "API_ISTEK_GECERSIZ",
+        "API_HIZ_SINIRI",
+        "API_SUNUCU_YOGUN",
+        "API_SURUM_BILGISI_YOK",
+        "API_SUNUCU_HATASI"
+      ],
+      "idempotency": "Güvenli GET: aynı başlıklarla aynı cevap. Kova kurulum kimliğinin SHA-256 özetinin ilk 4 baytı mod 100'den çıktığı için aynı telefon her gün aynı kademe kararını alır. Tek yan etki (rota tablosunda defterYazar: true): işleyici esikDurumu'nu bekleyerek çağırır; önbellek D04 saatine göre 60 saniyeden eskiyse tek uçuşlu tazeleme ertelenmiş yükseltme ortak dönem arasına girmişse uygulandi satırı ekler; satır aynı sıradaki ertelendi satırından kopyalanır, ON CONFLICT (platform, kanal, dosya_sirasi, karar) DO NOTHING ile eş güçlüdür. Kanal için hiç kayıt yoksa 503 API_SURUM_BILGISI_YOK, Retry-After 60.",
+      "rate_limit": "girissiz sınıfı: IP başına dakikada 3000, onRequest'te (girişsiz uçların ortak geniş sınırı, teknik.html#sunucu-guvenlik). Cevap X-Saat-Belgesi taşımaz: girişsiz istekte belgeye yazılacak doğrulanmış özne yoktur."
+    }
+  ],
+  "jobs": [
+    {
+      "name": "oasdiff_kirilma_denetimi",
+      "schedule": "CI: her çekme isteğinde ve ana dala her gönderimde (.github/workflows/sozlesme.yml, sozlesme işi); pg-boss işi değil, worker.ts'e girmez. Betik apps/server/scripts/api/oasdiff-kirilma-denetimi.ts; jobs/api klasörü yoktur (I072).",
+      "idempotency": "Durum yazmaz; aynı commit ve aynı saklı belgelerle aynı sonuç. oasdiff sürümü iş akışında tam sabittir, indirilen dosya SHA-256 özetiyle doğrulanır; eylemler tam commit özetiyle sabittir, iş akışı yalnız okuma yetkilidir.",
+      "does": "Önce kendini sınar: apps/server/test/features/api/ornekler/oasdiff/ altındaki örneklerle (1) gönderme yolunda cevap alanı kaldıran kırıcı örnek hem tam koşuda hem süzgeçli koşuda ERR vermeli; (2) tabanın altındaki örnek belgeye (taban-alti.json) karşı /v1/kimlik/giris isteğine zorunlu alan ekleyen örnek süzgeçli koşuda ERR vermeli; (3) Oge_yoklama_kaydi gövdesinden alan kaldıran örnek ERR vermeli; (4) yalnız ekleyen örnek ERR vermemeli. Biri tutmazsa durur (kırmızıya dönemeyen kapı süstür; oasdiff sürümü değişince süzgecin ve seviye dosyasının hâlâ çalıştığı da böyle görülür). Sonra güncel belgeyi apps/server/scripts/api/openapi-belgesi-sakla.ts --gecici ile üretir. Birinci koşu: packages/contracts/openapi/destek.json içindeki tamDenetimTabani'na eşit ya da yüksek her saklı sürüme karşı oasdiff breaking <saklı> <güncel> --fail-on ERR --err-ignore packages/contracts/openapi/kirilma-istisnalari.txt. İkinci koşu: bütün saklı sürümlere karşı yalnız destek.json içindeki hepSurumYollari listesine ve ^/x-oge/ yapay yollarına süzülmüş (--match-path, liste tek düzenli ifadede birleşir) ve --severity-levels packages/contracts/openapi/seviyeler.txt ile (istek alanı kaldırma ERR'e yükselir: strip şema eski istemcinin gönderdiği alanı sessizce atar). Herhangi bir ERR işi kırmızı yapar, kırılan sürümü ve yolu yazar."
+    },
+    {
+      "name": "openapi_belgesi_sakla",
+      "schedule": "CI: her çekme isteğinde denetim kipinde ve mobil/v* telefon yayın etiketi gönderildiğinde etiket kipinde (sozlesme işi). Sahip, telefon uygulamasının sürümünü (apps/mobile app.json expo.version) X yapan değişiklikte belgeyi node apps/server/scripts/api/openapi-belgesi-sakla.ts X ile üretip aynı değişikliğe ekler; X etiketlenene kadar uygulama kodunu değiştiren her değişiklik X.json'u da yeniden üretir; pg-boss işi değil.",
+      "idempotency": "Belge anahtarları sıralı, iki boşluk girintili, sonunda satır sonu olan JSON; aynı kod iki kez aynı baytları üretir. Etiketlenmiş sürümün belgesinin üzerine yazmaz, yazmaya kalkarsa durur.",
+      "does": "Uygulamayı apps/server/scripts/api/openapi-belgesi-sakla.ts içinden uygulamaKur({ surec: 'belge', ... }) ile kurar (olcumYazici vermez, kimlik dinleyicileri kurulmaz): sahte altyapı (veritabanı, kuyruk ve e-posta her kullanımda hata fırlatır, böylece kayıt sırasında veritabanına dokunan eklenti yakalanır), bütün eklentiler açık, swagger yalnız bu kipte kayıtlı, yayın bilgisi okunmaz. @fastify/swagger çıktısına her kuyruk öğesi türünün gövde şemasını (TUM_OGE_TURLERI, sahibin sözleşme dosyasından) components.schemas.Oge_<tur> olarak ve her biri için yalnız belgede bulunan yapay POST /x-oge/<tur> işlemini (istek gövdesi o bileşen, x-yapay: true, sunulmaz) ekler, OpenAPI 3.1.0 belgesini packages/contracts/openapi/<sürüm>.json dosyasına yazar. Denetim kipinde: (1) apps/mobile expo.version X ise ve X etiketi yoksa X.json var ve yeniden üretilen belgeyle bayt bayt aynı olmalı; (2) etiketlenmiş sürümlerin belgeleri ana dala göre değişmemiş ve silinmemiş olmalı. Etiket kipinde mobil/vX etiketinin commit'inde yeniden üretilen belge o commit'teki X.json ile bayt bayt aynı olmalı; aynı değilse iş kırmızıdır ve telefon yayın iş akışı (D15) ikiliyi derlemez. Böylece saklı belge telefon ikilisinin derlendiği commit'in sözleşmesidir. Uymazsa durur ve yapılacak komutu yazar."
+    }
+  ],
+  "state_machines": [
+    {
+      "name": "en_dusuk_surum_esigi (platform ve kanal çifti başına)",
+      "states": [
+        "kayit_yok",
+        "uygulandi",
+        "ertelendi"
+      ],
+      "transitions": [
+        {
+          "from": "kayit_yok",
+          "to": "uygulandi",
+          "by": "açılış alımı (app.ts onReady, yalnız surec api)",
+          "when": "Çift için hiç kayıt yokken gelen ilk geçerli dosyanın en düşük sürümü doğrudan uygulanır; korunacak eski eşik yoktur."
+        },
+        {
+          "from": "uygulandi",
+          "to": "uygulandi",
+          "by": "açılış alımı, daha büyük sıralı dosya",
+          "when": "İstenen en düşük sürüm geçerli değerden büyük değilse (eşit ya da düşürme) ya da donemArasiMi true ise hemen uygulanır; en son sürüm, bağlantılar ve kademeler yenilenir."
+        },
+        {
+          "from": "uygulandi",
+          "to": "ertelendi",
+          "by": "açılış alımı, daha büyük sıralı dosya",
+          "when": "İstenen değer geçerli değerden büyük ve donemArasiMi false ise; geçerli en düşük sürüm sürer, en son sürüm ve bağlantılar yenilenir, uyarı loglanır."
+        },
+        {
+          "from": "ertelendi",
+          "to": "uygulandi",
+          "by": "esikDurumu tazelemesi (yalnız surec api; GET /v1/surum bekleyerek, enDusukSurumDenetle beklemeden tetikler; zamanlayıcı yok)",
+          "when": "Önbellek D04 saatine göre 60 saniyeden eskiyken aynı sıranın ertelenmiş yükseltmesi için donemArasiMi true dönünce uygulandi satırı eklenir. Satırın bütün sütunları (en son sürüm, istenen en düşük sürüm, bağlantılar, kademeler, dosya özeti, listeler) aynı sıradaki ertelendi satırından kopyalanır; uygulayan sürecin bellekteki dosyası kullanılmaz (eski ya da yeni imajlı kopya başka değer yazamaz). Yalnız uygulanan_en_dusuk_surum istenen değere ve karar_ani D04 saatine eşitlenir."
+        },
+        {
+          "from": "ertelendi",
+          "to": "uygulandi",
+          "by": "açılış alımı, daha büyük sıralı dosya",
+          "when": "Yeni dosya geçerli değerden büyük olmayan bir en düşük sürüm getirirse erteleme düşer, yeni değer uygulanır."
+        },
+        {
+          "from": "ertelendi",
+          "to": "uygulandi",
+          "by": "açılış alımı, daha büyük sıralı dosya",
+          "when": "Yeni dosya geçerli değerden büyük bir en düşük sürüm getirir ve donemArasiMi true ise yeni sıra doğrudan uygulandi olarak eklenir; satır yeni dosyadan kurulur, eski sıranın ertelendi satırı artık geçerli değildir."
+        },
+        {
+          "from": "ertelendi",
+          "to": "ertelendi",
+          "by": "açılış alımı, daha büyük sıralı dosya",
+          "when": "Yeni dosya da yükseltme getiriyor ve donemArasiMi false ise yeni sıra ertelendi olarak eklenir; geçerli değer değişmez."
+        }
+      ]
+    },
+    {
+      "name": "istek_hatti (her API isteği, kancaların sırası)",
+      "states": [
+        "geldi",
+        "baskidan_gecti",
+        "on_denetimden_gecti",
+        "kimligi_kuruldu",
+        "yetkisi_denetlendi",
+        "sinirdan_gecti",
+        "govdesi_dogrulandi",
+        "islendi",
+        "cevaplandi"
+      ],
+      "transitions": [
+        {
+          "from": "geldi",
+          "to": "cevaplandi",
+          "by": "@fastify/under-pressure (kökteki ilk onRequest kancası)",
+          "when": "Olay döngüsü gecikmesi, kullanım ya da bellek eşiği aşılmışsa 503 API_SUNUCU_YOGUN ve 15 ile 45 saniye arası Retry-After; hiçbir kanca ve veritabanı çalışmadan döner."
+        },
+        {
+          "from": "geldi",
+          "to": "baskidan_gecti",
+          "by": "@fastify/under-pressure",
+          "when": "Baskı yoksa; ya da rota baskiDisi beyanlıysa (yalnız /health/live ve /v1/durum): rotalariKaydet bu rotalara null dönen rota düzeyi pressureHandler koyar, eklenti null dönüşte isteği geçirir."
+        },
+        {
+          "from": "baskidan_gecti",
+          "to": "on_denetimden_gecti",
+          "by": "kök onRequest kancaları (infra/api/kancalar; yalnız işlemci işi, veritabanına dokunmaz)",
+          "when": "İstek kimliği atanır; istemci başlıkları reddetmeden ayrıştırılır; Content-Encoding taşıyan gövdeli istek 415; yazma isteğinde panel dışı Origin 403 API_KOKEN_GECERSIZ; panelden bayrağı, çerezin okunup okunmayacağı ve kimlik bilgisi (Bearer ya da çerez) burada belirlenir; kimliğinde projeksiyon olan rotada oturum aranmaz, çerezin okunabildiği istekte istek.projeksiyonAnahtari __Host-yoklama-projeksiyon çerezinden dolar, başka rotada projeksiyon çerezi kimlik bilgisi sayılmaz (I052); en düşük sürüm durumu süreç önbelleğinden isteğe yazılır. Kimlik kümesi [girissiz] ya da [girissiz, projeksiyon] olan rotada girissiz IP sayacı burada artar (429). Öteki bütün rotalarda (oturum, cihaz imzası, projeksiyon) aynı adresin girissiz sayacı artırılmadan okunur; sınır dolmuşsa 429 API_HIZ_SINIRI gövde okunmadan ve veritabanına gitmeden döner."
+        },
+        {
+          "from": "on_denetimden_gecti",
+          "to": "kimligi_kuruldu",
+          "by": "oturum kancası (kökte, under-pressure'dan ve ucuz kancalardan sonra; D01'in oturumDogrula işlevi app.ts'ten)",
+          "when": "Rotanın kimlik kümesinde oturum varsa ve kimlik bilgisi varsa D01'e yalnız izinli kimlik bilgisinden kurulan OturumGirdisi verilir. Sonuç kimlik birleşimi tablosuna göre işlenir: [oturum] rotada geçersiz anahtar 401 (D01 kodu) ve kimlik bilgisi yoksa 401 API_KIMLIK_GEREKLI, ikisi de gövde okunmadan; [girissiz, oturum] ve [cihazImzasi, oturum] rotalarda geçersiz anahtar yalnız istek.oturumHatasi'na yazılır. [cihazImzasi, oturum] rotada degisim_bekliyor oturum kimliğe taşınmaz, oturumHatasi KIMLIK_KAPSAM_SINIRLI olur (kısıtlı oturum oturum gerektiren öğelerde oturum yok sayılır)."
+        },
+        {
+          "from": "kimligi_kuruldu",
+          "to": "yetkisi_denetlendi",
+          "by": "preParsing kancaları (rotalariKaydet ekler; kimliğinde cihazImzasi olmayan her rota)",
+          "when": "Gövde okunmadan: kimliğinde projeksiyon olan rotada D11'in kimlikKancasi istek.projeksiyonAnahtari'na göre istek.kimlik'i yazar; [girissiz, projeksiyon] rotada tanınmayan ya da kapanmış çerez hata değildir, istek kimliksiz sürer ve D11 yeni tarayıcı sayar. Ardından beyan denetimi şu sırayla: (1) kimlik yoksa ve rota girissiz kabul etmiyorsa 401 API_KIMLIK_GEREKLI ya da istek.oturumHatasi'ndaki D01 kodu; (2) oturumKapsami degisim_bekliyor ve rota degisimBekleyenKabul beyan etmemişse 403 KIMLIK_KAPSAM_SINIRLI; (3) kimlik.kaynak rotanın kimlikKaynaklari listesinde değilse (ör. çerezle gelen istek yalnız bearer kabul eden rotada) 403 API_ROL_YETKISIZ; (4) kimlik türü ya da rol beyana uymuyorsa, /yonetim/ yolunda yonetici rolü yoksa 403 API_ROL_YETKISIZ. Denetimi unutan modülün rotası kapalı kalır."
+        },
+        {
+          "from": "yetkisi_denetlendi",
+          "to": "sinirdan_gecti",
+          "by": "rotanın hız sınıfı kancası (hizSinifi; cihazImzasi içermeyen rotada preParsing'de)",
+          "when": "Doğrulanmış kimliğe bağlı sayaç sınırı aşılırsa 429 API_HIZ_SINIRI, Retry-After ve beklemeSaniye. [girissiz, oturum] rotada sınıf kimlik kurulduysa kimlikli sınıf, kurulmadıysa girissiz sınıftır."
+        },
+        {
+          "from": "sinirdan_gecti",
+          "to": "govdesi_dogrulandi",
+          "by": "Fastify JSON ayrıştırıcısı ve Zod istek şemaları",
+          "when": "Rota sınırını aşan gövde 413 API_GOVDE_COK_BUYUK, JSON dışı içerik 415 API_ICERIK_TURU, ayrışmayan ya da boş gövde 400 API_JSON_BOZUK, şemaya uymayan istek 400 API_ISTEK_GECERSIZ (yalnız alan yolu ve Zod kodu). Yetkisiz istek bu aşamaya hiç gelmez: yanlış roldeki büyük gövde 403 alır, 400 almaz."
+        },
+        {
+          "from": "kimligi_kuruldu",
+          "to": "govdesi_dogrulandi",
+          "by": "Fastify JSON ayrıştırıcısı ve Zod istek şemaları (yalnız kimliğinde cihazImzasi olan rotada)",
+          "when": "İmza gövdenin içinde olduğundan gövde önce okunur; sınır ve hata kodları öteki yoldakiyle aynı. Bu yola giren istek onRequest'teki okuma denetiminden geçmiştir: kimliksiz 401 sınırını aşmış adresin paketi gövdesi okunmadan 429 almıştır."
+        },
+        {
+          "from": "govdesi_dogrulandi",
+          "to": "yetkisi_denetlendi",
+          "by": "preHandler kancaları (yalnız kimliğinde cihazImzasi olan rotada)",
+          "when": "D06'nın kimlikKancasi imzayı doğrular ve istek.kimlik'i yazar: imza ve oturum ikisi de doğrulanırsa tur cihaz, kaynak imza, girisOturumuId korunur. Ardından aynı beyan denetimi; hiçbir kimlik kurulamadıysa 401."
+        },
+        {
+          "from": "yetkisi_denetlendi",
+          "to": "sinirdan_gecti",
+          "by": "hız sınıfı kancası (yalnız kimliğinde cihazImzasi olan rotada, preHandler'da)",
+          "when": "gonderim sınıfı: imza doğrulandıysa cihaz kimliği, doğrulanmadıysa giriş oturumu kimliği başına."
+        },
+        {
+          "from": "govdesi_dogrulandi",
+          "to": "islendi",
+          "by": "modülün işleyicisi (kimliğinde cihazImzasi olmayan rota)",
+          "when": "Yetki ve hız gövdeden önce geçildiğinden gövde doğrulanınca işleyici çalışır; hata çevirisi bir sonraki satırdakiyle aynıdır."
+        },
+        {
+          "from": "sinirdan_gecti",
+          "to": "islendi",
+          "by": "modülün işleyicisi (kimliğinde cihazImzasi olan rota; hata çevirisi her rotada aynı)",
+          "when": "Gövde önce okunduğundan imza, yetki ve hızdan sonra doğrudan işleyiciye geçer. uygulamaHatasi katalogdaki HTTP durumuyla ve bekleme kuralıyla döner; D12'nin tipli hatası kendi kataloğundaki 503 koduyla; D12 dışından kaçan geçici SQLSTATE (veritabanı hatası eşlemesi tablosu) 503 API_SUNUCU_YOGUN, 57014 ve 25P04 503 API_SORGU_ZAMAN_ASIMI (yedek tablo, ikinci güvence); IS_KUYRUGU_ kodu http değeriyle (500 olan kendi koduyla); http null işletim kodu ve öteki her hata 500 API_SUNUCU_HATASI."
+        },
+        {
+          "from": "islendi",
+          "to": "cevaplandi",
+          "by": "Zod cevap şeması ve kök onSend ve onResponse kancaları",
+          "when": "Cevap beyan edilen durumun şemasına göre serileştirilir (şemada olmayan alan atılır, uymayan cevap 500). Her cevaba Cache-Control: no-store ve X-Istek-Kimligi; koşulları tutarsa X-Saat-Belgesi eklenir; her 429 ve 503'e Retry-After. onResponse: istek hiçbir doğrulanmış kimlik kuramadan 401 ile bittiyse ve rota [girissiz] ya da [girissiz, projeksiyon] değilse adresin girissiz sayacı bir artar (imzası ya da oturumu doğrulanan istek hiç sayılmaz); ardından istek logu rota kalıbıyla yazılır."
+        }
+      ]
+    }
+  ],
+  "invariants": [
+    "Her rota rota tablosundan (TUM_ROTALAR) ve yalnız rotalariKaydet ile kaydedilir; tabloda olmayan yolu eklemeye çalışan eklenti açılışı durdurur, kayıtlı bir modülün tablodaki her rotası kaydedilmeden uygulama açılmaz.",
+    "Her rota kimlik kümesini (izinli altı birleşimden biri), oturum rotasında rollerini, hız sınıfını, gövde sınırını (en çok 2 MiB), cevap durumlarını ve döndürebileceği modül hata kodlarını beyan eder; /yonetim/ yolları yalnız yonetici rolüyle kaydedilir ve istekte yol kalıbından ikinci kez denetlenir.",
+    "Değişim bekleyen (degisim_bekliyor) oturum yalnız degisimBekleyenKabul beyanlı dört rotaya girer: GET /v1/kimlik/ben, POST /v1/kimlik/cikis, POST /v1/kimlik/cihaz-degisimi, POST /v1/kimlik/cihaz-degisimi/{talepId}/ret. Öteki her oturum rotası 403 KIMLIK_KAPSAM_SINIRLI verir; cihaz imzalı rotada bu oturum kimliğe taşınmaz.",
+    "Kimliğinde cihazImzasi olmayan rotada yetki (401, 403) ve hız sınırı (429) gövde okunmadan verilir; gövde sonrası sıra yalnız imzası gövdede olan rotadadır.",
+    "Her hata cevabı tek zarftır (hataZarfiSemasi); kod katalogdadır ve HTTP durumu katalogdan gelir; istemcinin gönderdiği değer hiçbir cevaba ve loga yankılanmaz; 5xx gövdesinde yalnız kod, katalogdaki sabit mesaj, istek kimliği ve 503'te beklemeSaniye bulunur, ayrinti null. Her 429 ve 503 Retry-After ve aynı değerde beklemeSaniye taşır; değer kodun katalogdaki bekleme kuralından gelir.",
+    "Her cevap X-Istek-Kimligi ve Cache-Control: no-store taşır; istek kimliği sunucuda üretilir, istemcinin gönderdiği kimliğe güvenilmez.",
+    "Sunucu hiçbir isteği istemci sürümü başlıklarına göre reddetmez; başlık yok ya da bozuksa istek aynen işlenir. Kayıt gönderme ucu hiçbir sürüme kapanmaz.",
+    "Yazma isteğinde çerez yalnız Origin panel adresine eşitken okunur; panel dışı Origin 403 alır; Bearer varsa çerez hiç okunmaz; kimlikKaynaklari yalnız bearer olan rotada çerezle kurulan kimlik 403 API_ROL_YETKISIZ alır.",
+    "GET iş verisini değiştirmez; defterYazar beyanlı GET yalnız sahibinin defter tablosuna yazar (GET /v1/esitleme/degisiklikler: D06 defteri, karar sunumu ve onay; GET /v1/surum: istemci_surum_esikleri'ne ertelenmiş eşik uygulaması). Beyansız GET'in tek yazısı kök oturum kancasının son kullanım anıdır (D01). HEAD rotası yoktur (exposeHeadRoutes false).",
+    "Geçerli en düşük sürüm dönem içinde hiç artmaz; düşürme her an uygulanır; kayıtlı en büyük sıradan küçük sıralı yayın dosyası hiçbir kararı değiştirmez; aynı sıra farklı içerikle gelirse ilk kayıt geçerli kalır.",
+    "istemci_surum_esikleri yalnız eklenir; karar_ani D04'ün saat arayüzünden gelir; uygulama kodu bu tabloda UPDATE ve DELETE çalıştırmaz; tabloya yalnız surec api yazar.",
+    "Hatalı sürüm ve iOS listeleri dosyanın sırasına bağlıdır: geçerli liste platformun kayıtlı en büyük sıralı satırından gelir, küçük sıralı dosyalı kopya daha yeni ilanı düşüremez.",
+    "Etiketlenmiş telefon sürümünün saklı OpenAPI belgesi hiç değişmez ve o etiketin commit'inden üretilmiş belgeyle aynıdır; destek.json'daki hepSurumYollari (giriş, sürüm, saat belgesi, gönderim) ve her kuyruk öğesinin gövde şeması bütün saklı sürümlere karşı, öteki yollar tam denetim tabanından yukarı her saklı sürüme karşı denetlenir; hepSurumYollari'ndaki yol hiç silinmez.",
+    "Cevap şemalarında enum anahtarı yoktur, büyüyebilen değerler x-extensible-enum taşır; cevap nesnelerinde isteğe bağlı alan yoktur, değeri olmayan alan null döner.",
+    "infra/api hiçbir modülü içe aktarmaz; D01, D02, D04 işlevleri ve D12 bağlantısı app.ts'ten parametreyle gelir, tipler drizzle-orm kütüphanesinden, packages/core'dan (D04'ün Saat ve SaatOznesi tipleri) ve D12'nin index.ts'inden yalnız import type ile (Islem, Veritabani). Tek tanım düzeyi bağ tablolar.ts'in, bütün tablo dosyaları gibi, D12'nin uygulama şema nesnesini almasıdır. Modül eklentileri kayıt sırasında veritabanına dokunmaz (belge üretimi veritabanısız koşar).",
+    "uygulamaKur hiçbir süreçte dinleme açmaz; surec isci'de rota kaydı, kök kancalar, under-pressure, hız tabloları, eşik alımı ve zamanlayıcı kurulmaz, modül eklentilerinin dinleyici kayıtları kurulur; surec belge'de yayın bilgisi okunmaz. Kimlik olaylarının dört abonesi surec api ve isci'de eklentilerden önce D01.kimlikDinleyicileriniKur ile kurulur ve kimlikDinleyicileriHazir ile denetlenir; belge kipinde kurulmaz.",
+    "Aşırı yükte istek veritabanına gitmeden düşer: under-pressure kökteki ilk kancadır, oturum kancası ondan sonra çalışır; baskıda yalnız baskiDisi beyanlı /health/live ve /v1/durum cevap verir. Kimliksiz 401 sınırını aşmış adresin isteği de oturum aramasından önce 429 alır.",
+    "Hata ve bulunamadı yakalayıcısı yalnız köktedir; modüller setErrorHandler ve setNotFoundHandler kullanmaz.",
+    "Her hız sınıfının tek sayaç tablosu vardır, açılışta bir kez kurulur ve sınıftaki bütün rotalarca paylaşılır; her sınıfın tablo boyu HIZ_SINIFLARI'nda yazılı anahtar evreninden büyüktür. Sayaçlar D04 saatiyle sayılır.",
+    "Girişsiz IP sayacı yalnız iki şeyi sayar: [girissiz] ve [girissiz, projeksiyon] rotasındaki her istek ve öteki rotalarda hiçbir doğrulanmış kimlik kuramadan 401 ile biten istek; imzası ya da oturumu doğrulanan istek hiçbir IP sayacına girmez.",
+    "Numara, isim, kod, anahtar ve jeton loga, adres satırına ve hata metnine girmez; istek logunda adres yerine rota kalıbı yazılır.",
+    "Saat belgesi yalnız doğrulanmış özneye ve D04 eşitlemeyi sağlıklı sayarken verilir; özne app.ts'teki tek eşlemeden gelir (öğrenci ve cihaz cihaz kimliği, personel kişi kimliği, hiçbir zaman giriş oturumu kimliği); 429, 5xx, girişsiz, projeksiyon ve çerezle gelen cevaplar belge taşımaz.",
+    "İşleyici bütçesi istek gelişinden 20 saniyedir: uzun işler kalanSureMs'e bakarak durur, agir rotalarda deyim en çok 15 saniye; hepsi Caddy'nin 25 ve telefonun 30 saniyesinin altında kalır.",
+    "Modüller arası içe aktarma sınır testiyle korunur (dependency-cruiser API'si, apps/server/src ve packages/core/src, sıfır ihlal): no-circular; yaprak.ts başka modülden yalnız yaprak.ts içe aktarır; modules/ altındaki dosya jobs/ ve bileşim köklerini içe aktarmaz; infra/api modules/ altından içe aktarmaz; packages/core packages/contracts'ı çalışma anında içe aktarmaz (yalnız import type), packages/contracts packages/core'daki sabit listeleri içe aktarabilir.",
+    "Projeksiyon çerezi yalnız kimliğinde projeksiyon olan rotada okunur, oturum aranmaz ve çerez D01'e gitmez; oturum rotasında kimlik sayılmaz (401 API_KIMLIK_GEREKLI). İstemci adresi (istek.ip, trustProxy) hız sayaçlarında ve D11'in süreç belleğindeki yeni tarayıcı sayacında kullanılır; o sayaçta adres saklanmaz ve loglanmaz.",
+    "Modül eklentileri <ad>Eklentisi adını taşır ve öneksiz kaydedilir; yol yalnız rota tanımından gelir."
+  ],
+  "exports": [
+    {
+      "name": "rotalariKaydet",
+      "signature": "function rotalariKaydet(app: FastifyInstance, rotalar: readonly RotaUygulamasi[]): void; type RotaUygulamasi<R extends RotaTanimi = RotaTanimi> = { tanim: R; isleyici: RotaIsleyicisi<R>; kimlikKancasi?: KimlikKancasi }; type KimlikKancasi = (istek: FastifyRequest) => Promise<void>",
+      "purpose": "Modül eklentisi kendi sözleşme dosyasındaki rota tanımlarını işleyicileriyle kaydeder. Açılışta denetler: tanım TUM_ROTALAR'da (test kipinde ayrıca DenemeSecenekleri.denemeRotalari'nda), yol modülün önekiyle başlıyor, kimlik birleşimi izinli altı birleşimden biri, kimlikKancasi kimliğinde cihazImzasi ya da projeksiyon olan rotada var, öteki rotada yok; rol, hız sınıfı, gövde sınırı, durumlar, degisimBekleyenKabul, kimlikKaynaklari ve defterYazar beyanları kurallara uyuyor. Fastify yolunu ({dersId} biçiminden :dersId'ye), Zod şemalarını, beyan edilen her durum için cevap serileştiricisini ve gövde sınırını kurar. Kancaları kimlik kümesine göre yerleştirir: cihazImzasi içermeyen rotada kimlikKancasi (projeksiyon), beyan denetimi ve hız sınıfı preParsing'de, yani gövde okunmadan; cihazImzasi rotasında imza gövdede olduğundan preHandler'da. surec isci'de hiçbir rota kaydetmez, yalnız tanımları not eder. Kaydedileni tamlık denetimi için not eder. Eklentiler öneksiz kaydedilir, yol yalnız rota tanımından gelir: önekle kaydedilen eklentinin yolu tablo dışı sayılır ve açılış durur.",
+      "note": "apps/server/src/infra/api/index.ts (rota-kaydi.ts)"
+    },
+    {
+      "name": "uygulamaHatasi",
+      "signature": "function uygulamaHatasi<K extends HataKodu>(kod: K, ayrinti?: HataAyrintisi<K>, secenek?: BeklemeSecenegi<K>): UygulamaHatasi; type BeklemeSecenegi<K extends HataKodu> = (typeof TUM_HATALAR)[K]['bekleme'] extends 'cagiran' ? { beklemeSaniye: number } : never",
+      "purpose": "Katalogdaki kodla fırlatılacak hatayı kurar; HTTP durumu, mesaj ve bekleme kuralı katalogdan gelir, ayrinti kodun katalogdaki küçük şemasına uymak zorundadır ve kişisel veri taşımaz. secenek yalnız bekleme kuralı 'cagiran' olan kodda verilebilir ve orada zorunludur (beklemeSaniye 1 ile 3600 arası tam sayı); öteki kodlarda tip izin vermez. http null işletim kodu da kurulabilir; istek içinde fırlatılırsa kök yakalayıcı 500 API_SUNUCU_HATASI verir ve kodu loglar. Sınıf packages/contracts/src/ortak/hata.ts'tedir; D12 gibi infra/api'yi içe aktaramayan modüller aynı sınıfı oradan kurar.",
+      "note": "apps/server/src/infra/api/index.ts (hata-yakalayici.ts); UygulamaHatasi sınıfı packages/contracts/src/ortak/hata.ts"
+    },
+    {
+      "name": "istekKimligi",
+      "signature": "function istekKimligi(istek: FastifyRequest): string",
+      "purpose": "İsteğin sunucuda üretilmiş UUIDv4 kimliği. İşi tetikleyen istek varsa modül işi isGonder(tx, kuyruk, veri, { istekKimligi: istekKimligi(istek) }) ile kuyruğa koyar; D14 kimliği ayrılmış alana yazar, iş verisine ayrıca konmaz. İşçi logu aynı kimlikle aranır.",
+      "note": "apps/server/src/infra/api/index.ts (kancalar/istek-kimligi.ts)"
+    },
+    {
+      "name": "hizSinifi",
+      "signature": "function hizSinifi(ad: HizSinifiAdi): (istek: FastifyRequest, cevap: FastifyReply) => Promise<void>; type HizSinifiAdi = 'girissiz' | 'oturum' | 'agir' | 'gonderim' | 'saat' | 'projeksiyon'",
+      "purpose": "Adlı hız sınıfını doğrulanmış kimliğe bağlı uygulayan kanca; her sınıfın tek sayaç tablosu vardır ve sayaçlar D04 saatiyle sayılır (saatli depo). Ad, anahtar, değer, tablo boyu ve anahtar evreni tek yerde: packages/contracts/src/ortak/hiz.ts HIZ_SINIFLARI. Sınıflar: girissiz IP başına dakikada 3000; oturum giriş oturumu başına 120; agir giriş oturumu başına 20 (/v1/raporlar/ altındaki bütün rotalar); gonderim imza doğrulandıysa cihaz kimliği, doğrulanmadıysa giriş oturumu başına 30; saat öğrencide cihaz kimliği, personelde giriş oturumu başına 30; projeksiyon projeksiyon başına 60. Başka ad yoktur (girisli, saat_belgesi, esitleme_gonderim derlemede reddedilir). rotalariKaydet her rotaya kendisi ekler; elle çağırmak yalnız kimliği kendi kancasında kuran modül içindir.",
+      "note": "apps/server/src/infra/api/index.ts (hiz-siniflari.ts)"
+    },
+    {
+      "name": "enDusukSurumDenetle",
+      "signature": "function enDusukSurumDenetle(istek: FastifyRequest): { durum: 'uygun' | 'altinda' | 'bilinmiyor'; istemciSurumu: string | null; enDusukSurum: string | null }",
+      "purpose": "İsteğin X-Platform, X-Kanal ve X-Uygulama-Surumu başlıklarını süreç önbelleğindeki geçerli en düşük sürümle karşılaştırır. Hiçbir zaman reddetmez ve veritabanını beklemez: esikDurumu'nu beklemeden çağırır; önbellek D04 saatine göre 60 saniyeden eskiyse tek uçuşlu tazelemeyi başlatır ve o anki değeri döner (zamanlayıcı yoktur; GET /v1/surum aynı işlevi bekleyerek çağırır). Yalnız surec api'de anlamlıdır. Sonuç log, ölçüm ve GET /v1/surum için kullanılır. En düşük sürümün altındaki telefonu yeni yoklamadan telefon kendisi alıkoyar (plan.html#dagitim-guncelleme-ilkesi).",
+      "note": "apps/server/src/infra/api/index.ts (surum/esik-durumu.ts)"
+    },
+    {
+      "name": "uygulamaKur",
+      "signature": "function uygulamaKur(b: UygulamaBagimliliklari): Promise<FastifyInstance>",
+      "purpose": "Tek kurucu: Fastify örneğini kurar (exposeHeadRoutes false), bütün eklentileri süreç tablosuna göre kaydeder, app.ready()'yi bekler ve örneği döner; listen hiçbir süreçte çağrılmaz, süreç türü b.surec ile verilir. Çağıranlar: server.ts (D15, surec api ve olcumYazici true, sonra listen), worker.ts (D14, surec isci, listen yok, yayinBilgisiYukle'yi ayrıca çağırmaz, kapanışta app.close()), openapi-belgesi-sakla (surec belge), D15'in test dünyası (surec api ve deneme). Sıra: (1) surec api ve isci'de, eklentileri kaydetmeden önce D01.kimlikDinleyicileriniKur({ dersler: derslerKimlikDinleyicisi, esitleme: esitlemeKimlikDinleyicisi, projeksiyon: projeksiyonKimlikDinleyicisi, isletim: kimlikOlayiDinleyicisi }) ve D01.kimlikDinleyicileriHazir() (abone eksikse süreç açılmaz; belge kipinde sahte altyapıda olay doğmadığından kurulmaz). (2) apiKur: ayarlar D15'in ayarlarından (panelAdresi, baski, guvenilenVekilAdresi, yayinBilgisiYolu), veritabani Veritabani.db, islem Veritabani.islem, donemArasiMi D02'nin işlevi (I006). (3) Modül eklentileri <ad>Eklentisi adıyla, öneksiz, { surec } ve modül seçenekleriyle: derslerEklentisi'ne qrDersAyariAcik = ayarlar().asama2.qrAcik; saatEklentisi'ne saatOznesiKur; projeksiyonEklentisi'ne qrAcik = ayarlar().asama2.qrAcik, ayarlar = ayarlar().projeksiyon ve geriYuklemePencereleri = D12.geriYuklemePencereleri; veritabaniEklentisi'ne veritabani; isletimEklentisi'ne rotalariKaydet, D06.ogeTuruKaydet, D01.hesapSilindiMi, D12.danismaKilidi, veritabani, saat, surec ve olcumYazici (kimlikOlayiDinleyicisiKaydet seçeneği yoktur; D15'in dinleyicisi (1)'deki isletim abonesidir); en son apiEklentisi. (4) onReady: rota tamlık denetimi, yayinBilgisiYukle (api ve isci) ve eşik alımı (yalnız api). Zamanlayıcıları eklentiler yalnız surec api iken kurar (D04 saat_esitleme_denetimi, olcumYazici true iken D15 ölçü yazıcısı). deneme yalnız test ortamı ayarında kabul edilir, üretimde verilirse açılış durur.",
+      "note": "apps/server/src/app.ts; bileşim kökü, D13 ekler"
+    },
+    {
+      "name": "UygulamaBagimliliklari",
+      "signature": "type UygulamaBagimliliklari = { surec: 'api' | 'isci' | 'belge'; ayarlar: () => Ayarlar; log: Logger; veritabani: Veritabani; islem: Veritabani['islem']; saat: Saat; isKuyrugu: IsKuyrugu; eposta: Eposta; olcumYazici?: boolean; deneme?: DenemeSecenekleri }",
+      "purpose": "uygulamaKur'un tek girdisi. ayarlar D15'in ayarlar işlevi (Ayarlar tipi D15'in), log D15'in log'u (Fastify loggerInstance olur), veritabani D12'nin Veritabani nesnesi ve islem onun Veritabani.islem'i, saat D04'ün Saat'i, isKuyrugu ve eposta D14'ten. olcumYazici varsayılan false; yalnız server.ts true verir, test dünyası ve openapi_belgesi_sakla vermez; değer isletimEklentisi'ne aynen geçer. Belge kipinde altyapı sahtedir ve her kullanımda fırlatır (kayıt sırasında veritabanına dokunan eklenti yakalanır).",
+      "note": "apps/server/src/app.ts; tip"
+    },
+    {
+      "name": "EklentiTemelSecenekleri",
+      "signature": "type EklentiTemelSecenekleri = { surec: 'api' | 'isci' | 'belge' }",
+      "purpose": "Her modülün <ad>Eklentisi'nin seçenek tipi bunu genişletir (contracts.json ortak kuralı Birleşim; kimlikEklentisi, derslerEklentisi, listelerEklentisi, saatEklentisi, yoklamaEklentisi, esitlemeEklentisi, dogrulamaEklentisi, devamEklentisi, duzeltmelerEklentisi, raporlarEklentisi, projeksiyonEklentisi, veritabaniEklentisi, isletimEklentisi ve D13'ün apiEklentisi). Eklenti altyapıyı seçenekten alır, kayıt sırasında veritabanına dokunmaz, zamanlayıcıyı yalnız surec api iken kurar, dinleyici kayıtlarını her süreçte yapar; rotaları yalnız rotalariKaydet ile kaydeder, setErrorHandler ve setNotFoundHandler kullanmaz.",
+      "note": "apps/server/src/infra/api/tipler.ts; index.ts tip olarak dışa açar"
+    },
+    {
+      "name": "Kimlik",
+      "signature": "type Kimlik = { kisiId: KisiId | null; girisOturumuId: GirisOturumuId | null; oturumKapsami: 'tam' | 'degisim_bekliyor' | null; kaynak: 'bearer' | 'cerez' | 'imza' | 'projeksiyon'; roller: readonly { rol: 'ogrenci' | 'hoca' | 'yonetici'; kapsamBirimId: BirimId | null }[]; incelemeHesabi: boolean; tur: 'ogrenci' | 'personel' | 'cihaz' | 'projeksiyon'; cihazId: CihazId | null; projeksiyonId: ProjeksiyonId | null; istemci: 'telefon' | 'panel' | 'kursu' }",
+      "purpose": "Bütün modüllerin kullandığı tek kimlik tipi (I009); OturumKisisi gibi ikinci bir ad yoktur. İlk altı alan kararın yazdığı biçimdir ve D01 oturumDogrula ile doldurur: roller personel_rolleri'nden gelir, kapsamBirimId null bütün birimler demektir; D02.dersYetkisi(tx, kimlik, dersId) yönetici kapsamını kimlik.roller'dan okur, yoneticiKapsami parametresi yoktur. tur, cihazId, projeksiyonId ve istemci D13'ün ek alanlarıdır: oturumda D01, imzada D06, projeksiyonda D11 yazar; istemci kaynaktan türer (bearer ve imza telefon, cerez panel, projeksiyon kursu). Kurallar: öğrenci ve cihaz kimliğinde roller tek öğe { rol: 'ogrenci', kapsamBirimId: null }; personelde en az bir hoca ya da yonetici rolü; projeksiyonda roller boş, kisiId null, projeksiyonId dolu; tur cihaz yalnız öğrenci cihazıdır (personel paketi oturumla gelir); imza ve oturum ikisi de doğrulanırsa tur cihaz, kaynak imza, girisOturumuId ve oturumKapsami korunur; oturum yoksa girisOturumuId ve oturumKapsami null. incelemeHesabi mağaza inceleme hesabıdır (D01). Giriş oturumu her yerde girisOturumuId'dir (tek başına oturum ders oturumudur). Rota beyanındaki rol eşlemesi: ogrenci roller'de ogrenci; personel roller'de hoca ya da yonetici; hoca ve yonetici o rolün varlığı.",
+      "note": "packages/contracts/src/ortak/kimlik.ts; tip; D13 tanımlar, D01 doldurur"
+    },
+    {
+      "name": "KisiId",
+      "signature": "type KisiId = string & { readonly __kimlik: 'Kisi' }",
+      "purpose": "Markalı kişi kimliği; giriş oturumu kimliğinin kişi kimliği yerine verilmesini derlemede reddeder. kimlikSemasi('Kisi') aynı markayı üretir.",
+      "note": "packages/contracts/src/ortak/kimlik.ts; tip"
+    },
+    {
+      "name": "GirisOturumuId",
+      "signature": "type GirisOturumuId = string & { readonly __kimlik: 'GirisOturumu' }",
+      "purpose": "Markalı giriş oturumu kimliği; saat belgesi öznesi olamaz (saatOznesiKur).",
+      "note": "packages/contracts/src/ortak/kimlik.ts; tip"
+    },
+    {
+      "name": "CihazId",
+      "signature": "type CihazId = string & { readonly __kimlik: 'Cihaz' }",
+      "purpose": "Markalı öğrenci cihazı kimliği; cihaz kimliğinde imzalayan cihaz.",
+      "note": "packages/contracts/src/ortak/kimlik.ts; tip"
+    },
+    {
+      "name": "ProjeksiyonId",
+      "signature": "type ProjeksiyonId = string & { readonly __kimlik: 'Projeksiyon' }",
+      "purpose": "Markalı kürsü tarayıcısı kimliği (D11).",
+      "note": "packages/contracts/src/ortak/kimlik.ts; tip"
+    },
+    {
+      "name": "BirimId",
+      "signature": "type BirimId = string & { readonly __kimlik: 'Birim' }",
+      "purpose": "Kimlik.roller[].kapsamBirimId'nin tipi; D02'nin birim kimliğiyle aynı marka (kimlikSemasi('Birim')). Rolde null bütün birimler demektir.",
+      "note": "packages/contracts/src/ortak/kimlik.ts; tip"
+    },
+    {
+      "name": "kimlikNesnesiSemasi",
+      "signature": "const kimlikNesnesiSemasi: z.ZodType<Kimlik>",
+      "purpose": "Kimlik'in çalışma anı şeması. Test kipinde kök kanca D01'in her gecerli dönüşünü bununla denetler, uymazsa 500 ve senaryo kırmızı. Rol nesnesi { rol, kapsamBirimId } dışındaki biçimi (metin dizisi roller, kapsamBirimId'siz rol, bilinmeyen rol) ve oturumId adlı alanı reddeder.",
+      "note": "packages/contracts/src/ortak/kimlik.ts"
+    },
+    {
+      "name": "FastifyRequest",
+      "signature": "declare module 'fastify' { interface FastifyRequest { kimlik: Kimlik | null; istemci: IstemciBilgisi; panelden: boolean; kimlikBilgisi: { tur: 'bearer' | 'cerez'; anahtar: string } | null; projeksiyonAnahtari: string | null; oturumHatasi: HataKodu | null } }",
+      "purpose": "Kök kancanın isteğe eklediği alanlar. panelden yalnız Origin panel adresine birebir eşitken true; D01 giriş ucunda çerezi yalnız panelden true iken kurar. Kimliğinde projeksiyon olan rotada ([projeksiyon] ve [girissiz, projeksiyon]) kök kanca oturum aramaz; çerezin okunabildiği istekte (GET ya da panelden true olan yazma isteği) projeksiyonAnahtari'nı __Host-yoklama-projeksiyon çerezinden doldurur, doğrulamayı D11'in kimlikKancasi yapar (I052). Oturum rotasında projeksiyon çerezi kimlik sayılmaz: yalnız onu taşıyan istek 401 API_KIMLIK_GEREKLI alır. İstemci adresi Fastify'ın istek.ip'sidir (trustProxy yalnız Caddy'nin iç adresi, girissiz hız sınıfıyla aynı kaynak); D11'in adres başına yeni tarayıcı sınırı onu yalnız süreç belleğindeki sayaçta kullanır, adres saklanmaz ve loglanmaz.",
+      "note": "apps/server/src/infra/api/tipler.ts; Fastify istek tipine declaration merging ile ekleme, yeni bir ad değildir (packages/contracts Fastify'a bağlı değildir)"
+    },
+    {
+      "name": "apiKur",
+      "signature": "function apiKur(app: FastifyInstance, b: ApiBagimliliklari): Promise<void>",
+      "purpose": "uygulamaKur'un iç adımı; başka çağıran yoktur. surec api'de kökte şu sırayla kurar: ilk kanca @fastify/under-pressure (eşikler ayarlardan; kullanimBinde binde tam sayıdır, 1000'e bölünüp maxEventLoopUtilization olur; pressureHandler zarflı 503 ve 15 ile 45 saniye Retry-After verir), @fastify/cookie, @fastify/helmet (API başlıkları D15-B05), @fastify/rate-limit (global kapalı, saatli depo), yalnız application/json ayrıştırıcısı, veritabanına dokunmayan kök kancalar, oturum kancası, onSend ve onResponse kancaları, yakalayıcılar ve rota bekçisi. surec belge'de kök kancalar ve yakalayıcılar kurulur (belgedeki başlıklar ve örtük kodlar için), under-pressure ve hız tabloları kurulmaz; surec isci'de hiçbiri kurulmaz. Kök yakalayıcının log satırı hata nesnesinin cause alanındaki { neden, sqlstate, kisit, tablo } bilgisini yazar (D12'nin veritabanı hatası; değer ve ileti metni yazılmaz); D12 dışından kaçan ham SQLSTATE'i GECICI_SQLSTATELER yedek tablosuyla ikinci güvence olarak çevirir (veritabanı hatası eşlemesi tablosu).",
+      "note": "apps/server/src/infra/api/index.ts (kur.ts); yalnız app.ts çağırır"
+    },
+    {
+      "name": "apiEklentisi",
+      "signature": "const apiEklentisi: FastifyPluginAsync<EklentiTemelSecenekleri>",
+      "purpose": "D13'ün kendi eklentisi (Birleşim kuralındaki <ad>Eklentisi adı; eski adı eklenti): API_ROTALARI'ndaki GET /v1/surum'u rotalariKaydet ile kaydeder. app.ts modül eklentilerinden sonra, öneksiz kaydeder; surec isci'de rota kaydetmez.",
+      "note": "apps/server/src/infra/api/index.ts (surum/surum-ucu.ts)"
+    },
+    {
+      "name": "ApiBagimliliklari",
+      "signature": "type ApiBagimliliklari = { surec: 'api' | 'isci' | 'belge'; ayarlar: { panelAdresi: string; guvenilenVekilAdresi: string; yayinBilgisiYolu: string | null; baski: { olayDongusuGecikmesiMs: number; kullanimBinde: number; bellekBayt: number } }; veritabani: Veritabani['db']; islem: Veritabani['islem']; saat: Saat; oturumDogrula: (girdi: OturumGirdisi) => Promise<OturumSonucu>; saatBelgesiVer: (tx: null, ozne: SaatOznesi, tekKullanimlikDeger: string) => { belge: string } | { verilemez: 'ESITLEME_BOZUK' | 'DEGER_GECERSIZ' }; saatOznesi: (kimlik: Kimlik) => SaatOznesi | null; donemArasiMi: (tx: Islem, an?: Date) => Promise<boolean>; deneme?: DenemeSecenekleri }  // Veritabani ve Islem D12'nin infra/veritabani/index.ts'inden yalnız import type; Veritabani['islem'] = <T>(fn: (tx: Islem) => Promise<T>, secenek?: { saltOkunur?: boolean; yalitim?: 'read_committed' | 'repeatable_read'; zamanAsimiMs?: number; yenidenDene?: boolean }) => Promise<T>",
+      "purpose": "apiKur'un girdisi; app.ts doldurur: veritabani Veritabani.db, islem Veritabani.islem (secenek'i saltOkunur, yalitim, zamanAsimiMs ve yenidenDene ile aynen iletir, sarmalayıcı yoktur), Islem tipi D12'nin index.ts'inden (yerel türetme yok), ayarlar D15'in ayarlarından, oturumDogrula D01'in işlevi, saatBelgesiVer D04'ün işlevinin kendisi (uyarlayıcı yok), saatOznesi app.ts'teki saatOznesiKur, donemArasiMi D02'nin dış yüzündeki işlev (I006; infra/api D02'yi içe aktarmaz, sahte işlev yalnız DenemeSecenekleri ile ve yalnız test ortamında gelir). yayinBilgisiYolu yalnız surec belge'de null olabilir, öteki süreçte null ise açılış durur (D15 varsayılanı /app/yayin-bilgisi.json). saat D04'ün Saat'idir (simdi(): UTC milisaniye).",
+      "note": "apps/server/src/infra/api/tipler.ts; tip"
+    },
+    {
+      "name": "OturumGirdisi",
+      "signature": "type OturumGirdisi = { yontem: string; basliklar: Readonly<Record<string, string | undefined>>; cerezler: Readonly<Record<string, string | undefined>> }",
+      "purpose": "D01'in oturumDogrula'sına giden girdi. D13 yalnız izinli kimlik bilgisinden kurar: Bearer varsa yalnız authorization başlığı, çerez okunacaksa yalnız __Host-yoklama-oturum; öteki başlık ve çerez, projeksiyon çerezi dahil, D01'e gitmez.",
+      "note": "apps/server/src/infra/api/tipler.ts; tip"
+    },
+    {
+      "name": "OturumSonucu",
+      "signature": "type OturumSonucu = { durum: 'yok' } | { durum: 'gecersiz'; kod: 'KIMLIK_OTURUM_YOK' | 'KIMLIK_OTURUM_BITTI'; neden: string | null } | { durum: 'gecerli'; kimlik: Kimlik }",
+      "purpose": "D01'in oturumDogrula dönüşüyle aynıdır; app.ts D01'in işlevi fırlatırsa da bu biçime çevirir. Test kipinde gecerli dönüşün kimliği kimlikNesnesiSemasi ile denetlenir, uymazsa 500 ve senaryo kırmızı.",
+      "note": "apps/server/src/infra/api/tipler.ts; tip"
+    },
+    {
+      "name": "saatOznesiKur",
+      "signature": "function saatOznesiKur(kimlik: Kimlik): SaatOznesi | null",
+      "purpose": "Saat belgesi öznesinin tek eşlemesi (saat belgesi öznesi tablosu): tur ogrenci ya da cihaz ve cihazId dolu ise { tur: 'ogrenci_cihazi', cihazId } (tur cihaz iken cihazId imzalayan cihazdır, D06'nın kancası yazar); tur personel ise { tur: 'personel', kisiId } (Kimlik.kisiId, hiçbir zaman girisOturumuId: D04-B14, belgenin öznesi kişidir ki internetsiz biten ders oturumunun işleri girişten sonra da doğrulansın); kaynak cerez, tur projeksiyon ya da öteki her durumda null (belge yok). SaatOznesi tipi D04'ündür (packages/core/src/saat). app.ts aynı işlevi ApiBagimliliklari.saatOznesi olarak köke, eklenti seçeneği olarak D04'ün belge ucuna verir. Başlıkların adları X-Saat-Istegi (istek) ve X-Saat-Belgesi (cevap); kök onSend kancası özneyi istekteki kimlikten bu işlevle kurar (I018).",
+      "note": "apps/server/src/app.ts; D13 ekler"
+    },
+    {
+      "name": "rotaTanimla",
+      "signature": "function rotaTanimla<const R extends RotaTanimi>(tanim: R): R",
+      "purpose": "Her modül kendi sözleşme dosyasında rotalarını bununla tanımlar; tanım anında yol biçimini, önek kuralını ve beyan kurallarını denetler: degisimBekleyenKabul yalnız packages/contracts/src/api.ts DEGISIM_BEKLEYEN_ROTALARI'ndaki dört D01 rotasında; kimlikKaynaklari yalnız kimliğinde oturum olan rotada, verilmezse ikisi de; defterYazar yalnız GET'te; durumlar tekil, 204 yalnız tek başına ve sema null iken; nesne biçimli hiz yalnız [girissiz, oturum] rotada; kimlikKancasi gereken rota (kimliğinde cihazImzasi ya da projeksiyon) kaydında verilir; kitle yalnız kimliğinde girissiz olan rotada. Aynı nesne sunucuda rotalariKaydet'e, istemcide istemci.cagir'a verilir: yöntem, yol ve şemalar tek kaynaktan gelir.",
+      "note": "packages/contracts/src/ortak/rota.ts"
+    },
+    {
+      "name": "RotaTanimi",
+      "signature": "interface RotaTanimi { modul: ModulAdi; ad: string; yontem: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; yol: string; kimlik: KimlikBirlesimi; roller?: readonly ('ogrenci' | 'personel' | 'hoca' | 'yonetici')[]; degisimBekleyenKabul?: true; kimlikKaynaklari?: readonly ('bearer' | 'cerez')[]; kitle?: 'ogrenci' | 'hoca'; hiz: HizSinifiAdi | { kimliksiz: 'girissiz'; kimlikli: HizSinifiAdi }; govdeSiniri?: number; istek: { yol?: z.ZodObject; sorgu?: z.ZodObject; govde?: z.ZodType; baslik?: z.ZodObject }; cevap: { durumlar: readonly [200 | 201 | 204, ...(200 | 201 | 204)[]]; sema: z.ZodType | null }; hatalar: readonly string[]; defterYazar?: true; saatBelgesi?: boolean; istemciCevapDenetimi?: boolean; baskiDisi?: boolean; ozet: string }",
+      "purpose": "Rota tablosunun bir satırı; alanların anlamı ve kuralları rota tablosu biçimi tablosunda. Her modül kendi sözleşme dosyasında bu biçimle yazar, TUM_ROTALAR birleştirir.",
+      "note": "packages/contracts/src/ortak/rota.ts; tip"
+    },
+    {
+      "name": "KimlikBirlesimi",
+      "signature": "type KimlikBirlesimi = readonly ['girissiz'] | readonly ['girissiz', 'oturum'] | readonly ['oturum'] | readonly ['cihazImzasi', 'oturum'] | readonly ['projeksiyon'] | readonly ['girissiz', 'projeksiyon']",
+      "purpose": "Rota kimliğinin izinli altı değeri (kimlik birleşimleri tablosu); öteki birleşim açılışı durdurur. [girissiz, projeksiyon] D11'in eşleştirme kodu ucu içindir (POST /v1/projeksiyon/eslestirme-kodu, I052): tanınan çerez kimlik kurar, tanınmayan ya da kapanmış çerez ve çerezsiz istek hata almaz, kimliksiz sürer.",
+      "note": "packages/contracts/src/ortak/rota.ts; tip"
+    },
+    {
+      "name": "hataKodlariTanimla",
+      "signature": "function hataKodlariTanimla<const K extends Record<string, HataTanimi>>(modul: ModulAdi, kodlar: K): K",
+      "purpose": "Modül kataloğunu tanımlar; kurallar yüklenirken denetlenir. Her kod modül adının büyük harfli önekiyle başlar (is-kuyrugu için IS_KUYRUGU_). hatalar.ts bütün katalogları TUM_HATALAR'da birleştirir ve çift kodu yüklenirken reddeder. D14'ün IS_KUYRUGU_HATA_KODLARI da bununla tanımlanır ve birleştirmeye girer; http değeri koddan koda verilir: API isteğinde de doğabilen isGonder hataları 500 ve genel metin, yalnız işçide doğanlar null (I071, I076).",
+      "note": "packages/contracts/src/ortak/hata.ts"
+    },
+    {
+      "name": "HataTanimi",
+      "signature": "type HataTanimi = { http: 400 | 401 | 403 | 404 | 409 | 413 | 415 | 422 | 429 | 500 | 503 | null; hoca: string | null; ogrenci: string | null; ayrinti?: z.ZodType; bekleme?: { sabit: number } | { aralik: readonly [number, number] } | 'cagiran' }",
+      "purpose": "Katalogdaki bir kodun satırı. http null işletim kodudur (D12 ve D15'in açılış kodları, D14'ün yalnız işçide doğan kodları): metinleri null olabilir, hiçbir rotanın hatalar listesine giremez, istekte fırlatılırsa kök yakalayıcı 500 API_SUNUCU_HATASI verir ve kodu loglar. http dolu kodda hoca ve öğrenci metni dolu. Her modül kodu 429 ya da 503 olabilir; 429 ve 503'te bekleme zorunlu, öteki durumlarda yasaktır: { sabit: saniye } (ör. ESITLEME_KURULUM_MESGUL 5, SAAT_ESITLEME_BOZUK 60), { aralik: [15, 45] } (sunucuda rastgele seçilir; ör. API_SUNUCU_YOGUN ve D12'nin VERITABANI_ kodları) ya da 'cagiran' (değeri fırlatan verir; ör. API_HIZ_SINIRI pencerenin kalanı, PROJEKSIYON_DENEME_SINIRI pencere sonu).",
+      "note": "packages/contracts/src/ortak/hata.ts; tip"
+    },
+    {
+      "name": "UygulamaHatasi",
+      "signature": "class UygulamaHatasi extends Error { readonly kod: string; readonly ayrinti: unknown; readonly beklemeSaniye: number | null }",
+      "purpose": "Fırlatılan hata sınıfı; markayla tanınır (instanceof'a dayanmaz). uygulamaHatasi bunu kurar; D12 gibi infra/api'yi içe aktaramayan modüller aynı sınıfı buradan kurar.",
+      "note": "packages/contracts/src/ortak/hata.ts; sınıf"
+    },
+    {
+      "name": "hataZarfiSemasi",
+      "signature": "const hataZarfiSemasi: z.ZodObject<{ hata: z.ZodObject<{ kod; mesaj; istekKimligi; alanlar; beklemeSaniye; ayrinti }> }>; type HataZarfi = z.infer<typeof hataZarfiSemasi>",
+      "purpose": "Bütün 4xx ve 5xx gövdelerinin tek şeması (D13-B01); D15'in ortak test kancası her 4xx ve 5xx gövdesini, fetch yardımcısı zarfGecerli denetimini bununla yapar.",
+      "note": "packages/contracts/src/ortak/hata.ts"
+    },
+    {
+      "name": "GECICI_SQLSTATELER",
+      "signature": "const GECICI_SQLSTATELER: Readonly<Record<string, 'kilitlenme' | 'havuz' | 'erisilemez' | 'zaman_asimi'>>",
+      "purpose": "Veritabanı hatası eşlemesinin tek kaynağı: 40P01, 40001 ve 55P03 kilitlenme; 53300 havuz; 57P01, 57P02, 57P03, 25P03 ve 08 sınıfı erisilemez; 57014 ve 25P04 zaman_asimi. D12.islem türü kendi koduna çevirir (VERITABANI_KILITLENME, VERITABANI_HAVUZ_DOLU, VERITABANI_ERISILEMEZ, VERITABANI_ZAMAN_ASIMI; http 503, bekleme aralik [15, 45]; I068). Kök yakalayıcı aynı sabitle D12 dışından kaçan ham hatayı ikinci güvence olarak çevirir: zaman_asimi 503 API_SORGU_ZAMAN_ASIMI, öteki türler 503 API_SUNUCU_YOGUN (I059).",
+      "note": "packages/contracts/src/ortak/hata.ts"
+    },
+    {
+      "name": "API_HATALARI",
+      "signature": "const API_HATALARI: { API_ISTEK_GECERSIZ: 400; API_JSON_BOZUK: 400; API_KIMLIK_GEREKLI: 401; API_ROL_YETKISIZ: 403; API_KOKEN_GECERSIZ: 403; API_UC_BULUNAMADI: 404; API_GOVDE_COK_BUYUK: 413; API_ICERIK_TURU: 415; API_SONUC_COK_BUYUK: 422; API_HIZ_SINIRI: 429; API_SUNUCU_HATASI: 500; API_SUNUCU_YOGUN: 503; API_SORGU_ZAMAN_ASIMI: 503; API_SURUM_BILGISI_YOK: 503 }",
+      "purpose": "D13'ün kendi kodları; örtük kod kümesine girer (rotanın hatalar listesine yazılmaz). Bekleme kuralları: API_HIZ_SINIRI 'cagiran' (pencerenin kalanı), API_SUNUCU_YOGUN ve API_SORGU_ZAMAN_ASIMI aralik [15, 45], API_SURUM_BILGISI_YOK sabit 60.",
+      "note": "packages/contracts/src/api.ts"
+    },
+    {
+      "name": "API_ROTALARI",
+      "signature": "const API_ROTALARI: readonly [RotaTanimi]",
+      "purpose": "D13'ün rota listesi: yalnız GET /v1/surum (girissiz, hız sınıfı girissiz, defterYazar).",
+      "note": "packages/contracts/src/api.ts"
+    },
+    {
+      "name": "DEGISIM_BEKLEYEN_ROTALARI",
+      "signature": "const DEGISIM_BEKLEYEN_ROTALARI: readonly { yontem: 'GET' | 'POST'; yol: string }[]",
+      "purpose": "Kısıtlı (degisim_bekliyor) oturumun girebileceği dört rotanın tek listesi: GET /v1/kimlik/ben, POST /v1/kimlik/cikis, POST /v1/kimlik/cihaz-degisimi, POST /v1/kimlik/cihaz-degisimi/{talepId}/ret. degisimBekleyenKabul yalnız bu rotalarda beyan edilebilir.",
+      "note": "packages/contracts/src/api.ts"
+    },
+    {
+      "name": "PLATFORMLAR",
+      "signature": "const PLATFORMLAR: readonly ['android', 'ios']",
+      "purpose": "Platform listesi; istemci_surum_esikleri platform CHECK'i ve yayinBilgisiSemasi bununla aynıdır (D12 şema testi karşılaştırır).",
+      "note": "packages/contracts/src/api.ts"
+    },
+    {
+      "name": "KANALLAR",
+      "signature": "const KANALLAR: readonly ['play', 'github', 'appstore', 'testflight']",
+      "purpose": "Kanal listesi; android play ve github, ios appstore ve testflight (istemci_surum_esikleri platform ve kanal CHECK'i).",
+      "note": "packages/contracts/src/api.ts"
+    },
+    {
+      "name": "ESIK_KARARLARI",
+      "signature": "const ESIK_KARARLARI: readonly ['uygulandi', 'ertelendi']",
+      "purpose": "istemci_surum_esikleri.karar CHECK listesi.",
+      "note": "packages/contracts/src/api.ts"
+    },
+    {
+      "name": "surumCevabiSemasi",
+      "signature": "const surumCevabiSemasi: z.ZodObject<{ enSonSurum; enDusukSurum; guncellemeVar; guncellemeGerekli; magazaBaglantisi; gecisBaglantisi }>",
+      "purpose": "GET /v1/surum cevabının şeması; alanların anlamı uç noktalar bölümünde.",
+      "note": "packages/contracts/src/api.ts"
+    },
+    {
+      "name": "ortukKodlar",
+      "signature": "function ortukKodlar(kimlik: KimlikBirlesimi): readonly HataKodu[]",
+      "purpose": "Rotanın beyan etmeden döndürebileceği kodlar, kimlik beyanına göre: her rotada bütün API_ kodları, D12'nin geçici 503 kodları (VERITABANI_HAVUZ_DOLU, VERITABANI_KILITLENME, VERITABANI_ERISILEMEZ, VERITABANI_ZAMAN_ASIMI, VERITABANI_NESIL_BELIRSIZ) ve D14'ün http değeri 500 olan IS_KUYRUGU_ kodları (API isteğinde de doğabilen isGonder hataları; IS_KUYRUGU_HATA_KODLARI'ndan http alanına göre süzülür, ad yazılmaz); kimliğinde oturum olan rotada ayrıca D01'in KIMLIK_OTURUM_YOK, KIMLIK_OTURUM_BITTI ve KIMLIK_KAPSAM_SINIRLI. Test kipindeki beyan bekçisi ve OpenAPI üreticisi rotanın hatalar listesine bunları kendisi ekler; modüller yazmaz. http null kodlar (yalnız işçide doğan IS_KUYRUGU_ kodları dahil) örtük kümeye girmez, istekte 500 API_SUNUCU_HATASI olur.",
+      "note": "packages/contracts/src/hatalar.ts; D13 ekler"
+    },
+    {
+      "name": "genisleyenEnum",
+      "signature": "function genisleyenEnum<const T extends readonly [string, ...string[]]>(degerler: T): z.ZodType<T[number] | (string & {})>",
+      "purpose": "Cevaptaki büyüyebilen değer: çalışma anında z.string().max(64), belgede x-extensible-enum (enum anahtarı yok); tip bilinen değerleri önerir ama bilinmeyeni de kabul eder, istemci varsayılan dalı yazmak zorunda kalır. İstek şemalarında kapalı z.enum kullanılır.",
+      "note": "packages/contracts/src/ortak/enum.ts"
+    },
+    {
+      "name": "anSemasi",
+      "signature": "const anSemasi: z.ZodString  // z.iso.datetime",
+      "purpose": "An: UTC ISO 8601, milisaniyeli ve Z ile (2026-03-02T07:00:00.000Z).",
+      "note": "packages/contracts/src/ortak/zaman.ts"
+    },
+    {
+      "name": "gunSemasi",
+      "signature": "const gunSemasi: z.ZodString  // z.iso.date",
+      "purpose": "Takvim günü YYYY-MM-DD, İstanbul günü; rapor aralığı bu biçimde gider.",
+      "note": "packages/contracts/src/ortak/zaman.ts"
+    },
+    {
+      "name": "dersSaatiSemasi",
+      "signature": "const dersSaatiSemasi: z.ZodString",
+      "purpose": "Ders saati HH:MM, İstanbul yerel saati.",
+      "note": "packages/contracts/src/ortak/zaman.ts"
+    },
+    {
+      "name": "sureMsSemasi",
+      "signature": "const sureMsSemasi: z.ZodNumber",
+      "purpose": "Süre: tam sayı milisaniye; alan adı Ms ile biter.",
+      "note": "packages/contracts/src/ortak/zaman.ts"
+    },
+    {
+      "name": "bindeSemasi",
+      "signature": "const bindeSemasi: z.ZodNumber",
+      "purpose": "Yüzde: onda bir birimli tam sayı (695 = yüzde 69,5); alan adı Binde ile biter.",
+      "note": "packages/contracts/src/ortak/zaman.ts"
+    },
+    {
+      "name": "buyukSayiSemasi",
+      "signature": "const buyukSayiSemasi: z.ZodString",
+      "purpose": "2^53'ü aşabilen tam sayı ondalık metin olarak (ör. veritabanı nesli).",
+      "note": "packages/contracts/src/ortak/zaman.ts"
+    },
+    {
+      "name": "kimlikSemasi",
+      "signature": "function kimlikSemasi<const A extends string>(ad: A): z.ZodType<string & { readonly __kimlik: A }>",
+      "purpose": "Markalı UUID kimlik şeması (z.uuid() ya da z.uuidv7()); ders, oturum ve öğrenci kimlikleri karışmaz; KisiId ve BirimId gibi tiplerle aynı marka.",
+      "note": "packages/contracts/src/ortak/kimlik.ts"
+    },
+    {
+      "name": "istemciKimligiSemasi",
+      "signature": "const istemciKimligiSemasi: z.ZodString  // z.uuidv7()",
+      "purpose": "Oluşturan işlerde istemcinin ürettiği UUIDv7 tekrar anahtarı (D13-B12).",
+      "note": "packages/contracts/src/ortak/kimlik.ts"
+    },
+    {
+      "name": "ogrenciNoSemasi",
+      "signature": "const ogrenciNoSemasi: z.ZodString",
+      "purpose": "9 ya da 10 rakamlı öğrenci numarası metni; yola ve sorguya girmez.",
+      "note": "packages/contracts/src/ortak/kimlik.ts"
+    },
+    {
+      "name": "beklenenSurumNoSemasi",
+      "signature": "const beklenenSurumNoSemasi: z.ZodNumber",
+      "purpose": "D02 ile aynı ad ve tip: alan beklenenSurumNo, 0 ile 2147483647 arası tam sayı; çevrimiçi düzenlemede uymazsa 409 <MODÜL>_SURUM_DEGISTI.",
+      "note": "packages/contracts/src/ortak/sayfa.ts"
+    },
+    {
+      "name": "sayfaSemasi",
+      "signature": "function sayfaSemasi<T extends z.ZodType>(oge: T): z.ZodObject<{ ogeler: z.ZodArray<T>; sonrakiImlec: z.ZodNullable<z.ZodString> }>",
+      "purpose": "Büyüyen liste cevabı {ogeler, sonrakiImlec: metin ya da null}; anahtar kümesi imleci (D13-B13).",
+      "note": "packages/contracts/src/ortak/sayfa.ts"
+    },
+    {
+      "name": "sayfaSorgusuSemasi",
+      "signature": "const sayfaSorgusuSemasi: z.ZodObject<{ imlec; adet }>",
+      "purpose": "Sayfa sorgusu: imlec opak base64url, en çok 200 karakter; adet 1 ile 500, varsayılan 100.",
+      "note": "packages/contracts/src/ortak/sayfa.ts"
+    },
+    {
+      "name": "tamListeSemasi",
+      "signature": "function tamListeSemasi<T extends z.ZodType>(oge: T, enCok?: number)",
+      "purpose": "Sınıf boyu tam listelerin tek yardımcısı: varsayılan en çok 2000 satır; rotalariKaydet bu şemayı taşıyan cevapta satırı serileştirmeden önce sayar, aşınca 422 API_SONUC_COK_BUYUK döner, modül sınırı ayrıca hatırlamaz.",
+      "note": "packages/contracts/src/ortak/sayfa.ts"
+    },
+    {
+      "name": "ogeSonuclariSemasi",
+      "signature": "function ogeSonuclariSemasi<const S extends readonly [string, ...string[]], const E extends { duzeltme?: z.ZodType; yeniKarar?: z.ZodType; sayilan?: z.ZodType } = {}>(sonuclar: S, ek?: E)",
+      "purpose": "Toplu işlem cevabı {sonuclar: [{kimlik, sonuc, kod, ...ek}]} istek sırasıyla; sonuc genisleyenEnum, kod öğe düzeyinde modül kodu ya da null (D13-B28). Modül öğeye yalnız ekleme alanları koyabilir: duzeltme, yeniKarar ve sayilan (I045; başka ad derlemede reddedilir). Tanımlı alanlar verilen şemayla doğrulanır; şema bilinmeyen ek alanı reddetmez (atar), böylece sahibin sonradan eklediği alan eski istemciyi kırmaz. Toplu istekte 200'ü aşan öğe her yerde 400 API_ISTEK_GECERSIZ (alan yolu ogeler, Zod kodu too_big).",
+      "note": "packages/contracts/src/ortak/oge-sonucu.ts"
+    },
+    {
+      "name": "imzaliMetinSemasi",
+      "signature": "function imzaliMetinSemasi<E extends z.ZodRawShape = {}>(s: { metinEnCok: number; imzaEnCok: number; imzaliTurler: readonly [string, ...string[]]; imzasizTurler?: readonly string[]; ek?: E })",
+      "purpose": "İmzalı içerik {metin, imzaTuru, imza, ...ek}: imzalı türde imza zorunlu, imzasız türde null (D06 ikinciCapa: imzaliTurler ['a', 's'], imzasizTurler ['o'], ek { anahtarId }). Metin aynen taşınır, imza metnin baytları üzerindedir (D13-B32).",
+      "note": "packages/contracts/src/ortak/imzali-metin.ts"
+    },
+    {
+      "name": "surumSemasi",
+      "signature": "const surumSemasi: z.ZodString",
+      "purpose": "Uygulama sürümü MAJOR.MINOR.PATCH, her bölüm en çok 4 rakam.",
+      "note": "packages/contracts/src/ortak/surum.ts"
+    },
+    {
+      "name": "surumAyristir",
+      "signature": "function surumAyristir(metin: string): readonly [number, number, number] | null",
+      "purpose": "Sürüm metnini üç sayıya ayırır; geçersiz biçimde null döner.",
+      "note": "packages/contracts/src/ortak/surum.ts"
+    },
+    {
+      "name": "surumKarsilastir",
+      "signature": "function surumKarsilastir(a: string, b: string): -1 | 0 | 1",
+      "purpose": "Bölümleri sayısal karşılaştırır (1.10.0 > 1.9.0); toplam sıralamadır.",
+      "note": "packages/contracts/src/ortak/surum.ts"
+    },
+    {
+      "name": "MODULLER",
+      "signature": "const MODULLER: readonly ModulAdi[]",
+      "purpose": "On beş modül adının tek listesi; ModulAdi bundan türer, kod öneki ve yol öneki buna bağlıdır.",
+      "note": "packages/contracts/src/ortak/moduller.ts"
+    },
+    {
+      "name": "BASLIKLAR",
+      "signature": "const BASLIKLAR: Readonly<Record<string, string>>",
+      "purpose": "Başlık adlarının tek listesi (başlıklar ve çerezler tablosu): X-Uygulama-Surumu, X-Guncelleme-Kimligi, X-Platform, X-Kanal, X-Kurulum-Kimligi, X-Saat-Istegi, X-Arka-Plan, X-Panel-Surumu, X-Istek-Kimligi, X-Saat-Belgesi.",
+      "note": "packages/contracts/src/ortak/basliklar.ts"
+    },
+    {
+      "name": "CEREZLER",
+      "signature": "const CEREZLER: { oturum: '__Host-yoklama-oturum'; projeksiyon: '__Host-yoklama-projeksiyon' }",
+      "purpose": "Çerez adlarının tek listesi: oturum çerezini D01, projeksiyon çerezini D11 kurar; __Host- öneki Path=/ istediğinden iki çerez adla ayrılır.",
+      "note": "packages/contracts/src/ortak/basliklar.ts"
+    },
+    {
+      "name": "ogeTuruTanimla",
+      "signature": "function ogeTuruTanimla<const T extends string, G extends z.ZodType>(tur: T, govde: G, s: { sahip: ModulAdi }): OgeTuruTanimi<T, G>",
+      "purpose": "Kuyruk öğesi türünün sahibi (D04, D05, D07, D09, D11, D15) gövde şemasını kendi sözleşme dosyasında bununla dışa verir; D06 opak metin gövdeyi aynı şemayla ayrıştırır (contracts.json ortak kuralı: öğe gövdesinin şeması sahibindedir). openapi-belgesi-sakla her saklı belgeye components.schemas.Oge_<tur> ve yapay POST /x-oge/<tur> yazar; oasdiff bütün saklı sürümlere karşı bunları da karşılaştırır, böylece öğe ayrıştırıcısını kıran değişiklik CI'da kırmızı olur.",
+      "note": "packages/contracts/src/ortak/oge.ts; D13 ekler"
+    },
+    {
+      "name": "OgeTuruTanimi",
+      "signature": "type OgeTuruTanimi<T extends string = string, G extends z.ZodType = z.ZodType> = { tur: T; govde: G; sahip: ModulAdi }",
+      "purpose": "Bir kuyruk öğesi türünün tanımı: tür adı, gövde şeması ve sahip modül.",
+      "note": "packages/contracts/src/ortak/oge.ts; tip"
+    },
+    {
+      "name": "TUM_OGE_TURLERI",
+      "signature": "const TUM_OGE_TURLERI: readonly OgeTuruTanimi[]",
+      "purpose": "rotalar.ts bütün öğe türü tanımlarını birleştirir ve çift türü yüklenirken reddeder; openapi-belgesi-sakla buradan okur.",
+      "note": "packages/contracts/src/rotalar.ts; D13 ekler"
+    },
+    {
+      "name": "HIZ_SINIFLARI",
+      "signature": "const HIZ_SINIFLARI: readonly { ad: HizSinifiAdi; anahtar: 'ip' | 'girisOturumu' | 'cihazYoksaGirisOturumu' | 'projeksiyon'; dakikada: number; tabloBoyu: number; anahtarEvreni: number; kanca: 'onRequest' | 'preParsing' | 'preHandler' }[]",
+      "purpose": "Hız sınıflarının tek tanımı; hiz-siniflari.ts, rota tablosu sözleşme testi, OpenAPI belgesi (x-hiz-sinifi) ve D15'in yük testi buradan okur. Değerler hız sınıfları tablosundadır; her sınıfta tabloBoyu anahtarEvreni'nden büyüktür.",
+      "note": "packages/contracts/src/ortak/hiz.ts; D13 ekler"
+    },
+    {
+      "name": "kalanSureMs",
+      "signature": "function kalanSureMs(istek: FastifyRequest): number",
+      "purpose": "İsteğin varışından (D04 saatiyle onRequest'te yazılır) başlayan 20 saniyelik işleyici bütçesinden kalan süre; negatif olabilir. Uzun işler buna bakarak durur: gönderim (D06) yeni parçaya başlamadan kalan süre yetmiyorsa kalan öğelere TEKRAR_DENE ESITLEME_ZAMAN_BUTCESI döner ve işlemi bitirir; agir rotalar işlemi zamanAsimiMs: min(15000, kalanSureMs) ile açar. Bütçeyi aşan işleyici 503 API_SORGU_ZAMAN_ASIMI fırlatır (panel yeniden denemez). Süre bütçesi tablosu uçtan uca değerleri verir. D12.islem'in zamanAsimiMs'i agir rotada en çok 15000'dir ve kalanSureMs ile küçülür (I068).",
+      "note": "apps/server/src/infra/api/index.ts (sure-butcesi.ts); D13 ekler"
+    },
+    {
+      "name": "ISLEYICI_BUTCESI_MS",
+      "signature": "const ISLEYICI_BUTCESI_MS = 20000",
+      "purpose": "İşleyici bütçesi, istek gelişinden 20 saniye (süre bütçesi tablosu); D12-B06'daki eski 25 saniye cümlesi bu bütçeye çekildi (I068).",
+      "note": "apps/server/src/infra/api/index.ts (sure-butcesi.ts)"
+    },
+    {
+      "name": "istemciKur",
+      "signature": "function istemciKur(s: { temelAdres: string; kimlikBilgisi: 'omit' | 'same-origin'; basliklar: (rota: RotaTanimi) => Record<string, string> | Promise<Record<string, string>>; zamanAsimiMs?: number; fetch?: typeof fetch }): { cagir<R extends RotaTanimi>(rota: R, girdi: RotaGirdisi<R>, s?: { arkaPlan?: boolean; sinyal?: AbortSignal }): Promise<IstekSonucu<R>> }",
+      "purpose": "Telefonla panelin ortak fetch yardımcısı: girdiyi istek şemasıyla göndermeden denetler, zaman aşımını AbortController ile kurar (varsayılan 30 saniye), beklenmeyen biçimi geçici sayar, sonucu teknik.html#telefon-gonderme-protokolu tablosuna göre sınıflar. X-Saat-Belgesi, X-Istek-Kimligi ve Retry-After'ı sonuca koyar. Yeniden denemez.",
+      "note": "packages/contracts/src/istemci.ts"
+    },
+    {
+      "name": "sonucSinifi",
+      "signature": "function sonucSinifi(durum: number, zarfGecerli: boolean): 'basari' | 'gecici' | 'bol' | 'dur'",
+      "purpose": "Protokol tablosunun tek yeri. zarfGecerli: gövde JSON olarak ayrışıyor, hataZarfiSemasi'na uyuyor ve X-Istek-Kimligi başlığı zarftaki istekKimligi'ne eşit. 2xx basari; 413 her zaman bol (bölmek güvenli); 401 ve 403 zarfla dur, zarfsız gecici; öteki 4xx zarfla bol, zarfsız gecici (üniversite ağ geçidinin, WAF'ın ya da vekilin HTML sayfası kuyruğu durdurmaz, kaydı rete düşürmez); 408, 429 ve 5xx gecici.",
+      "note": "packages/contracts/src/istemci.ts"
+    },
+    {
+      "name": "TUM_ROTALAR",
+      "signature": "const TUM_ROTALAR: readonly RotaTanimi[]",
+      "purpose": "On beş modülün rota listelerini yalnız birleştirir; iskelette bir kez yazılır, sonra değişmez (her modül iskelette kendi boş sözleşme dosyasını açar). Yüklenirken çift (yöntem, yol) ve çift (modül, ad) reddedilir.",
+      "note": "packages/contracts/src/rotalar.ts"
+    },
+    {
+      "name": "TUM_HATALAR",
+      "signature": "const TUM_HATALAR: Readonly<Record<HataKodu, HataTanimi>>",
+      "purpose": "On beş modülün hata kataloglarını (IS_KUYRUGU_HATA_KODLARI dahil) yalnız birleştirir; iskelette bir kez yazılır; yüklenirken çift kod reddedilir.",
+      "note": "packages/contracts/src/hatalar.ts"
+    },
+    {
+      "name": "HataKodu",
+      "signature": "type HataKodu = keyof typeof TUM_HATALAR",
+      "purpose": "Katalogdaki bütün kodların birleşim tipi.",
+      "note": "packages/contracts/src/hatalar.ts; tip"
+    },
+    {
+      "name": "yayinBilgisiSemasi",
+      "signature": "const yayinBilgisiSemasi: z.ZodObject<{ bicim: z.ZodLiteral<1>; sira: z.ZodNumber; olusturmaAni: typeof anSemasi; kanallar: z.ZodArray<z.ZodType<KanalGirdisi>>; hataliSurumler: z.ZodArray<z.ZodType<HataliSurum>>; iosPaketSurumleri: z.ZodArray<z.ZodString>; iosDagitimTurleri: z.ZodArray<z.ZodString> }>",
+      "purpose": "CI'nın yazdığı (D15), sunucunun yalnız okuduğu dosyanın şeması; D07'nin istediği alan adlarıyla tek şema. Kök nesne, kanal girdisi, kademe adımı ve hatalı sürüm girdisi z.strictObject'tir: istek nesnelerindeki strip kuralının bilerek istisnasıdır, çünkü bu dosya CI'dan gelir ve yanlış ya da eski alan adı açılışta ve D15'in kaynak denetiminde kırmızı olmalı, sessizce atılmamalı. kanallar dört platform ve kanal çiftinin her birini tam bir kez taşır; enDusukSurum en son sürümden büyük olamaz; magazaBaglantisi https; gecisBaglantisi yalnız testflight'ta dolu; kademeler yalnız github'da, en çok 10, başlangıçlar artan, yüzdeler 0 ile 100 arası ve azalmayan. hataliSurumler en çok 100: uygulamaSurumu surumSemasi, guncellemeKimligi UUID ya da null, baslangicAni anSemasi, gerekce en çok 200 karakter. iosPaketSurumleri en çok 500; iosDagitimTurleri en çok 10, her biri küçük harf ASCII ve tire, en çok 32 karakter; değerlerin anlamı D07'nin. iosDagitimTurleri I031 ile eklendi; D07 dosyayı yalnız yayinBilgisi() ile okur.",
+      "note": "packages/contracts/src/api.ts"
+    },
+    {
+      "name": "YayinBilgisi",
+      "signature": "type YayinBilgisi = z.infer<typeof yayinBilgisiSemasi>",
+      "purpose": "Doğrulanmış yayın bilgisi dosyasının tipi.",
+      "note": "packages/contracts/src/api.ts; tip"
+    },
+    {
+      "name": "KanalGirdisi",
+      "signature": "type KanalGirdisi = { platform: 'android' | 'ios'; kanal: 'play' | 'github' | 'appstore' | 'testflight'; enSonSurum: string; enDusukSurum: string; magazaBaglantisi: string; gecisBaglantisi: string | null; kademeler: readonly { baslangic: string; yuzde: number }[] }",
+      "purpose": "Bir platform ve kanal çiftinin girdisi.",
+      "note": "packages/contracts/src/api.ts; tip"
+    },
+    {
+      "name": "HataliSurum",
+      "signature": "type HataliSurum = { platform: 'android' | 'ios'; uygulamaSurumu: string; guncellemeKimligi: string | null; baslangicAni: string; gerekce: string }",
+      "purpose": "Hatalı ilan edilmiş sürümün girdisi; D07 yalnız yayinBilgisi() ile okur.",
+      "note": "packages/contracts/src/api.ts; tip"
+    },
+    {
+      "name": "yayinBilgisi",
+      "signature": "function yayinBilgisi(): YayinBilgisi & { gecerliSira: number }",
+      "purpose": "Süreç önbelleğinden döner; hatalı sürüm ve iOS listelerini dosyanın sırası ile istemci_surum_esikleri'ndeki kayıtlı en büyük sıradan hangisi büyükse ondan verir (gecerliSira o sıradır). Önbellek D04 saatine göre 60 saniyeden eskiyse tek uçuşlu salt okuma tazelemesi başlar (api ve isci'de; eşik yazan değerlendirme yalnız api'de). Yüklenmeden çağrılırsa sessizce boş dönmez, hata fırlatır (boş liste hatalı sürüm denetimini görünmeden kapatırdı). yayin-bilgisi.json'u okuyan tek yol budur: D07 kendi okuyucusunu ve yayinBilgisiYolu ayarını tutmaz (I031).",
+      "note": "apps/server/src/infra/api/index.ts (surum/yayin-bilgisi.ts); D13 ekler"
+    },
+    {
+      "name": "yayinBilgisiYukle",
+      "signature": "function yayinBilgisiYukle(yol: string): Promise<YayinBilgisi>",
+      "purpose": "Dosyayı okuyan ve doğrulayan tek yer: yayin-bilgisi.json'u Zod'la doğrular, bozuksa açılışı durduran hata fırlatır. uygulamaKur surec api ve isci'de açılışta çağırır; worker.ts ayrıca çağırmaz.",
+      "note": "apps/server/src/infra/api/index.ts (surum/yayin-bilgisi.ts); D13 ekler"
+    },
+    {
+      "name": "ModulAdi",
+      "signature": "type ModulAdi = 'kimlik' | 'dersler' | 'listeler' | 'saat' | 'yoklama' | 'esitleme' | 'dogrulama' | 'devam' | 'duzeltmeler' | 'raporlar' | 'projeksiyon' | 'veritabani' | 'api' | 'is-kuyrugu' | 'isletim'",
+      "purpose": "On beş modülün adı; MODULLER sabitinden türer.",
+      "note": "packages/contracts/src/ortak/moduller.ts; tip"
+    },
+    {
+      "name": "IstemciBilgisi",
+      "signature": "type IstemciBilgisi = { uygulamaSurumu: string | null; guncellemeKimligi: string | null; platform: 'android' | 'ios' | null; kanal: 'play' | 'github' | 'appstore' | 'testflight' | null; kurulumKimligi: string | null; panelSurumu: string | null; arkaPlan: boolean }",
+      "purpose": "Kök kancanın X- başlıklarından reddetmeden kurduğu nesne: bozuk ya da eksik başlık null, arkaPlan X-Arka-Plan: 1 iken true; D01 son görülen sürümü, updateId'yi, platform ve kanalı buradan yazar ve arkaPlan'da son kullanımı uzatmaz.",
+      "note": "packages/contracts/src/ortak/basliklar.ts; tip"
+    },
+    {
+      "name": "HataAyrintisi",
+      "signature": "type HataAyrintisi<K extends HataKodu> = (typeof TUM_HATALAR)[K]['ayrinti'] extends z.ZodType ? z.input<(typeof TUM_HATALAR)[K]['ayrinti']> : never",
+      "purpose": "Şeması olmayan kodda never (ayrinti verilemez).",
+      "note": "packages/contracts/src/ortak/hata.ts; tip"
+    },
+    {
+      "name": "RotaGirdisi",
+      "signature": "type RotaGirdisi<R extends RotaTanimi> = { [P in keyof R['istek']]: z.input<NonNullable<R['istek'][P]>> }",
+      "purpose": "Yalnız rotanın beyan ettiği istek parçalarını taşır; istemci.cagir'ın girdisi.",
+      "note": "packages/contracts/src/ortak/rota.ts; tip"
+    },
+    {
+      "name": "RotaIsleyicisi",
+      "signature": "type RotaIsleyicisi<R extends RotaTanimi> = (istek: FastifyRequest & { girdi: { [P in keyof R['istek']]: z.output<NonNullable<R['istek'][P]>> } }, cevap: FastifyReply) => Promise<{ durum: R['cevap']['durumlar'][number]; govde: R['cevap']['sema'] extends z.ZodType ? z.input<R['cevap']['sema']> : null }>",
+      "purpose": "Yalnız beyan edilen durumlardan birini döndürebilir (204'te govde null).",
+      "note": "apps/server/src/infra/api/tipler.ts; tip"
+    },
+    {
+      "name": "IstekSonucu",
+      "signature": "type IstekSonucu<R extends RotaTanimi> = { sinif: 'basari'; durum: R['cevap']['durumlar'][number]; govde: R['cevap']['sema'] extends z.ZodType ? z.output<R['cevap']['sema']> : null; istekKimligi: string; saatBelgesi: string | null } | { sinif: 'gecici'; durum: number | null; neden: 'ag' | 'zaman_asimi' | 'bicim' | 'durum'; hata: HataZarfi['hata'] | null; beklemeSaniye: number | null; istekKimligi: string | null } | { sinif: 'bol' | 'dur'; durum: number; hata: HataZarfi['hata'] | null; istekKimligi: string | null }",
+      "purpose": "Her istemci çağrısının sonucu; bol ve dur'da hata yalnız zarfGecerli iken doludur (zarfsız 413 bol olabilir).",
+      "note": "packages/contracts/src/istemci.ts; tip"
+    },
+    {
+      "name": "DenemeSecenekleri",
+      "signature": "type DenemeSecenekleri = { donemArasiMi?: (tx: Islem, an?: Date) => Promise<boolean>; baskiAcik?: () => boolean; hizSiniflari?: Partial<Record<HizSinifiAdi, { dakikada: number }>>; denemeRotalari?: readonly RotaUygulamasi[]; denemeEklentileri?: readonly FastifyPluginAsync[]; oturumDogrula?: ApiBagimliliklari['oturumDogrula']; saatBelgesiVer?: ApiBagimliliklari['saatBelgesiVer']; beyanDisiKod?: 'kirmizi' | 'uyari'; adimKaydi?: (adim: string, secenekler?: Readonly<Record<string, unknown>>) => void }",
+      "purpose": "Yalnız test ortamı ayarında kabul edilir: sahte dönem arası, baskı anahtarı, küçük hız sınırları (pencere D04'ün sahte saatiyle ilerler), bekçinin TUM_ROTALAR dışında kabul edeceği /v1/deneme/ altındaki rotalar ve eklentiler, sahte oturum ve belge işlevleri, beyan dışı kod davranışı (testte varsayılan kirmizi) ve uygulamaKur'un açılış adımlarını (kimlik dinleyicileri, her eklenti kaydı ve seçenekleri) sırayla bildiren adimKaydi.",
+      "note": "apps/server/src/infra/api/tipler.ts; tip"
+    }
+  ],
+  "files": [
+    "apps/server/src/app.ts",
+    "apps/server/src/infra/api/index.ts",
+    "apps/server/src/infra/api/kur.ts",
+    "apps/server/src/infra/api/tipler.ts",
+    "apps/server/src/infra/api/rota-kaydi.ts",
+    "apps/server/src/infra/api/hata-yakalayici.ts",
+    "apps/server/src/infra/api/hiz-siniflari.ts",
+    "apps/server/src/infra/api/asiri-yuk.ts",
+    "apps/server/src/infra/api/openapi.ts",
+    "apps/server/src/infra/api/tablolar.ts",
+    "apps/server/src/infra/api/saatli-depo.ts",
+    "apps/server/src/infra/api/sure-butcesi.ts",
+    "apps/server/src/infra/api/kancalar/istek-kimligi.ts",
+    "apps/server/src/infra/api/kancalar/istemci-basliklari.ts",
+    "apps/server/src/infra/api/kancalar/koken.ts",
+    "apps/server/src/infra/api/kancalar/kimlik.ts",
+    "apps/server/src/infra/api/kancalar/beyan-denetimi.ts",
+    "apps/server/src/infra/api/kancalar/kimliksiz-sayac.ts",
+    "apps/server/src/infra/api/kancalar/cevap-basliklari.ts",
+    "apps/server/src/infra/api/kancalar/saat-belgesi.ts",
+    "apps/server/src/infra/api/kancalar/istek-logu.ts",
+    "apps/server/src/infra/api/surum/yayin-bilgisi.ts",
+    "apps/server/src/infra/api/surum/esik-karari.ts",
+    "apps/server/src/infra/api/surum/esik-deposu.ts",
+    "apps/server/src/infra/api/surum/esik-durumu.ts",
+    "apps/server/src/infra/api/surum/kova.ts",
+    "apps/server/src/infra/api/surum/surum-ucu.ts",
+    "apps/server/scripts/api/openapi-belgesi-sakla.ts",
+    "apps/server/scripts/api/oasdiff-kirilma-denetimi.ts",
+    "apps/server/test/features/api/hata-zarfi.feature",
+    "apps/server/test/features/api/kimlik-ve-koken.feature",
+    "apps/server/test/features/api/govde-ve-icerik.feature",
+    "apps/server/test/features/api/hiz-siniri.feature",
+    "apps/server/test/features/api/asiri-yuk.feature",
+    "apps/server/test/features/api/rota-tablosu.feature",
+    "apps/server/test/features/api/saat-belgesi-basligi.feature",
+    "apps/server/test/features/api/surum.feature",
+    "apps/server/test/features/api/esik-karari.feature",
+    "apps/server/test/features/api/openapi-belgesi.feature",
+    "apps/server/test/features/api/oasdiff.feature",
+    "apps/server/test/features/api/butunlesik.feature",
+    "apps/server/test/features/api/surec.feature",
+    "apps/server/test/features/api/bilesim.feature",
+    "apps/server/test/features/api/sure-butcesi.feature",
+    "apps/server/test/features/api/ornekler/oasdiff/taban.json",
+    "apps/server/test/features/api/ornekler/oasdiff/kirici.json",
+    "apps/server/test/features/api/ornekler/oasdiff/ekleyen.json",
+    "apps/server/test/features/api/ornekler/oasdiff/taban-alti.json",
+    "apps/server/test/features/api/ornekler/oasdiff/kirici-giris.json",
+    "apps/server/test/features/api/ornekler/oasdiff/kirici-oge.json",
+    "apps/server/test/features/api/ornekler/yayin-bilgisi/gecerli.json",
+    "apps/server/test/features/api/ornekler/yayin-bilgisi/bozuk.json",
+    "apps/server/test/features/api/ornekler/yayin-bilgisi/d07-ornegi.json",
+    "apps/server/test/steps/api/ortak-adimlar.ts",
+    "apps/server/test/steps/api/deneme-eklentisi.ts",
+    "apps/server/test/steps/api/surum-adimlari.ts",
+    "apps/server/test/steps/api/sozlesme-adimlari.ts",
+    "apps/server/test/steps/api/butunlesik-adimlari.ts",
+    "apps/server/test/steps/api/surec-adimlari.ts",
+    "apps/server/test/steps/api/sinir-adimlari.ts",
+    "packages/contracts/package.json",
+    "packages/contracts/tsconfig.json",
+    "packages/contracts/tsconfig.build.json",
+    "packages/contracts/src/api.ts",
+    "packages/contracts/src/rotalar.ts",
+    "packages/contracts/src/hatalar.ts",
+    "packages/contracts/src/istemci.ts",
+    "packages/contracts/src/ortak/index.ts",
+    "packages/contracts/src/ortak/moduller.ts",
+    "packages/contracts/src/ortak/rota.ts",
+    "packages/contracts/src/ortak/hata.ts",
+    "packages/contracts/src/ortak/enum.ts",
+    "packages/contracts/src/ortak/zaman.ts",
+    "packages/contracts/src/ortak/kimlik.ts",
+    "packages/contracts/src/ortak/sayfa.ts",
+    "packages/contracts/src/ortak/oge-sonucu.ts",
+    "packages/contracts/src/ortak/imzali-metin.ts",
+    "packages/contracts/src/ortak/basliklar.ts",
+    "packages/contracts/src/ortak/surum.ts",
+    "packages/contracts/src/ortak/hiz.ts",
+    "packages/contracts/src/ortak/oge.ts",
+    "packages/contracts/src/ortak/testler/istemci.test.ts",
+    "packages/contracts/src/ortak/testler/rota-tablosu.test.ts",
+    "packages/contracts/src/ortak/testler/hata-katalogu.test.ts",
+    "packages/contracts/src/ortak/testler/surum.test.ts",
+    "packages/contracts/src/ortak/testler/semalar.test.ts",
+    "packages/contracts/src/ortak/testler/kimlik.test.ts",
+    "packages/contracts/src/ortak/testler/hiz.test.ts",
+    "packages/contracts/src/ortak/testler/paket.test.ts",
+    "packages/contracts/src/ortak/testler/tipler.tip-testi.ts",
+    "packages/contracts/openapi/destek.json",
+    "packages/contracts/openapi/kirilma-istisnalari.txt",
+    "packages/contracts/openapi/seviyeler.txt",
+    ".github/workflows/sozlesme.yml"
+  ],
+  "tests": [
+    {
+      "name": "Bozuk JSON gövdesi tek zarfla 400 alır",
+      "kind": "behavior",
+      "asserts": "Ayrışmayan ve boş JSON gövdesi 400 API_JSON_BOZUK alır; gövde hataZarfiSemasi'na uyar, istekKimligi X-Istek-Kimligi başlığıyla aynıdır, alanlar boş dizi, beklemeSaniye ve ayrinti null; Content-Type application/json."
+    },
+    {
+      "name": "Şemaya uymayan istekte yalnız alan yolu ve kod döner, değer yankılanmaz",
+      "kind": "behavior",
+      "asserts": "Deneme rotasına 11 rakamlı ogrenciNo gönderilir: 400 API_ISTEK_GECERSIZ, alanlar[0] = {konum: govde, yol: ogrenciNo, kod: Zod kodu}; cevap gövdesinde ve yakalanan log satırlarında gönderilen rakam dizisi geçmez. Pozitif denetim: 10 rakamlı geçerli numara 200 alır."
+    },
+    {
+      "name": "Beklenmeyen hata yalnız sabit mesaj ve istek kimliği döner",
+      "kind": "behavior",
+      "asserts": "Deneme rotası 'gizli-ayrinti-123' metinli Error fırlatır: 500 API_SUNUCU_HATASI, mesaj katalogdaki sabit cümle; gövdede 'gizli-ayrinti-123' geçmez; üretim ayarındaki log satırında hata sınıfı, dosya ve satır ile rota kalıbı var, mesaj yok."
+    },
+    {
+      "name": "Veritabanı kısıt hatası yalnız kod ve kısıt adıyla loglanır",
+      "kind": "behavior",
+      "asserts": "Deneme rotası istemci_surum_esikleri'ne ON CONFLICT'siz aynı satırı iki kez ekler: cevap 500 zarfı; log satırında 23505 ve istemci_surum_esikleri_platform_kanal_dosya_sirasi_karar_uq var, ihlal eden değerler (detail) yok."
+    },
+    {
+      "name": "Bilinmeyen /v1 yolu zarflı 404 döner",
+      "kind": "behavior",
+      "asserts": "GET /v1/yok-boyle-bir-yol: 404 API_UC_BULUNAMADI, Content-Type application/json (panel sayfası değil), Cache-Control: no-store."
+    },
+    {
+      "name": "Her cevap no-store ve sunucu istek kimliği taşır",
+      "kind": "behavior",
+      "asserts": "200, 400, 401, 403, 404, 413, 415, 429, 500 ve 503 cevaplarının hepsinde Cache-Control: no-store ve UUID biçimli X-Istek-Kimligi var; iki istek farklı kimlik alır; istemcinin gönderdiği X-Request-Id ve X-Istek-Kimligi değerleri kullanılmaz."
+    },
+    {
+      "name": "Oturum isteyen her rota kimliksiz istekte 401 alır",
+      "kind": "behavior",
+      "asserts": "TUM_ROTALAR'daki kimliği yalnız oturum olan her rota ve deneme rotaları kimliksiz istekte gövde okunmadan 401 API_KIMLIK_GEREKLI alır; girişsiz rotalar 401 almaz (pozitif denetim); taranan rota sayısı sıfır değildir (zemin denetimi deneme rotalarıyla)."
+    },
+    {
+      "name": "Yanlış rol 403 alır, doğru rol geçer",
+      "kind": "behavior",
+      "asserts": "Yalnız yonetici rollü deneme rotası hoca oturumuyla 403 API_ROL_YETKISIZ, yönetici oturumuyla 200; personel beyanlı rota hoca ve yöneticiye açık, öğrenciye 403; /yonetim/ yolunda yonetici dışı rol beyan eden deneme tanımı açılışı durdurur. ogrenci beyanlı deneme rotası roller'inde { rol: 'ogrenci' } olan kimliğe 200, yalnız hoca rollü kimliğe 403 API_ROL_YETKISIZ."
+    },
+    {
+      "name": "Değişim bekleyen oturum yalnız izinli rotalara girer",
+      "kind": "behavior",
+      "asserts": "Sahte oturumDogrula oturumKapsami degisim_bekliyor döner: degisimBekleyenKabul beyansız deneme oturum rotası 403 KIMLIK_KAPSAM_SINIRLI alır ve işleyici çalışmaz (yan etki sayacı 0); degisimBekleyenKabul beyanlı deneme rotası 200; [cihazImzasi, oturum] deneme rotasında geçerli imzayla 200, istek.kimlik.girisOturumuId null ve istek.oturumHatasi KIMLIK_KAPSAM_SINIRLI; kısıtlı oturum yanlış rolle de 403 KIMLIK_KAPSAM_SINIRLI alır (kapsam rolden önce denetlenir). Pozitif denetim: aynı oturum tam dönünce beyansız rota 200."
+    },
+    {
+      "name": "Kısıtlı oturum hesabın verisine ulaşamaz",
+      "kind": "behavior",
+      "asserts": "Bütünleşik (bütün eklentilerle uygulamaKur): teyitli öğrencinin numarasıyla ikinci telefondan kayıt (D01) kısıtlı oturum alır. Bu oturumla GET /v1/esitleme/degisiklikler 403 KIMLIK_KAPSAM_SINIRLI ve cevapta isim, kayıt ya da karar yok; aynı oturumla gelen imzalı gönderimdeki sorun_bildirimi öğesi TEKRAR_DENE ESITLEME_OTURUM_GEREKLI alır; GET /v1/kimlik/ben 200. Hoca değişimi onaylayınca aynı oturumla GET /v1/esitleme/degisiklikler 200 (pozitif denetim)."
+    },
+    {
+      "name": "Panel dışı Origin'le yazma isteği 403 alır",
+      "kind": "behavior",
+      "asserts": "Origin https://baska.ornek ile POST, PUT, PATCH ve DELETE 403 API_KOKEN_GECERSIZ alır ve işleyici çalışmaz (yan etki sayacı sıfır); aynı istekler panel Origin'iyle 200; GET isteğinde Origin'e bakılmaz; girişsiz deneme yazma rotası da yabancı Origin'le 403 alır (giriş CSRF'si)."
+    },
+    {
+      "name": "Origin'siz yazma isteğinde çerez okunmaz",
+      "kind": "behavior",
+      "asserts": "Geçerli panel çereziyle Origin'siz POST oturum kurmaz ve 401 API_KIMLIK_GEREKLI alır; aynı istek panel Origin'iyle 200; Origin'siz GET aynı çerezle 200."
+    },
+    {
+      "name": "Bearer varken çerez okunmaz",
+      "kind": "behavior",
+      "asserts": "Hocanın Bearer anahtarı ve başka kişinin panel çereziyle gelen istek Bearer sahibinin kimliğiyle işlenir; kapanmış Bearer ve geçerli çerez 401 alır, çereze düşülmez; sahte oturumDogrula'ya giden OturumGirdisi'nde çerez yok."
+    },
+    {
+      "name": "Çerez kabul etmeyen rotada panel çerezi 403 alır",
+      "kind": "behavior",
+      "asserts": "kimlikKaynaklari ['bearer'] deneme rotası geçerli panel çerezi ve panel Origin'iyle 403 API_ROL_YETKISIZ, aynı kişinin Bearer'ıyla 200. Bütünleşik: panel çereziyle POST /v1/saat/belge 403 API_ROL_YETKISIZ ve cevapta X-Saat-Belgesi yok; hocanın Bearer'ıyla 200 (pozitif denetim)."
+    },
+    {
+      "name": "Cihaz imzalı rotada geçersiz oturum isteği düşürmez",
+      "kind": "behavior",
+      "asserts": "Deneme cihaz imzalı rotası (kimlik [cihazImzasi, oturum]) kapanmış Bearer ve deneme kancasının geçerli saydığı imzayla 200 döner, istek.kimlik.tur cihaz, kaynak imza, istek.oturumHatasi D01 kodu; imza ve geçerli oturum birlikte gelince tur cihaz ve girisOturumuId korunur; imza da yoksa 401 API_KIMLIK_GEREKLI."
+    },
+    {
+      "name": "Kimlik birleşimleri beyan edildiği gibi işler",
+      "kind": "behavior",
+      "asserts": "Altı birleşimin her biri için deneme rotası: [girissiz] Bearer'ı okumaz (sahte oturumDogrula sayacı 0); [girissiz, oturum] geçerli Bearer'la kimlikli ve oturum sınıfında sayılır, geçersiz Bearer'la girişsiz 200 alır, oturumHatasi dolu ve girissiz sınıfında sayılır; [oturum] geçersiz Bearer'la 401 D01 kodu; [cihazImzasi, oturum] bir önceki senaryodaki gibi; [projeksiyon] deneme kancasının yazdığı kimlikle 200, kimliksiz 401; [girissiz, projeksiyon] panel Origin'li POST'ta deneme kancasının tanıdığı çerezle kimlikli 200, tanımadığı ya da kapanmış saydığı çerezle ve çerezsiz kimliksiz 200 (401 yok) ve her istek girissiz sayacında. İzinsiz birleşim ([cihazImzasi] tek başına, [oturum, projeksiyon]) ve kimlikKancasi'sız projeksiyon tanımı açılışı durdurur."
+    },
+    {
+      "name": "JSON dışı içerik ve sıkıştırılmış gövde 415 alır",
+      "kind": "behavior",
+      "asserts": "text/plain, application/x-www-form-urlencoded ve multipart/form-data gövdeler ile Content-Encoding: gzip taşıyan JSON 415 API_ICERIK_TURU alır; application/json; charset=utf-8 geçer; __proto__ anahtarlı gövde 400 alır."
+    },
+    {
+      "name": "Gövde sınırı tam değerde geçer, bir bayt üstünde 413 alır",
+      "kind": "behavior",
+      "asserts": "64 KiB sınırlı deneme rotasında tam 65536 baytlık gövde 200, 65537 baytlık 413 API_GOVDE_COK_BUYUK; 1 MiB beyanlı deneme rotası 1 MiB gövdeyi kabul eder; 2 MiB'tan büyük beyan açılışı durdurur."
+    },
+    {
+      "name": "Yetki ve hız denetimi gövdeden önce çalışır",
+      "kind": "behavior",
+      "asserts": "Öğrenci oturumuyla yalnız yonetici deneme rotasına 1 MiB bozuk JSON 403 API_ROL_YETKISIZ alır (400 ya da 413 değil) ve ayrıştırıcı çağrı sayacı 0; oturum sınıfı sınırı dolmuş yönetici oturumu aynı rotaya bozuk gövdeyle 429 alır. Pozitif denetim: sınırı dolmamış yönetici oturumuyla aynı bozuk gövde 400 API_JSON_BOZUK."
+    },
+    {
+      "name": "Girişsiz uçta IP sınırı aşılınca 429 ve Retry-After döner, başka IP etkilenmez",
+      "kind": "behavior",
+      "asserts": "Test seçeneğiyle küçültülmüş girissiz sınırında sınırın bir fazlası 429 API_HIZ_SINIRI; Retry-After pozitif tam sayı ve zarftaki beklemeSaniye ile aynı; başka istemci adresinden gelen istek 200; D04'ün sahte saati 60 saniyelik pencereyi geçince ilk adres yeniden 200 alır (sayaçlar saatli depoda D04 saatiyle sayılır, gerçek bekleme yok)."
+    },
+    {
+      "name": "Oturum sınıfında sayaç oturuma bağlıdır",
+      "kind": "behavior",
+      "asserts": "Aynı IP'den iki oturum: birinin sınırı dolunca öbürü 200 almaya devam eder; agir sınıfındaki rota oturum sınıfının sayacını tüketmez."
+    },
+    {
+      "name": "Yalnız kimliksiz biten istek IP sayacına girer",
+      "kind": "behavior",
+      "asserts": "Küçültülmüş girissiz sınırında aynı IP'den: geçersiz Bearer'la [oturum] rotasına gelen istekler 401 alır ve sınırın bir fazlasında 429 alır; aynı adresten kapanmış Bearer ve geçerli imzayla gelen gönderimler sınırın iki katı kadar 200 alır ve sayaç artmaz; geçerli oturumla gelen istekler sayaca girmez. Sınır sahte imzalı paketlerle dolduktan sonra sahte imzalı paket gövdesi okunmadan 429 alır ve deneme imza doğrulayıcısının çağrı sayacı artmaz."
+    },
+    {
+      "name": "Sınırı aşmış adresten Bearer püskürtmesi veritabanına gitmez",
+      "kind": "behavior",
+      "asserts": "Küçültülmüş sınırda kimliksiz 401 sayısı dolan adresten rastgele Bearer'larla gelen 100 istek 429 alır ve sahte oturumDogrula'nın çağrı sayacı sınır değerinde kalır; başka adresten geçerli Bearer 200 alır (pozitif denetim)."
+    },
+    {
+      "name": "Aşırı yükte 503 ve 15 ile 45 saniye arası Retry-After döner",
+      "kind": "behavior",
+      "asserts": "Deneme seçeneğiyle baskı açılınca sıradan rota ve bilinmeyen yol 503 API_SUNUCU_YOGUN alır, Retry-After 15 ile 45 arasında; baskiDisi beyanlı deneme rotası (test kipinde izinli) ve kayıtlıysa /health/live ile /v1/durum cevap vermeye devam eder; 100 denemede en az 10 farklı Retry-After değeri görülür."
+    },
+    {
+      "name": "Aşırı yükte oturum kancası hiç çalışmaz",
+      "kind": "behavior",
+      "asserts": "Baskı açıkken oturum zorunlu deneme rotasına geçerli Bearer'la gelen istek 503 alır ve sahte oturumDogrula işlevinin çağrı sayacı sıfır kalır; baskı kapanınca aynı istek 200 alır ve sayaç bir artar (pozitif denetim)."
+    },
+    {
+      "name": "Geçici veritabanı hataları 503'e çevrilir",
+      "kind": "behavior",
+      "asserts": "Deneme rotasının fırlattığı D12 tipli hataları (VERITABANI_HAVUZ_DOLU, VERITABANI_KILITLENME, VERITABANI_ERISILEMEZ, VERITABANI_ZAMAN_ASIMI, VERITABANI_NESIL_BELIRSIZ) kendi koduyla 503 ve 15 ile 45 arası Retry-After alır; D12 dışından kaçan ham hata GECICI_SQLSTATELER'deki her SQLSTATE için (40P01, 40001, 55P03, 53300, 57P01, 57P02, 57P03, 25P03 ve 08 sınıfı) 503 API_SUNUCU_YOGUN ve Retry-After, 57014 ve 25P04 için 503 API_SORGU_ZAMAN_ASIMI alır; liste sabitten okunur, testte yeniden yazılmaz; 23505 500 API_SUNUCU_HATASI (zemin denetimi)."
+    },
+    {
+      "name": "Modül 429 ve 503 kodları bekleme süresiyle döner",
+      "kind": "behavior",
+      "asserts": "Deneme kataloğunda { sabit: 5 } kurallı 503 kodu Retry-After 5 ve beklemeSaniye 5 ile döner; 'cagiran' kurallı 429 kodu uygulamaHatasi'na verilen 37 ile Retry-After 37; aralik kurallı kod 15 ile 45 arası; 5xx gövdesinde mesaj katalogdaki sabit metin, ayrinti null. Pozitif denetim: 409 kodunda Retry-After ve beklemeSaniye yok."
+    },
+    {
+      "name": "İşletim kodu istekte 500'e çevrilir",
+      "kind": "behavior",
+      "asserts": "Deneme rotası http null bir işletim kodu fırlatınca cevap 500 API_SUNUCU_HATASI; log satırında işletim kodu ve rota kalıbı var, cevapta yok; aynı kodu hatalar listesine yazan deneme tanımı açılışı durdurur."
+    },
+    {
+      "name": "Sürüm başlıkları bozuk ya da yokken istek reddedilmez",
+      "kind": "behavior",
+      "asserts": "X-Uygulama-Surumu abc, X-Platform windows ve hiç başlık taşımayan istekler deneme yazma rotasında 200; enDusukSurumDenetle bilinmiyor döner; istek.istemci alanları null, arkaPlan false."
+    },
+    {
+      "name": "En düşük sürümün altındaki istemci reddedilmez",
+      "kind": "behavior",
+      "asserts": "Geçerli en düşük sürüm 1.3.0 iken 1.2.0 başlıklı istek deneme yazma rotasında 200; enDusukSurumDenetle altinda; GET /v1/surum guncellemeGerekli true; 1.3.0 başlıklı istekte uygun."
+    },
+    {
+      "name": "GET /v1/surum platform ve kanala göre cevap verir",
+      "kind": "behavior",
+      "asserts": "Dört kanal için enSonSurum, enDusukSurum ve magazaBaglantisi dosyayla aynı; testflight'ta gecisBaglantisi dolu, ötekilerde null; android ve appstore çifti 400; X-Uygulama-Surumu eksik 400; cevap X-Saat-Belgesi taşımaz."
+    },
+    {
+      "name": "Kanal kaydı yokken GET /v1/surum 503 döner",
+      "kind": "behavior",
+      "asserts": "istemci_surum_esikleri'nde ios ve testflight satırı olmayan deneme kurulumunda GET /v1/surum (ios, testflight) 503 API_SURUM_BILGISI_YOK ve Retry-After 60; aynı kurulumda öteki kanal 200 (pozitif denetim)."
+    },
+    {
+      "name": "GitHub kademesi aynı kuruluma her gün aynı kararı verir",
+      "kind": "behavior",
+      "asserts": "Yüzde 0'da hiçbir kurulum, 100'de bütün kurulumlar guncellemeVar alır; yüzde 30'da aynı kurulum kimliği art arda ve sahte saatle ertesi gün aynı cevabı alır; kademeler dolu ve ilk adımın başlangıcından bir dakika önce hiçbir kurulum guncellemeVar almaz, başlangıçta adımın yüzdesi kadarı alır; sonraki adımın başlangıcı geçince yüzde kendiliğinden artar. X-Kurulum-Kimligi'siz (girişten önceki) istek yüzde 100'den küçükken guncellemeVar false, guncellemeGerekli yine doğru."
+    },
+    {
+      "name": "Dönem içindeki yükseltme ertelenir, dönem arası gelince uygulanır",
+      "kind": "behavior",
+      "asserts": "donemArasiMi false iken yüksek en düşük sürümlü dosyayla açılış: tabloda ertelendi satırı, GET /v1/surum eski değeri ve yeni enSonSurum'u döner; işlev true olur ve D04'ün sahte saati 60 saniye ilerleyince GET /v1/surum uygulandi satırı ekler ve yeni değeri döner; uygulandi satırının uygulanan_en_dusuk_surum ve karar_ani dışındaki bütün sütunları ertelendi satırıyla aynı; iki uygulama örneği aynı anda değerlendirse de tek uygulandi satırı olur."
+    },
+    {
+      "name": "Eşik önbelleği tek mekanizmayla tazelenir",
+      "kind": "behavior",
+      "asserts": "Zamanlayıcı kurulmaz: sahte saatte bekleyen zamanlayıcı sayısı 0. Sahte saat 59 saniye ilerleyince tazeleme olmaz (sorgu sayacı değişmez); 60 saniyede GET /v1/surum yeni değeri döner; yalnız enDusukSurumDenetle çağrılan ikinci örnekte ilk çağrı eski değeri döner ve tek tazeleme başlatır (aynı anda 50 çağrı tek sorgu), tazeleme bitince sonraki çağrı yeni değeri döner."
+    },
+    {
+      "name": "Düşürme dönem içinde de hemen uygulanır",
+      "kind": "behavior",
+      "asserts": "donemArasiMi false iken daha düşük en düşük sürümlü daha büyük sıralı dosyayla açılış uygulandi satırı ekler ve GET /v1/surum yeni değeri hemen döner."
+    },
+    {
+      "name": "Küçük sıralı dosya kayıtlı kararı değiştirmez",
+      "kind": "behavior",
+      "asserts": "Sıra 7 uygulanmışken sıra 6'lı dosyayla açılan örnek yeni satır eklemez, cevap sıra 7'nin değerleriyle aynıdır; o örnekte yayinBilgisi().hataliSurumler sıra 7'nin listesidir ve gecerliSira 7; sıra 7'de hatalı ilan edilen sürümle imzalanmış kayıt o örnekte de İncelemede HATALI_SURUM alır (D07 kuralı yayinBilgisi()'nden okur); aynı sıra farklı içerikle gelince satır eklenmez ve hata logu yazılır."
+    },
+    {
+      "name": "Bozuk yayın bilgisi dosyasıyla uygulama açılmaz",
+      "kind": "behavior",
+      "asserts": "Şemaya uymayan, eksik kanallı, en düşük sürümü en son sürümden büyük, hatalı sürüm girdisinde eski alan adı (surum ya da neden) taşıyan ya da iosDagitimTurleri'siz dosyada app.ready() dosya yolunu ve Zod yolunu söyleyen iletiyle reddeder; geçerli örnek dosyada açılır (zemin denetimi)."
+    },
+    {
+      "name": "Saat belgesi başlığı yalnız koşullar tutunca eklenir",
+      "kind": "behavior",
+      "asserts": "Kimlikli Bearer isteğinde geçerli X-Saat-Istegi varsa 200 ve 4xx cevabı X-Saat-Belgesi taşır ve belge isteğin değerini içerir; 429, 500, 503, eşitleme bozukken, girişsiz rotada, projeksiyon rotasında, çerezle gelen istekte, saatBelgesi false rotada ve bozuk X-Saat-Istegi'nde başlık yoktur, istek yine işlenir."
+    },
+    {
+      "name": "Hocanın saat belgesi kişi kimliği öznesiyle doğrulanır",
+      "kind": "contract",
+      "asserts": "Bütünleşik: hoca Bearer'ıyla herhangi bir 200 cevabından alınan X-Saat-Belgesi saatBelgesiDogrula'dan ozne { tur: personel, kisiId: hocanın kisiId'si } ile geçer; öğrenci cihazında { tur: ogrenci_cihazi, cihazId }; hocanın o belgeyle gönderdiği pencere_suresi öğesinin ilk_capa_durumu gecerli. Kontrol: girisOturumuId ile kurulmuş özneli belge saatSonucu'nda ozne_uyusmuyor verir. Tip testi (tipler.tip-testi.ts): personel öznesine GirisOturumuId vermek @ts-expect-error ile derlemede hata verir."
+    },
+    {
+      "name": "Rota tablosu dışı ve eksik kayıt açılışı durdurur",
+      "kind": "behavior",
+      "asserts": "Deneme eklentisi app.get ile tablo dışı yol eklemeye çalışınca açılış hata verir; kayıtlı bir modülün tablodaki bir rotası kaydedilmezse app.ready() eksik rotayı söyleyerek reddeder; tam kayıtta açılır. Bir modül eklentisi önekle (prefix) kaydedilince yolu tablo dışı sayılır ve açılış durur; bütün eklentilerle kurulan uygulamada GET /v1/veritabani/yonetim/geri-yuklemeler rota tablosundaki yolunda kayıtlıdır (veritabaniEklentisi öneksiz)."
+    },
+    {
+      "name": "HEAD ikizi açılışı durdurmaz",
+      "kind": "behavior",
+      "asserts": "exposeHeadRoutes false ile bütün eklentilerle açılış rota bekçisine takılmaz; HEAD /v1/surum 404 API_UC_BULUNAMADI zarflı döner; GET /v1/surum 200 (zemin denetimi)."
+    },
+    {
+      "name": "Rota yalnız beyan ettiği kodları döndürür",
+      "kind": "behavior",
+      "asserts": "Test kipinde deneme rotası beyan etmediği ve örtük olmayan bir modül kodunu fırlatınca cevap 500 API_SUNUCU_HATASI olur ve log satırı beyan dışı kodu ve rota kalıbını yazar; beyan ettiği kod aynen döner; üretim kipinde beyan dışı kod korunur, yalnız uyarı loglanır."
+    },
+    {
+      "name": "Örtük kodlar beyan gerektirmez",
+      "kind": "behavior",
+      "asserts": "Test kipinde hatalar listesi boş [oturum] deneme rotası süresi dolmuş oturumla 401 KIMLIK_OTURUM_BITTI, kısıtlı oturumla 403 KIMLIK_KAPSAM_SINIRLI, D12'nin havuz hatasıyla 503 VERITABANI_HAVUZ_DOLU alır (500 değil); [girissiz] rotada KIMLIK_OTURUM_BITTI fırlatılınca 500 (o rotada örtük değil)."
+    },
+    {
+      "name": "Oluşturma rotası 200 ve 201'i aynı şemayla serileştirir",
+      "kind": "behavior",
+      "asserts": "durumlar [201, 200] beyanlı deneme rotası yeni kaynakta 201, aynı kimlik ve içerikte 200 döner; iki durumda da şemada olmayan alan (gizliAlan) cevapta yok; beyan dışı 202 döndüren işleyici 500 alır."
+    },
+    {
+      "name": "Süreç türü kurulumu belirler",
+      "kind": "behavior",
+      "asserts": "surec isci ile kurulan uygulama ready olur, app.server.listening false; istemci_surum_esikleri'ne satır yazılmaz; sahte saatte bekleyen zamanlayıcı yok; deneme eklentisinin kaydettiği dinleyici kayıtlıdır ve tetiklenince çalışır; app.inject ile GET /v1/surum 200 almaz (rota yok); yayinBilgisi() dosyanın listelerini döner. Pozitif denetim: surec api aynı veritabanında açılış alımında satır yazar ve GET /v1/surum 200. surec belge yayın bilgisi dosyası yokken açılır."
+    },
+    {
+      "name": "İstek bütçesi aşılınca kalan öğeler TEKRAR_DENE alır",
+      "kind": "behavior",
+      "asserts": "Toplu deneme rotası her öğede D04 sahte saatini 3 saniye ilerletir ve kalanSureMs'e bakar: 200 öğelik istekte ilk 6 öğe KABUL, kalanlar TEKRAR_DENE ve hepsi tek cevapta 200; agir deneme rotası bütçeyi aşınca 503 API_SORGU_ZAMAN_ASIMI ve Retry-After alır. Pozitif denetim: saat ilerletilmezse 200 öğenin hepsi KABUL."
+    },
+    {
+      "name": "Sonuç sınırı aşılınca 422 döner",
+      "kind": "behavior",
+      "asserts": "tamListeSemasi'lı deneme rotası 2000 satırda 200, 2001 satırda 422 API_SONUC_COK_BUYUK alır ve satırlar serileştirilmez."
+    },
+    {
+      "name": "Projeksiyon çerezi yalnız projeksiyon kimlikli rotada okunur",
+      "kind": "behavior",
+      "asserts": "[projeksiyon] deneme rotasına __Host-yoklama-projeksiyon çereziyle Origin'siz GET ve panel Origin'li POST gelir: sahte oturumDogrula'nın çağrı sayacı 0, deneme kancası istek.projeksiyonAnahtari'nı dolu görür ve 200; aynı çerezle Origin'siz POST'ta projeksiyonAnahtari null ve 401 API_KIMLIK_GEREKLI (köken kuralı). [oturum] deneme rotasına yalnız geçerli projeksiyon çereziyle gelen istek 401 API_KIMLIK_GEREKLI alır ve sahte oturumDogrula'ya giden OturumGirdisi'nde projeksiyon çerezi yoktur. Pozitif denetim: aynı istek geçerli panel oturum çereziyle 200."
+    },
+    {
+      "name": "Kimlik dinleyicileri eklentilerden önce kurulur",
+      "kind": "behavior",
+      "asserts": "DenemeSecenekleri.adimKaydi ile alınan açılış kaydında surec api ve isci'de kimlikDinleyicileriniKur (dersler, esitleme, projeksiyon, isletim abonesiyle) ve kimlikDinleyicileriHazir ilk <ad>Eklentisi kaydından önce birer kez yer alır; surec belge'de ikisi de yoktur; isletimEklentisi'nin kayıt seçeneklerinde rotalariKaydet, ogeTuruKaydet, hesapSilindiMi, danismaKilidi, veritabani, saat, surec ve olcumYazici vardır, kimlikOlayiDinleyicisiKaydet yoktur. Bütünleşik (bütün eklentilerle api): hesap silen işlem isletim abonesine ulaşır, D15'in o kişiye ait telefon_sayaclari satırı aynı işlemde silinir (kayıt gerçek bağlantıyı gösterir, zemin denetimi)."
+    },
+    {
+      "name": "Ölçü yazıcısı yalnız verilen seçenekle açılır",
+      "kind": "behavior",
+      "asserts": "surec api ile olcumYazici verilmeden kurulan uygulamada açılış kaydı isletimEklentisi'ne olcumYazici false geçtiğini gösterir ve sahte saatte D15 ölçü yazıcısının zamanlayıcısı yoktur; olcumYazici true ile değer true geçer ve zamanlayıcı kurulur (pozitif denetim); surec isci ve olcumYazici true ile zamanlayıcı yine kurulmaz (zamanlayıcılar yalnız api)."
+    },
+    {
+      "name": "Kök log veritabanı hatasının nedenini yazar",
+      "kind": "behavior",
+      "asserts": "Deneme rotası cause'u { neden: 'kilitlenme', sqlstate: '40P01', kisit: null, tablo: 'istemci_surum_esikleri' } olan D12 tipli VERITABANI_KILITLENME hatası fırlatır: cevap 503 VERITABANI_KILITLENME ve Retry-After; yakalanan log satırında neden, sqlstate, kisit ve tablo alanları var, cevap gövdesinde yok; cause'suz hata da loglanır ve bu alanlar yoktur (zemin denetimi)."
+    },
+    {
+      "name": "İş kuyruğu kodları http değerine göre döner",
+      "kind": "behavior",
+      "asserts": "IS_KUYRUGU_HATA_KODLARI'ndaki her kod hatalar listesi boş deneme rotasından fırlatılır: http değeri 500 olan kod kendi koduyla 500, katalogdaki genel metinle ve beyan dışı sayılmadan döner (örtük); http değeri null olan kod 500 API_SUNUCU_HATASI olur ve kod yalnız log satırında görünür; taranan kod sayısı sıfır değildir (zemin denetimi)."
+    },
+    {
+      "name": "Rota tablosu kuralları",
+      "kind": "contract",
+      "asserts": "TUM_ROTALAR'da (yöntem, yol) ve (modül, ad) tekil; yol sahibinin /v1/<modül> önekiyle ya da dört kök istisnadan biriyle başlar; yol küçük harf, tireli ve ASCII; /yonetim/ yolları yalnız yonetici rolü ister; baskiDisi yalnız /health/live ve /v1/durum'da; her rotada izinli kimlik birleşimi, hız sınıfı, en çok 2 MiB gövde sınırı, durumlar ve hatalar listesi var; hatalar listesindeki her kod TUM_HATALAR'da ve http null değil; degisimBekleyenKabul taşıyan rota kümesi DEGISIM_BEKLEYEN_ROTALARI'na eşit (dört rota); kimlikKaynaklari yalnız oturumlu rotada; defterYazar yalnız GET'te ve defterYazar rotaları listelenir (GET /v1/surum ve GET /v1/esitleme/degisiklikler beklenir); kitle yalnız kimliğinde girissiz olan rotada; kimliği [girissiz, projeksiyon] olan rota kümesi yalnız POST /v1/projeksiyon/eslestirme-kodu. Taranan rota sayısı sıfır değil (GET /v1/surum zemin)."
+    },
+    {
+      "name": "Hız sınıfı kuralları",
+      "kind": "contract",
+      "asserts": "Her rotanın hiz değeri (nesne biçiminde iki değeri de) HIZ_SINIFLARI'nda; /v1/raporlar/ altındaki her rota agir (taranan rapor rotası sayısı sıfır değil); girissiz yalnız kimliğinde girissiz olan rotada; her sınıfta tabloBoyu anahtarEvreni'nden büyük; çalışan uygulamada kurulan sayaç tablolarının boyu HIZ_SINIFLARI ile aynı."
+    },
+    {
+      "name": "Kimlik nesnesi tek şemaya uyar",
+      "kind": "contract",
+      "asserts": "kimlikNesnesiSemasi: geçerli öğrenci (roller [{ rol: 'ogrenci', kapsamBirimId: null }]), personel (bütün birimler için { rol: 'yonetici', kapsamBirimId: null }, birim kapsamlı { rol: 'hoca', kapsamBirimId: BirimId }), cihaz ve projeksiyon (roller boş) örnekleri geçer; oturumId adlı alan, metin dizisi roller (['hoca']), kapsamBirimId'siz rol ve bilinmeyen rol (sahip) reddedilir. Test kipinde kök kanca D01'in her gecerli dönüşünü bu şemayla denetler, böylece D01'in bütün senaryoları bu sözleşmenin testi olur; uymayan sahte dönüş 500 verir (pozitif denetim)."
+    },
+    {
+      "name": "Hata kataloğu kuralları",
+      "kind": "contract",
+      "asserts": "TUM_HATALAR'da her kod tek, BÜYÜK_HARF ASCII ve öneki modül adının büyük harfi; HTTP durumu izinli kümede ya da null; http dolu kodda hoca ve öğrenci metni dolu, en çok 200 karakter, süslü parantez yer tutucusu ve rakam dizisi yok; her 429 ve 503 kodunun bekleme kuralı var, öteki kodlarda yok; aralik değerleri 1 ile 3600 arasında; http null kod hiçbir rotanın hatalar listesinde değil; her API_ kodu en az bir senaryoda gerçekten dönüyor (senaryo kapsama listesi; API_SONUC_COK_BUYUK ve API_SURUM_BILGISI_YOK dahil); IS_KUYRUGU_HATA_KODLARI TUM_HATALAR'da ve her kodunun http değeri 500 ya da null (taranan IS_KUYRUGU_ kod sayısı sıfır değil)."
+    },
+    {
+      "name": "Cevap şemalarında enum yok, genişleyen alanlar x-extensible-enum taşıyor",
+      "kind": "contract",
+      "asserts": "Üretilen OpenAPI belgesi taranır: cevap şemalarında enum anahtarlı alan sayısı sıfır (bilerek kapalı liste boş); hata zarfının kod alanı x-extensible-enum taşır ve listede API_ISTEK_GECERSIZ vardır (pozitif denetim); taranan şema sayısı rota sayısından az değil."
+    },
+    {
+      "name": "İstek şemalarında üst sınırlar var",
+      "kind": "contract",
+      "asserts": "Belgedeki her istek metninde maxLength, her dizide maxItems, her tam sayıda minimum ve maximum var; hiçbir istek nesnesinde additionalProperties false yok (strip); bilerek sınırsız alan listesi boş."
+    },
+    {
+      "name": "Cevaplarda isteğe bağlı alan yok",
+      "kind": "contract",
+      "asserts": "Belgedeki her cevap nesnesinin bütün özellikleri required listesinde; değeri olmayabilen alanlar null tiplidir."
+    },
+    {
+      "name": "OpenAPI belgesi kararlı ve eksiksiz",
+      "kind": "contract",
+      "asserts": "Belge iki kez üretilince bayt bayt aynı; anahtarlar sıralı; openapi 3.1.0; her işlemde güvenlik gereksinimi kimlik beyanıyla uyumlu (girissiz boş, oturum Bearer ya da çerez, kimlikKaynaklari'na göre daralır; cihazImzasi ve projeksiyon x-kimlik), isteğe bağlı sürüm ve saat başlıkları yazılı; TUM_ROTALAR'daki her rota belgede var; iki durum beyan eden her rotada iki durum da var (POST /v1/dersler, POST /v1/projeksiyon/onay ve POST /v1/raporlar/subeler/{subeId}/aksis-ozeti/ciktilar beklenir); her işlemin hata listesi beyan ve örtük kodların birleşimi; TUM_OGE_TURLERI'ndeki her tür için components.schemas.Oge_<tur> ve yapay POST /x-oge/<tur> var; defterYazar rotaları x-defter-yazar taşır."
+    },
+    {
+      "name": "oasdiff kapısı kırılmayı yakalar",
+      "kind": "contract",
+      "asserts": "Örnek taban belgeye karşı gönderme yolunda cevap alanı kaldıran belge ERR ile kırmızı; tabanın altındaki örnek belgeye (taban-alti.json) karşı /v1/kimlik/giris isteğine zorunlu alan ekleyen belge hepSurumYollari koşusunda kırmızı; Oge_yoklama_kaydi gövdesinden alan kaldıran belge seviyeler.txt ile kırmızı; yalnız uç ve isteğe bağlı istek alanı ekleyen belge yeşil; x-extensible-enum listesine değer ekleyen belge yeşil; etiketlenmiş bir saklı belge değiştirilince saklama denetimi kırmızı."
+    },
+    {
+      "name": "Yayın bilgisi D07 alanlarıyla katı doğrulanır",
+      "kind": "contract",
+      "asserts": "D07'nin örnek dosyası (ornekler/yayin-bilgisi/d07-ornegi.json) yayinBilgisiSemasi'ndan geçer ve hatalı sürüm girdisi { platform, uygulamaSurumu, guncellemeKimligi, baslangicAni, gerekce } olarak okunur; alan adı surum ya da neden olan girdi ve bilinmeyen kök alan reddedilir (strict). Pozitif denetim: bilinmeyen alan istek şemalarında hâlâ sessizce atılır (strip kuralı bozulmadı)."
+    },
+    {
+      "name": "İstemci yardımcısı protokol tablosuna uyar",
+      "kind": "contract",
+      "asserts": "Sahte fetch ile: JSON olmayan 200 (kampüs giriş sayfası), ayrışmayan JSON, yönlendirme ve zaman aşımı gecici; HTML 403 ve HTML 404 gecici; zarflı 403 ve zarflı 401 dur; zarflı 400, 404, 409, 415 ve 422 bol; HTML 413 ve zarflı 413 bol; zarfın istekKimligi X-Istek-Kimligi'ne uymayan 400 gecici; 408, 429 ve 503 gecici, Retry-After beklemeSaniye'ye geçer; istemciCevapDenetimi açık rotada şemaya uymayan 200 gecici; arkaPlan seçeneği X-Arka-Plan: 1 ekler; telefon kipinde credentials omit."
+    },
+    {
+      "name": "Sınır testi içe aktarma kurallarını sıfır ihlalle geçer",
+      "kind": "contract",
+      "asserts": "dependency-cruiser API'siyle (kurallar testin içinde, ayrı yapılandırma dosyası yok; D15 paketi tam sürümle ekler ve kalite iş akışında koşar; iskelet adımında da koşar) apps/server/src ve packages/core/src üzerinde sıfır ihlal: no-circular; modules/<ad>/yaprak.ts başka modülden yalnız yaprak.ts içe aktarır, hiçbir index.ts'i almaz; modules/ altındaki dosya jobs/ ve bileşim köklerini (app.ts, server.ts, worker.ts, cli/) içe aktarmaz; infra/api modules/ altından hiçbir dosya almaz (D12'den yalnız import type); packages/core packages/contracts'ı çalışma anında içe aktarmaz, yalnız import type. Dört iki yönlü çift iki yönlü çiftler tablosundaki yönlerle bağlıdır. Pozitif denetim: geçici dizinde her kural için bilerek eklenen tek yanlış içe aktarma (yaprak.ts'ten başka modülün index.ts'i, modules/ dosyasından jobs/, iki dosyalı döngü, core'dan contracts değeri, infra/api'den modules/) o kuralda tam bir ihlal verir; core'dan contracts'a import type ihlal vermez (zemin denetimi)."
+    },
+    {
+      "name": "Derlenmiş sözleşme paketi Node'da açılır",
+      "kind": "contract",
+      "asserts": "tsc -p packages/contracts/tsconfig.build.json geçici dizine derlenir; koşulsuz Node dist'teki her dışa açık giriş noktasını içe aktarır ve hata yok (çıktıda .ts uzantılı göreli içe aktarma kalmadığı böyle görülür); testler dist'e girmez; kaynak koşuluyla aynı giriş noktaları src'ye çözülür. Pozitif denetim: node:fs içe aktaran örnek dosya tsconfig.json ile derlemede hata verir (types boş). packages/contracts'ın packages/core çalışma alanı bağımlılığı derlenmiş pakette çözülür: core'dan alınan sabit listeler dist'ten okunur."
+    },
+    {
+      "name": "Altyapı tipleri D12 ile aynıdır",
+      "kind": "contract",
+      "asserts": "Tip testi (tipler.tip-testi.ts, expect-type): ApiBagimliliklari['islem'] D12'nin Veritabani['islem'] tipine, ApiBagimliliklari['veritabani'] Veritabani['db'] tipine ve infra/api'nin kullandığı Islem D12'nin Islem'ine eşit; islem secenek ile (saltOkunur, yalitim, zamanAsimiMs, yenidenDene) çağrılabilir, bilinmeyen secenek alanı @ts-expect-error ile derlemede hata verir (pozitif denetim). Çalışma anında esikDurumu tazelemesinin okuma işlemi sahte D12 islem'ine { saltOkunur: true } seçeneğini aynen geçirir (sarmalayıcı yok)."
+    },
+    {
+      "name": "Öğe sonucu şeması yalnız ekleme alanlarını kabul eder",
+      "kind": "contract",
+      "asserts": "ogeSonuclariSemasi(['KABUL', 'RET'], { sayilan: z.boolean() }) ile: sayilan true olan öğe geçer, sayilan 'evet' olan öğe reddedilir, bilinmeyen ek alan (notlar) reddedilmez ve çıktıda yoktur; ek'siz şema {kimlik, sonuc, kod} biçimini korur (zemin denetimi). Tip testi: ek'e duzeltme, yeniKarar ve sayilan dışında bir ad vermek @ts-expect-error ile derlemede hata verir."
+    },
+    {
+      "name": "Sürüm karşılaştırması toplam sıralamadır",
+      "kind": "property",
+      "asserts": "fast-check, en az 1000 deneme: yansıma, ters simetri ve geçişlilik tutar; bölümler sayısal karşılaştırılır (1.10.0 > 1.9.0); geçersiz biçimde surumAyristir null döner ve karşılaştırmaya girmez."
+    },
+    {
+      "name": "Kurulum kovası kararlı ve düzgün dağılır",
+      "kind": "property",
+      "asserts": "Aynı kurulum kimliği hep aynı kovayı alır; sabit tohumlu 100.000 rastgele UUIDv7'de her kova yüzde 0,8 ile 1,2 arasında; kova 0 ile 99 dışına çıkmaz."
+    },
+    {
+      "name": "Eşik karar işlevi dönem içinde yükseltmez",
+      "kind": "property",
+      "asserts": "fast-check durum makinesi, en az 500 dizi: rastgele dosya sırası, istenen sürüm ve dönem arası adımlarında geçerli en düşük sürüm donemArasi false adımda hiç artmaz; true adımda kayıtlı en büyük sıralı dosyanın istenen değerine eşitlenir (ertelenmiş sıra için uygulandi satırı ertelendi satırının kopyasıdır; ertelendi durumundayken daha büyük sıralı yükseltici dosya donemArasi true ise doğrudan uygulandi olur); daha küçük sıralı dosya hiçbir şey değiştirmez."
+    },
+    {
+      "name": "İstemci başlık ayrıştırıcısı hiçbir girdide fırlatmaz",
+      "kind": "property",
+      "asserts": "fast-check rastgele başlık değerleri ve dizileri: işlev her zaman döner, geçersiz değerler null olur, geçerli değerler aynen korunur."
+    },
+    {
+      "name": "Ders çıkışı yükünde sınırlar ve aşırı yük doğru davranır",
+      "kind": "load",
+      "asserts": "D15'in k6 ders çıkışı senaryosunda (binlerce ayrı cihaz kimliği, sınırlar açık, 20.000 telefon 1 dakikada): 429 oranı sıfır; bütün 503'ler Retry-After taşır; hız sınıfı tablolarının bellek payı ve gönderim ucunda cevap serileştirmenin süre payı ölçülüp yazılır; gönderim cevaplarının p99'u 20 saniyelik bütçenin altında; under-pressure eşikleri ve sınıf değerleri bu ölçümden sonra kesinleşir."
+    },
+    {
+      "name": "Köken denetimi bozulunca senaryo kırmızı olur",
+      "kind": "mutation",
+      "asserts": "koken.ts'teki Origin karşılaştırması her zaman eşit dönecek biçimde bozulur: \"Panel dışı Origin'le yazma isteği 403 alır\" senaryosu kırmızı olur; özgün baytlar geri yazılır ve md5 eşleşir."
+    },
+    {
+      "name": "Çerez Origin'siz okunursa senaryo kırmızı olur",
+      "kind": "mutation",
+      "asserts": "Kimlik bilgisi çıkarma kuralı Origin'siz yazma isteğinde çerezi okuyacak biçimde bozulur: \"Origin'siz yazma isteğinde çerez okunmaz\" senaryosu kırmızı olur; geri yazılır, md5 eşleşir."
+    },
+    {
+      "name": "genisleyenEnum enum üretirse sözleşme testi kırmızı olur",
+      "kind": "mutation",
+      "asserts": "genisleyenEnum z.enum dönecek biçimde bozulur: \"Cevap şemalarında enum yok, genişleyen alanlar x-extensible-enum taşıyor\" testi kırmızı olur; geri yazılır, md5 eşleşir."
+    },
+    {
+      "name": "Dönem içi koruma kaldırılınca erteleme senaryosu kırmızı olur",
+      "kind": "mutation",
+      "asserts": "esik-karari.ts'te donemArasi koşulu true kabul edilecek biçimde bozulur: \"Dönem içindeki yükseltme ertelenir, dönem arası gelince uygulanır\" senaryosu ve \"Eşik karar işlevi dönem içinde yükseltmez\" testi kırmızı olur; geri yazılır, md5 eşleşir."
+    },
+    {
+      "name": "Oturum kancası baskıdan önceye alınırsa senaryo kırmızı olur",
+      "kind": "mutation",
+      "asserts": "apiKur'da oturum kancası under-pressure'dan önce kaydedilecek biçimde bozulur: \"Aşırı yükte oturum kancası hiç çalışmaz\" senaryosu kırmızı olur (sayaç sıfır kalmaz); geri yazılır, md5 eşleşir."
+    },
+    {
+      "name": "Yakalayıcı gelen değeri yankılarsa senaryo kırmızı olur",
+      "kind": "mutation",
+      "asserts": "hata-yakalayici.ts Zod issue mesajını zarfa koyacak biçimde bozulur: \"Şemaya uymayan istekte yalnız alan yolu ve kod döner, değer yankılanmaz\" senaryosu kırmızı olur; geri yazılır, md5 eşleşir."
+    },
+    {
+      "name": "Kısıtlı oturum denetimi kaldırılınca senaryo kırmızı olur",
+      "kind": "mutation",
+      "asserts": "beyan-denetimi.ts'teki oturumKapsami koşulu silinir: \"Değişim bekleyen oturum yalnız izinli rotalara girer\" senaryosu kırmızı olur; geri yazılır, md5 eşleşir."
+    },
+    {
+      "name": "Yetki denetimi gövdeden sonraya alınırsa senaryo kırmızı olur",
+      "kind": "mutation",
+      "asserts": "rota-kaydi.ts beyan denetimini preParsing yerine preHandler'a koyacak biçimde bozulur: \"Yetki ve hız denetimi gövdeden önce çalışır\" senaryosu kırmızı olur (403 yerine 400); geri yazılır, md5 eşleşir."
+    },
+    {
+      "name": "Saat belgesi öznesi giriş oturumundan kurulursa test kırmızı olur",
+      "kind": "mutation",
+      "asserts": "saatOznesiKur personel öznesine kisiId yerine girisOturumuId koyacak biçimde (tip zorlamasıyla) bozulur: \"Hocanın saat belgesi kişi kimliği öznesiyle doğrulanır\" testi kırmızı olur; geri yazılır, md5 eşleşir."
+    },
+    {
+      "name": "Kimliksiz sayaç imzalı isteği sayarsa senaryo kırmızı olur",
+      "kind": "mutation",
+      "asserts": "kimliksiz-sayac.ts her 401'i kimlikten bağımsız sayacak ve imzalı isteği de artıracak biçimde bozulur: \"Yalnız kimliksiz biten istek IP sayacına girer\" senaryosu kırmızı olur; geri yazılır, md5 eşleşir."
+    },
+    {
+      "name": "Kimlik dinleyicileri eklentilerden sonra kurulursa senaryo kırmızı olur",
+      "kind": "mutation",
+      "asserts": "app.ts'te kimlikDinleyicileriniKur çağrısı modül eklentilerinin kaydından sonraya alınır: \"Kimlik dinleyicileri eklentilerden önce kurulur\" senaryosu kırmızı olur; geri yazılır, md5 eşleşir."
+    },
+    {
+      "name": "Projeksiyon çerezi oturum rotasında okunursa senaryo kırmızı olur",
+      "kind": "mutation",
+      "asserts": "kancalar/kimlik.ts projeksiyon çerezini kimliğinde projeksiyon olmayan rotada da okuyacak ve OturumGirdisi'ne koyacak biçimde bozulur: \"Projeksiyon çerezi yalnız projeksiyon kimlikli rotada okunur\" senaryosu kırmızı olur; geri yazılır, md5 eşleşir."
+    }
+  ],
+  "resolved_gaps": [
+    {
+      "gap": "D13-B01",
+      "decision": "Tek zarf: {hata: {kod, mesaj, istekKimligi, alanlar, beklemeSaniye, ayrinti}}, bütün alanlar her zaman var. kod katalogdaki BÜYÜK_HARF ASCII değer (cevapta x-extensible-enum); mesaj katalogdaki kısa Türkçe cümle, gelen değer ve iç ayrıntı içermez; alanlar yalnız doğrulama hatasında dolu [{konum: govde | sorgu | yol | baslik, yol, kod}] (Zod yolu ve issue kodu, değer yok, en çok 20), öteki hatalarda boş dizi; beklemeSaniye her 429 ve 503'te dolu, Retry-After ile aynı, değeri kodun katalogdaki bekleme kuralından (sabit, 15 ile 45 aralığı ya da fırlatanın verdiği); ayrinti kodun katalogda tanımlı küçük şemasıyla, yoksa null (ör. LISTELER_HATALI_SATIR satır numaraları, <MODÜL>_SURUM_DEGISTI güncel sürüm, kişisel veri yok). İçerik türü application/json; RFC 9457 kullanılmaz. Kökteki setErrorHandler ve setNotFoundHandler bu zarfı üretir. 5xx'te kod katalogdaki 500 ya da 503 kodudur (API_ kodu ya da modülün kendi kodu, ör. VERITABANI_HAVUZ_DOLU, SAAT_ESITLEME_BOZUK), mesaj katalogdaki sabit metin, alanlar boş, ayrinti null; değer ve iç ayrıntı taşımaz.",
+      "why": "Telefon günlük sayaca kodu yazar, panel alan hatasını alana bağlar (tasarim.html#erisilebilirlik-okuyucu), istek kimliği ekranda görünür (tasarim.html#tipografi); tek biçim tek ayrıştırıcı demek. Fastify'ın varsayılan gövdesi doğrulama hatasında gelen değeri yankılayabilir. ayrinti alanı D01-B49 (cihaz kapanma nedeni), D03-B22 (hatalı satırlar) ve D02-B48 (güncel sürüm) isteklerini tek yerde karşılar."
+    },
+    {
+      "gap": "D13-B02",
+      "decision": "packages/contracts'ta tek katalog: her modül <MODÜL>_ önekli kodlarını kendi dosyasında tanımlar, hatalar.ts birleştirir; her kod tek HTTP durumuna bağlı. Kurallar: 400 bozuk ya da şemaya uymayan istek; 401 yalnız kimlik yok ya da geçersiz; 403 yalnız ilke düzeyi red (rol, köken, hesap durumu); kaynak düzeyi red ve yokluk 404 <MODÜL>_BULUNAMADI, varlığı sızdırmaz (D01-B49'daki kaynak_disi 403 yerine bu); 409 yalnız çevrimiçi uçlarda durum çakışması ve beklenen sürüm uyuşmazlığı; 413 gövde; 415 içerik türü; 422 yalnız API_SONUC_COK_BUYUK; 429 ve 503 her katalogda kullanılabilir, her biri bekleme kuralı taşır ve Retry-After'lıdır; 500 beklenmeyen; http null işletim kodudur, istekte 500 API_SUNUCU_HATASI olur. Kuyruktan gelen uçlarda öğe düzeyindeki her sonuç 200 gövdesinde öğe sonucudur; 4xx yalnız isteğin bütünü bozuksa. Her rota döndürebileceği modül kodlarını beyan eder; ortak katmanların kodları beyan edilmez, ortukKodlar kimlik beyanından ekler (API_ kodları, D12'nin geçici 503 kodları, oturumlu rotada D01'in oturum ve kapsam kodları). Test kipinde yakalayıcı beyan ve örtük küme dışındaki kodu 500 API_SUNUCU_HATASI'na çevirip loglar, beklediği kodu alamayan senaryo kırmızı olur (üretimde kod korunur, yalnız uyarı loglanır). Uygulama 408 üretmez (Node isteğin alınması zaman aşımında üretir); 502 ve 504 Caddy'nindir.",
+      "why": "Telefonun davranışı duruma bağlı (teknik.html#telefon-gonderme-protokolu): kuyruk ucunda yanlış 403 bütün kuyruğu durdurur, zaten var için 409 kaydı bölmeyle rete düşürür. Durum kümesini daraltmak her yeni kodu protokol tablosunda öngörülebilir kılar; başka hocanın dersini görme senaryosu (plan.html#baslangic) 404 bekler."
+    },
+    {
+      "gap": "D13-B03",
+      "decision": "Katalogda her kodun iki metni var: hoca ve öğrenci. Sunucu mesaj alanını kimlik türüne göre seçer (öğrenci oturumu ya da öğrenci cihazı öğrenci metni, personel ve projeksiyon hoca metni); kimliksiz istekte rotanın kitle beyanından seçer: öğrencinin girişsiz uçları (POST /v1/kimlik/ogrenci/kayit, POST /v1/kimlik/cihaz-degisimi, POST /v1/dogrulama/deger) kitle: 'ogrenci' beyan eder, beyansız girişsiz rota hoca metni verir; istemci aynı tablodan kendi kitlesinin metnini gösterir, tanımadığı kodda sunucunun mesajını gösterir. Metin kişisel veri, iç ayrıntı ve yer tutucu içermez; istek kimliği metne gömülmez, ayrı ve Plex Mono ile gösterilir. Sen ya da siz kararı tasarim.html#acik-hitap açık noktasına bağlıdır; iki metin ayrı tutulduğu için karar yalnız metni değiştirir.",
+      "why": "İki istemci aynı sözcükleri kullanır; eski istemci yeni kodu tanımasa da anlamlı metin gösterir (x-extensible-enum, teknik.html#sunucu-mimari)."
+    },
+    {
+      "gap": "D13-B04",
+      "decision": "Fastify genReqId crypto.randomUUID (UUIDv4), requestIdHeader false (gelen değer yok sayılır), log etiketi istekKimligi. Başarı dahil her cevapta X-Istek-Kimligi başlığı (X-Request-Id değil: başlık adları da Türkçe ASCII kuralına uyar), hata zarfında istekKimligi. İşi tetikleyen istek varsa modül işi isGonder(tx, kuyruk, veri, { istekKimligi: istekKimligi(istek) }) ile kuyruğa koyar; D14 kimliği ayrılmış alana yazar, iş verisine ayrıca konmaz; işçi logu aynı kimlikle aranır (D15-B18'deki log arama aracı).",
+      "why": "Varsayılan sayaç (req-1) kopyalar ve yeniden başlatmalar arasında çakışır; istemcinin kimliğine güvenmek log zehirlemesine açık (Caddy'nin adres başlığı kuralıyla aynı, teknik.html#altyapi-caddy). UUIDv4, sunucu kimliklerinin dışa açık jeton olmama kuralıyla (teknik.html#veritabani) karışmaz."
+    },
+    {
+      "gap": "D13-B05",
+      "decision": "Rota tablosunda zorunlu kimlik alanı bir kümedir, listelenenlerden biri yeter; izinli altı birleşim kimlik birleşimleri tablosunda: [girissiz], [girissiz, oturum], [oturum], [cihazImzasi, oturum], [projeksiyon], [girissiz, projeksiyon] (D11'in eşleştirme kodu ucu, I052); öteki birleşim açılışı durdurur. Oturum rotası roller ister: ogrenci, personel (hoca ya da yönetici), hoca, yonetici. Kök kanca D01'in oturumDogrula işlevini app.ts'ten alır ve isteğe tek Kimlik tipini ekler (packages/contracts/src/ortak/kimlik.ts: kisiId, girisOturumuId, oturumKapsami, kaynak, roller [{rol: ogrenci, hoca ya da yonetici; kapsamBirimId: BirimId ya da bütün birimler için null}], incelemeHesabi (I009) ve D13'ün ek alanları tur, cihazId, projeksiyonId, istemci; D01 döndürür, D02 dahil bütün modüller kullanır); cihaz imzasını D06, projeksiyon anahtarını D11 kendi kimlikKancasi'nda doğrulayıp aynı alana yazar. rotalariKaydet'in eklediği beyan denetimi şu sırayla çalışır: kimlik yoksa 401 API_KIMLIK_GEREKLI ya da D01'in oturum kodu; oturumKapsami degisim_bekliyor ve rota degisimBekleyenKabul beyan etmemişse 403 KIMLIK_KAPSAM_SINIRLI (kısıtlı oturum yalnız DEGISIM_BEKLEYEN_ROTALARI'ndaki dört rotaya girer: /ben, /cikis, cihaz değişimi ve değişim reddi; hesabın verisini görmez); kimlik kaynağı rotanın kimlikKaynaklari'nda değilse 403 API_ROL_YETKISIZ; rol ya da tür uymazsa 403 API_ROL_YETKISIZ. Kapsam rolden önce denetlenir ki telefon onay beklediğini doğru koddan öğrensin. Denetimi unutan modülün rotası kapalı kalır. D01.yetkiDenetle modüllerde yönetici kapsamı için kalır; rota düzeyindeki karar kökte ve API_ROL_YETKISIZ ile verilir. /yonetim/ yolları yalnız yonetici rolüyle kaydedilebilir ve istekte yol kalıbından ikinci kez denetlenir. Oturum her istekte veritabanından okunur (D01, bellek önbelleği yok); kaynak sahipliği modül servisinde, reddi 404.",
+      "why": "Beyan yoksa bir uçta denetim unutulur; IP sınırının hangi uçlara uygulanacağı da bu listeye bağlı (teknik.html#sunucu-guvenlik). Kancanın yalnız hocayı eklemesi öğrenci, yönetici, cihaz ve kürsü isteklerini karşılamaz (D13-C01, D01-B16)."
+    },
+    {
+      "gap": "D13-B06",
+      "decision": "Gönderim ucu (D06) rota tablosunda [cihazImzasi, oturum] ile beyan edilir: ikisinden biri yeter (hoca paketleri yalnız oturumla, öğrenci paketleri imzayla gelir, plan.html#kararlar-kayit-ve-makbuz); Bearer geçersizse istek düşmez (istek.oturumHatasi not edilir), yalnız oturum gerektiren öğeler öğe sonucu alır (D06-B10). İkisi de doğrulanırsa tur cihaz, kaynak imza ve girisOturumuId korunur. Değişim bekleyen kısıtlı oturum bu rotada kimliğe taşınmaz (oturumHatasi KIMLIK_KAPSAM_SINIRLI): oturum gerektiren öğe (sorun_bildirimi gibi) ESITLEME_OTURUM_GEREKLI alır. Hız sınırı doğrulanmış kimliğe bağlıdır (gonderim sınıfı: cihaz, yoksa giriş oturumu); paket düzeyinde 401 yalnız istek hiçbir yolla doğrulanamıyorsa ve bu 401 adresin kimliksiz sayacına girer. Kaldırılmış cihazdan kaldırma anından sonra imzalanmış kaydın kabul sınırı ürün kararıdır ve kural sahibi D07'dir: açık nokta D13-A02.",
+      "why": "Bekleyen kayıtlar hiçbir zaman engellenmez (plan.html#dagitim-guncelleme-ilkesi) ve eski telefondaki bekleyen kayıt değişim onayıyla karara bağlanır (plan.html#gun-kenar-durumlar); gönderim Bearer isteseydi oturumu kapanmış eski telefonun kuyruğu 401 ile durur, kayıtlar yalnız makbuzla kurtarılırdı."
+    },
+    {
+      "gap": "D13-B07",
+      "decision": "Panelin kendiliğinden yaptığı istekler (TanStack Query'nin odak ve aralık yeniden çekmeleri) X-Arka-Plan: 1 başlığı taşır; fetch yardımcısı arkaPlan seçeneğiyle ekler. D01'in kancası bu isteklerde son kullanımı uzatmaz ama süreyi denetler; son kullanım dakikada en çok bir kez yazılır. Süre dolunca D01'in 401 kodu döner, panel giriş sayfasına gider; paneldeki sayaç yalnız uyarı gösterir, karar sunucudadır (teknik.html#sunucu-kimlik).",
+      "why": "Her istek sayılırsa ortak kürsü bilgisayarında açık kalan panel 24 saate kadar açık kalır ve planın asıl önlemi olan 1 saatlik işlemsizlik (plan.html#kararlar-roller) işlemez; her istekte yazmak her panel isteğine bir UPDATE ekler."
+    },
+    {
+      "gap": "D13-B08",
+      "decision": "Tek kural, kökte: (1) Yazma isteğinde (POST, PUT, PATCH, DELETE) Origin varsa ayarlardaki panel adresine birebir eşit olmalı, değilse 403 API_KOKEN_GECERSIZ; girişsiz giriş uçları dahil (giriş CSRF'sini keser). (2) Yazma isteğinde Origin yoksa çerez okunmaz, istek çerezsiz sayılır (telefon). (3) Bearer varsa çerez hiç okunmaz. (4) GET ve HEAD çerezi okur, iş verisini değiştirmez. (5) Gövdeli yazma isteğinde yalnız application/json (415). Çerez adları __Host- önekli (Secure, Path=/, Domain yok) ve packages/contracts/src/ortak/basliklar.ts'te tek yerde: __Host-yoklama-oturum (D01 kurar), __Host-yoklama-projeksiyon (D11 kurar); Origin'siz istekte çerez kurulmaz. CSRF jetonu yok. İnventerdeki aynı istekte çerez ve Bearer gelirse 400 önerisi bırakıldı: Bearer CSRF taşıyamaz (CORS yok, ön uçuş geçmez), 400 ise yanlışlıkla çerez almış bir telefonun kuyruğunu bölmeyle rete düşürürdü.",
+      "why": "React Native fetch Origin göndermez, tarayıcılar yazma isteğinde gönderir; kural telefonu kırmadan çerezli paneli korur ve D01-B53 ile D13-B08'i tek kurala bağlar. Aynı köken, yalnız JSON ve Origin ASVS 5.0 seviye 2 hedefine yeter (teknik.html#sunucu-guvenlik)."
+    },
+    {
+      "gap": "D13-B09",
+      "decision": "Altı hız sınıfı, her biri açılışta bir kez @fastify/rate-limit'in fastify.rateLimit(seçenek) kancasıyla kurulur (eklentinin global sınırı kapalı). Bu çağrı kendi LocalStore'unu (store.child, kendi LRU tablosu) kurar; sınıf başına tek çağrı tek tablo demektir ve sınıftaki bütün rotalar aynı kancayı paylaşır (eklenti kaynağında doğrulandı). Rota düzeyi config.rateLimit kullanılmaz: rota başına ayrı tablo kurar, sınır sınıf değil rota başına olur. Eklentinin LocalStore'u yerine saatli depo (infra/api/saatli-depo.ts: Map üstünde ekleme sırasıyla LRU, yeni bağımlılık yok) kullanılır: pencereyi Date.now() ile değil D04 saatiyle sayar ve sayacı artırmadan okuma işlevi verir. Sınıflar packages/contracts/src/ortak/hiz.ts HIZ_SINIFLARI'nda tek yerde (hız sınıfları tablosu): girissiz IP başına dakikada 3000; oturum giriş oturumu başına 120; agir giriş oturumu başına 20 (/v1/raporlar/ altındaki bütün rotalar ve rapor gibi pahalı uçlar); gonderim imza doğrulandıysa cihaz kimliği, doğrulanmadıysa giriş oturumu başına 30 (başlıktaki X-Kurulum-Kimligi doğrulanmamış bir değerdir, anahtar olursa kişi başlığı değiştirerek sınırı aşardı; iki anahtar da doğrulanmış kimliktir ve evreni sınırlıdır); saat öğrencide cihaz, personelde giriş oturumu başına 30; projeksiyon projeksiyon başına 60. Başka sınıf adı yoktur (girisli, saat_belgesi, esitleme_gonderim yazan modüller oturum, saat, gonderim yazar). Girissiz sayaç yalnız [girissiz] rotada her isteği ve öteki rotalarda hiçbir doğrulanmış kimlik kuramadan 401 ile biten isteği sayar (onResponse); imzası ya da oturumu doğrulanan istek hiç sayılmaz (kampüs NAT'ı arkasındaki telefonlar birbirini kısıtlamaz, teknik.html#sunucu-guvenlik: IP sınırı yalnız girişsiz uçlarda). Kimlikli rotalarda aynı sayaç onRequest'te artırılmadan okunur: dolmuşsa 429 gövde okunmadan ve oturum aranmadan döner; saldırı sürerken aynı adresin geçerli paketleri de 429 ve Retry-After ile bekler, kayıt kaybolmaz. Kimlikli sınıflar cihaz imzasız rotada preParsing'de, imzalı rotada preHandler'da çalışır. 429 zarfı, Retry-After ve beklemeSaniye; IP yalnız sınır olayında loglanır. Kod deneme sınırları (e-posta kodu, kayıt kodu, yedek kod, eşleştirme kodu) bu sınıfların dışında, sahibinin PostgreSQL sayacındadır (plan.html#hile-rastgele-isim); kod isteğinde adres başına sınır sessizdir, her durumda aynı cevap döner (D01), 429'u yalnız IP sınıfı verir ve adresle ilgili bir şey söylemez. Değerler başlangıçtır, ders çıkışı yük testinden sonra hiz-siniflari.ts'te ve teknik.html'de güncellenir. n kopyada etkin sınır en çok n katıdır; plan bunu kaba sınır sayar (plan.html#teknoloji-sunucu-yeri).",
+      "why": "Eklentinin varsayılan 5000 anahtarlık tablosu 50.000 öğrencide sayaçları sürekli atar. Değerler yazılmazsa sınırlar açık koşan yük testi (teknik.html#testler-kalite) ya 429 yağmuruna ya sınırsızlığa göre geçer. Sınıf adları ve değerler D13'ün, ölçüm D15'in yük testinde (D06-B29 ve D15-B42 bu bölüşümle uzlaşır)."
+    },
+    {
+      "gap": "D13-B10",
+      "decision": "Aşırı yük (under-pressure) 503 API_SUNUCU_YOGUN, havuz dolması ve geçici veritabanı hataları D12'nin 503 kodlarıyla döner; hepsi 15 ile 45 saniye arasında sunucuda rastgele seçilen Retry-After taşır (under-pressure'da pressureHandler, öbürlerinde kodun aralik bekleme kuralı); istemci üstüne kendi rastgele payını ekler. Eşikler (maxEventLoopDelay, maxEventLoopUtilization, maxRssBytes kap sınırının altında) ayarlardan (D15) okunur, yazılmazsa uygulama açılmaz. under-pressure kökteki ilk kancadır; /health/live ve /v1/durum rota tablosunda baskiDisi taşır ve rotalariKaydet onlara null dönen rota düzeyi pressureHandler koyar (eklenti fastify-plugin ile sarılı, null dönüşte isteği geçirir; kaynağında doğrulandı). Veritabanı hataları veritabanı hatası eşlemesi tablosuna göre çevrilir; tek kaynak packages/contracts/src/ortak/hata.ts GECICI_SQLSTATELER: 40P01, 40001 (D12 bir kez yeniden denedikten sonra) ve 55P03 kilitlenme; 53300 ve havuz bekleme aşımı havuz; 57P01, 57P02, 57P03, 25P03 ve 08 sınıfı erişilemez; 57014 ve 25P04 zaman aşımı. D12'nin islem'i bunları kendi kataloğundaki 503 kodlarına (VERITABANI_KILITLENME, VERITABANI_HAVUZ_DOLU, VERITABANI_ERISILEMEZ, VERITABANI_ZAMAN_ASIMI; ayrıca VERITABANI_NESIL_BELIRSIZ) çevirir, hepsinin bekleme kuralı aralik [15, 45]; kök yakalayıcı bu kodları olduğu gibi döner. D12 dışından kaçan ham hata (istek işleminin dışındaki sorgu) aynı sabitle 503 API_SUNUCU_YOGUN'a, 57014 ve 25P04 503 API_SORGU_ZAMAN_ASIMI'na çevrilir ve uyarı loglanır (yedek tablo ikinci güvencedir, D12.islem bunları zaten çevirir; I059); öteki SQLSTATE 500; log satırı cause'daki { neden, sqlstate, kisit, tablo } bilgisini yazar (D13-A04 kapandı).",
+      "why": "under-pressure'ın sabit varsayılanı ders çıkışında binlerce telefonu aynı saniyede geri getirir; havuz 503'ünün Retry-After taşıması yazılı değildi (teknik.html#sunucu-mimari). Eşik yazılmazsa eklenti hiçbir şey yapmaz (teknik.html#sunucu-guvenlik)."
+    },
+    {
+      "gap": "D13-B11",
+      "decision": "Genel gövde sınırı 64 KiB (Fastify bodyLimit); rota tablosunda uç başına sınır beyan edilir, en çok 2 MiB (fazlası açılışta hata). Öneriler: gönderim 1 MiB (D06 beyan eder; 200 zarflı en büyük paketin yaklaşık üç katı), liste yükleme 2 MiB (D03), toplu işlemler 256 KiB. Aşan istek 413 API_GOVDE_COK_BUYUK. Caddy'deki istek sınırı en büyük rota sınırından büyük tutulur ki 413'ü zarfla Fastify versin (D15).",
+      "why": "Fastify'ın 1 MiB varsayılanı her uçta kalırsa girişsiz uçlar gereksiz büyük gövde kabul eder; telefonun 413'te bölme kuralı (teknik.html#telefon-gonderme-protokolu) sınırın açıkça yazılmasına dayanır (teknik.html#sunucu)."
+    },
+    {
+      "gap": "D13-B12",
+      "decision": "Değer koyan işler PUT ile doğal eş güçlü. Oluşturan işler (elle ekleme, sorun bildirimi, düzeltme, makbuz okutma, gösterim kaydı) istemcinin ürettiği UUIDv7 kimliği taşır (ortak istemciKimligiSemasi, z.uuidv7()); sahip hedefli ON CONFLICT ile ekler: aynı içerik zaten varsa 200 ve var olan kaynak, farklı içerik çevrimiçi uçta 409 <MODÜL>_KIMLIK_CAKISMASI, kuyruk ucunda öğe sonucu ret. Kuyruktan gelen işlerde (cihaz, sıra numarası) da tekildir (D06). Genel Idempotency-Key başlığı ve cevap önbelleği tablosu yok. Panelde mutasyonlar kendiliğinden yeniden denenmez; form kimliği form açılınca üretilir; düğmenin ikinci basışı zaten yok sayılır (tasarim.html#k-loading).",
+      "why": "Zaman aşımında sunucu yazmış ama cevap ulaşmamış olabilir; anahtar yoksa elle ekleme ya da sorun bildirimi çift yazılır. Teknik yoklama kaydı için bu deseni zaten seçti (teknik.html#veritabani); ikinci desen ve tablo bakımı ikiye katlar."
+    },
+    {
+      "gap": "D13-B13",
+      "decision": "Sınıf boyu listeler (ders listesi, oturumun kayıtları, onay partisi, rapor) tek cevapta tam döner; sunucunun sert üst sınırı 2000 satır, aşılırsa kesik liste değil 422 API_SONUC_COK_BUYUK (istemci kapsamı daraltır); sınırı ortak tamListeSemasi taşır ve rotalariKaydet uygular, modül hatırlamak zorunda değildir. Büyüyen listeler (denetim kaydı, sonradan değişenler, yöneticinin hoca listesi) anahtar kümesi imleciyle: sorguda imlec (opak base64url, en çok 200 karakter) ve adet (varsayılan 100, en çok 500); cevap {ogeler, sonrakiImlec: metin ya da null}; imleç sıralama anahtarı ve UUID taşır, numara ya da ad taşımaz, biçimi Zod ile denetlenir; ortak sayfaSemasi ve sayfaSorgusuSemasi. Telefonun indirme imleci (D06) bu desenden ayrıdır, aynı opak metin kuralına uyar.",
+      "why": "Panel tabloları bütün satırları çizer, sıralama ve süzme panelde (tasarim.html#kutuphaneler-panel-t); OFFSET büyük tabloda yavaşlar ve eş zamanlı eklemede satır atlar ya da tekrarlar. Rapor uçlarında sayfalama yok (D10 notu)."
+    },
+    {
+      "gap": "D13-B14",
+      "decision": "Türkçe ASCII adlar (ç c, ğ g, ı i, ö o, ş s, ü u). Yol /v1/<modül>/... ve yönetici uçları /v1/<modül>/yonetim/... (contracts.json bağlayıcı kararı); dört kök istisna /health/live, /health/ready, /v1/durum, /v1/surum. Yol bölümleri küçük harf ve tireli, koleksiyon çoğul, kaynak kimliği yolda UUID, en çok iki düzey iç içe; durum geçişleri kaynak altında eylem (POST .../erken-kapat). JSON alanları camelCase, kod değerleri BÜYÜK_HARF; cevap kökü her zaman nesne; değeri olmayan alan null döner, atlanmaz. DELETE yalnız gerçekten kapanan şeyde; pasifleştirme ve arşivleme eylem ucuyla. Öğrenci numarası, kod, anahtar ve jeton yola ve sorguya girmez; numarayla arama gövdeli POST ile. Başlık adları da aynı kurala uyar (X-Istek-Kimligi, X-Saat-Belgesi). İnventerdeki /v1/yonetim/hocalar örneği bağlayıcı önek kararıyla geçersiz.",
+      "why": "Türkçe harf yolda yüzde kodlama, NFC ve NFD sorunları getirir; API yalnız eklemeyle değiştiğinden (teknik.html#altyapi-guncellemeler) yanlış ad kalıcıdır; adres satırı kuralı teknik.html#sunucu-ayarlar'da."
+    },
+    {
+      "gap": "D13-B15",
+      "decision": "Ortak Zod yardımcıları (packages/contracts/src/ortak/zaman.ts ve kimlik.ts): an UTC ISO 8601 milisaniyeli ve Z ile (z.iso.datetime); takvim günü YYYY-MM-DD İstanbul günü (z.iso.date), rapor aralığı bu biçimde (plan.html#hoca: gün olarak); ders saati HH:MM İstanbul yerel; süre tam sayı milisaniye, alan adı Ms ile biter; yüzde onda bir birimli tam sayı, alan adı Binde ile biter (695 = yüzde 69,5); 2^53'ü aşabilen tam sayı ondalık metin (buyukSayiSemasi); imleçler opak metin; imzalı metin ve imza telefonun ürettiği metin olarak aynen, yeniden kodlanmadan taşınır.",
+      "why": "Veritabanı nesli 64 bittir (teknik.html#kod-veri-modeli), JavaScript sayısı 2^53'ü aşınca sessizce yuvarlanır ve baştan indir kararı bozulur; İstanbul yerel saatiyle UTC karışırsa pencere kayar; sunucu imzalı metni yeniden biçimlendirmez (teknik.html#sunucu-imza-dogrulama)."
+    },
+    {
+      "gap": "D13-B16",
+      "decision": "Telefon her isteğe X-Uygulama-Surumu (MAJOR.MINOR.PATCH), X-Guncelleme-Kimligi (expo-updates updateId), X-Platform (android, ios), X-Kanal (play, github, appstore, testflight) ve girişten sonra X-Kurulum-Kimligi (D06-B08: bir uygulama kopyasında bir hesabın kurulum kimliği; telefon her hesap için ayrı UUIDv7 üretir, girişten önce hesap olmadığından göndermez) koyar; panel isteğe bağlı X-Panel-Surumu (derleme özeti) koyar. Hepsi sözleşmede isteğe bağlı başlık; kök kanca reddetmeden ayrıştırır (bozuk değer null) ve istek.istemci'ye yazar; D01 son görülen sürümü cihaz kaydına buradan yazar. GET /v1/surum girişsizdir ve platform, kanal ve sürüm başlıklarını zorunlu ister; cevap {enSonSurum, enDusukSurum, guncellemeVar, guncellemeGerekli, magazaBaglantisi, gecisBaglantisi}. GitHub kademesi kurulum kimliğinin SHA-256 özetinin ilk 4 baytı mod 100 kovasıyla seçilir; başlık yoksa (girişten önce) telefon kademe dışındadır, guncellemeVar yalnız yüzde 100'de true; guncellemeGerekli ve mağaza bağlantısı girişten önce de doğru iner. Hesap değişince kova değişebilir; kademe yalnız duyuruyu etkiler, kayıtları etkilemez.",
+      "why": "Sunucu kanalı bilmeden kademeli duyuruyu ve kuruluma göre doğru bağlantıyı veremez (plan.html#dagitim-guncelleme); başlıklar sözleşmede yazılmazsa oasdiff zorunlu hale gelmelerini yakalayamaz."
+    },
+    {
+      "gap": "D13-B17",
+      "decision": "Sunucu yayın bilgisini alırken korur: yeni dosyanın en düşük sürümü geçerli değerden büyükse ve D02'nin donemArasiMi işlevi false dönerse yükseltme ertelenir (istemci_surum_esikleri'ne ertelendi satırı, uyarı logu); dönem arası gelince ilk esikDurumu tazelemesi (GET /v1/surum ya da enDusukSurumDenetle tetikler, yalnız surec api) uygulandi satırı ekler. Düşürme her an uygulanır. Koruma dört kanalda aynıdır; deneme dönemindeki TestFlight istisnası en düşük sürümü değil derlemenin süresini ilgilendirir (plan.html#dagitim-deneme). Sunucu en düşük sürümün altındaki istemcinin hiçbir isteğini HTTP düzeyinde reddetmez; sınırı telefon uygular; tek sunucu yaptırımı hatalı sürüm listesindeki sürümün yeni kayıtlarını İncelemede almaktır (D07, D13-B29). app.ts D02'nin dış yüzündeki donemArasiMi(tx, an?) işlevini (I006: bileşim kökü parametre olarak verir, infra/api D02'yi içe aktarmaz) bağlar; her zaman false veren saplama yoktur, sahte işlev yalnız DenemeSecenekleri ile ve yalnız test ortamında gelir. Ortak dönem arası hiç oluşmazsa ne olacağı açık nokta D13-A01.",
+      "why": "Kural yalnız dönem arasında yükseltir (plan.html#dagitim-guncelleme-ilkesi), birimlerin takvimi farklı ve CI takvimi bilmez; denetim yoksa dönem ortasında yanlış bir yayın bütün eski telefonları yeni yoklamadan keser."
+    },
+    {
+      "gap": "D13-B18",
+      "decision": "yayin-bilgisi.json CI'da üretilir ve sunucu imajına girer (D15-B26: CI sunucuya erişmez, imaj imzalı olduğundan dosya da imzalı gelir); yolu ayarlardan gelir. Şema packages/contracts/src/api.ts'te (yayinBilgisiSemasi, D07'nin alan adlarıyla, katı nesneler): bicim, artan sira, olusturmaAni, dört platform ve kanal çiftinin her biri tam bir kez, hataliSurumler [{platform, uygulamaSurumu, guncellemeKimligi, baslangicAni, gerekce}], iosPaketSurumleri, iosDagitimTurleri. Dosyayı okuyan tek yer D13'tür (yayinBilgisiYukle; D07 yalnız yayinBilgisi() kullanır, I031); D07 kendi okuyucusunu, değişim zamanına bakan önbelleğini ve yayinBilgisiYolu ayarını tutmaz. Sunucu açılışta dosyayı Zod'la doğrular; geçersizse açılmaz, sırayla yeniden başlatmada eski kopya hizmette kalır (ortam ayarlarındaki kuralla aynı, teknik.html#sunucu-ayarlar). Geçerli dosyanın kararları ve platforma ait listeleri istemci_surum_esikleri'ne eklenir, cevaplar ve listeler tablodan verilir; böylece eski imajlı ya da geri alınmış kopya daha küçük sıralı dosyasıyla kayıtlı kararı ya da hatalı sürüm ilanını geri çeviremez ve sırayla yenilemede iki kopya aynı kaydı aynı karara bağlar (D13-B29). GitHub kademeleri dosyada tarihli takvimdir ({baslangic, yuzde}), yüzde artırmak yeni yayın istemez. İnventerdeki Compose birimi ve değişme zamanına bakarak yeniden okuma önerisi bırakıldı.",
+      "why": "Birim önerisi CI'ya sunucuya yazma yolu açardı, D15 bunu dışlıyor; imajdaki dosya imzalı gelir, kopyalar arası tutarlılığı tablo sağlar. Bozuk dosyanın en düşük sürümü yanlışlıkla yükseltmesi açılışta durdurulur (plan.html#dagitim-guncelleme: sunucu yalnız okur)."
+    },
+    {
+      "gap": "D13-B19",
+      "decision": "openapi_belgesi_sakla betiği (apps/server/scripts/api/openapi-belgesi-sakla.ts; D13-A09) uygulamayı uygulamaKur({ surec: 'belge' }) ile sahte altyapıyla ve bütün eklentiler açık kurar, port açmadan @fastify/swagger çıktısına her kuyruk öğesi türünün gövde şemasını (components.schemas.Oge_<tur> ve yapay POST /x-oge/<tur>) ekler ve anahtarları sıralı JSON olarak packages/contracts/openapi/<uygulama sürümü>.json'a yazar; belge üretimde sunulmaz, swagger yalnız bu kipte kaydedilir. X sürümünün belgesi X etiketlenene kadar kodla birlikte yeniden üretilir, mobil/vX etiketinin commit'inden üretilen belgeyle bayt bayt aynı olmak zorundadır ve etiketten sonra hiç değişmez; böylece saklı belge telefon ikilisinin derlendiği commit'in sözleşmesidir. Desteklenen küme iki katmanlı: packages/contracts/openapi/destek.json'daki tamDenetimTabani'na eşit ya da yüksek her saklı sürüm tam denetlenir; bütün saklı sürümlere karşı ise destek.json'daki hepSurumYollari ve öğe gövdeleri denetlenir (ikinci koşu, --match-path ve seviyeler.txt). hepSurumYollari başlangıçta: ^/v1/esitleme/gonderim$, ^/v1/surum$, ^/v1/saat/belge$, ^/v1/kimlik/kod$, ^/v1/kimlik/giris$, ^/v1/kimlik/ben$, ^/v1/kimlik/cikis$, ^/v1/kimlik/ogrenci/kayit$, ^/v1/dogrulama/deger$ (plan.html#dagitim-guncelleme-ilkesi: en düşük sürümün altındaki telefonda giriş, makbuzlar ve bekleyen kayıtların gönderimi çalışır; telefon en düşük sürümün altında olduğunu GET /v1/surum'dan öğrenir; bekleyen kaydın ikinci çapası saat belgesidir; girişin gerektirdiği başka bir D01 ya da D07 yolu çıkarsa sahibi listeye ekler). Taban yalnız etkin en düşük sürüm (GET /v1/surum) onu geçtikten sonra, dönem arasında, elle ve gözden geçirilerek yükseltilir. Güvenlik şemaları (Bearer, çerez, x-kimlik ile cihaz imzası ve projeksiyon), isteğe bağlı sürüm ve saat başlıkları ve rotanın hata kodları belgede yazılır. Uzaktan güncelleme ayrı belge üretmez. D15'in eski sürüm istek örnekleri (D15-B32) taban ve üstü sürümlerde bütün örnekleri, bütün saklı sürümlerde gönderim ve hepSurumYollari örneklerini oynatır (D13-A05).",
+      "why": "Karar belgeyi her uygulama yayınında saklamayı ve desteklenen her sürüme karşı oasdiff'i istiyor (teknik.html#sunucu-mimari); küme tanımı yazılmazsa denetim ya eski telefonları korumaz ya bütün sürümleri sonsuza dek kilitler. CI etkin en düşük sürümü göremediğinden taban otomatik çekilmez."
+    },
+    {
+      "gap": "D13-B20",
+      "decision": "Tek yardımcı genisleyenEnum(degerler): cevap şemasında z.string().max(64) ve .meta({'x-extensible-enum': degerler}), enum anahtarı üretilmez; TypeScript tipi bilinen değerler ya da (string & {}). İstek şemasında kapalı z.enum. Uygulanacak alanlar: kayıt etiketleri, sunucu kararları, gerekçe ve sebep kodları, son durumlar, öğe sonuçları, uyarı seviyeleri, hata kodları. Belge üzerinden çalışan sözleşme testi cevap şemalarında enum geçen her alanı kırmızı yapar ve .meta'nın belgeye geçtiğini aynı testte pozitif denetimle sabitler (geçmezse swagger dönüştürücüsünde eklenir). İstemci bilinmeyen değerde çökmez: bilinmeyen etiket atlanır, bilinmeyen hata kodunda sunucunun mesajı gösterilir.",
+      "why": "z.enum JSON Schema'da enum üretir ve oasdiff yeni değeri kırılma sayar (teknik.html#sunucu-mimari); TypeScript enum yasak (teknik.html#temel)."
+    },
+    {
+      "gap": "D13-B21",
+      "decision": "Fetch yardımcısında beklenmeyen biçim: Content-Type application/json değil, gövde JSON olarak ayrışmıyor ya da yönlendirme oldu (redirect: 'error'; telefonda ayrıca cevap adresi istek adresinden farklıysa); sonuç gecici. Cevap şeması çalışma anında yalnız rotada istemciCevapDenetimi true ise denetlenir; bu yalnız gönderim ucunda açıktır, uymayan cevap gecici sayılır. Telefon kuyruğu öğe sonuçlarının kimliklerini gönderilen paketle birebir eşleştirmeden hiçbir kaydı Sunucuya ulaştı yapmaz (apps/mobile kuralı, sözleşmede yazılı). Saat belgesinin telefonun tek kullanımlık değerini taşıması da cevabın sunucudan geldiğini gösterir (plan.html#gun-saati-degistirmek-neden-ise-yaramaz).",
+      "why": "200 dönen bir HTML sayfası başarı sanılırsa (ör. Caddy /v1 isteğine panel sayfasını dönerse) makbuz ilerler ama kayıt sunucuda yoktur: makbuzlu kayıtta kayıp 0 hedefi bozulur (plan.html#hedefler, plan.html#kararlar-gonderme)."
+    },
+    {
+      "gap": "D13-B22",
+      "decision": "Başlık çifti: istekte X-Saat-Istegi (16 rastgele baytın base64url'i, 22 karakter), cevapta X-Saat-Belgesi. Kök onSend kancası şu koşulların hepsi tutarsa belgeyi D04'ün saatBelgesiVer işleviyle (app.ts'ten, uyarlayıcısız) üretip ekler: istekte geçerli X-Saat-Istegi var; rotanın saatBelgesi bayrağı false değil (D04'ün kendi belge ucu false); app.ts'teki saatOznesiKur(kimlik) özne veriyor (saat belgesi öznesi tablosu: öğrenci ya da cihaz için { tur: 'ogrenci_cihazi', cihazId }, personel için Kimlik.kisiId ile { tur: 'personel', kisiId }, hiçbir zaman giriş oturumu kimliği; D04-B14: internetsiz biten ders oturumunun işleri girişten sonra gider, belge öznesi oturuma bağlı olsaydı saatSonucu ozne_uyusmuyor verir, erken kapatma ve kısaltma geriye işlemezdi; çerezle gelen istek ve projeksiyon için özne yok); durum 2xx ya da 4xx ve 429 değil; saatBelgesiVer verilemez dönmüyor (eşitleme bozuk ya da değer geçersiz). Gönderim cevabı da aynı başlığı taşır (gönderim öncesi belge isteğinin yerini tutmaz, plan.html#teknoloji-sunucu-yeri). Girişsiz uçlar belge taşımaz; panel X-Saat-Istegi koymaz. Başlıklar OpenAPI'de ortak istek ve cevap başlığıdır; belgenin içeriği, imzası ve doğrulaması D04'ün. Adlar ve özne kuralı komşularca kabul edildi (I018): özne istekteki kimlikten, tur cihaz ise imzalayan cihazdan saatOznesiKur ile kurulur.",
+      "why": "Karar var ama yol yoktu (plan.html#gun-ikinci-capa: sunucunun diğer cevapları da yeni belge taşır); telefon kendi değerini taşımayan belgeyi kullanmaz, değer istekte gitmezse belge işe yaramaz. Her şemaya belge alanı eklemek onlarca şemada tekrar ve unutma demek."
+    },
+    {
+      "gap": "D13-B23",
+      "decision": "Tek çekirdek yardımcı istemciKur({temelAdres, kimlikBilgisi, basliklar, zamanAsimiMs}) ve cagir(rota, girdi, {arkaPlan, sinyal}): rota tanımından yöntem ve yolu alır, yol parametrelerini kodlar, girdiyi rotanın istek şemasıyla göndermeden denetler (panel formlarıyla aynı şema), zaman aşımını AbortController ve setTimeout ile kurar (varsayılan 30 saniye; AbortSignal.any kullanılmaz), telefonda credentials omit, panelde same-origin. Sonucu sınıflar (sonucSinifi(durum, zarfGecerli); zarfGecerli: gövde hataZarfiSemasi'na uyuyor ve X-Istek-Kimligi zarftaki istekKimligi'ne eşit): basari; gecici (ağ, zaman aşımı, 408, 429, 5xx, beklenmeyen biçim ve zarfsız 4xx); bol (413 her zaman, zarflı 400 ve öteki zarflı 4xx, protokoldeki 400 gibi işlenir kuralı); dur (zarflı 401 ve 403). Zarf şartı API'den gelmeyen 4xx'i ayırır: üniversitenin ağ geçidinin, WAF'ın ya da vekilin HTML 403'ü kuyruğu durdurmaz, HTML 404 ya da 400'ü kaydı bölüp rete düşürmez; 413'ü bölmek her zaman güvenlidir. Protokol tablosu tek yerde (sonucSinifi). Başlıkları istemcinin verdiği sağlayıcı ekler (telefon: Bearer, sürüm başlıkları, kurulum kimliği, saat isteği; panel: X-Arka-Plan, X-Panel-Surumu). Yeniden deneme yardımcıda değil: telefonda kuyrukta, panelde TanStack Query'de yalnız sorgularda ve yalnız gecici sınıfta, API_SORGU_ZAMAN_ASIMI hariç.",
+      "why": "Telefon ve panel aynı yardımcıyı kullanıyor (teknik.html#sunucu-mimari, teknik.html#panel-cati) ama ihtiyaçları farklı; contracts'ta Node modülü yasak (teknik.html#temel), Hermes'te ya da Chrome 109'da olmayan bir API sessizce kırılır."
+    },
+    {
+      "gap": "D13-B24",
+      "decision": "İstek nesneleri strip (z.object varsayılanı; istek ve cevap şemalarında z.strictObject ve z.looseObject kullanılmaz; tek bilinçli istisna CI'nın yazdığı yayin-bilgisi.json şemasıdır, orada yanlış alan adı sessizce atılmasın diye katı nesne kullanılır). Her metin alanında .max(), her dizide .max() (gönderim 200), sayılarda .int() ve alt üst sınır; kimlikler markalı tip (kimlikSemasi('Ders') gibi) ve z.uuid() ya da z.uuidv7(); öğrenci numarası 9 ya da 10 rakamlı metin (ortak ogrenciNoSemasi, plan.html#hoca-liste-yukleme). Fastify'ın onProtoPoisoning ve onConstructorPoisoning değeri error. Kurallar şema nesnelerinden üretilen OpenAPI belgesi taranarak denenir, kaynak metin aranmaz.",
+      "why": "Katı şema geri alınan bir yayında bilinmeyen alanı 400 yapar, telefon böler ve kaydı rete düşürür (teknik.html#telefon-gonderme-protokolu); sınırsız metin ve dizi ASVS seviye 2 girdi doğrulamasıyla çelişir; aynı UUID tipindeki ders, oturum ve öğrenci kimlikleri karışır."
+    },
+    {
+      "gap": "D13-B25",
+      "decision": "Cevap şeması üretimde de uygulanır (fastify-type-provider-zod serializerCompiler): şemada olmayan alan atılır, uymayan cevap 500 API_SUNUCU_HATASI, logda rota kalıbı ve Zod yolu (değer yok). Gönderim ucundaki maliyet ders çıkışı yük testinde ölçülür; bütçeyi aşarsa yalnız o uçta aynı Zod şemasından üretilen JSON Schema ile Fastify'ın hızlı serileştiricisine geçilir, sözleşme değişmez.",
+      "why": "Oturum anahtarı özeti ya da başka öğrencinin numarası gibi alanların yanlışlıkla dışarı çıkmasını önler (plan.html#kararlar-indirme: veri amaçla sınırlı)."
+    },
+    {
+      "gap": "D13-B26",
+      "decision": "Uçtan uca süre bütçesi (süre bütçesi tablosu): telefon istemcisi 30 saniye (saat belgesi isteğinde 10, D04), Caddy response_header_timeout 25 saniye (D15), işleyici bütçesi istek gelişinden 20 saniye. Fastify requestTimeout 20 saniye yalnız isteğin alınmasını sınırlar (aşılınca Node 408 döner, telefon yeniden dener); işleyici süresini kalanSureMs bağlar: onRequest varış anını D04 saatiyle yazar, uzun işler buna bakarak durur. Gönderimde (D06) öğe döngüsü yeni parçaya başlamadan kalan süreye bakar, yetmiyorsa kalan öğelere TEKRAR_DENE ESITLEME_ZAMAN_BUTCESI döner ve işlemi bitirir; cevap 20 saniye içinde gider. agir rotalarda deyim en çok 15 saniye (D12 islem zamanAsimiMs: min(15000, kalanSureMs)), havuz beklemesi 2 saniye dahil işlem en çok 20 saniye. Bütçeyi aşan işleyici 503 API_SORGU_ZAMAN_ASIMI, deyim süresi aşımı D12'nin 503 VERITABANI_ZAMAN_ASIMI kodu; panel ikisinde de kendiliğinden yeniden denemez. keepAliveTimeout Fastify varsayılanı 72 saniye kalır, Caddy'nin üst akış boşta bağlantı süresi bundan kısa tutulur (D15). Değerler yük testiyle doğrulanır. İnventerdeki 25 saniyelik istek süresi önerisi D15-B17'deki 20 saniyeyle birleştirildi; D12'deki 'Fastify'ın 25 saniyelik istek süresi' cümlesi bu bütçeyle düzeltildi (D13-A04, I068).",
+      "why": "Sunucu telefondan uzun çalışıp yazarsa telefon başarısız sayıp yeniden gönderir, yük ikiye katlanır (teknik.html#telefon-gonderme-protokolu); Caddy ile Node'un boşta bekleme süreleri uyumsuzsa ara sıra 502 olur."
+    },
+    {
+      "gap": "D13-B27",
+      "decision": "Zorunlu kırıcı değişiklikte yeni uç eklenir; eski uç onu kullanan son sürüm tam denetim tabanının altına düşünce (yalnız dönem arasında) silinir, o anda desteklenen küme daraldığından oasdiff kesin kırılma vermez. destek.json'daki hepSurumYollari'ndaki yollar (gönderim, sürüm, saat belgesi, giriş ve girişin gerektirdiği yollar) ve kuyruk öğesi gövdeleri hiçbir zaman silinmez ve bütün saklı sürümlere karşı denetlenir; bu yollarda zorunlu kırılma yeni yol eklenerek yapılır, eski yol kalır. Kaçınılmaz istisna yalnız packages/contracts/openapi/kirilma-istisnalari.txt dosyasında (oasdiff --err-ignore), her satırın üstünde gerekçe yorumuyla; /v2 yalnız API'nin bütünü değişirse.",
+      "why": "oasdiff kesin kırılmada CI'yı durdurur (teknik.html#sunucu-mimari); güvenlik düzeltmesi gibi zorunlu bir kırılmanın yazılı yolu olmalı, kayıt gönderme ucu hiçbir sürüme kapanmaz (plan.html#dagitim-guncelleme-ilkesi)."
+    },
+    {
+      "gap": "D13-B28",
+      "decision": "Toplu işlemlerde tek desen: istek {ogeler} (en çok 200), cevap 200 {sonuclar: [{kimlik, sonuc, kod}]} istek sırasıyla; sonuc genişleyen enum (ortak ogeSonuclariSemasi), kod öğe düzeyinde modül kodu ya da null; isteğin bütünü bozuksa 400, gövde sınırı aşılmışsa 413. 200'ü aşan öğe sayısı her toplu uçta aynı koddur: 400 API_ISTEK_GECERSIZ (alan yolu ogeler, Zod too_big); modül ayrı kod tanımlamaz. Sahip modül öğe başına SAVEPOINT ile tek işlemde yazar (teknik.html#veritabani'deki gönderme deseni). Öğeye modül yalnız ekleme alanları (duzeltme, yeniKarar, sayilan) koyabilir; şema tanımlı alanları doğrular, bilinmeyen ek alanı reddetmez (I045).",
+      "why": "Gönderme ucu her kayda ayrı sonuç diyor (plan.html#kararlar-gonderme); bir öğe başkasının dersine aitse isteğin bütününü 403'lemek telefonda kuyruğu durdurur, panelde bütün partiyi boşa çıkarır."
+    },
+    {
+      "gap": "D13-B29",
+      "decision": "Hatalı sürüm kuralı kaydın imzalı metnindeki (imza anındaki) uygulama sürümünü ve updateId'yi kullanır (kayıt biçimi D05'in, kural D07'nin, D06-B25 ile aynı); istek başlıkları yalnız gönderen istemciyi izlemek ve loglamak içindir. Hatalı sürüm listesi yayin-bilgisi.json'dadır, D07 onu yalnız yayinBilgisi() ile okur; liste en düşük sürüm kararıyla aynı sıra kuralına bağlıdır (istemci_surum_esikleri.hatali_surumler, geçerli liste platformun en büyük sıralı satırı), böylece sırayla yenilemede iki kopya aynı kaydı aynı karara bağlar ve imajı geri almak hatalı sürüm ilanını düşürmez.",
+      "why": "Başlığa bakılırsa hatalı güncellemeyle imzalanıp düzeltmeden sonra gönderilen kayıt düzgün sürüme yazılır, düzgün kayıt hatalı sürümden yeniden gönderilince yanlış İncelemede kalır (plan.html#dagitim-guncelleme-ilkesi)."
+    },
+    {
+      "gap": "D13-B30",
+      "decision": "Yalnız cevaplar sıkıştırılır, Caddy'de (encode zstd gzip; D15). İstek gövdesi sıkıştırılmaz; Content-Encoding taşıyan gövdeli istek 415 API_ICERIK_TURU.",
+      "why": "İstek sıkıştırma gövde sınırını ve 413 ile bölme mantığını bulanıklaştırır, sıkıştırma bombası riski getirir; ders çıkışındaki 2 ile 3 isteğin cevapları zaten küçük (plan.html#teknoloji-sunucu-yeri)."
+    },
+    {
+      "gap": "D13-B31",
+      "decision": "Yayın sırası önce API (göç ve yeni kopyalar hazır), sonra panel dosyaları (D15'in yayın adımı). Panel yeni bir uçta API_UC_BULUNAMADI alırsa sayfayı yenile önerisiyle gösterir; vite:preloadError'da bir kez kendiliğinden yenileme zaten karar (teknik.html#panel-sunulma). Yalnız ekleme kuralı açık kalmış eski sekmenin yeni API'yle konuşmasını güvenli kılar; X-Panel-Surumu logda eski sekmeyi gösterir.",
+      "why": "Panel durağan dosyadır, API kopyaları sırayla yenilenir; yeni panel eski kopyada yeni uca 404 alabilir."
+    },
+    {
+      "gap": "D13-B32",
+      "decision": "İmzalı içerik JSON içinde opak metin alanı olarak taşınır: ortak imzaliMetinSemasi({metinEnCok, imzaEnCok, imzaliTurler, imzasizTurler, ek}) {metin, imzaTuru, imza, ...ek} verir; imzalı türde imza zorunlu, imzasız türde null (D06'nın ikinci çapası: imzaliTurler a ve s, imzasizTurler o, ek anahtarId); sunucu imzayı metnin baytları üzerinde doğrular, sonra metni ayrıştırır. Ham gövde yakalama ve kanonik JSON yok. Paketin iç biçimi D06'nın, kaydın iç biçimi D05'in.",
+      "why": "Ham gövde ya da kanonik JSON üzerindeki imza anahtar sırası, boşluk ve sayı biçimine bağlı kalır; aradaki bir katmanın gövdeyi yeniden yazması imzayı bozar. Kayıt zarfı zaten metin, imza türü, imza biçiminde (teknik.html#sunucu-imza-dogrulama)."
+    },
+    {
+      "gap": "D13-A04",
+      "decision": "Mimar kararı I068 ve I059 (ACCEPT): D12.islem geçici hataları GECICI_SQLSTATELER ile kendi kodlarına çevirir: VERITABANI_KILITLENME (40P01 ve 40001 bir yeniden denemeden sonra, 55P03), VERITABANI_HAVUZ_DOLU (53300 ve 2 saniyelik havuz beklemesi), VERITABANI_ERISILEMEZ (57P01, 57P02, 57P03, 25P03, 08 sınıfı), VERITABANI_ZAMAN_ASIMI (57014, 25P04); bunlar ve VERITABANI_NESIL_BELIRSIZ http 503 ve bekleme { aralik: [15, 45] } taşır, ortukKodlar'dadır, rotalar yazmaz; işletim kodları http null. zamanAsimiMs agir rotada en çok 15000'dir ve kalanSureMs ile küçülür; D12-B06'daki 25 saniye cümlesi D13'ün 20 saniyelik işleyici bütçesi oldu. D13 tarafı: kök yakalayıcının SQLSTATE yedek tablosu 55P03, 25P03, 57P01, 57P02 ve 08 sınıfını API_SUNUCU_YOGUN, 57014 ve 25P04'ü API_SORGU_ZAMAN_ASIMI olarak ikinci güvence diye çevirir; app.ts ApiBagimliliklari.veritabani'ya Veritabani.db, islem'e Veritabani.islem verir, Islem tipi D12'nin index.ts'inden gelir ve islem secenek'i (saltOkunur, yalitim, zamanAsimiMs, yenidenDene) aynen iletilir; kök log cause'daki { neden, sqlstate, kisit, tablo } bilgisini yazar; veritabaniEklentisi öneksiz kaydedilir; D13'ün eşik yazıları hedefli ON CONFLICT (platform, kanal, dosya_sirasi, karar) DO NOTHING ile yazılır.",
+      "why": "İki belge aynı sabiti kullanınca telefon her geçici veritabanı hatasında aynı bekleme kuralını görür ve koddan nedeni ayırt eder; yedek tablo D12 dışından kaçan ham hatayı da 503'te tutar. Hedefsiz ON CONFLICT başka bir tekillik ihlalini, birincil anahtar dahil, sessizce yutardı."
+    },
+    {
+      "gap": "D13-A05",
+      "decision": "Mimar kararı I069 (CHANGE): D15 eşleşmeleri kabul edildi (ayar şemasında PANEL_ADRESI, GUVENILEN_VEKIL_ADRESI, YAYIN_BILGISI_YOLU ve under-pressure eşikleri; server.ts uygulamaKur({ surec: 'api', ..., olcumYazici: true }) sonra listen; /health/live ve /v1/durum baskiDisi; ISLETIM_KAPANIYOR { sabit: 5 }; Caddy sınırları; yayın akışı ve sozlesme işinin etiket kipi; packages/contracts imaj derlemesi; ortak test kancasının zarf ve şema denetimi; yük testi HIZ_SINIFLARI'ndan). Tek ayrım: dependency-cruiser kuralları ayrı yapılandırma dosyasında değil D13'ün sınır testinde durur (dependency-cruiser API'siyle apps/server/src üstünde no-circular ve yaprak kuralı, iskelet adımında da koşar); D15 paketi tam sürümle ekler ve kalite iş akışında testi koşar.",
+      "why": "Kural ile onu sınayan test tek dosyada olunca kural testsiz değişemez ve her kural bilerek eklenen yanlış içe aktarmayla kırmızıya döndürülebilir; ayrı yapılandırma dosyası D15'in dosyası olur, kuralın sahibi iki yere bölünürdü."
+    },
+    {
+      "gap": "D13-A07",
+      "decision": "Mimar kararı I070 ve A2 (CHANGE): birleşim kuralları contracts.json ortak kuralı Birleşim'e işlendi; eklenti adı 'eklenti' değil <ad>Eklentisi'dir (kimlikEklentisi, derslerEklentisi, listelerEklentisi, saatEklentisi, yoklamaEklentisi, esitlemeEklentisi, dogrulamaEklentisi, devamEklentisi, duzeltmelerEklentisi, raporlarEklentisi, projeksiyonEklentisi, veritabaniEklentisi, isletimEklentisi; D13'ünki apiEklentisi) ve seçenek tipi EklentiTemelSecenekleri'ni ({ surec }) genişletir. Dört iki yönlü çiftin ters yönü app.ts seçeneğiyle değil yaprak dosyası kuralıyla bağlanır (iki yönlü çiftler tablosu): yaprak.ts başka modülden yalnız yaprak.ts içe aktarır; modules/ dosyası jobs/ ve bileşim köklerini içe aktarmaz; bileşim kökleri ve jobs/ çift saymaz. D13'ün sınır testi no-circular ve yaprak kuralını sıfır ihlalle koşar, her kural bilerek eklenen yanlış içe aktarmayla kırmızıya döner.",
+      "why": "Ortak ad kalıbı app.ts'in on dört eklentiyi karıştırmadan kaydetmesini ve aramayla bulunmasını sağlar; yaprak kuralı döngüyü dosya düzeyinde keser, app.ts'in her çift için seçenek taşıması gerekmez."
+    },
+    {
+      "gap": "D13-A08",
+      "decision": "Mimar kararı I071 ve I076 (CHANGE): komşulara giden eşleşme talimatları kabul edildi ve sahiplerine gitti (D01 Kimlik ve rota beyanları, D02 dersYetkisi(tx, kimlik, dersId), D04 belge ucu, D06 gönderim beyanı ve 20 saniyelik bütçe, öğe gövdeleri ogeTuruTanimla ile, D07 yalnız yayinBilgisi(), D09 400 API_ISTEK_GECERSIZ, D10 agir ve min(15000, kalanSureMs), D11 bekleme kuralları ve kimlikKancasi). Tek ayrım: IS_KUYRUGU_ kodlarının http değeri koddan koda verilir: API isteğinde de doğabilen isGonder hataları 500 ve genel metin (örtük kod kümesinde), yalnız işçide doğanlar null; IS_KUYRUGU_HATA_KODLARI hataKodlariTanimla ile hatalar.ts birleştirmesine girer. app.ts kurucusu uygulamaKur dinleme açmadan ve surec ('api' | 'isci' | 'belge') ile çağrılır, zamanlayıcıları yalnız api kurar; worker.ts uygulamaKur({ surec: 'isci' }) çağırır ve yayinBilgisiYukle'yi ayrıca çağırmaz.",
+      "why": "isGonder bir API işleminin içinde de çağrılır; http null kod orada 500 API_SUNUCU_HATASI olur ve hangi altyapının düştüğü cevaptan okunmaz. Koddan koda http değeri istekte görülen kodu katalogda doğru durumla tutar."
+    },
+    {
+      "gap": "D13-A09",
+      "decision": "Mimar kararı I072 (ACCEPT; I122 aynı): apps/server/scripts/api/* globu D13'e eklendi, apps/server/src/jobs/api/* globu kalktı. openapi-belgesi-sakla.ts ve oasdiff-kirilma-denetimi.ts apps/server/scripts/api/ altındadır; jobs/api/index.ts yoktur, worker.ts jobs/api içe aktarmaz; spec.files, .github/workflows/sozlesme.yml komutları ve iş açıklamaları yeni yolu kullanır.",
+      "why": "teknik.html#kod jobs/'ı iş kuyruğu görevleri diye tanımlıyor; iki CI betiği pg-boss işi değildir ve jobs/api/index.ts yalnız bu yerleşim yüzünden worker.ts'e boş liste veriyordu."
+    }
+  ],
+  "contradictions_resolved": [
+    {
+      "id": "D13-C01",
+      "resolution": "Kök kanca isteğe yalnız hocanın değil isteği yapanın kimliğini ve rolünü ekler: öğrenci, personel rolleri (hoca, yönetici), cihaz ve projeksiyon (D13-B05, D01-B16). Bu belge kancanın tek Kimlik tipini {tur, kisiId, roller [{rol, kapsamBirimId}], girisOturumuId, oturumKapsami, kaynak, cihazId, projeksiyonId, istemci, incelemeHesabi} eklediğini yazar; teknik.html#sunucu'daki 'isteğe hocanın kimliğini ekler' cümlesi 'isteğe kişinin kimliğini ve rolünü ekler' olarak düzeltilmeli (açık nokta D13-A06)."
+    },
+    {
+      "id": "D13-C02",
+      "resolution": "İki karar birlikte tutar: istemciler cevap tiplerini tip olarak alır ve bilinmeyen değerlere dayanıklıdır; fetch yardımcısı her cevapta içerik türü, JSON ayrıştırma ve yönlendirme denetimi yapar, çalışma anında şema denetimini yalnız makbuzu ilerleten gönderim cevabında yapar (D13-B21). Bu dar istisna teknik.html#sunucu-mimari'ye bir cümleyle yazılmalı (D13-A06)."
+    },
+    {
+      "id": "D13-C03",
+      "resolution": "Anlamlı olan uygulama (telefon) yayınıdır: eski telefonların konuştuğu sözleşme odur. Belge her uygulama yayınında <sürüm>.json adıyla saklanır, sunucu yayınları belge saklamaz (D13-B19). teknik.html#kod satırı 'her uygulama yayınının saklanan OpenAPI belgesi' olarak düzeltilmeli (D13-A06)."
+    }
+  ],
+  "open_points": [
+    {
+      "id": "D13-A01",
+      "question": "Birim takvimleri ortak bir dönem arası bırakmazsa (bir birimin yeni dönemi öbürünün devamsızlık işleme son gününden önce başlıyorsa) en düşük sürüm nasıl yükselir?",
+      "recommendation": "En düşük sürüm uygulama genelinde tek değer kalsın (öğrenci birden çok birimden ders alabilir, telefonun birimi yok; D02-B35). Ortak pencere yoksa yükseltme ertelenmiş kalır, sunucu her açılışta ertelendi durumunu uyarı olarak loglar ve sahip bir sonraki ortak pencereyi bekler. Plandaki kural (plan.html#dagitim-guncelleme-ilkesi) birim bazına çevrilmez; bunun bedeli, takvimleri hiç örtüşmeyen birimler varken en düşük sürümün yükselememesidir.",
+      "needs_owner": true
+    },
+    {
+      "id": "D13-A02",
+      "question": "Değişimle kapanmış (kaldırılmış) bir cihazdan, kaldırma anından sonra imzalanmış kayıt gelirse ne olur? Gönderim ucu bu kayıtları engellemez; kuralın sahibi D07'dir.",
+      "recommendation": "Kaldırma anından önceki hesaplanan saatli kayıtlar değişim kuralıyla birlikte karara bağlansın (plan.html#gun-kenar-durumlar); hesaplanan saati kaldırma anından sonraki kayıtlar kanıt olarak saklansın, sayılmasın ve gerekçe koduyla denetime yazılsın. Çalınan eski telefon bu yolla kayıt gönderebilir ama kayıt sayılmaz; iç sayaç geri alınamadığından saat geriye kaydırılamaz.",
+      "needs_owner": true
+    },
+    {
+      "id": "D13-A06",
+      "question": "teknik.html'de üç cümle düzeltmesi ve yük testinden sonra yazılacak değerler onaylanıyor mu?",
+      "recommendation": "teknik.html#sunucu: 'isteğe hocanın kimliğini ekler' yerine 'isteğe kişinin kimliğini ve rolünü ekler' (D13-C01); teknik.html#kod: 'her yayının saklanan OpenAPI belgesi' yerine 'her uygulama yayınının saklanan OpenAPI belgesi' (D13-C03); teknik.html#sunucu-mimari: 'istemciler cevap tiplerini yalnız tip olarak alır' cümlesine 'yalnız gönderim cevabı çalışma anında şemayla denetlenir' eki (D13-C02). Hız sınıfı değerleri, under-pressure eşikleri ve Retry-After aralığı ders çıkışı yük testinden sonra teknik.html#sunucu-guvenlik'e yazılsın.",
+      "needs_owner": true
+    }
+  ],
+  "hiz_siniflari": [
+    {
+      "ad": "girissiz",
+      "anahtar": "IP (trustProxy'den)",
+      "dakikada": "3000",
+      "kanca": "onRequest ([girissiz] ve [girissiz, projeksiyon] rotası artırır; öteki rotalar artırmadan okur, kimliksiz 401 onResponse'ta artırır)",
+      "tablo_boyu": "50.000",
+      "anahtar_evreni": "Bir dakikada istek yapan ayrı adres: kampüs NAT'ı ve operatör adresleri, yük testi tahmini 20.000'in altında",
+      "kullanim": "Girişsiz uçlar (eşleştirme kodu ucu dahil) ve kimliksiz biten istekler; D11'in adres başına yeni tarayıcı sınırı bundan ayrı, süreç belleğindedir."
+    },
+    {
+      "ad": "oturum",
+      "anahtar": "giriş oturumu kimliği",
+      "dakikada": "120",
+      "kanca": "preParsing",
+      "tablo_boyu": "200.000",
+      "anahtar_evreni": "Etkin giriş oturumu: öğrenci telefonları ve personel oturumları, yaklaşık 120.000",
+      "kullanim": "Girişli uçların varsayılanı."
+    },
+    {
+      "ad": "agir",
+      "anahtar": "giriş oturumu kimliği",
+      "dakikada": "20",
+      "kanca": "preParsing",
+      "tablo_boyu": "50.000",
+      "anahtar_evreni": "Etkin personel giriş oturumu, 10.000'in altında",
+      "kullanim": "/v1/raporlar/ altındaki bütün rotalar ve öteki pahalı uçlar."
+    },
+    {
+      "ad": "gonderim",
+      "anahtar": "imza doğrulandıysa cihaz kimliği, doğrulanmadıysa giriş oturumu kimliği",
+      "dakikada": "30",
+      "kanca": "preHandler (imza doğrulamasından sonra)",
+      "tablo_boyu": "200.000",
+      "anahtar_evreni": "Etkin öğrenci cihazı ve personel giriş oturumu, yaklaşık 70.000",
+      "kullanim": "Gönderim ucu; bölme dizisini (yaklaşık 16 istek) kaldırır."
+    },
+    {
+      "ad": "saat",
+      "anahtar": "öğrencide cihaz kimliği, personelde giriş oturumu kimliği",
+      "dakikada": "30",
+      "kanca": "preParsing",
+      "tablo_boyu": "200.000",
+      "anahtar_evreni": "Etkin öğrenci cihazı ve personel giriş oturumu, yaklaşık 70.000",
+      "kullanim": "Saat belgesi ucu (D04)."
+    },
+    {
+      "ad": "projeksiyon",
+      "anahtar": "projeksiyon kimliği",
+      "dakikada": "60",
+      "kanca": "preParsing (D11 kancasından sonra)",
+      "tablo_boyu": "10.000",
+      "anahtar_evreni": "Kayıtlı kürsü tarayıcısı, derslik sayısı kadar, 3.000'in altında",
+      "kullanim": "Kürsü kod yoklaması."
+    }
+  ],
+  "surec_tablosu": [
+    {
+      "adim": "Fastify örneği (exposeHeadRoutes false, listen yok)",
+      "api": "var",
+      "isci": "var",
+      "belge": "var"
+    },
+    {
+      "adim": "Kimlik dinleyicileri: D01.kimlikDinleyicileriniKur (dersler, esitleme, projeksiyon, isletim) ve kimlikDinleyicileriHazir, eklentilerden önce",
+      "api": "var",
+      "isci": "var",
+      "belge": "yok (sahte altyapıda olay doğmaz)"
+    },
+    {
+      "adim": "@fastify/under-pressure, hız tabloları (saatli depo)",
+      "api": "var",
+      "isci": "yok",
+      "belge": "yok"
+    },
+    {
+      "adim": "Kök kancalar, oturum kancası, onSend ve onResponse kancaları, yakalayıcılar, rota bekçisi",
+      "api": "var",
+      "isci": "yok",
+      "belge": "var (belgedeki başlıklar ve örtük kodlar için; istek karşılanmaz)"
+    },
+    {
+      "adim": "Modül eklentileri (<ad>Eklentisi, öneksiz): dinleyici, kuyruk öğesi işleyicisi, saklama işleyicisi, iş tanımı kayıtları",
+      "api": "var",
+      "isci": "var",
+      "belge": "var"
+    },
+    {
+      "adim": "rotalariKaydet",
+      "api": "rotaları kaydeder",
+      "isci": "rota kaydetmez, tanımları not eder; tamlık denetimi yok",
+      "belge": "rotaları kaydeder"
+    },
+    {
+      "adim": "@fastify/swagger",
+      "api": "yok",
+      "isci": "yok",
+      "belge": "var"
+    },
+    {
+      "adim": "yayinBilgisiYukle ve listelerin salt okuma tazelemesi",
+      "api": "var",
+      "isci": "var",
+      "belge": "yok (dosya okunmaz)"
+    },
+    {
+      "adim": "Eşik alımı (istemci_surum_esikleri'ne yazma) ve esikDurumu değerlendirmesi",
+      "api": "var",
+      "isci": "yok",
+      "belge": "yok"
+    },
+    {
+      "adim": "Modül zamanlayıcıları (D04 saat_esitleme_denetimi; D15 ölçü yazıcısı yalnız olcumYazici true iken)",
+      "api": "var",
+      "isci": "yok",
+      "belge": "yok"
+    },
+    {
+      "adim": "Altyapı (veritabanı, kuyruk, e-posta)",
+      "api": "gerçek",
+      "isci": "gerçek",
+      "belge": "sahte, her kullanımda fırlatır"
+    }
+  ],
+  "kimlik_birlesimleri": [
+    {
+      "birlesim": "[girissiz]",
+      "kimlik_kurulumu": "Kimlik bilgisi okunmaz, oturum aranmaz; girissiz IP sayacı onRequest'te artar.",
+      "gecersiz_anahtar": "Yok; istek her zaman kimliksiz işlenir.",
+      "hiz": "girissiz"
+    },
+    {
+      "birlesim": "[girissiz, oturum]",
+      "kimlik_kurulumu": "Kimlik bilgisi okunur; geçerliyse kimlik kurulur.",
+      "gecersiz_anahtar": "Geçersiz anahtar isteği düşürmez: istek kimliksiz işlenir, istek.oturumHatasi dolar.",
+      "hiz": "{ kimliksiz: 'girissiz', kimlikli: 'oturum' } ya da tek sınıf; kimliksiz istek girissiz sayacına girer."
+    },
+    {
+      "birlesim": "[oturum]",
+      "kimlik_kurulumu": "Kimlik bilgisi yoksa gövde okunmadan 401 API_KIMLIK_GEREKLI. Projeksiyon çerezi kimlik sayılmaz: yalnız onu taşıyan istek 401 API_KIMLIK_GEREKLI alır.",
+      "gecersiz_anahtar": "Geçersiz anahtar gövde okunmadan 401 (D01 kodu).",
+      "hiz": "Kimlikli sınıf (oturum, agir ya da saat)."
+    },
+    {
+      "birlesim": "[cihazImzasi, oturum]",
+      "kimlik_kurulumu": "Biri yeter. İmza gövdede olduğundan gövde önce okunur, D06'nın kimlikKancasi preHandler'da doğrular. İkisi de doğrulanırsa tur cihaz, kaynak imza, girisOturumuId korunur.",
+      "gecersiz_anahtar": "Geçersiz anahtar istek.oturumHatasi'na yazılır; kısıtlı oturum kimliğe taşınmaz (KIMLIK_KAPSAM_SINIRLI); hiçbiri doğrulanmazsa 401 ve kimliksiz sayaç artar.",
+      "hiz": "gonderim (cihaz, yoksa giriş oturumu)."
+    },
+    {
+      "birlesim": "[projeksiyon]",
+      "kimlik_kurulumu": "Oturum aranmaz, Bearer ve oturum çerezi okunmaz. Çerezin okunabildiği istekte (GET ya da istek.panelden true olan yazma isteği) kök kanca istek.projeksiyonAnahtari'nı __Host-yoklama-projeksiyon çerezinden doldurur; D11'in kimlikKancasi preParsing'de doğrular.",
+      "gecersiz_anahtar": "Doğrulanmazsa 401 ve kimliksiz sayaç artar.",
+      "hiz": "projeksiyon"
+    },
+    {
+      "birlesim": "[girissiz, projeksiyon]",
+      "kimlik_kurulumu": "D11'in eşleştirme kodu ucu (I052). Oturum aranmaz; çerezin okunabildiği istekte kök kanca istek.projeksiyonAnahtari'nı doldurur, D11'in kimlikKancasi preParsing'de doğrular ve tanırsa istek.kimlik'e tarayıcıyı yazar.",
+      "gecersiz_anahtar": "Hata değil: tanınmayan ya da kapanmış çerez ve çerezsiz istek kimliksiz işlenir, D11 yeni tarayıcı sayar.",
+      "hiz": "girissiz (tek sınıf; her istek IP sayacında, onRequest'te). D11'in adres başına yeni tarayıcı sınırı istek.ip'yi yalnız süreç belleğindeki sayacında kullanır."
+    }
+  ],
+  "saat_oznesi_eslemesi": [
+    {
+      "kimlik": "tur ogrenci (öğrenci oturumu, Bearer)",
+      "ozne": "{ tur: 'ogrenci_cihazi', cihazId: Kimlik.cihazId }",
+      "not": "Öğrenci oturumu cihaza bağlıdır; cihazId yoksa belge yok."
+    },
+    {
+      "kimlik": "tur cihaz (imza doğrulandı)",
+      "ozne": "{ tur: 'ogrenci_cihazi', cihazId: Kimlik.cihazId }",
+      "not": "cihazId imzalayan cihazdır (D06'nın kancası yazar); gönderim cevabı da belge taşır."
+    },
+    {
+      "kimlik": "tur personel, kaynak bearer (hoca telefonu)",
+      "ozne": "{ tur: 'personel', kisiId: Kimlik.kisiId }",
+      "not": "Kişi kimliği; giriş oturumu kimliği hiçbir zaman özne olmaz (D04-B14)."
+    },
+    {
+      "kimlik": "kaynak cerez (panel)",
+      "ozne": "yok",
+      "not": "Panel X-Saat-Istegi koymaz; D04 belge ucu çerez kabul etmez."
+    },
+    {
+      "kimlik": "tur projeksiyon",
+      "ozne": "yok",
+      "not": "Kürsü belge kullanmaz."
+    },
+    {
+      "kimlik": "kimlik yok (girişsiz)",
+      "ozne": "yok",
+      "not": "Belgeye yazılacak doğrulanmış özne yok."
+    }
+  ],
+  "veritabani_hata_eslemesi": [
+    {
+      "sqlstate": "40P01, 40001 (D12 bir kez yeniden denedikten sonra), 55P03",
+      "tur": "kilitlenme",
+      "d12_kodu": "VERITABANI_KILITLENME 503",
+      "kok_yakalayici": "API_SUNUCU_YOGUN 503 (yedek tablo, ikinci güvence)",
+      "bekleme": "aralik [15, 45]"
+    },
+    {
+      "sqlstate": "53300, havuz bekleme aşımı (2 saniye)",
+      "tur": "havuz",
+      "d12_kodu": "VERITABANI_HAVUZ_DOLU 503",
+      "kok_yakalayici": "API_SUNUCU_YOGUN 503 (yedek tablo, ikinci güvence)",
+      "bekleme": "aralik [15, 45]"
+    },
+    {
+      "sqlstate": "57P01, 57P02, 57P03, 25P03, 08 sınıfı",
+      "tur": "erisilemez",
+      "d12_kodu": "VERITABANI_ERISILEMEZ 503",
+      "kok_yakalayici": "API_SUNUCU_YOGUN 503 (yedek tablo, ikinci güvence)",
+      "bekleme": "aralik [15, 45]"
+    },
+    {
+      "sqlstate": "57014, 25P04",
+      "tur": "zaman_asimi",
+      "d12_kodu": "VERITABANI_ZAMAN_ASIMI 503",
+      "kok_yakalayici": "API_SORGU_ZAMAN_ASIMI 503 (yedek tablo, ikinci güvence)",
+      "bekleme": "aralik [15, 45]; panel yeniden denemez"
+    },
+    {
+      "sqlstate": "Nesil iki kaynakta tutarsız",
+      "tur": "yok (D12'nin kendi denetimi)",
+      "d12_kodu": "VERITABANI_NESIL_BELIRSIZ 503",
+      "kok_yakalayici": "yok",
+      "bekleme": "aralik [15, 45]"
+    },
+    {
+      "sqlstate": "23 sınıfı ve öteki her SQLSTATE",
+      "tur": "yok",
+      "d12_kodu": "VeritabaniHatasi, http 500",
+      "kok_yakalayici": "API_SUNUCU_HATASI 500",
+      "bekleme": "yok; log cause'daki neden, sqlstate, kısıt ve tabloyu yazar, değer yazmaz"
+    }
+  ],
+  "ortuk_kodlar": [
+    {
+      "kapsam": "Her rota",
+      "kodlar": "Bütün API_ kodları; VERITABANI_HAVUZ_DOLU, VERITABANI_KILITLENME, VERITABANI_ERISILEMEZ, VERITABANI_ZAMAN_ASIMI, VERITABANI_NESIL_BELIRSIZ; D14'ün http değeri 500 olan IS_KUYRUGU_ kodları (isGonder hataları)"
+    },
+    {
+      "kapsam": "Kimliğinde oturum olan rota",
+      "kodlar": "Ayrıca KIMLIK_OTURUM_YOK, KIMLIK_OTURUM_BITTI, KIMLIK_KAPSAM_SINIRLI"
+    },
+    {
+      "kapsam": "Hiçbir rota",
+      "kodlar": "http null işletim kodları (D12, D14'ün yalnız işçide doğan IS_KUYRUGU_ kodları, D15 açılış kodları): istekte fırlatılırsa 500 API_SUNUCU_HATASI ve kod loglanır"
+    }
+  ],
+  "sure_butcesi": [
+    {
+      "katman": "Telefon istemcisi",
+      "sure": "30 s (saat belgesi isteğinde 10 s)",
+      "asim": "Aşılınca gecici, telefon yeniden dener (D04, teknik.html#telefon-gonderme-protokolu)."
+    },
+    {
+      "katman": "Caddy response_header_timeout",
+      "sure": "25 s",
+      "asim": "Aşılınca zarfsız 502 ya da 504; fetch yardımcısı gecici sayar (D15)."
+    },
+    {
+      "katman": "Fastify requestTimeout",
+      "sure": "20 s",
+      "asim": "Yalnız isteğin alınması; aşılınca Node 408."
+    },
+    {
+      "katman": "İşleyici bütçesi (kalanSureMs)",
+      "sure": "20 s, istek gelişinden",
+      "asim": "Aşan işleyici 503 API_SORGU_ZAMAN_ASIMI; gönderim kalan öğelere TEKRAR_DENE ESITLEME_ZAMAN_BUTCESI döner."
+    },
+    {
+      "katman": "agir rotada deyim",
+      "sure": "en çok 15 s (min(15000, kalanSureMs))",
+      "asim": "D12 islem zamanAsimiMs; aşım VERITABANI_ZAMAN_ASIMI 503."
+    },
+    {
+      "katman": "Yazan işlemde deyim",
+      "sure": "5 s (D12 rol süresi)",
+      "asim": "Gönderim parçaları SAVEPOINT ile; aşım parça düzeyinde TEKRAR_DENE (D06)."
+    },
+    {
+      "katman": "Havuz beklemesi",
+      "sure": "2 s",
+      "asim": "Aşım VERITABANI_HAVUZ_DOLU 503 (D12)."
+    }
+  ],
+  "iki_yonlu_ciftler": [
+    {
+      "cift": "D01 ile D02",
+      "index_yonu": "Yok: iki yön de yaprak dosyasından geçer.",
+      "yaprak_yonu": "D02 D01'i yalnız modules/kimlik/yaprak.ts'ten (kisiGetir, personelRolleri, yetkiDenetle, hesapSilindiMi); D01 D02'yi yalnız modules/dersler/yaprak.ts'ten (birimGetir, dersYetkisi, kilitliBirimDonemleri) içe aktarır."
+    },
+    {
+      "cift": "D01 ile D07",
+      "index_yonu": "D01 D07'nin index.ts'ini içe aktarır (cihazKanitiniDogrula, dogrulamaDegeriniTuket, yenidenDegerlendir).",
+      "yaprak_yonu": "D07 D01'i yalnız modules/kimlik/yaprak.ts'ten ya da app.ts'in verdiği eklenti seçeneğiyle kullanır."
+    },
+    {
+      "cift": "D05 ile D07",
+      "index_yonu": "D05 D07'nin index.ts'ini içe aktarır (kararHesapla, kararGecmisineYaz, appAttestSayaciniDenetle).",
+      "yaprak_yonu": "D07 D05'i yalnız modules/yoklama/yaprak.ts'ten ya da app.ts'in verdiği eklenti seçeneğiyle kullanır."
+    },
+    {
+      "cift": "D08 ile D09",
+      "index_yonu": "D09 D08'in index.ts'ini (dersSonuclari, sonucuDegistirebilirMi, ogrenciDevamDurumu) ve modules/devam/yaprak.ts'i (devamHesaplaIsiKoy) içe aktarır.",
+      "yaprak_yonu": "D08 D09'u yalnız modules/duzeltmeler/yaprak.ts (duzeltmeleriGetir, acikSorunBildirimleri) ve packages/core/src/duzeltmeler (sonDurumOnceligi) üstünden kullanır, D09'un index.ts'ini içe aktarmaz."
+    }
+  ],
+  "paket_dosyalari": [
+    {
+      "dosya": "packages/contracts/package.json",
+      "icerik": "Çalışma alanı paketi; exports her giriş noktası için iki koşul verir: kaynak (./src/<ad>.ts; Metro unstable_conditionNames, Vite resolve.conditions, tsconfig customConditions ve geliştirme ile testte node --conditions=kaynak) ve default (./dist/<ad>.js ile ./dist/<ad>.d.ts; imajdaki sunucu). Giriş noktaları: ., ./ortak, ./istemci, ./rotalar, ./hatalar ve her modülün sözleşme dosyası (./*). Bağımlılıklar zod (sürüm D15'in pnpm kataloğundan) ve packages/core çalışma alanı paketi (workspace:*; I031): sözleşme dosyaları core'daki sabit listeleri (ör. packages/core/src/dogrulama/kodlar.ts) içe aktarabilir; core packages/contracts'ı çalışma anında içe aktarmaz, gerekirse yalnız import type kullanır (sınır testi denetler). Node yerleşik modülü yok."
+    },
+    {
+      "dosya": "packages/contracts/tsconfig.json",
+      "icerik": "D15'in tsconfig.base.json'ını genişletir; types: [] (Node tipleri yok, node: içe aktarması derlemede hata), lib: ES2022 ve DOM (fetch, AbortController, URL tipleri; çalışma anında yalnız Hermes ve Chrome 109'da olanlar kullanılır, D13-B23), allowImportingTsExtensions, noEmit. Biome noNodejsModules bu pakette hata düzeyinde (D15'in Biome yapılandırması)."
+    },
+    {
+      "dosya": "packages/contracts/tsconfig.build.json",
+      "icerik": "tsconfig.json'ı genişletir; noEmit false, rewriteRelativeImportExtensions: true (göreli .ts içe aktarmaları .js'e çevrilir), declaration: true, rootDir src, outDir dist; src/**/testler/** ve *.test.ts hariç. D15'in imaj derlemesi bu dosyayla çalışır; imaj açılış denetimi derlenmiş paketi koşulsuz içe aktarır; core'dan gelen içe aktarmalar core'un derlenmiş girişine çözülür."
+    }
+  ],
+  "goc": {
+    "klasor": "apps/server/migrations/<14 haneli UTC>_api_<açıklama>/",
+    "dosyalar": "migration.sql ve snapshot.json",
+    "glob": "apps/server/migrations/??????????????_api_*",
+    "kural": "Yalnız D13 api belirteciyle klasör açar; göç yalnız istemci_surum_esikleri'ne dokunur ve teknik.html#sunucu-mimari'deki yönteme uyar (drizzle-kit, önce genişlet sonra daralt). Göç dosyaları dosya listesine değil iş paketine yazılır. Klasör kuralı ve CI göç denetimi D12'nindir. Paralel paketler birleşmeden önce ana dala yeniden dayanır; dallandıktan sonra ana dala göç girdiyse D13 kendi klasörünü silip drizzle-kit generate ile yeniden üretir (A1)."
+  }
+}

@@ -1,0 +1,385 @@
+{
+ "id": "D05",
+ "packages": [
+  {
+   "id": "D05-P01",
+   "title": "Sözleşme, zarf kodlaması ve çift anahtarı",
+   "files": [
+    "packages/contracts/src/yoklama.ts",
+    "packages/core/src/yoklama/zarf.ts",
+    "packages/core/src/yoklama/zarf.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "yoklamaCiftAnahtari"
+   ],
+   "needs": [
+    "D13.ogeTuruTanimla",
+    "D13.rotaTanimla",
+    "D13.hataKodlariTanimla",
+    "D13.genisleyenEnum",
+    "D13.kimlikSemasi",
+    "D13.anSemasi"
+   ],
+   "tests": [
+    "Zarf gidiş dönüşü"
+   ],
+   "depends_on": [],
+   "size": "M",
+   "notes": "Kayıt metni, zarf ve okutma gövdesi şemaları, tipler, YOKLAMA_ hata kodları, denetim olayı şemaları, rota tanımı ve yoklamaCiftAnahtari sözleşmeye, zarf ayrıştırma ve üretme packages/core'a yazılır; zarf gidiş dönüşü özellik testiyle (numRuns 1000, kanonik olmayan base64url ve 1274 bayt reddi dahil) sınanır."
+  },
+  {
+   "id": "D05-P02",
+   "title": "Saf çekirdek: karşılaştırma, sayılan sırası, gerekçe tablosu ve panel sayıları",
+   "files": [
+    "packages/core/src/yoklama/karsilastir.ts",
+    "packages/core/src/yoklama/karsilastir.test.ts",
+    "packages/core/src/yoklama/sayilan.ts",
+    "packages/core/src/yoklama/sayilan.test.ts",
+    "packages/core/src/yoklama/gerekceler.ts",
+    "packages/core/src/yoklama/gerekceler.test.ts",
+    "packages/core/src/yoklama/panelSayilari.ts",
+    "packages/core/src/yoklama/panelSayilari.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D04.IKINCI_CAPA_YOK_NEDENLERI"
+   ],
+   "tests": [
+    "Panel sayıları tasarım örneği",
+    "Panel sayıları bölüşümü",
+    "Sayılan seçimi gelişin sırasından bağımsız",
+    "Karşılaştırma tablosu",
+    "Zarf ve sayılan mutasyonu"
+   ],
+   "depends_on": [
+    "D05-P01"
+   ],
+   "size": "M",
+   "notes": "Zarf karşılaştırma tablosu, sayilanSec sırası, saklamadan ret ve ikinci çapa yokluk sınıflaması ile panel bölüşümü saf işlev olarak yazılır; tasarım örneği, bölüşüm ve permütasyon özellik testleri ile Stryker kırma eşiği (%90) ve bilerek bozulan kurallarla sınanır."
+  },
+  {
+   "id": "D05-P03",
+   "title": "Tablolar, tablo göçü, saat sütunları ve test kurucusu",
+   "files": [
+    "apps/server/src/modules/yoklama/tablolar.ts",
+    "packages/core/src/yoklama/saatSutunlari.ts",
+    "packages/core/src/yoklama/saatSutunlari.test.ts",
+    "apps/server/test/support/kurucular/yoklama.ts",
+    "apps/server/migrations/20261012080000_yoklama_tablolar/migration.sql",
+    "apps/server/migrations/20261012080000_yoklama_tablolar/snapshot.json"
+   ],
+   "tables": [
+    "yoklama_kayitlari",
+    "makbuz_okutmalari"
+   ],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D12.tabloYardimcilari",
+    "D12.kisitAdi",
+    "D04.saatSonucu",
+    "D04.ILK_CAPA_DURUMLARI",
+    "D04.IKINCI_CAPA_DURUMLARI",
+    "D04.SAAT_DURUMLARI",
+    "D04.SAAT_KAYNAKLARI",
+    "D04.PENCERE_SONUCLARI"
+   ],
+   "tests": [
+    "İkinci çapa değerleri sözleşmesi",
+    "Saat sonucu sütun gidiş dönüşü",
+    "CHECK listeleri sözleşmeyle aynı"
+   ],
+   "depends_on": [
+    "D05-P01"
+   ],
+   "size": "L",
+   "notes": "İki tablo dizinleri, üretilmiş saat_sebebi ve ele_gecmis_anahtar sütunları ve sözleşmeden içe alınan CHECK listeleriyle Drizzle şemasına ve drizzle-kit generate göçüne, SaatSonucu sütun eşlemesi packages/core'a, kayıt, okutma ve imzalı zarf kurucuları test desteğine yazılır; gerçek veritabanında saat gidiş dönüşü, D04 değerleriyle CHECK sözleşmesi (23514) ve D12 şema testiyle sınanır."
+  },
+  {
+   "id": "D05-P04",
+   "title": "Yaprak: kayıt okuma, kilitleme, sayılan seçimi ve karar yazımı",
+   "files": [
+    "apps/server/src/modules/yoklama/yaprak.ts",
+    "apps/server/src/modules/yoklama/sayilanSecimi.ts",
+    "packages/core/src/yoklama/index.ts",
+    "apps/server/test/features/yoklama/sayilan-kayit.feature",
+    "apps/server/test/steps/yoklama/kayit-adimlari.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "kayitGetir",
+    "kayitlariKilitle",
+    "oturumKayitlari",
+    "sayilanKayitlar",
+    "kararSutunlariniYaz"
+   ],
+   "needs": [
+    "D12.danismaKilidi",
+    "D08.devamHesaplaIsiKoy",
+    "D06.ogrenciDurumuDegisti"
+   ],
+   "tests": [
+    "Karar değişince sayılan yeniden seçilir",
+    "Onay girdisi doldurulur ve boşaltılır",
+    "Kendi beyanı onaysız süzgeci",
+    "Ders ve etiket süzgeci",
+    "Modül sınırı",
+    "İlk kesin karar bir kez yazılır"
+   ],
+   "depends_on": [
+    "D05-P02",
+    "D05-P03"
+   ],
+   "size": "L",
+   "notes": "D07, D08 ve D09'un beklediği yaprak işlevleri, (oturum, öğrenci) çift kilidi ve sayılanın kilit altında yeniden seçimi yalnız izinli yaprak içe aktarmalarıyla yazılır; kurucuyla kurulan satırlarda sayılan, onay, süzgeç ve sorgu planı senaryoları, gerçek veritabanında karar sürümü özellik testi (numRuns 300) ve D13 modül sınırı testiyle sınanır."
+  },
+  {
+   "id": "D05-P05",
+   "title": "İmza ve bağ denetimi, kilit anahtarları, denetim sınırı, kanıt ve yetki göçü",
+   "files": [
+    "apps/server/src/modules/yoklama/imzaDogrula.ts",
+    "packages/core/src/yoklama/ornekZarflar.ts",
+    "apps/server/src/modules/yoklama/kilit.ts",
+    "apps/server/src/modules/yoklama/islemOnbellegi.ts",
+    "apps/server/src/modules/yoklama/denetimSiniri.ts",
+    "apps/server/src/modules/yoklama/kanit.ts",
+    "apps/server/src/cli/yoklama-kaniti.ts",
+    "apps/server/test/features/yoklama/degismezlik.feature",
+    "apps/server/migrations/20261012080100_yoklama_yetkiler/migration.sql",
+    "apps/server/migrations/20261012080100_yoklama_yetkiler/snapshot.json"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "kanitCikar"
+   ],
+   "needs": [
+    "D01.cihazAnahtariGetir",
+    "D01.kisiGetir",
+    "D02.oturumGetir",
+    "D07.kararAnahtarlari",
+    "D11.qrKilitAnahtarlari",
+    "D09.denetimeYaz",
+    "D04.istanbulTarihi",
+    "D15.log",
+    "D12.veritabaniKur"
+   ],
+   "tests": [
+    "Değişmez sütunlar korunur",
+    "Kanıt çıkarma",
+    "Kanıt komutu",
+    "Değişmezlik yetkisi mutasyonu"
+   ],
+   "depends_on": [
+    "D05-P04"
+   ],
+   "size": "L",
+   "notes": "Üç imza türünün doğrulaması ve bağ denetimi, kilitAnahtarlari kancası, işlem önbelleği, günlük denetim sınırı, kanitCikar ve kanıt komutu ile REVOKE ve sütun GRANT göçü yazılır; kanıtın saklı anahtarla yeniden doğrulanması, kanıt komutunun çıkış kodları, rol yetkisi senaryoları ve REVOKE mutasyonuyla sınanır, kanca ve sınır davranışı P06 ile P07 senaryolarında da koşar."
+  },
+  {
+   "id": "D05-P06",
+   "title": "Öğrenci kaydı gönderimi: kayıt işleme çekirdeği ve kayıt işleyicisi",
+   "files": [
+    "apps/server/src/modules/yoklama/kayitIsle.ts",
+    "apps/server/src/modules/yoklama/yoklamaKaydiOgesi.ts",
+    "apps/server/test/features/yoklama/kayit-gonderme.feature",
+    "apps/server/test/steps/yoklama/durum-makinesi-adimlari.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "yoklamaKaydiOgesi"
+   ],
+   "needs": [
+    "D04.saatSonucu",
+    "D04.pencereSonucu",
+    "D04.esitlemeSaglikliMi",
+    "D07.kararHesapla",
+    "D07.kararGecmisineYaz",
+    "D07.appAttestSayaciniDenetle",
+    "D11.qrKanitiniAyristir",
+    "D08.devamHesaplaIsiKoy",
+    "D06.ogrenciDurumuDegisti",
+    "D06.ogeTuruKaydet",
+    "D09.denetimOlaylariniKaydet",
+    "D15.log"
+   ],
+   "tests": [
+    "Aynı kayıt iki kez gönderilir",
+    "Denetim olayı sınırı",
+    "Öğe kimliği metindeki kimlikten farklı",
+    "Başka öğrencinin adına imzalanmış kayıt",
+    "Başka öğrencinin telefonundan gönderilen kayıt",
+    "Bozuk öğe paketi düşürmez",
+    "Listede olmayan derse kayıt",
+    "Silinmiş hesabın kaydı",
+    "Oturum başına kayıt sınırı",
+    "İkinci çapası onarılabilir kayıt bekler",
+    "Bilinmeyen biçim sürümü",
+    "Bağlam değişiyor",
+    "Pencere sonucu kilit sırasıyla alınır",
+    "Öğrenci sürümü çağrının sonunda bir kez",
+    "Ulaşma anı GelenOge'den",
+    "Yan etki belleği parça geri alınınca",
+    "iOS 27 onay uzantıları",
+    "Kayıtlı örnek zarflar"
+   ],
+   "depends_on": [
+    "D05-P04",
+    "D05-P05"
+   ],
+   "size": "L",
+   "notes": "Kimlik karşılaştırması, sıra ve oturum sınırı, saat kurma, oturum sırasıyla pencere sonucu, D07 kararı, ON CONFLICT ekleme ve son adımda devam işi ile öğrenci sürümü isleToplu içinde yazılır; işleyici test uygulamasına kaydedilerek POST /v1/esitleme/gonderim üzerinden öğe sonucu, satır, denetim, log ve sahte D04, D07 ve D12 çağrı günlüğü senaryolarıyla sınanır."
+  },
+  {
+   "id": "D05-P07",
+   "title": "Makbuz okutması ve eşzamanlı gönderim durum makinesi",
+   "files": [
+    "apps/server/src/modules/yoklama/makbuzOkutmasiOgesi.ts",
+    "apps/server/test/features/yoklama/makbuz-okutma.feature",
+    "apps/server/test/features/yoklama/gonderme-durum-makinesi.feature",
+    "apps/server/test/steps/yoklama/okutma-adimlari.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "makbuzOkutmasiOgesi"
+   ],
+   "needs": [
+    "D02.dersYetkisi",
+    "D02.dersGetir",
+    "D04.saatSonucu",
+    "D06.ogeTuruKaydet"
+   ],
+   "tests": [
+    "İmzasız çakışmalar iz bırakmaz",
+    "Aynı dönemde (cihaz, sıra) başka kimlikle gelir",
+    "Hocanın makbuz okutması",
+    "Başka hocanın okutması",
+    "Devirden önce okutulan makbuz",
+    "Aynı okutma öğesi iki kez gelir",
+    "Reddedilmiş okutma yeniden gelir",
+    "Okutma öğesi başka hesabın adıyla gelir",
+    "Aynı öğrencinin aynı oturuma iki kaydı aynı anda gelir",
+    "Kilit anahtarları kancası",
+    "Eklenmeyen yarış iz bırakmaz",
+    "Gönderme ucu durum makinesi"
+   ],
+   "depends_on": [
+    "D05-P05",
+    "D05-P06"
+   ],
+   "size": "L",
+   "notes": "Hocanın okutma işleyicisi hesap ve ders sahipliği denetimi, devirden önceki sahiplik, personel öznesiyle okutma anı ve deneme satırlarıyla yazılır; okutma senaryoları, iki bağlantılı eşzamanlı gönderim ve kilit kancası senaryoları ile iki öğe türünü karıştıran fast-check durum makinesi (numRuns 200, sabit tohum 20261010) ile sınanır."
+  },
+  {
+   "id": "D05-P08",
+   "title": "Oturum kayıtları ucu",
+   "files": [
+    "apps/server/src/modules/yoklama/oturumKayitlariUcu.ts",
+    "apps/server/test/features/yoklama/oturum-kayitlari-ucu.feature",
+    "apps/server/test/steps/yoklama/uc-adimlari.ts"
+   ],
+   "tables": [],
+   "endpoints": [
+    "GET /v1/yoklama/oturumlar/{oturumId}/kayitlar"
+   ],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D02.oturumGetir",
+    "D02.dersYetkisi",
+    "D02.kilitDurumu",
+    "D02.OTURUM_TURLERI",
+    "D02.OTURUM_DURUMLARI",
+    "D02.IPTAL_NEDENLERI",
+    "D03.listeSatirlari",
+    "D01.ogrenciHesabiGetir",
+    "D09.duzeltmeleriGetir",
+    "D09.sonDurumOnceligi",
+    "D06.gondermeSuresiSonu",
+    "D08.DEVAM_SON_DURUMLARI",
+    "D13.hizSinifi",
+    "D13.uygulamaHatasi"
+   ],
+   "tests": [
+    "Kafa sayısı girilmeden liste gizlidir",
+    "Son durum sayım dışı, kilitli ve MUAF",
+    "İki şubeli büyük oturum",
+    "Bir numarada iki hesap",
+    "Başka hocanın oturumu sorulur",
+    "Hesabı olmayan öğrenci oturum listesinde",
+    "Genişleyen değerler",
+    "Rota tablosu kimlik denetimi"
+   ],
+   "depends_on": [
+    "D05-P04"
+   ],
+   "size": "M",
+   "notes": "Dersin sahibine kafa sayısı ya da yapıldı cevabından sonra şube satırlarını, sayılan kaydı, son durumu, panel sayılarını ve liste dışı kayıt sayısını dönen uç yazılır; görünürlük, son durum, iki şubeli 4.000 satırlık oturum, bir numarada iki hesap, 404 ve 403 ret, genişleyen değer ve oasdiff senaryolarıyla sınanır."
+  },
+  {
+   "id": "D05-P09",
+   "title": "Eklenti, indirme kaynağı, saklama ve tam bileşim senaryoları",
+   "files": [
+    "apps/server/src/modules/yoklama/index.ts",
+    "apps/server/src/modules/yoklama/eklenti.ts",
+    "apps/server/src/jobs/yoklama/index.ts",
+    "apps/server/src/modules/yoklama/indirmeKaynagi.ts",
+    "apps/server/src/modules/yoklama/saklama.ts",
+    "apps/server/test/features/yoklama/saklama-ve-kanit.feature",
+    "apps/server/test/features/yoklama/zaten-var-ve-ret.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "yoklamaEklentisi",
+    "ogrencininKayitlari"
+   ],
+   "needs": [
+    "D06.ogeTuruKaydet",
+    "D06.indirmeKaynagiKaydet",
+    "D12.saklamaIsleyicisiKaydet",
+    "D12.saklamaIsleyicisiniCalistir",
+    "D09.denetimOlaylariniKaydet",
+    "D13.rotalariKaydet",
+    "D13.EklentiTemelSecenekleri",
+    "D02.kilitliBirimDonemleri"
+   ],
+   "tests": [
+    "İmzalı başka metin aynı kimlikle gelir",
+    "Aynı metin aynı anahtarın yeni imzasıyla gelir",
+    "Aynı kimlik başka dönemin oturumuyla gelir",
+    "Karar sürümü telefona iner",
+    "Yedekten dönen eski cihaz kaydı yeni telefondan",
+    "Yedekten dönüşte ulaşma anı korunur",
+    "Öğrencinin indirmesi yalnız kendi kayıtlarını verir",
+    "Saklama sınıfı",
+    "Eklenti birleşimi",
+    "Denetim olayları kaydı",
+    "Öğe gövde şemaları",
+    "Ders çıkışı yükü"
+   ],
+   "depends_on": [
+    "D05-P06",
+    "D05-P07",
+    "D05-P08"
+   ],
+   "size": "M",
+   "notes": "yoklamaEklentisi iki öğe türünü, öğrenci indirme kaynağını, 'yoklama.donem_verisi' saklama sınıfını, denetim olaylarını ve rotayı veritabanına dokunmadan kaydeder, ogrencininKayitlari ve saklama partisi yazılır; tam bileşimde eklenti, saklama, indirme, çakışan ve yeniden gönderilen kayıt senaryoları ile D15 ders çıkışı yük profiliyle sınanır."
+  }
+ ]
+}

@@ -1,0 +1,1590 @@
+{
+  "id": "D02",
+  "title": "Ders, program ve oturum üretimi",
+  "decided": [
+    {
+      "id": "D02-K01",
+      "fact": "Hoca web panelinden dersini ve programını girer: gün, saat, derslik ve her ders saatinin teori mi uygulama mı olduğu. Oturumlar programdan otomatik üretilir; hoca oturumları tek tek açmaz (Hoca ve yönetici, Web paneli hoca).",
+      "anchor": "plan.html#hoca",
+      "quote": "Ders ve program: gün, saat, derslik, her saatin teori mi uygulama mı olduğu; oturumlar programdan otomatik üretilir."
+    },
+    {
+      "id": "D02-K02",
+      "fact": "Program ve yoklama süresi ders gününden önce, internet varken hoca tarafından ayarlanır (Yoklama günü, adım 1); oturumların telefona dersten önce inmiş olması bu sıraya dayanır.",
+      "anchor": "plan.html#gun",
+      "quote": "Hoca öğrenci listesini yükler; ders programını (her saatin teori/uygulama türüyle) ve yoklama süresini ayarlar."
+    },
+    {
+      "id": "D02-K03",
+      "fact": "Yoklama süresi hocanın ders ayarıdır (öneri 15 dakika, örnek 09:00 ile 09:15) ve seçilmeyebilir; pencereye etkisi D04'ün kapsamında, alanın nerede tutulacağı D02-B26 (Kararlar, Yoklama penceresi satırı).",
+      "anchor": "plan.html#kararlar-inceleme-hesaplari",
+      "quote": "hoca ders ayarında süre seçtiyse o süre sonunda sayaçla kapanır (öneri 15 dakika, örnek 09:00 ile 09:15)."
+    },
+    {
+      "id": "D02-K04",
+      "fact": "Veri modeli taslağı: dersler, ders saatleri ve şubeler gün, yerel saat, derslik, teori ya da uygulama türü ve yoklama süresini taşır; derste teori ve uygulama için iki ayrı p alanı vardır (varsayılan 70 ve 80).",
+      "anchor": "teknik.html#kod-veri-modeli",
+      "quote": "Dersler, ders saatleri ve şubeler: gün, yerel saat, derslik, teori ya da uygulama, yoklama süresi; derste teori ve uygulama için iki ayrı p değeri"
+    },
+    {
+      "id": "D02-K05",
+      "fact": "Öğrenci listesi şubeye bağlıdır; bir oturum birlikte işlenen birden çok şubeyi kapsayabilir (sonuç olarak oturum ile şube arasında çoktan çoğa ilişki vardır).",
+      "anchor": "teknik.html#kod-veri-modeli",
+      "quote": "Ders listesi şubeye bağlı; oturum, birlikte işlenen birden çok şubeyi kapsayabilir."
+    },
+    {
+      "id": "D02-K06",
+      "fact": "Dersin teori ve uygulama devam oranları (p) iki ayrı alandır; varsayılan teoride 70, uygulamada 80. Alanlar ders satırında, anlamları D08'in.",
+      "anchor": "plan.html#devam-uyari-seviyeleri",
+      "quote": "derste teori ve uygulama için iki ayrı alan, varsayılan teoride 70, uygulamada 80."
+    },
+    {
+      "id": "D02-K07",
+      "fact": "Kuralı farklı programdaki dersin teori ve uygulama oranlarını yönetici değiştirir (ör. hazırlıkta bütün saatlerde %80); planda yöneticinin bir derse yazdığı tek alan budur.",
+      "anchor": "plan.html#devam",
+      "quote": "Kuralı farklı programda (ör. hazırlıkta bütün saatlerde %80) yönetici dersin teori ve uygulama oranlarını (iki ayrı p) değiştirir."
+    },
+    {
+      "id": "D02-K08",
+      "fact": "Roller yönetici ve hocadır; asistan ve ortak hoca rolleri sonraya bırakıldı. Sonuç olarak ilk sürümde bir dersin tek hocası vardır.",
+      "anchor": "plan.html#kararlar-roller",
+      "quote": "Yönetici, hoca; asistan, ortak hoca rolleri sonra."
+    },
+    {
+      "id": "D02-K09",
+      "fact": "Sınıf listesi yalnız o dersin hocasının telefonuna iner; amaç internetsiz elle ekleme ve telafi işaretlemesidir. Belge dersi tek bir hocaya bağlı anlatır.",
+      "anchor": "plan.html#kararlar-indirme",
+      "quote": "sınıf listesi yalnız o dersin hocasının telefonuna iner (internetsiz elle ekleme ve telafi işaretlemesi için)"
+    },
+    {
+      "id": "D02-K10",
+      "fact": "Davranış senaryolarında hocanın başka hocanın dersini görmesi ya da onaylaması ret beklentisiyle yazılır; her biri önce kırmızı yazılır (Başlangıç, adım 3).",
+      "anchor": "plan.html#baslangic",
+      "quote": "Yetki ve hile: başka hocanın dersini görme ya da onaylama"
+    },
+    {
+      "id": "D02-K11",
+      "fact": "\"Ders ve program\" Türkçe davranış senaryosu yazılacak konulardan biridir; sunucu, senaryolar modül modül yeşile çevrilerek yazılır (Başlangıç, adım 3 ve 4).",
+      "anchor": "plan.html#baslangic",
+      "quote": "önce Türkçe yazılır: hoca kaydı ve yönetici onayı, ders ve program"
+    },
+    {
+      "id": "D02-K12",
+      "fact": "Kökteki oturum doğrulama kancası panel çerezini ya da telefonun Bearer anahtarını oturumla eşleştirip isteğe hocanın kimliğini ekler; ders sahipliği denetimi bu kimliğe dayanır.",
+      "anchor": "teknik.html#sunucu",
+      "quote": "gelen çerezi ya da Bearer anahtarını oturumla eşleştirip isteğe hocanın kimliğini ekler"
+    },
+    {
+      "id": "D02-K13",
+      "fact": "Oturum tablosu her ders günü için satır tutar ve açılış ile kapanış anını UTC (timestamptz) taşır (Veri modeli, Oturumlar).",
+      "anchor": "teknik.html#kod-veri-modeli",
+      "quote": "Oturumlar: her ders günü; açılış ve kapanış anı (UTC,"
+    },
+    {
+      "id": "D02-K14",
+      "fact": "Oturumun anlarını sunucu üretir ve telefona indirir; oturumda kapandı mı (süresi dolanı zamanlanmış iş kapatır), kafa sayısı, yapıldı mı ve ayar değişiklikleri alanları vardır.",
+      "anchor": "teknik.html#kod-veri-modeli",
+      "quote": "sunucu üretir, telefona iner), kapandı mı (süresi dolanı zamanlanmış iş kapatır), kafa sayısı, yapıldı mı, ayar değişiklikleri."
+    },
+    {
+      "id": "D02-K15",
+      "fact": "Ders saatleri İstanbul saatidir; sunucu her oturumun açılış ve kapanış anını UTC olarak üretip telefona indirir, telefonun saat dilimi hiç kullanılmaz (Kararlar, Yoklama penceresi satırı).",
+      "anchor": "plan.html#kararlar-inceleme-hesaplari",
+      "quote": "Saatler İstanbul saati: sunucu her oturumun açılış ve kapanış anını UTC üretip telefona indirir; telefonun saat dilimi hiç kullanılmaz, farklıysa da pencere kaymaz."
+    },
+    {
+      "id": "D02-K16",
+      "fact": "Ders programındaki gün ve saat yerel tutulur (time), Europe/Istanbul bölgesiyle yorumlanır; ders günü date tipindedir. Anlık zamanlar (kayıt, ulaşma, onay) timestamptz'dir (Zaman ve sıralama satırı).",
+      "anchor": "teknik.html#veritabani-donem-alani",
+      "quote": "Ders programındaki gün ve saat yerel: time , \"Europe/Istanbul\" bölgesiyle yorumlanır"
+    },
+    {
+      "id": "D02-K17",
+      "fact": "Panelde program ve oturum tarihleri her zaman İstanbul saatiyle ve Türkçe biçimle gösterilir; bilgisayarın saat dilimine bırakılmaz. Rapor tarih aralığı sunucuya gün olarak gider.",
+      "anchor": "plan.html#hoca",
+      "quote": "Tarih ve saatler her zaman İstanbul saatiyle (Europe/Istanbul), Türkçe biçimle gösterilir, Excel'e de öyle yazılır; bilgisayarın saat dilimine bırakılmaz."
+    },
+    {
+      "id": "D02-K18",
+      "fact": "Testler TZ=UTC ile koşar; senaryodaki ders saatleri adımlarda açıkça İstanbul saatiyle yorumlanır (oturum üretimi testleri de bu kurala uyar).",
+      "anchor": "teknik.html#testler-veritabani-sifirlama",
+      "quote": "Test komutları saat dilimini sabitler (TZ=UTC); senaryodaki saatler adımlarda açıkça İstanbul saatiyle yorumlanır"
+    },
+    {
+      "id": "D02-K19",
+      "fact": "Testlerde ders ve oturum için hazır veri kurucular kullanılır; ayrı sahte veri kütüphanesi yoktur.",
+      "anchor": "teknik.html#testler-veritabani-sifirlama",
+      "quote": "Ders, oturum, öğrenci cihazı için hazır veri kurucular."
+    },
+    {
+      "id": "D02-K20",
+      "fact": "Örnek senaryo programı ders kodu, hafta günü, yerel saat aralığı ve yoklama süresiyle yazar (\"MAT101\", pazartesi 09:00 ile 11:00, 15 dakika).",
+      "anchor": "teknik.html#testler-kalite",
+      "quote": "Diyelim ki \"MAT101\" dersi pazartesi 09:00-11:00 arasında ve yoklama süresi 15 dakika"
+    },
+    {
+      "id": "D02-K21",
+      "fact": "Oturum başına iş kuyruğa konmaz; birkaç dakikada bir çalışan tek zamanlanmış iş süresi dolmuş, kapanmamış bütün oturumları kapatır. Program değişince iş iptali gerekmez, iş iki kez çalışsa da sonuç değişmez.",
+      "anchor": "teknik.html#sunucu-arka-plan",
+      "quote": "Oturum başına iş yok: birkaç dakikada bir tek zamanlanmış iş süresi dolmuş, kapanmamış bütün oturumları kapatır; program değişince iş iptali gerekmez"
+    },
+    {
+      "id": "D02-K22",
+      "fact": "Oturum kısa kodu (Aşama 2 QR'ında 10 rakam) oturum tablosunda ayrı, tekil sayısal sütundur; sunucu sırayla verir ve oturumlarla birlikte telefona indirir.",
+      "anchor": "teknik.html#telefon-kamera-qr",
+      "quote": "Oturum kısa kodu UUIDv7 kimliğe sığmadığından oturum tablosunda ayrı, tekil sayısal sütundur; sunucu sırayla verir, telefona oturumlarla birlikte iner."
+    },
+    {
+      "id": "D02-K23",
+      "fact": "Raporlar oturum üzerinden çalışır ve tarih oturumda durur; BRIN dizini baştan konmaz, gerçek bir tarih aralığı sorgusu yavaşlarsa eklenir.",
+      "anchor": "teknik.html#veritabani-donem-alani",
+      "quote": "BRIN baştan konmaz (raporlar oturum üzerinden çalışır, tarih oturumda)"
+    },
+    {
+      "id": "D02-K24",
+      "fact": "Boyut varsayımı: 50.000 öğrenci, öğrenci başına 6 ders, ders başına haftada en az 1 oturum (iki gün işlenen derste 2), yılda 28 hafta; yılda en az 8,4 milyon kayıt (Ölçeklenme yolu, Hacim).",
+      "anchor": "plan.html#teknoloji-sunucu-yeri",
+      "quote": "50.000 öğrenci, 6 ders, haftada en az 1 oturum (iki gün işlenen derste 2), 28 hafta: yılda en az 8,4 milyon kayıt."
+    },
+    {
+      "id": "D02-K25",
+      "fact": "Blok ders tek oturumdur: tek yoklama bütün saatleri sayar; hoca düzeltmede saat sayısı seçebilir, seçim yalnız bir saatten uzun oturumda, varsayılan bütün saatler. Sonuç olarak oturum saat sayısını taşır (Kararlar, Blok ders satırı).",
+      "anchor": "plan.html#kararlar-kafa-sayisi",
+      "quote": "Tek yoklama bütün saatleri sayar; geç gelen ya da erken çıkana hoca düzeltmede saat sayısı seçebilir (ör. 3 saatin 2'si var)"
+    },
+    {
+      "id": "D02-K26",
+      "fact": "Aynı saatte yalnız bir derse yoklama verilir ve çakışma hocalara gösterilir; çift anadal ve yandal dersleri her programın kendi ders listesinde ayrı tutulur, çakışma bu listeler arasında da denetlenir (Kararlar, Çakışan dersler satırı).",
+      "anchor": "plan.html#kararlar-kafa-sayisi",
+      "quote": "Aynı saatte yalnız bir derse yoklama verilir, çakışma hocalara gösterilir; çift anadal ve yandal dersleri her programın kendi ders listesinde ayrı tutulur"
+    },
+    {
+      "id": "D02-K27",
+      "fact": "Birlikte işlenen şubeler için tek yoklama ve tek kafa sayısı; böyle şubelerin var olup olmadığı açık noktadır (Kararlar, Birlikte işlenen şubeler satırı).",
+      "anchor": "plan.html#kararlar-kafa-sayisi",
+      "quote": "Tek yoklama, tek kafa sayısı (böyle şube varsa)."
+    },
+    {
+      "id": "D02-K28",
+      "fact": "Ders düzeyinde \"Aşama 1 dersi\" ile \"QR'lı ders\" ayrımı vardır: Aşama 1 dersinde QR'sız kayıt sayılır, QR'lı derste QR'sız gelen kayıt İncelemede kalır ve hoca onaylayana kadar sayılmaz (Kayıt etiketleri, QR'sız).",
+      "anchor": "plan.html#gun-kayit-etiketleri",
+      "quote": "Aşama 1 dersinde sayılır; QR'lı derste QR'sız gelen kayıt İncelemede kalır, hoca isterse onaylar; onaylayana kadar sayılmaz."
+    },
+    {
+      "id": "D02-K29",
+      "fact": "Hocanın ders sonunda girdiği yaklaşık kafa sayısı aynı zamanda \"ders yapıldı\" onayıdır; sonuç olarak oturumun yapıldı durumu kafa sayısının gelişiyle kurulur.",
+      "anchor": "plan.html#kararlar-kafa-sayisi",
+      "quote": "Hoca ders sonunda yaklaşık kafa sayısını girer (\"ders yapıldı\" onayı da), kayıt sayısını ancak sonra görür."
+    },
+    {
+      "id": "D02-K30",
+      "fact": "Kafa sayısı girilmemiş geçmiş oturum için hocaya \"Ders yapıldı mı?\" sorulur; cevaplanmamış oturum varken dönem sonu çıktısı alınamaz (Kararlar, Onaysız ders satırı).",
+      "anchor": "plan.html#kararlar-kafa-sayisi",
+      "quote": "Kafa sayısı girilmemiş geçmiş ders için hocaya \"Ders yapıldı mı?\" sorulur; cevaplanmadan dönem sonu çıktısı alınamaz."
+    },
+    {
+      "id": "D02-K31",
+      "fact": "\"Yapılmadı\" denen oturumun kayıtları da saatleri de sayılmaz (ne T'ye ne devamsızlığa girer).",
+      "anchor": "plan.html#kararlar-kafa-sayisi",
+      "quote": "Yapılmadı denen dersin kayıtları ve saatleri sayılmaz."
+    },
+    {
+      "id": "D02-K32",
+      "fact": "Telafi dersi önceden programa girilir. Aynı gün girilirse yalnız programı internetteyken indiren telefonlarda pencere açılır; bilmeyen telefonların öğrencilerini hoca listeden işaretler (Kararlar, Telafi dersi satırı).",
+      "anchor": "plan.html#kararlar-kafa-sayisi",
+      "quote": "Önceden programa girilir. Aynı gün girilirse programı internetteyken indiren telefonlarda açılır; indirmemiş, internetsiz telefon bilemez, hoca kaydı olmayan öğrencileri listeden işaretler."
+    },
+    {
+      "id": "D02-K33",
+      "fact": "Program değişikliği iptal ya da telafidir; değişiklik internet varken telefona iner, internetsiz telefonda eski program geçerli kalır ve son kararı sunucu verir (Kenar durumlar).",
+      "anchor": "plan.html#gun-kenar-durumlar",
+      "quote": "Program değişti (iptal, telafi): Değişiklik internet varken telefona iner; internetsizken eski program geçerli, son karar sunucuda."
+    },
+    {
+      "id": "D02-K34",
+      "fact": "Aşama 2'de QR iki kaynaktan gösterilse ya da kapatılıp yeniden açılsa da kayıtlar tek oturumda birleşir; sonuç olarak oturumu QR açılışı değil program belirler.",
+      "anchor": "plan.html#asama23-okutma",
+      "quote": "Aynı derste QR iki kaynaktan gösterilirse (projeksiyon ve hocanın telefonu) ya da hoca QR'ı kapatıp yeniden açarsa kayıtlar tek oturumda birleşir."
+    },
+    {
+      "id": "D02-K35",
+      "fact": "Sayım ders saati bazındadır, taban yapılan derslerdir (öğrenci işlerinden teyit bekliyor); ortak kurallar paketi tabanı dışarıdan alır. Yapılmayıp telafi edilmeyen saati olan ders AKSİS özetinde işaretlenir.",
+      "anchor": "plan.html#devam",
+      "quote": "Ortak kurallar paketi tabanı dışarıdan alır; yapılmayıp telafi edilmeyen saati olan ders AKSİS özetinde işaretlenir."
+    },
+    {
+      "id": "D02-K36",
+      "fact": "Hak formülündeki T, öğrencinin derse eklendiği tarihten sonra yapılan saatlerdir (Md.9/4 geç kayıtta dersin bütün yapılan saatleri) ve teori ile uygulama için ayrı hesaplanır; bunun için oturumun tarihi, türe göre saatleri ve yapıldı durumu gerekir.",
+      "anchor": "plan.html#devam-uyari-seviyeleri",
+      "quote": "T: öğrencinin derse eklendiği tarihten sonra yapılan saatler (Md.9/4 geç kayıtta dersin bütün yapılan saatleri)."
+    },
+    {
+      "id": "D02-K37",
+      "fact": "Dönem ortasında uyarı seviyesi T yerine yapılan ve kalan planlı saatlerin toplamıyla hesaplanır; AKSİS kararı ve özet yalnız yapılan saatlerle. Kalan planlı saatler türe göre bilinmelidir.",
+      "anchor": "plan.html#devam-uyari-seviyeleri",
+      "quote": "Dönem ortasında seviye, formüldeki T yerine yapılan ve kalan planlı saatlerin toplamıyla hesaplanır"
+    },
+    {
+      "id": "D02-K38",
+      "fact": "2. uyarı seviyesi, kalan hak sonraki oturumun o türdeki saatini aşmayınca tetiklenir; sonraki oturumun türe göre saat sayısı bilinmelidir.",
+      "anchor": "plan.html#devam-uyari-seviyeleri",
+      "quote": "2. seviye, kalan hak sonraki oturumun o türdeki saatini aşmayınca tetiklenir."
+    },
+    {
+      "id": "D02-K39",
+      "fact": "Ekle-bırak süresinde eklenen öğrencinin önceki oturumları sayılmaz; Md.9/4 geç kayıtta kayıttan önceki oturumlar Yok sayılır. Hoca bu seçimi yalnız ilk yapılan dersten sonra eklenen öğrencide görür, varsayılan ilkidir.",
+      "anchor": "plan.html#devam",
+      "quote": "Hoca bu seçimi yalnız ilk yapılan dersten sonra eklenen öğrencide görür; varsayılan ilki."
+    },
+    {
+      "id": "D02-K40",
+      "fact": "Son oturumdan sonra telefonu sunucuya bağlanmamış ve sonucu tek kayıtla değişebilecek öğrenci KARAR BEKLİYOR görünür; hoca bu listeyi son ders gününden itibaren görür.",
+      "anchor": "plan.html#devam-donem-sonu",
+      "quote": "hoca son ders gününden itibaren bu öğrencilerin listesini görür"
+    },
+    {
+      "id": "D02-K41",
+      "fact": "Dönemin son haftasında gönderilmemiş kayıt hatırlatması telefonun her açılışında çıkar; sonuç olarak telefon son haftayı bilmelidir.",
+      "anchor": "plan.html#devam-donem-sonu",
+      "quote": "Son hafta gönderilmemiş kayıt hatırlatması her açılışta çıkar."
+    },
+    {
+      "id": "D02-K42",
+      "fact": "Yönetici panelinde birim (fakülte, enstitü) bazında takvim girilir: dönem tarihleri, ekle-bırak bitişi, tatil ve sınav haftaları, devamsızlıkların işlenmesi için son gün.",
+      "anchor": "plan.html#hoca",
+      "quote": "Birim (fakülte, enstitü) bazında dönem tarihleri, ekle-bırak bitişi, tatil ve sınav haftaları, devamsızlıkların işlenmesi için son gün."
+    },
+    {
+      "id": "D02-K43",
+      "fact": "Tek genel takvim varsayılmaz: İÜ genel ön lisans ve lisans takviminin yanında birimlere ayrı takvim yayımlıyor (Eczacılık ayrı; Tıp, Diş Hekimliği, Hukuk, AUZEF ve Konservatuvar teyit edilmedi).",
+      "anchor": "plan.html#hoca",
+      "quote": "Tek genel takvim varsayılmaz: İÜ genel ön lisans ve lisans takviminin yanında birimlere ayrı takvim yayımlıyor"
+    },
+    {
+      "id": "D02-K44",
+      "fact": "Veri modeli taslağında birimler (fakülte, bölüm) ve birim bazında dönem kaydı vardır: ekle-bırak bitişi, tatil ve sınav haftaları, devamsızlık işleme son günü.",
+      "anchor": "teknik.html#kod-veri-modeli",
+      "quote": "Birimler ve dönemler: fakülte, bölüm; birim bazında dönem, ekle-bırak bitişi, tatil ve sınav haftaları, devamsızlık işleme son günü."
+    },
+    {
+      "id": "D02-K45",
+      "fact": "Birim ve bölüm alanları baştan modelde bulunur; dönem tarihleri ve kilit birim bazındadır (Ölçeklenme yolu, Birimlere genişleme).",
+      "anchor": "plan.html#teknoloji-sunucu-yeri",
+      "quote": "Birim ve bölüm alanları baştan modelde, dönem tarihleri ve kilit birim bazında."
+    },
+    {
+      "id": "D02-K46",
+      "fact": "Yıllık dersler ile tıp, diş hekimliği, eczacılık ve hemşirelikte anabilim dalı bazında uygulama hesabı ilk sürümde yoktur, bu birimler katılınca eklenir; sonuç olarak ilk sürümün oturum üretimi yalnız dönemlik dersi kapsar.",
+      "anchor": "plan.html#teknoloji-sunucu-yeri",
+      "quote": "Yıllık dersler ile tıp, diş hekimliği, eczacılık ve hemşirelikte anabilim dalı bazında uygulama hesabı (Md.19/2) ilk sürümde yok"
+    },
+    {
+      "id": "D02-K47",
+      "fact": "Yoklama tablosunun tekil anahtarlarında dönem kimliği baştan vardır ve tablo gerekirse döneme göre bölünür; sonuç olarak dönem, kimliği olan ayrı bir varlıktır.",
+      "anchor": "teknik.html#veritabani-donem-alani",
+      "quote": "Yoklama tablosunun tekil anahtarlarında dönem kimliği baştan var"
+    },
+    {
+      "id": "D02-K48",
+      "fact": "Dönem kilidi birimin akademik takvimindeki \"devamsızlıkların otomasyona işlenmesi için son gün\"e bağlıdır; yönetici bu tarihi her dönem ve her birim için girer.",
+      "anchor": "plan.html#devam-donem-sonu",
+      "quote": "Kilit, birimin akademik takvimindeki \"devamsızlıkların otomasyona işlenmesi için son gün\"e bağlı; yönetici bu tarihi her dönem ve birim için girer."
+    },
+    {
+      "id": "D02-K49",
+      "fact": "Yönetici panelinde dönem sonu kilidi yer alır ve birimin son gününe bağlıdır.",
+      "anchor": "plan.html#hoca",
+      "quote": "Dönem sonu kilidi, birimin son gününe bağlı."
+    },
+    {
+      "id": "D02-K50",
+      "fact": "Son gün takvimde dersin bittiği güne denk gelebilir (Eczacılık 2025 ile 2026 takviminde ikisi de 2 Ocak 2026); bu yüzden son haftanın kayıtlarında gönderme süresi en geç bu gündür.",
+      "anchor": "plan.html#devam-donem-sonu",
+      "quote": "bu yüzden son haftanın kayıtlarına 7 günlük pay güvenilmez, süre en geç bu gündür."
+    },
+    {
+      "id": "D02-K51",
+      "fact": "Beklenen gönderme süresi en geç 7 gündür; dönemin son haftasında süre en geç birimin son gününde biter. Bu sınırın tarihi birim takviminden gelir.",
+      "anchor": "plan.html#kararlar-gonderme-suresi",
+      "quote": "Beklenen süre en geç 7 gündür; dönemin son haftasında süre en geç birimin \"devamsızlıkların işlenmesi için son gün\"ünde biter"
+    },
+    {
+      "id": "D02-K52",
+      "fact": "Birimin son gününden sonra gelen geçerli kayıt yalnız saklanır; sayım ancak denetim kaydı bırakan düzeltmeyle değişir. Sonuç olarak kilitten sonra düzeltme yolu açık kalır.",
+      "anchor": "plan.html#kararlar-gonderme-suresi",
+      "quote": "birimin son gününden sonraysa yalnız saklanır, sayım ancak denetim kaydı bırakan düzeltmeyle değişir."
+    },
+    {
+      "id": "D02-K53",
+      "fact": "Kilidin bir etkisi: dönem kilidine kadar onaylanmayan Kendi beyanı kaydı sayılmış haliyle kilitlenir ve denetim kaydına onaysız kilitlendiği yazılır.",
+      "anchor": "plan.html#gun-kayit-etiketleri",
+      "quote": "Dönem kilidine kadar onaylanmayan kayıt sayılmış haliyle kilitlenir, denetim kaydına onaysız kilitlendiği yazılır."
+    },
+    {
+      "id": "D02-K54",
+      "fact": "Sunucuya ulaşan kayıtlar da dönem kilitlenene kadar telefonda saklanır; sonuç olarak kilit durumu telefona ulaşmalıdır.",
+      "anchor": "plan.html#kararlar-kayit-ve-makbuz",
+      "quote": "Ulaşanlar da dönem kilitlenene kadar telefonda saklanır."
+    },
+    {
+      "id": "D02-K55",
+      "fact": "Dönem kilidi, gönderme süresinin sonu ve ulaşma anı gibi kural taşıyan zamanlar ortak kurallar paketindeki saat arayüzünden gelir; kural için SQL'de now() kullanılmaz.",
+      "anchor": "teknik.html#testler-veritabani-sifirlama",
+      "quote": "kural taşıyan her zaman (ulaşma anı, gönderme süresinin sonu, dönem kilidi) arayüzden gelir, kural için SQL'de now() kullanılmaz"
+    },
+    {
+      "id": "D02-K56",
+      "fact": "İzin verilen en düşük uygulama sürümü yalnız dönem arasında, birimlerin devamsızlık işleme son günü geçip yeni dönem başlamadan yükseltilir; sonuç olarak \"dönem arası\" birim takvimlerinden çıkar.",
+      "anchor": "plan.html#dagitim-guncelleme-ilkesi",
+      "quote": "izin verilen en düşük sürüm yalnız dönem arasında, birimlerin devamsızlık işleme son günü"
+    },
+    {
+      "id": "D02-K57",
+      "fact": "Ders silinmez, arşivlenir (Devamsızlık, Dönem sonu).",
+      "anchor": "plan.html#devam-donem-sonu",
+      "quote": "Ders silinmez, arşivlenir."
+    },
+    {
+      "id": "D02-K58",
+      "fact": "Hoca hesabı silinince dersleri arşivlenir; giriş bilgileri silinir, oturumları kapanır, düzeltmeleri denetim kaydında kalır.",
+      "anchor": "plan.html#kararlar-hesap-silme",
+      "quote": "Hoca hesabı silinince giriş bilgileri (e-posta adresi, giriş kodları) silinir, oturumları kapanır; dersleri arşivlenir, düzeltmeleri denetim kaydında kalır."
+    },
+    {
+      "id": "D02-K59",
+      "fact": "Apple ve Google inceleme hesaplarının ikisi de yalnız her an açık deneme dersini görür; deneme hesapları ve sunucu her an, yurt dışından da erişilebilir.",
+      "anchor": "plan.html#kararlar-inceleme-hesaplari",
+      "quote": "İki hesap da yalnız her an açık deneme dersini görür"
+    },
+    {
+      "id": "D02-K60",
+      "fact": "Öğrencinin dersleri, ders saatleri ve derslik adları dersten önce telefonuna iner (Yoklama günü, adım 2); derslik adı telefonda gösterilen veridir.",
+      "anchor": "plan.html#gun",
+      "quote": "Dersleri, saatleri ve derslik adları telefona iner; telefon sunucudan saat belgesini alır."
+    },
+    {
+      "id": "D02-K61",
+      "fact": "Öğrenci telefonuna yalnız kendi dersleri, ders saatleri, oturumları, tatiller ve kendi liste satırı iner; başka öğrencinin adı ya da numarası hiç inmez. Ders, program saati, oturum ve tatil satırları D02'nindir.",
+      "anchor": "plan.html#kararlar-indirme",
+      "quote": "öğrenci telefonuna yalnız kendi dersleri, ders saatleri, oturumları, tatiller ve kendi liste satırı iner"
+    },
+    {
+      "id": "D02-K62",
+      "fact": "Program telefona artımlı iner: \"şu sürümden beri değişenler\" çekilir, telefonun saati kullanılmaz, silinen satırlar silindi işaretiyle iner.",
+      "anchor": "plan.html#kararlar-indirme",
+      "quote": "Program ve listelerden \"şu sürümden beri değişenler\" çekilir (telefonun saati kullanılmaz), silinenler silindi işaretiyle iner."
+    },
+    {
+      "id": "D02-K63",
+      "fact": "Telefona inen dersler, ders saatleri, oturumlar ve tatiller tablolarının her satırında değişiklik sürümü ve silindi işareti bulunur; sürüm tek sayaç satırından alınır.",
+      "anchor": "teknik.html#kod-veri-modeli",
+      "quote": "Telefona inen tablolar (dersler, ders saatleri, oturumlar, listeler, tatiller): her satırda değişiklik sürümü ve silindi işareti; sürüm tek sayaç satırından"
+    },
+    {
+      "id": "D02-K64",
+      "fact": "Sunucu tek uygulamadır, modülleri: kimlik, dersler, listeler, oturumlar, yoklama, düzeltmeler, raporlar, yönetim. D02'nin bu modüllere eşlemesi D02-B41.",
+      "anchor": "teknik.html#sunucu-mimari",
+      "quote": "Tek uygulama, modüller: kimlik, dersler, listeler, oturumlar, yoklama, düzeltmeler, raporlar, yönetim."
+    },
+    {
+      "id": "D02-K65",
+      "fact": "Modüller birbirinin servis ve veri erişimine dokunmaz, yalnız index.ts dış yüzünü çağırır; sınırı Biome'un noPrivateImports kuralı hata düzeyinde denetler.",
+      "anchor": "teknik.html#sunucu-mimari",
+      "quote": "Modüller birbirinin servis ve veri erişimine dokunmaz, yalnız index.ts dış yüzünü çağırır"
+    },
+    {
+      "id": "D02-K66",
+      "fact": "Modül dış yüzü çağıranın veritabanı işlemini (tx) parametreyle alır, havuzdan bağlantı istemez; sonuç olarak başka modül oturum ve ders bilgisini D02'nin dış yüzünden aynı işlemde okur.",
+      "anchor": "teknik.html#sunucu-mimari",
+      "quote": "Dış yüz çağıranın veritabanı işlemini (tx) parametreyle alır, havuzdan bağlantı istemez"
+    },
+    {
+      "id": "D02-K67",
+      "fact": "Açık istisna: başka modülün tablo dosyası yabancı anahtar için D02'nin tablo tanımını alabilir (ör. kaydın oturuma bağlanması).",
+      "anchor": "teknik.html#sunucu-mimari",
+      "quote": "Açık istisnalar: tablo dosyası yabancı anahtar için başka modülün tablo tanımını alabilir"
+    },
+    {
+      "id": "D02-K68",
+      "fact": "Raporlar modülü rapor ve AKSİS özeti için tabloları, D02 tabloları dahil, doğrudan ve yalnız okur.",
+      "anchor": "teknik.html#sunucu-mimari",
+      "quote": "raporlar modülü rapor ve AKSİS özeti için tabloları yalnız okur"
+    },
+    {
+      "id": "D02-K69",
+      "fact": "Ortak altyapı (veritabanı, iş kuyruğu, oturum doğrulama, saat, e-posta) kökte bir kez kaydedilir; her modül /v1/<modül> altında kendi eklentisidir.",
+      "anchor": "teknik.html#sunucu",
+      "quote": "Ortak altyapı (veritabanı, iş kuyruğu, oturum doğrulama, saat, e-posta) kökte bir kez kaydedilir; her modül"
+    },
+    {
+      "id": "D02-K70",
+      "fact": "Tek değer alan durum ve kod listeleri PostgreSQL enum değil, metin ve CHECK kısıtıdır; D02'nin oturum durumu, saat türü ve iptal nedeni listeleri de bu kurala girer.",
+      "anchor": "teknik.html#sunucu-mimari",
+      "quote": "Tek değer alan durum ve kod listeleri (sunucu kararı, gerekçe ve sebep kodları, son durum) PostgreSQL enum değil, metin ve CHECK kısıtı"
+    },
+    {
+      "id": "D02-K71",
+      "fact": "Büyüyebilen cevap değerleri (durumlar dahil) ilk yayından itibaren x-extensible-enum taşır; cevaplarda tarih metin olarak taşınır.",
+      "anchor": "teknik.html#sunucu-mimari",
+      "quote": "Büyüyebilen cevap değerleri (etiketler, kayıt sonuçları, durumlar) ilk yayından itibaren x-extensible-enum taşır"
+    },
+    {
+      "id": "D02-K72",
+      "fact": "Sunucunun ürettiği kimliklerde (ders, şube, oturum) varsayılan açıkça uuidv7() olur ve bunu şema testi denetler; kimlik oluşturma zamanını ele verdiğinden dışa açık jeton olarak kullanılmaz.",
+      "anchor": "teknik.html#veritabani",
+      "quote": "Sunucunun ürettiği kimliklerde varsayılan açıkça uuidv7()"
+    },
+    {
+      "id": "D02-K73",
+      "fact": "Kurallar veritabanında da korunur: yabancı anahtarlar ve geçerli değer kontrolleri; kod hatası bile bozuk veri yazdıramamalıdır.",
+      "anchor": "teknik.html#veritabani",
+      "quote": "Kurallar veritabanında da korunur: yabancı anahtarlar, geçerli değer kontrolleri."
+    },
+    {
+      "id": "D02-K74",
+      "fact": "Tasarımdaki öğrenci \"Bugün\" ekranı örneği ders kodu, saat türü, derslik, ders adı, başlangıç ve bitiş saati ile hocanın unvanlı adını gösterir; ders ve oturum yükünde bu alanlar gerekir.",
+      "anchor": "tasarim.html#ph-home",
+      "quote": "Bugün BİL 301 Teori D-204 Veri Yapıları 10:00 ile 11:50 · Dr. Öğr. Üyesi S. Aksoy"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "D02-B01",
+      "question": "Ders kaydı neyi temsil eder ve sahibi kimdir: bir hocanın bir dönemdeki ders açılışı mı (altında şubeler), dönemdeki ortak ders kodu mu (şube başına hoca), yoksa ders yok yalnız şube mi?",
+      "why": "Yetki denetimi (\"başka hocanın dersini görme ya da onaylama\" reddi), listenin hangi hocanın telefonuna ineceği (\"o dersin hocası\"), birlikte işlenen şubeler ve AKSİS özetinin birimi bu modele bağlı; yanlış modelde aynı kodlu dersin farklı hocalarının şubeleri karışır ya da yetki sızar.",
+      "options": [
+        "Ders = hoca + dönem + kod açılışı; şubeler bu açılışın altında; tek sahip sütunu (sahip_hoca_id)",
+        "Ders = dönem + kod (paylaşılan); her şubenin ayrı sahibi",
+        "Ders yok, yalnız şube (şube = sahip + dönem + kod + ad)"
+      ],
+      "recommendation": "Birincisi. Plan dersi tek hocaya bağlı anlatıyor (\"sınıf listesi yalnız o dersin hocasının telefonuna iner\", plan.html#kararlar-indirme), asistan ve ortak hoca rolleri sonra (plan.html#kararlar-roller), dersi hoca panelden kendisi açar (plan.html#hoca). Aynı kodu farklı hocalar ayrı açılış olarak açar; tekillik (dönem, sahip, kod). Yetki tek sütunla denetlenir; ortak hoca ya da asistan gelince üyelik tablosu \"önce genişlet, sonra daralt\" ile eklenir (D02-B46).",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B02",
+      "question": "Haftalık program saati (slot) derse mi, şubeye mi bağlanır; aynı dersin şubeleri farklı saatlerdeyse öğrenciye hangi oturumlar iner?",
+      "why": "Pencere telefonda programdan kendiliğinden açılır; öğrenciye başka şubenin oturumu inerse o saatte de pencere açılır; kayıt kabulü şube düzeyinde yapılmazsa öğrenci başka şubenin oturumuna yoklama verip sayılabilir. Teknik belge \"oturum, birlikte işlenen birden çok şubeyi kapsayabilir\" diyor (teknik.html#kod-veri-modeli).",
+      "options": [
+        "Slot derse bağlı ve katılan şubelerin kümesini taşır (varsayılan bütün şubeler); oturum slotun şube kümesini kopyalar",
+        "Slot şubeye bağlı; birlikte işlenme ayrı birleştirme kaydıyla",
+        "İlk sürümde şube yok, her şube ayrı ders"
+      ],
+      "recommendation": "Birincisi: farklı saatli şubeleri de birlikte işlenen şubeleri de tek yapıyla karşılar. İndirme (D06) ve kayıt kabulü (D07) \"öğrencinin şubesi oturumun şube kümesinde mi\" sorusuyla yapılır; bu, D02'nin dış yüzünde tek fonksiyon olur.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B03",
+      "question": "Oturum \"her ders günü\" mü (teknik.html#kod-veri-modeli), \"bir dersin tek buluşması\" mı (plan.html#sozluk)? Aynı gün ayrık iki buluşması olan ders (sabah teori, öğleden sonra uygulama) bir oturum mu iki mi?",
+      "why": "Yoklama, kafa sayısı, son durum ve \"Ders yapıldı mı?\" oturum başına; tek oturum sayılırsa öğleden sonraki buluşma sabahki yoklamayla sayılır, saat başına bölünürse blok ders iki yoklama ister. Tasarımdaki panel adresi (yoklama.ornek/dersler/bil301/yoklama/2026-10-06) oturumu tarihle adresliyor, aynı gün iki oturumda belirsiz kalır (D02-C01).",
+      "options": [
+        "Bir slot oluşumu = bir oturum; ardışık saatler tek slotta (blok) toplanır; aynı gün ayrık buluşmalar ayrı oturum",
+        "Ders başına gün başına tek oturum",
+        "Her ders saati ayrı oturum"
+      ],
+      "recommendation": "Birincisi: sözlükteki \"tek buluşma\" tanımına ve blok ders kuralına (\"Tek yoklama bütün saatleri sayar\") uyar; Hacim satırındaki \"iki gün işlenen derste 2\" gün başına tek buluşma varsayımıyla çelişmez. API ve panel oturumu tarihle değil oturum kimliğiyle adresler.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B04",
+      "question": "Bir oturumun kaç ders saati olduğu ve her saatin türü nasıl tutulur; \"10:00 ile 11:50\" gibi bir aralık kaç saattir?",
+      "why": "Hak formülü teori ve uygulama için ayrı T ister (plan.html#devam); ders saati 50 dakika olduğundan saat sayısı dakikadan türetilemez (tasarım örneği 10:00 ile 11:50); blok derste düzeltme saat sayısı seçer.",
+      "options": [
+        "Slotta başlangıç, bitiş ve türe göre açık saat sayıları (teori_saat, uygulama_saat); oturum üretimde kopyalar",
+        "Her ders saati ayrı satır (sıra ve tür)",
+        "Süreden türet (50 dakika = 1 saat)"
+      ],
+      "recommendation": "Birincisi: karışık blok (2 teori + 1 uygulama) tek oturumda kalır, formül yalnız türe göre toplam ister. CHECK: teori_saat >= 0, uygulama_saat >= 0, toplam >= 1, başlangıç < bitiş, oturum gece yarısını geçmez.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B05",
+      "question": "Oturumlar ne zaman ve hangi ufukla üretilir: program kaydında dönemin tamamı mı, kayan pencereyle mi, telefonda mı?",
+      "why": "Telefon seviyeyi \"yapılan ve kalan planlı saatler\" ve 2. seviyeyi \"sonraki oturumun o türdeki saati\" ile yerelde hesaplar (plan.html#devam-uyari-seviyeleri); sayım tabanı da açık nokta (yapılan mı planlanan mı, plan.html#acik-sayim-tabani), iki cevap için de planlanan saatler dönemin tamamı için bilinmeli; pencere internetsiz açıldığından oturum önceden inmiş olmalı.",
+      "options": [
+        "Program kaydedilince dönemin bütün oturumları aynı veritabanı işleminde üretilir; değişiklikte yalnız gelecekteki oturumlar yeniden hesaplanır",
+        "Kayan pencere (ör. 2 hafta) gecelik işle",
+        "Telefon programdan kendisi üretir"
+      ],
+      "recommendation": "Birincisi: ders başına dönemde yaklaşık 14 hafta ve birkaç slot, küçük bir yazım; gecelik işe bağımlılık yok. Üçüncüsü reddedilir: tatil ve iptal kararı sunucuda (\"son karar sunucuda\", plan.html#gun-kenar-durumlar). Tarih genişletme sunucunun dersler modülünde saf fonksiyon olur (telefon oturum üretmediği için ortak kurallar paketine girmez); fast-check ile \"tatil gününde oturum yok\", \"aynı girdi aynı oturumlar\", \"iki kez üretmek ikinci kez değişiklik yapmaz\" özellikleri denenir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B06",
+      "question": "Tatil günlerinde ve sınav haftalarında oturum üretilir mi?",
+      "why": "Plan takvime tatil ve sınav haftalarını koyuyor ama oturum üretimine etkisini yazmıyor; üretilirse her biri için \"Ders yapıldı mı?\" sorulur, kalan planlı saatler şişer ve seviye uyarıları hatalı çıkar.",
+      "options": [
+        "Tatilde ve bütün sınav haftalarında hiç oturum üretilmez; hoca gerekirse telafi ekler",
+        "Tatilde üretilmez, sınav haftasında üretilir",
+        "Tatilde üretilmez; sınav haftası türüne göre takvimde \"ders yapılır mı\" seçimi, varsayılan yapılmaz"
+      ],
+      "recommendation": "Üçüncüsü: tatil kesin dışarıda; ara sınav haftasında ders yapan birim olabileceği için seçim takvimde, varsayılan \"yapılmaz\". Sayım tabanını ve planlı saatleri değiştirdiği için sahibi onaylamalı.",
+      "needs_owner": true
+    },
+    {
+      "id": "D02-B07",
+      "question": "Yarım gün tatil (arife öğleden sonra) ve dönem ortasında ilan edilen tatil ya da idari izin nasıl girilir ve oturumlara nasıl yansır?",
+      "why": "Oturum tatille kısmen çakışabilir (12:00 ile 14:50, tatil 13:00'te başlıyor); ilan edilen tatil önceden üretilmiş oturumları etkiler ve internetsiz telefonlar eski programla pencere açar.",
+      "options": [
+        "Tatil = tarih aralığı + isteğe bağlı başlangıç saati; takvim değişince etkilenen gelecekteki oturumlar \"iptal (tatil)\" olur, silinmez; başlangıcı tatil başlangıcından önce olan oturum kalır",
+        "Yalnız tam gün tatil",
+        "Kısmi çakışmada oturum kırpılır"
+      ],
+      "recommendation": "Birincisi: basit ve geriye izlenebilir; hoca yapılmayan oturumu yine \"yapılmadı\" diye cevaplayabilir. Tatil nedeniyle iptal edilen oturumun kayıtları sayılmaz, son karar sunucuda (plan.html#gun-kenar-durumlar).",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B08",
+      "question": "Dönem genel bir varlık mı (akademik yıl + yarıyıl) ve birim takvimi ona mı bağlanır, yoksa her birimin ayrı dönem satırı mı olur?",
+      "why": "Yoklama kaydının tekil anahtarında dönem kimliği var ve tablo döneme göre bölünecek (teknik.html#veritabani-donem-alani); tarihler ve kilit ise birim bazında (plan.html#teknoloji-olceklenme-yolu); 2'lik ortak sınır \"dönem başına\" (plan.html#hile-otomatik-kabul-kurali).",
+      "options": [
+        "Genel dönem (2026-2027 güz gibi) + birim x dönem satırı (bağlı takvim, son gün, kilit durumu)",
+        "Her birim için ayrı dönem satırı"
+      ],
+      "recommendation": "Birincisi: kaydın dönemi oturumun dersinin genel dönemidir; bölme tek anahtarla olur; farklı birimden ders alan çift anadal öğrencisi aynı dönemde kalır; kilit birim x dönem satırında tutulur.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B09",
+      "question": "Aynı genel takvimi kullanan birimler için tarihler bir kez mi girilir?",
+      "why": "İÜ genel ön lisans ve lisans takvimi birçok birime ortak, bazı birimlerin ayrı takvimi var (plan.html#hoca); her birime aynı tarihleri ayrı ayrı girmek hata ve uyuşmazlık doğurur; 2026-2027'de hangi birimlerin ayrı takvimi olduğu açık nokta (plan.html#acik-aksis).",
+      "options": [
+        "Takvim ayrı varlık; birim x dönem satırı bir takvime bağlanır (genel takvim + birime özel takvimler)",
+        "Her birimin kendi kopyası, kopyalama düğmesiyle",
+        "Genel takvim + birim bazında yalnız farklı alanların geçersiz kılınması"
+      ],
+      "recommendation": "Birincisi: \"Tek genel takvim varsayılmaz\" kararına uyar, ortak tarih bir kez girilir; birime özel takvim gerekince yeni takvim açılıp bağlanır. Geçersiz kılma alan alan birleştirme mantığı getirir, gerek yok.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B10",
+      "question": "Hangi birim türleri var, birim ile bölüm ilişkisi ne, listeyi kim tutar ve ders hangi birimin takvimini kullanır?",
+      "why": "Takvim ve kilit birim bazında; teknik belge birimleri \"fakülte, bölüm\", plan \"fakülte, enstitü\" diye sayıyor (D02-C03); hoca kaydında bölüm seçiliyor; servis derslerinde hocanın birimi dersin birimi olmayabilir.",
+      "options": [
+        "Birim tablosu (tür: fakülte, enstitü, yüksekokul, meslek yüksekokulu, konservatuvar) + birime bağlı bölüm tablosu; yönetici yönetir; ders kendi birimini taşır (varsayılan hocanın bölümünün birimi)",
+        "Ders birimi hocadan türetilir",
+        "Bölüm de takvim birimi olabilir"
+      ],
+      "recommendation": "Birincisi: takvim fakülte ve enstitü düzeyinde (plan.html#hoca), bölüm alt birim; tür listesi metin + CHECK ve x-extensible-enum.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B11",
+      "question": "Ders kodu, ders adı ve şube etiketi hangi biçimde tutulur, neler tekildir, hoca sonradan değiştirebilir mi?",
+      "why": "Hoca AKSİS özetini AKSİS'teki dersle eşleştirip elle girer; telefonda ve panelde \"BİL 301 Veri Yapıları\" gibi gösterilir (tasarim.html#ekranlar); AKSİS'e otomatik bağlantı olmadığından ders kataloğu yok.",
+      "options": [
+        "Kod ve ad serbest metin (NFC, baş ve sondaki boşluk silinir, çoklu boşluk teke iner); şube etiketi serbest metin; tekil: (dönem, sahip, kod) ve (ders, şube etiketi); kayıt geldikten sonra kod değişikliği denetim kaydıyla",
+        "Yönetici ders kataloğu tutar, hoca katalogdan seçer"
+      ],
+      "recommendation": "Birincisi: AKSİS'e otomatik bağlantı yok kararıyla uyumlu. Liste satırı olan şube silinmez, pasif olur (listelerdeki \"silinmez, pasif olur\" ilkesiyle aynı).",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B12",
+      "question": "Derslik serbest metin mi, bina ve salon kataloğu mu?",
+      "why": "Derslik adı telefona iner (plan.html#gun); Aşama 2 kürsü ve Aşama 3 konum dersliğe bağlanacakmış gibi görünür.",
+      "options": [
+        "Serbest metin; slotta ve oturumda kopyası, tek oturumda değiştirilebilir",
+        "Derslik tablosu (bina, ad, kapasite)"
+      ],
+      "recommendation": "Birincisi: Aşama 3'te referans hocanın telefonu ve sınıf konumu telefona gönderilmiyor (plan.html#asama23-gps); Aşama 2 eşleştirmesi tarayıcı ile ders arasında; katalog gerekmiyor. Uzunluk sınırı CHECK ile (D02-B49).",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B13",
+      "question": "Gelecekteki bir oturumun saati, günü ya da dersliği değişince oturum kimliği korunur mu, eski oturum iptal edilip yenisi mi açılır; eski anlar nerede tutulur?",
+      "why": "İnternetsiz telefon eski programla pencere açıp eski oturum kimliğine kayıt üretebilir (\"internetsizken eski program geçerli, son karar sunucuda\"); kimlik silinirse kayıt boşa düşer; son kararı veren D07 eski anları bilmezse kaydı yanlış değerlendirir.",
+      "options": [
+        "Aynı gün içinde saat ya da derslik değişikliğinde kimlik korunur, önceki anlar oturum değişikliği geçmişine yazılır; gün değişirse eski oturum \"iptal (taşındı)\" olur, yenisi telafi gibi bağlanır; oturum hiç silinmez",
+        "Her değişiklik iptal + yeni oturum",
+        "Oturum yerinde güncellenir, geçmiş tutulmaz"
+      ],
+      "recommendation": "Birincisi: kayıtlar kimlikle oturuma bağlı kalır, geçmiş D07 için kanıt olur; teknik belgedeki oturum \"ayar değişiklikleri\" alanının program tarafı bu geçmiştir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B14",
+      "question": "Program değişikliği hangi oturumlara uygulanır; başlamış ya da geçmiş oturum ve kilitli dönem düzenlenebilir mi; değişiklik ve slot hangi tarih aralığında geçerli olur?",
+      "why": "Geçmiş oturumun saatini değiştirmek kayıtların pencereye göre kararını sonradan değiştirir; dönem ortasında eklenen ya da biten slot (ör. 3. haftadan itibaren ek uygulama saati, 7 haftalık modül) bir geçerlilik aralığı ister.",
+      "options": [
+        "Değişiklik yalnız başlangıcı saat arayüzüne göre gelecekte olan oturumlara uygulanır; slotta isteğe bağlı geçerlilik başlangıcı ve bitişi; başlamış ve geçmiş oturumda yalnız \"Ders yapıldı mı?\" cevabı ve D04'ün ders içi ayarları; kilitli dönemde hiçbiri",
+        "Geçmiş oturum da düzenlenir, denetim kaydıyla"
+      ],
+      "recommendation": "Birincisi: sayımı geriye dönük değiştirmez; geçmişi düzeltme yolu zaten düzeltmelerdir (D09).",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B15",
+      "question": "İptal ile \"yapılmadı\" nasıl ayrılır ve \"yapılmayıp telafi edilmeyen saat\" hangi oturumlardan hesaplanır; tatil nedeniyle iptal telafi borcu doğurur mu?",
+      "why": "Plan bu dersi AKSİS özetinde işaretliyor (plan.html#devam) ama borcun tanımını vermiyor; resmi tatil iptali borç sayılırsa tatile denk gelen her ders işaretlenir.",
+      "options": [
+        "Oturum durumu: planlandı, iptal (neden: hoca, tatil, taşındı), yapıldı, yapılmadı; türe göre borç = hoca iptali ve yapılmadı saatleri eksi yapılan telafi saatleri; telafi isteğe bağlı olarak telafi ettiği oturuma bağlanır",
+        "Telafi her zaman bir iptal oturumuna bağlanır; borç bağlantısız iptallerdir",
+        "İşaret yalnız \"yapılmadı\" cevaplarından"
+      ],
+      "recommendation": "Birincisi; tatil iptali borç doğurmaz. Hangi iptalin telafi gerektirdiği yönetmelik yorumudur, sahibi onaylamalı.",
+      "needs_owner": true
+    },
+    {
+      "id": "D02-B16",
+      "question": "Telafi dersi ne zaman girilebilir (önceden, aynı gün, geçmiş gün), hangi tarih aralığında, tatile denk gelebilir mi, hangi şubeleri kapsar, yoklama süresi ne olur?",
+      "why": "Plan yalnız \"Önceden programa girilir\" ve aynı gün durumunu yazıyor (Kararlar, Telafi dersi satırı); geçmiş güne girilen telafide hiçbir telefon pencere açamaz, bütün öğrenciler listeden işaretlenmek zorunda kalır.",
+      "options": [
+        "Gelecekteki ve aynı günkü telafi serbest; geçmiş gün telafisi kilitten önce, uyarıyla (\"telefonlar bilemedi, listeden işaretleyin\"); tarih dönemin ders başlangıcı ile birimin son günü arasında; tatile denk gelirse uyarı; şube kümesi ve süre dersten varsayılan",
+        "Yalnız gelecekteki telafi"
+      ],
+      "recommendation": "Birincisi: unutulan telafiyi kaydetmenin tek yolu, uyarı hocanın listeden işaretlemesi gerektiğini söyler. Geçmiş gün telafisine izin vermek ürün kararıdır.",
+      "needs_owner": true
+    },
+    {
+      "id": "D02-B17",
+      "question": "\"Hoca kaydı olmayan öğrencileri listeden işaretler\" hangi kayıt ve sebep koduyla sonuçlanır?",
+      "why": "Elle eklemenin sebep kodları \"telefonu yok ya da çalışmıyor\" ve \"QR okutamadı\" (plan.html#gun-son-durumlar), ikisi de telafinin telefona inmemesini anlatmıyor; Haksız devamsız hedefi sebep kodundan hesaplanıyor (plan.html#hedefler).",
+      "options": [
+        "Yeni tarafsız sebep kodu (ör. \"telafi telefona inmedi\"), son durum Elle eklendi",
+        "\"Beyana dayalı\" kod",
+        "\"telefonu yok ya da çalışmıyor\" kodu"
+      ],
+      "recommendation": "Birincisi: öğrenciyi suçlamaz ve ölçümde ayrı görünür. Sebep kodu listesi ve son durum eşlemesi ürün kararıdır (sahibi D09 ile).",
+      "needs_owner": true
+    },
+    {
+      "id": "D02-B18",
+      "question": "Bir oturum ne zaman \"geçmiş ve onaysız\" sayılır, soru hangi istemcide çıkar, toplu cevap olur mu, \"yapılmadı\" cevabından sonra kuyruktan gelen kafa sayısı ne yapar?",
+      "why": "Hocanın kafa sayısı internetsiz kuyrukta gecikebilir (plan.html#kararlar-kafa-sayisi); erken sorulursa gereksiz cevap istenir; çelişki sessizce çözülürse sayım değişir ve dönem sonu çıktısı yanlış açılır.",
+      "options": [
+        "Oturum bitişi geçmiş ve kafa sayısı yoksa listelenir (panel ve hoca telefonu); \"yapıldı\" kafa sayısız yapıldı yapar; \"yapılmadı\" sonrası gelen kafa sayısı oturumu yeniden onaysız (çelişkili) yapar ve soru tekrar çıkar; toplu cevap düğmesi",
+        "Son gelen kazanır",
+        "Kafa sayısı her zaman kazanır"
+      ],
+      "recommendation": "Birincisi: dönem sonu çıktısı zaten cevap bekliyor, çelişki aynı mekanizmayla görünür olur; her cevap denetim kaydına yazılır (D02-B40).",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B19",
+      "question": "Kilit tam olarak ne zaman olur (son günün başı mı sonu mu), otomatik mi, yönetici düğmesiyle mi?",
+      "why": "Plan \"süre en geç bu gündür\" diyor, yani o gün gelen kayıt sayılmalı; yönetici ekranında \"Dönem sonu kilidi\" ayrı satır olarak geçiyor (plan.html#hoca), düğme mi gösterge mi belli değil.",
+      "options": [
+        "Otomatik: son günün bitişi (ertesi gün 00:00 Europe/Istanbul), saat arayüzünden; durum her istekte bu andan türetilir, kilit işi yan etkileri idempotent uygular; yönetici ekranı tarihi ve durumu gösterir",
+        "Yönetici düğmesi",
+        "Son günün başı"
+      ],
+      "recommendation": "Birincisi: plandaki \"bağlı\" sözüne ve \"süre en geç bu gündür\" kuralına uyar; kural için SQL now() kullanılmaz (teknik.html#testler-veritabani-sifirlama). İş gecikse de durum saatten türediği için doğru kalır.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B20",
+      "question": "Kilit tam olarak neyi dondurur, neye izin verir?",
+      "why": "Etkiler plana dağınık yazılmış; liste olmadan kilit ya fazla yazılır (düzeltmeyi de engeller) ya eksik (program kilitten sonra değişir).",
+      "options": [
+        "Kilitte: gelen kayıt yalnız saklanır; onaysız Kendi beyanı sayılmış haliyle kilitlenir ve denetim kaydı yazılır; program, telafi, iptal, takvim ve süre ayarı değişmez; düzeltme denetim kaydıyla sürer; dersler arşivlenir (salt okunur); kilit durumu telefona iner; eski saat belgesi ve QR anahtarları bırakılabilir",
+        "Kilitte her yazma kapanır, düzeltme dahil"
+      ],
+      "recommendation": "Birincisi: plan kilitten sonra sayımın \"ancak denetim kaydı bırakan düzeltmeyle\" değişebileceğini söylüyor (plan.html#kararlar-gonderme-suresi); ikincisi bu yolu kapatır.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B21",
+      "question": "Son gün yanlış girildiyse ya da birim ertelediyse kilit geri alınır ya da tarih ileri alınabilir mi?",
+      "why": "Erken girilen tarih dersleri vaktinden önce kilitler; Kendi beyanı dondurma gibi etkiler geri dönmez.",
+      "options": [
+        "Son gün geçmeden serbest değişir; geçtikten sonra yalnız ileri alınır, gerekçe ve denetim kaydıyla; uygulanmış etkiler geri alınmaz",
+        "Hiç değişmez",
+        "Tam geri alma (etkiler dahil)"
+      ],
+      "recommendation": "Birincisi; yeniden açılan dönemde gelen kayıtlar yine sayılır. Yönetici yetkisini genişlettiği için sahibi onaylamalı.",
+      "needs_owner": true
+    },
+    {
+      "id": "D02-B22",
+      "question": "Yönetici bütün birimlerin takvimini, kilidini ve p değerlerini mi değiştirir, yalnız kendi biriminin mi?",
+      "why": "İlk yönetici sahip, sonra bölüm başkanı yönetici olur ve başkalarını ekler (plan.html#kararlar-roller); birimlere genişleme planlı; genel yönetici başka birimin kilidini değiştirebilir.",
+      "options": [
+        "İlk sürümde bütün yöneticiler genel; yönetici kaydına baştan isteğe bağlı birim alanı (boş = genel)",
+        "Baştan birim bazlı yönetici"
+      ],
+      "recommendation": "Birincisi: ilk sürüm tek birimle denenecek; alan baştan durduğundan birim bazlı yetki göçsüz açılır. Yetki kapsamı ürün kararıdır.",
+      "needs_owner": true
+    },
+    {
+      "id": "D02-B23",
+      "question": "Ders başka hocaya devredilebilir mi (hoca ayrılırsa, izne çıkarsa, hesabı silinirse)?",
+      "why": "Hoca hesabı silinince \"dersleri arşivlenir\" (plan.html#kararlar-hesap-silme); dönem ortasındaysa öğrencilerin yoklaması ve onaylar sürmeli; yeni hoca yeni ders açarsa geçmiş kayıtlar ayrı derste kalır.",
+      "options": [
+        "Yönetici dersi onaylı başka hocaya devreder, denetim kaydıyla; silinen hocanın dönem içi dersi devredilene kadar salt okunur",
+        "Devir yok, yeni ders açılır"
+      ],
+      "recommendation": "Birincisi: kayıtlar ve hak hesabı tek derste kalır. Plan yöneticinin yetkilerini tek tek sayıyor, devir yeni yetki olduğu için sahibi onaylamalı.",
+      "needs_owner": true
+    },
+    {
+      "id": "D02-B24",
+      "question": "Yönetici dersleri, öğrenci listelerini ve yoklamaları görebilir mi?",
+      "why": "Yönetici p değerini değiştirmek için dersi bulmalı (plan.html#devam), ama liste ve yoklama erişimi yazılmamış; veri amaçla sınırlı ilkesi var (plan.html#kararlar-indirme).",
+      "options": [
+        "Yönetici ders listesini görür (kod, ad, hoca, birim, p, durum), öğrenci listesi ve yoklama görmez",
+        "Yönetici her şeyi görür"
+      ],
+      "recommendation": "Birincisi. Kişisel veriye erişim ürün ve gizlilik kararıdır, sahibi onaylamalı.",
+      "needs_owner": true
+    },
+    {
+      "id": "D02-B25",
+      "question": "Birim takvimi girilmeden ders ve program kaydedilebilir mi; kilitli döneme ders açılabilir mi; ders açmak yönetici onayı ister mi?",
+      "why": "Oturum üretimi derslerin başlangıç ve bitiş tarihine, tatile ve sınav haftalarına bağlı; takvim yoksa oturum üretilemez; kilitli döneme açılan ders yalnız saklanan kayıt toplar.",
+      "options": [
+        "Birim x dönem takvimi yoksa ya da dönem kilitliyse program kaydı açık hata koduyla reddedilir (ör. takvim_yok, donem_kilitli); ders açmak için ayrı onay yok, hoca zaten onaylı",
+        "Program kaydedilir, takvim gelince iş üretir"
+      ],
+      "recommendation": "Birincisi: sade, sıra hatası yok; ilk yönetici sahibin kendisi olduğu için takvim önce girilir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B26",
+      "question": "Yoklama süresi ders ayarı mı, program saati alanı mı, oturum alanı mı?",
+      "why": "Plan \"hoca ders ayarında süre seçtiyse\" diyor, teknik belge süreyi \"Dersler, ders saatleri ve şubeler\" alanları arasında sayıyor; ders içi süre değişikliği oturuma özgü (D04).",
+      "options": [
+        "Derste varsayılan süre (boş = süre seçilmedi); oturum üretimde kopyalar; ders içi değişiklik oturumda (D04)",
+        "Slot düzeyinde süre",
+        "Yalnız oturumda"
+      ],
+      "recommendation": "Birincisi: plandaki \"ders ayarı\" sözüne uyar; süre değişince yalnız başlamamış oturumlara yansır (D02-B14).",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B27",
+      "question": "Takvim (tatil, sınav haftası, ders tarihleri) değişince birimdeki bütün derslerin oturumları nasıl yeniden hesaplanır?",
+      "why": "Bir birimde yüzlerce ders var; tek istekte hepsini yeniden üretmek uzun sürer, yarıda kalırsa bazı dersler eski takvimle kalır.",
+      "options": [
+        "Takvim yazımıyla aynı işlemde pg-boss işi kuyruğa girer; iş dersleri parça parça, her dersi kendi işleminde yeniden hesaplar; idempotent",
+        "Takvim yazımı aynı istekte hepsini yeniden üretir"
+      ],
+      "recommendation": "Birincisi: teknik belge işleri veritabanı işlemiyle birlikte kuyruğa koyuyor (teknik.html#sunucu-arka-plan); iş iki kez çalışsa da sonuç değişmez.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B28",
+      "question": "\"Aynı saatte\" neyi ifade eder, çakışmayı kim ne zaman hesaplar, hocaya ne gösterilir; aynı öğrenci iki programda farklı numarayla görünüyorsa nasıl eşleşir?",
+      "why": "Plan çakışmanın hocalara gösterileceğini ve çift anadal ve yandal listeleri arasında da denetleneceğini söylüyor (Kararlar, Çakışan dersler satırı) ama ölçütü ve ekranı vermiyor.",
+      "options": [
+        "İki oturumun [başlangıç, bitiş) aralıkları kesişirse çakışma; sunucu öğrencinin etkin liste satırları (D03) ve oturumlar üzerinden sorguyla hesaplar; panelde ders sayfasında çakışan öğrenciler ve öbür dersin kodu ve adı; eşleştirme kişi kimliğiyle (D01, D03)",
+        "Yalnız yoklama anında telefonda"
+      ],
+      "recommendation": "Birincisi: ayrı tablo gerekmez, sorgu ve dizin yeter; telefondaki \"tek derse yoklama\" kuralı D04 ve D07'de kalır.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B29",
+      "question": "Öğrenci ve hoca telefonuna inen ders ve oturum satırları hangi alanları taşır (kod, ad, tür, derslik, saatler, hoca adı ve unvanı, kilit durumu, iptal durumu)?",
+      "why": "Tasarımdaki \"Bugün\" ekranı hocanın unvanlı adını (\"Dr. Öğr. Üyesi S. Aksoy\") ve ders listesinde \"Dönem kapandı\" durumunu gösteriyor (tasarim.html); hoca kaydında unvan alanı yok (D02-C02); telefon kilidi öğrenip saklanan kayıtları bırakabilmeli.",
+      "options": [
+        "Ders satırı: kod, ad, kilit durumu ve son gün, hocanın görünen adı (unvan D01'de isteğe bağlı alan olursa eklenir); oturum satırı: tarih, başlangıç ve bitiş anı (UTC), türe göre saat sayısı, derslik, tür (normal, telafi), durum (planlandı, iptal), kısa kod; tatil satırları gösterim için",
+        "Hoca adı inmez"
+      ],
+      "recommendation": "Birincisi: hoca adı başka öğrencinin verisi değil, veri amaçla sınırlı ilkesine uyar; unvan alanı D01'in kararıdır.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B30",
+      "question": "İnceleme hesaplarının \"her an açık deneme dersi\" nasıl modellenir?",
+      "why": "Google deneme bilgilerinin her an ve her konumdan çalışmasını istiyor (plan.html#kararlar-inceleme-hesaplari); kayıt oturuma bağlı olduğundan her an bir oturum açık olmalı; deneme dersi kilit, \"Ders yapıldı mı?\", çakışma, ölçüm ve raporlara girmemeli. Plandaki \"deneme dönemi\" (ilk gerçek ders denemesi) bundan ayrı bir şeydir.",
+      "options": [
+        "Derste \"deneme dersi\" işareti ve süresiz, kilitsiz inceleme dönemi; günlük iş her gün için 00:00 ile 24:00 (İstanbul) oturumunu 14 gün ileriye kadar üretir; onaysız ders, çakışma, kilit, dönem arası, ölçüm ve rapor sorguları işaretli dersi dışlar; sunucu açılışta yoksa kurar",
+        "Pencere D04'te \"her zaman açık\" bayrağıyla, oturumsuz"
+      ],
+      "recommendation": "Birincisi: oturumsuz pencere kayıt modelini bozar. Aynı günde ikinci kayıt \"tek sayılan kayıt\" kuralıyla sayılmayan kayıt olur, hata vermez.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B31",
+      "question": "Ekle-bırak bitişi sunucuda neye girer?",
+      "why": "Takvimde alan var ama planda geçtiği tek yer \"Ekle-bırak süresinde eklenen öğrencinin önceki oturumları sayılmaz\" kuralı ve varsayılan zaten bu (plan.html#devam).",
+      "options": [
+        "Bilgi ve D03'ün ekleme ekranında ipucu: ekle-bırak bitişinden sonra eklenen öğrencide seçim ekranı Md.9/4 seçeneğini açıklamayla gösterir, varsayılan değişmez",
+        "Sunucu kuralı: ekle-bırak sonrası eklenende varsayılan Md.9/4"
+      ],
+      "recommendation": "Birincisi: plandaki varsayılanı değiştirmez; ikincisi ürün kararını değiştirir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B32",
+      "question": "\"Son hafta\", \"son ders günü\" ve \"son oturum\" nasıl tanımlanır?",
+      "why": "Telefondaki son hafta hatırlatması ve KARAR BEKLİYOR listesi bunlara bağlı (plan.html#devam-donem-sonu).",
+      "options": [
+        "Son hafta = birimin son gününden geriye 7 gün (son gün dahil); son oturum = dersin iptal edilmemiş son oturumu; son ders günü = onun tarihi",
+        "Son hafta = takvimdeki derslerin bittiği hafta"
+      ],
+      "recommendation": "Birincisi: gönderme süresi kuralıyla (7 gün ve son gün) aynı ölçü; telefon hesaplayabilsin diye son gün ders satırıyla iner.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B33",
+      "question": "Birim takviminde hangi tarih alanları, hangi kısıtlarla tutulur?",
+      "why": "Plan \"dönem tarihleri\" diyor; oturum üretimi derslerin başlangıç ve bitişini, KARAR BEKLİYOR ve kilit son günü ister; sınav haftasının türü D02-B06 için gerekir.",
+      "options": [
+        "ders_baslangic, ders_bitis, ekle_birak_bitis, devamsizlik_son_gun (hepsi zorunlu date); tatiller (başlangıç, bitiş, isteğe bağlı yarım gün saati, ad); sınav haftaları (başlangıç, bitiş, tür: ara, final, bütünleme; ders yapılır mı); CHECK: ders_baslangic < ders_bitis <= devamsizlik_son_gun, ekle_birak_bitis <= ders_bitis"
+      ],
+      "recommendation": "Bu liste; son gün dersin bittiği güne eşit olabildiği için (Eczacılık örneği, plan.html#devam-donem-sonu) kısıt <= ile kurulur; ekle-bırak dersler başlamadan da bitebileceği için ders başlangıcına bağlanmaz.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B34",
+      "question": "Yarıyıl türleri neler; yaz okulu ayrı dönem mi?",
+      "why": "Plan yılda 28 hafta (güz ve bahar) varsayıyor; yaz okulu yazılmamış; tür listesi sonradan genişlerse istemciler kırılmamalı.",
+      "options": [
+        "Tür metin + CHECK (güz, bahar, yaz) ve x-extensible-enum; yaz okulu ilk sürümde kullanılmasa da değer var",
+        "Yalnız güz ve bahar"
+      ],
+      "recommendation": "Birincisi.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B35",
+      "question": "En düşük sürümün yükseltilebileceği \"dönem arası\" birim takvimlerinden nasıl hesaplanır?",
+      "why": "Kural \"birimlerin devamsızlık işleme son günü geçip yeni dönem başlamadan\" (plan.html#dagitim-guncelleme-ilkesi); birimlerin takvimi farklı.",
+      "options": [
+        "Bütün etkin birimlerin son günü geçmiş ve hiçbir birimde yeni dönemin ders başlangıcı gelmemişse dönem arası (inceleme dönemi hariç); tek fonksiyon, D06 ve D13 kullanır",
+        "Birim bazında en düşük sürüm"
+      ],
+      "recommendation": "Birincisi: en düşük sürüm uygulama genelinde tek değerdir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B36",
+      "question": "Arşivleme ne zaman olur ve ne yapar?",
+      "why": "Plan \"Ders silinmez, arşivlenir\" diyor ve hoca silinince dersler arşivleniyor; arşivli dersin telefonlarda, raporlarda ve yetkide nasıl davrandığı yazılmamış.",
+      "options": [
+        "Arşiv = salt okunur ve etkin listelerden çıkış; kilitte birimin dersleri kendiliğinden arşivlenir; hoca kilitten önce kaydı olmayan kendi dersini arşivleyebilir; telefona silindi işaretiyle iner; raporlar ve AKSİS özeti arşivli dersi gösterir",
+        "Yalnız kilitte ve hoca silinince"
+      ],
+      "recommendation": "Birincisi: yanlış açılan dersi kaldırmanın silmesiz yolu.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B37",
+      "question": "D02 satırları değişiklik akışında nasıl iner: iptal edilen oturum, arşivlenen ders, kaldırılan slot ve tatil?",
+      "why": "Telefonun iptali \"iptal\" diye göstermesi ile hiç göstermemesi farklı; ders hiç silinmediğine göre dersler tablosundaki silindi işaretinin anlamı tanımsız.",
+      "options": [
+        "Oturum hiç silindi işareti almaz, durum alanı \"iptal\" olur; slot ve tatil kaldırılınca silindi işareti; ders arşivlenince ya da öğrenci listeden pasifleşince o kullanıcıya silindi işareti",
+        "İptal edilen oturum da silindi işaretiyle iner"
+      ],
+      "recommendation": "Birincisi: öğrenci iptali görür; değişiklik sürümü her yazımda tek sayaç satırından artar (teknik.html#kod-veri-modeli).",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B38",
+      "question": "Oturum kısa kodu sütunu ve dizisi Aşama 1 göçünde mi açılır?",
+      "why": "Aşama 2 QR'ı oturum kısa kodunu taşır (teknik.html#telefon-kamera-qr); sonradan eklemek dolu tabloda doldurma ve dizin ister.",
+      "options": [
+        "Aşama 1'de sütun, dizi ve tekil dizin baştan; her oturuma üretimde verilir; CHECK 10 rakamı aşmaz",
+        "Aşama 2 göçünde"
+      ],
+      "recommendation": "Birincisi: ucuz ve \"önce genişlet\" ilkesine uygun; telefondaki gizli özellik yasağı sunucu sütununu kapsamaz.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B39",
+      "question": "Program saatinden oturum anı (UTC) hangi katmanda, hangi saat dilimi verisiyle üretilir; saat dilimi kuralı değişirse ne olur?",
+      "why": "Ortak kurallar paketi Intl kullanmaz ve UTC milisaniyeyle hesaplar (teknik.html#kod); sabit +03:00 yazmak, Türkiye yaz saatine dönerse sessizce kayar.",
+      "options": [
+        "Tarih genişletme saf TypeScript fonksiyonu (sivil tarihler); (tarih + yerel saat) AT TIME ZONE 'Europe/Istanbul' çevirisi aynı işlemde PostgreSQL'de; saat dilimi verisi güncellenince gelecekteki oturumlar yeniden hesaplanır",
+        "Çeviri Node'da Intl ile",
+        "Sabit +03:00"
+      ],
+      "recommendation": "Birincisi: saat dilimi kaynağı tek (veritabanı); testler TZ=UTC ile koşar ve İstanbul yorumunu açıkça dener (teknik.html#testler-veritabani-sifirlama).",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B40",
+      "question": "Program, telafi, iptal, \"Ders yapıldı mı?\" cevabı, takvim, kilit, p ve sahiplik değişiklikleri denetim kaydına yazılır mı?",
+      "why": "Plan düzeltme ve onayları denetim kaydına yazıyor; program değişiklikleri de sayımı değiştirir (yapılmadı, iptal) ama kaydı yazılmamış.",
+      "options": [
+        "Evet: D09'un denetim tablosuna kim, ne zaman, önceki ve yeni değer, neden kodu",
+        "Hayır, yalnız düzeltmeler"
+      ],
+      "recommendation": "Birincisi: itirazda kanıt ve Haksız devamsız hesabı için gerekir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B41",
+      "question": "D02 hangi sunucu modüllerine dağılır, uç yolları ve tablo adları nasıl yazılır?",
+      "why": "Teknik belge modülleri \"dersler, oturumlar, yönetim\" diye sayıyor ve her modülü /v1/<modül> altına koyuyor; takvim ve kilidin hangi modülde olduğu yazılmamış; \"yönetim\" adında Türkçe harf var; \"oturum\" sözcüğü sözlükte iki anlamlı (ders oturumu ve giriş oturumu, plan.html#sozluk), kimlik modülünde de \"oturumlarım\" ucu var.",
+      "options": [
+        "dersler: ders, şube, program saati; oturumlar: üretim, telafi, iptal, yapıldı mı, çakışma; yönetim: birim, bölüm, dönem, takvim, kilit; yollar ASCII (/v1/dersler, /v1/oturumlar, /v1/yonetim); ders oturumu tablosu \"oturum\", giriş oturumu tablosu D01'de ayrı adla (ör. giris_oturumu)",
+        "Takvim ve kilit dersler modülünde"
+      ],
+      "recommendation": "Birincisi; yol harf kuralı D13'ün, giriş oturumu tablo adı D01'in kararıdır.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B42",
+      "question": "Farklı kodlu iki ders (ör. iki bölümün ortak dersi) birlikte işlenirse nasıl modellenir; AKSİS özeti ders mi şube başına çıkar?",
+      "why": "Plan birlikte işlenen şubeler için tek yoklama ve tek kafa sayısı istiyor, var olup olmadıkları açık nokta (plan.html#acik); AKSİS listeleri şube başına.",
+      "options": [
+        "İlk sürümde yalnız aynı ders açılışının şubeleri birlikte işlenir; farklı kodlar tek ders altında iki şube olarak açılır, listeler ayrı yüklenir; AKSİS özeti şube başına (D10)",
+        "Dersler arası birleştirme kaydı"
+      ],
+      "recommendation": "Birincisi: açık nokta kapanana kadar en sade yol.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B43",
+      "question": "Program, telafi ve iptal yalnız panelde mi, hoca telefonunda da mı yapılır?",
+      "why": "Plan bunları \"Web paneli, hoca (internet gerekir)\" altında sayıyor, hoca modu listesinde yok (plan.html#hoca); aynı gün telafi telefondan gerekebilir.",
+      "options": [
+        "Yalnız panel; hoca telefonu programı gösterir",
+        "Telefonda da (internetliyken)"
+      ],
+      "recommendation": "Birincisi: plana uyar; uçlar istemciden bağımsız olduğu için telefon ekranı sonra eklenebilir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B44",
+      "question": "Süre seçilmemiş (Kendi beyanı) derslerde de her oturum için \"Ders yapıldı mı?\" sorulur mu?",
+      "why": "Süre seçilmeyen derste yoklama takip edilmiyor olabilir (Kararlar, Süre seçilmediyse satırı); hoca kafa sayısı girmezse her hafta soru birikir.",
+      "options": [
+        "Her geçmiş oturum için sorulur, toplu cevap düğmesiyle",
+        "Kayıt gelmiş oturum yapıldı sayılır"
+      ],
+      "recommendation": "Birincisi: ikincisi sayım tabanını hocasız değiştirir; toplu cevap \"ders başına en çok 2 dakika\" hedefini korur (plan.html#hedefler).",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B45",
+      "question": "Oturum iptal edildiğinde ya da \"yapılmadı\" denildiğinde o oturumun kayıtlarının sayımı nasıl düşer: kayıt işaretleri aynı işlemde mi değişir, sayım sorgusu oturum durumuna mı bakar?",
+      "why": "Plan kararları \"kayıt geldiğinde ya da ilgili olay olduğunda ... aynı işlemde\" veriyor (plan.html#kararlar-supheli-kayit) ve \"Yapılmadı denen dersin kayıtları ve saatleri sayılmaz\" diyor; ham kayıt kanıttır, silinmez.",
+      "options": [
+        "D02 dış yüzü olay verir, D07 aynı işlemde o oturumun kayıtlarının sayılan işaretini kaldırır; oturum yeniden yapıldı olursa işaret aynı yoldan geri gelir",
+        "Kayıt işaretleri değişmez; sayım sorguları oturum durumuna bakar"
+      ],
+      "recommendation": "Birincisi: sayılan kayıt işareti kayıtta tutuluyor (teknik.html#kod-veri-modeli) ve kısmi tekil dizin ona dayanıyor; işaret oturum durumuyla tutarlı kalmalı; dış yüz çağıranın işlemini aldığından tek işlemde olur.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B46",
+      "question": "Uygulama (lab) derslerinin oturumlarını asistan yürütüyorsa sahiplik ve yetki modeli ne olur; blok derste ikinci okutma oturumu bölmeyi gerektirir mi?",
+      "why": "Açık noktada \"Asistansa asistan rolü öne çekilir\" ve \"Blok derslerde ikinci okutma gerekli mi?\" soruları duruyor (plan.html#acik); tek sahipli model (D02-B01) asistanın oturum yürütmesini karşılamaz.",
+      "options": [
+        "Cevap gelene kadar tek sahip; asistan rolü gelirse ders başına üyelik tablosu (rol: sahip, asistan) eklenir; ikinci okutma oturumu bölmez, oturum içinde ikinci kontrol olarak D11'e kalır",
+        "Baştan üyelik tablosu"
+      ],
+      "recommendation": "Birincisi; cevap ürün kararıdır ve modelin genişleme yolu hazırdır.",
+      "needs_owner": true
+    },
+    {
+      "id": "D02-B47",
+      "question": "Aşama 2'de bir dersin \"QR'lı ders\" olduğu nerede tutulur, kim açar, dönem ortasında değişebilir mi; QR gösterilmeyen oturum QR'lı sayılır mı?",
+      "why": "QR'lı derste QR'sız gelen kayıt İncelemede kalır, Aşama 1 dersinde sayılır (plan.html#gun-kayit-etiketleri); ders QR'lı işaretliyken projeksiyon çalışmazsa bütün kayıtlar İncelemede kalır ve hocaya iş çıkar.",
+      "options": [
+        "Derste hocanın açtığı \"QR'lı\" ayarı, gelecekteki oturumlara kopyalanır; o oturumda QR hiç gösterilmediyse (QR gösterim kaydı yoksa) oturum Aşama 1 kuralıyla değerlendirilir",
+        "Ders ayarı, istisnasız",
+        "Ayar yok: oturum, ilk QR gösterim kaydı gelince QR'lı olur"
+      ],
+      "recommendation": "Birincisi: projeksiyon arızasında öğrenciyi cezalandırmaz, QR'lı derste kanıtı da korur. Sayımı etkilediği için sahibi onaylamalı; sütun Aşama 2 göçüyle gelir.",
+      "needs_owner": true
+    },
+    {
+      "id": "D02-B48",
+      "question": "Program ve takvim yazımında eşzamanlı düzenleme nasıl korunur?",
+      "why": "PUT programı gelecekteki oturumları yeniden üretir; iki sekmeden ya da iki yöneticiden gelen eşzamanlı yazım birinin değişikliğini sessizce ezer.",
+      "options": [
+        "Satırın değişiklik sürümü istekte beklenen sürüm olarak gelir; uyuşmazsa 409 ve güncel hal döner",
+        "Son yazan kazanır"
+      ],
+      "recommendation": "Birincisi: değişiklik sürümü zaten her satırda var (teknik.html#kod-veri-modeli); başlık adı ve hata zarfı D13'ün.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B49",
+      "question": "Girdi sınırları ne olmalı: ders başına slot, şube ve telafi sayısı; kod, ad, şube etiketi ve derslik uzunlukları?",
+      "why": "Zod sözleşmesi her alan için sınır ister; sınırsız liste tek istekte binlerce oturum üretir.",
+      "options": [
+        "Sözleşmede açık sınırlar (ör. ders başına en çok 20 slot, 20 şube, dönem başına 30 telafi; kod 20, ad 120, şube etiketi 20, derslik 40 karakter), veritabanında aynı CHECK",
+        "Yalnız veritabanı sınırı"
+      ],
+      "recommendation": "Birincisi; sayılar başlangıç değeri, ilk dönemin gerçek verisiyle ayarlanır.",
+      "needs_owner": false
+    },
+    {
+      "id": "D02-B50",
+      "question": "Dönem başladıktan sonra sisteme alınan derste (ör. ilk deneme dönemi dönem ortasında başlarsa) geçmiş haftaların oturumları üretilir mi?",
+      "why": "Geçmiş oturum üretilmezse T yalnız sistemin başladığı tarihten sonrasını sayar ve AKSİS özeti dönemin bir kısmını gösterir; üretilirse her biri için \"Ders yapıldı mı?\" sorulur ve kâğıtla alınan yoklamalar elle girilmek zorunda kalır.",
+      "options": [
+        "Yalnız gelecekteki oturumlar üretilir; derste \"takip başlangıcı\" tarihi tutulur, AKSİS özeti ve raporlar bu tarihi yazar",
+        "Geçmiş oturumlar yapıldı ve herkes Yok olarak üretilir",
+        "Geçmiş oturumlar onaysız üretilir, hoca düzeltmeyle doldurur"
+      ],
+      "recommendation": "Birincisi: kâğıt dönemini sisteme taşımaya zorlamaz, özetin kısmi olduğu açıkça görünür. AKSİS özetinin anlamını değiştirdiği için sahibi onaylamalı.",
+      "needs_owner": true
+    }
+  ],
+  "contradictions": [
+    {
+      "id": "D02-C01",
+      "a": "teknik.html#kod-veri-modeli: \"Oturumlar: her ders günü\"",
+      "b": "plan.html#sozluk: \"Bir dersin tek buluşması; yoklama ve son durum oturum başına tutulur.\"",
+      "note": "Aynı gün iki ayrık buluşması olan derste birinci tanım tek oturum, ikincisi iki oturum demek; plan.html Hacim satırı (\"iki gün işlenen derste 2\") gün başına tek buluşma varsayıyor, tasarımdaki panel adresi de oturumu tarihle adresliyor. Çözüm önerisi D02-B03."
+    },
+    {
+      "id": "D02-C02",
+      "a": "plan.html#kararlar-roller: \"ad-soyad, bölüm ve yalnız @istanbul.edu.tr e-postayla başvuru.\"",
+      "b": "tasarim.html#ph-home: \"10:00 ile 11:50 · Dr. Öğr. Üyesi S. Aksoy\"",
+      "note": "Tasarım örneği öğrenci ekranında hocanın unvanını gösteriyor, hoca kaydı unvan toplamıyor. Unvan alanı D01'in kararı, ders yükü D02-B29."
+    },
+    {
+      "id": "D02-C03",
+      "a": "teknik.html#kod-veri-modeli: \"Birimler ve dönemler: fakülte, bölüm; birim bazında dönem\"",
+      "b": "plan.html#hoca: \"Birim (fakülte, enstitü) bazında dönem tarihleri\"",
+      "note": "Takvimin bağlandığı birim teknik belgede \"fakülte, bölüm\", planda \"fakülte, enstitü\" olarak sayılıyor; bölümün kendi takvimi olup olmadığı ve enstitünün birim olup olmadığı belirsiz. Öneri D02-B10: takvim fakülte ve enstitü düzeyinde, bölüm alt birim."
+    }
+  ],
+  "entities": [
+    {
+      "name": "birim",
+      "purpose": "Takvimin ve kilidin bağlandığı akademik birim (fakülte, enstitü, yüksekokul, meslek yüksekokulu, konservatuvar).",
+      "key_fields": [
+        "id (uuidv7)",
+        "ad",
+        "tur (metin + CHECK)",
+        "ust_birim_id",
+        "etkin"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "bolum",
+      "purpose": "Birime bağlı bölüm; hoca kaydında seçilir, dersin varsayılan birimini verir.",
+      "key_fields": [
+        "id (uuidv7)",
+        "birim_id",
+        "ad",
+        "etkin"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "donem",
+      "purpose": "Genel akademik dönem; yoklama kaydının tekil anahtarındaki ve bölme anahtarındaki dönem kimliği.",
+      "key_fields": [
+        "id (uuidv7)",
+        "akademik_yil (ör. 2026-2027)",
+        "yariyil (guz, bahar, yaz; CHECK)",
+        "inceleme_donemi (evet/hayır; deneme dersi için süresiz)",
+        "tekil (akademik_yil, yariyil)"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "takvim",
+      "purpose": "Bir dönemin tarih seti; birden çok birim aynı takvime bağlanabilir (genel takvim ya da birime özel takvim).",
+      "key_fields": [
+        "id (uuidv7)",
+        "donem_id",
+        "ad",
+        "ders_baslangic (date)",
+        "ders_bitis (date)",
+        "ekle_birak_bitis (date)",
+        "devamsizlik_son_gun (date)",
+        "degisiklik_surumu"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "takvim_tatili",
+      "purpose": "Takvimdeki tatil; tam gün ya da yarım gün; telefona tatil satırı olarak iner.",
+      "key_fields": [
+        "id (uuidv7)",
+        "takvim_id",
+        "baslangic_tarihi (date)",
+        "bitis_tarihi (date)",
+        "yarim_gun_baslangic (time, boş = tam gün)",
+        "ad",
+        "degisiklik_surumu",
+        "silindi"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "takvim_sinav_haftasi",
+      "purpose": "Takvimdeki sınav haftası; oturum üretiminde ders yapılıp yapılmadığını belirler.",
+      "key_fields": [
+        "id (uuidv7)",
+        "takvim_id",
+        "baslangic_tarihi",
+        "bitis_tarihi",
+        "tur (ara, final, butunleme; CHECK)",
+        "ders_yapilir (evet/hayır)"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "birim_donemi",
+      "purpose": "Birim x dönem: hangi takvim kullanılıyor, kilit anı ve kilidin uygulanıp uygulanmadığı.",
+      "key_fields": [
+        "birim_id + donem_id (birincil anahtar)",
+        "takvim_id",
+        "kilit_ani (timestamptz; son günün bitişi Europe/Istanbul, takvim değişince aynı işlemde güncellenir)",
+        "kilit_uygulandi_at",
+        "degisiklik_surumu"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "ders",
+      "purpose": "Bir hocanın bir dönemdeki ders açılışı; sahiplik, birim ve ders ayarları. p alanlarının anlamı D08'in, süre alanınınki D04'ün.",
+      "key_fields": [
+        "id (uuidv7)",
+        "donem_id",
+        "birim_id",
+        "sahip_hoca_id",
+        "kod",
+        "ad",
+        "teori_p (varsayılan 70)",
+        "uygulama_p (varsayılan 80)",
+        "yoklama_suresi_dk (boş = süre seçilmedi)",
+        "deneme_dersi (evet/hayır)",
+        "takip_baslangici (date, dönem ortası başlangıç için)",
+        "qr_li (Aşama 2)",
+        "arsivlendi_at",
+        "degisiklik_surumu",
+        "tekil (donem_id, sahip_hoca_id, kod)"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "sube",
+      "purpose": "Dersin şubesi; öğrenci listesi satırları şubeye bağlanır (D03).",
+      "key_fields": [
+        "id (uuidv7)",
+        "ders_id",
+        "etiket",
+        "pasif_at",
+        "degisiklik_surumu",
+        "tekil (ders_id, etiket)"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "program_saati",
+      "purpose": "Haftalık program saati (slot): gün, yerel saat aralığı, türe göre saat sayısı, derslik, geçerlilik aralığı.",
+      "key_fields": [
+        "id (uuidv7)",
+        "ders_id",
+        "gun (1-7 ISO; CHECK)",
+        "baslangic_saati (time)",
+        "bitis_saati (time)",
+        "teori_saat",
+        "uygulama_saat",
+        "derslik",
+        "gecerlilik_baslangic (date)",
+        "gecerlilik_bitis (date)",
+        "degisiklik_surumu",
+        "silindi"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "program_saati_subesi",
+      "purpose": "Slotun hangi şubeleri kapsadığı (birlikte işlenen şubeler dahil).",
+      "key_fields": [
+        "program_saati_id",
+        "sube_id"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "oturum",
+      "purpose": "Dersin tek buluşması; programdan ya da telafiden üretilir, hiç silinmez. Pencere sütunları ve kapandı mı D04'ün, kafa sayısı D07'nin.",
+      "key_fields": [
+        "id (uuidv7)",
+        "ders_id",
+        "donem_id",
+        "program_saati_id (telafide boş)",
+        "tur (normal, telafi; CHECK)",
+        "tarih (date)",
+        "baslangic (timestamptz)",
+        "bitis (timestamptz)",
+        "teori_saat",
+        "uygulama_saat",
+        "derslik",
+        "durum (planlandi, iptal; CHECK)",
+        "iptal_nedeni (hoca, tatil, tasindi)",
+        "yapildi (boş, evet, hayır)",
+        "telafi_edilen_oturum_id",
+        "kisa_kod (bigint, tekil, Aşama 2)",
+        "degisiklik_surumu"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "oturum_subesi",
+      "purpose": "Oturumun kapsadığı şubeler; öğrenciye hangi oturumun ineceğini ve kaydın hangi oturuma sayılacağını belirler.",
+      "key_fields": [
+        "oturum_id",
+        "sube_id"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "oturum_degisikligi",
+      "purpose": "Oturumun program kaynaklı değişiklik geçmişi (önceki anlar, derslik, durum); D07'nin eski programla gelen kayıt kararı için kanıt.",
+      "key_fields": [
+        "id (uuidv7)",
+        "oturum_id",
+        "onceki_baslangic",
+        "onceki_bitis",
+        "onceki_derslik",
+        "onceki_durum",
+        "degistiren_kisi_id",
+        "zaman (timestamptz)",
+        "neden_kodu"
+      ],
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "degisiklik_sayaci",
+      "purpose": "Tek satırlık değişiklik sürümü sayacı; D02 tabloları her yazımda sürümünü buradan alır.",
+      "key_fields": [
+        "deger (bigint)"
+      ],
+      "proposed_owner": "D06"
+    },
+    {
+      "name": "denetim_kaydi",
+      "purpose": "Program, telafi, iptal, yapıldı mı cevabı, takvim, kilit, p ve devir değişikliklerinin kaydı; yalnız eklenir.",
+      "key_fields": [
+        "kim",
+        "zaman",
+        "nesne türü ve kimliği",
+        "önceki ve yeni değer",
+        "neden kodu"
+      ],
+      "proposed_owner": "D09"
+    }
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/dersler",
+      "client": "panel",
+      "purpose": "Hocanın kendi derslerini dönem süzgeciyle listeler; başka hocanın dersi görünmez.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/dersler",
+      "client": "panel",
+      "purpose": "Ders açar (dönem, birim, kod, ad, şubeler, yoklama süresi); sahip isteği yapan hocadır.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/dersler/{dersId}",
+      "client": "panel",
+      "purpose": "Ders ayrıntısı: şubeler, program, bağlı takvimin özeti, kilit ve arşiv durumu.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/dersler/{dersId}",
+      "client": "panel",
+      "purpose": "Ad, kod, birim ve yoklama süresini değiştirir; kilitli dönemde reddedilir.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/dersler/{dersId}/arsivle",
+      "client": "panel",
+      "purpose": "Kaydı olmayan dersi kilitten önce arşivler; silme yok.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/dersler/{dersId}/subeler",
+      "client": "panel",
+      "purpose": "Derse şube ekler.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/dersler/{dersId}/subeler/{subeId}",
+      "client": "panel",
+      "purpose": "Şube etiketini değiştirir ya da şubeyi pasifleştirir.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/dersler/{dersId}/program",
+      "client": "panel",
+      "purpose": "Haftalık program saatlerini şube kümeleriyle verir.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/dersler/{dersId}/program/onizleme",
+      "client": "panel",
+      "purpose": "Önerilen programın oturumlara etkisini yazmadan gösterir: eklenecek, iptal edilecek ve değişecek oturumlar.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/dersler/{dersId}/program",
+      "client": "panel",
+      "purpose": "Haftalık programı yazar ve gelecekteki oturumları aynı işlemde yeniden üretir; beklenen değişiklik sürümü uyuşmazsa 409.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/dersler/{dersId}/oturumlar",
+      "client": "panel",
+      "purpose": "Dersin oturumlarını durum, tür, tarih ve türe göre saatleriyle listeler (tarih aralığı gün olarak).",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/dersler/{dersId}/telafi",
+      "client": "panel",
+      "purpose": "Telafi oturumu ekler (tarih, saat aralığı, türe göre saat, derslik, şubeler, isteğe bağlı telafi ettiği oturum).",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/oturumlar/{oturumId}",
+      "client": "panel",
+      "purpose": "Başlamamış tek oturumun saatini ya da dersliğini değiştirir; önceki değerler değişiklik geçmişine yazılır.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/oturumlar/{oturumId}/iptal",
+      "client": "panel",
+      "purpose": "Başlamamış oturumu nedeniyle iptal eder; oturum silinmez.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/oturumlar/onaysiz",
+      "client": "panel",
+      "purpose": "Hocanın \"Ders yapıldı mı?\" cevabı bekleyen geçmiş oturumlarını listeler (hoca telefonu da internetliyken çağırır).",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/oturumlar/{oturumId}/yapildi-mi",
+      "client": "panel",
+      "purpose": "\"Ders yapıldı mı?\" cevabını yazar (yapıldı ya da yapılmadı); hoca telefonu da internetliyken çağırır.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/oturumlar/yapildi-mi",
+      "client": "panel",
+      "purpose": "Toplu \"Ders yapıldı mı?\" cevabı (oturum kimlikleri listesi ve tek cevap).",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/dersler/{dersId}/cakismalar",
+      "client": "panel",
+      "purpose": "Dersin öğrencilerinden başka derslerle saat çakışanları ve çakışan dersin kodu ve adını listeler.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/bolumler",
+      "client": "telefon",
+      "purpose": "Hoca kaydı formu için birim ve bölüm listesini verir (girişsiz; panelden de çağrılır).",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/yonetim/birimler",
+      "client": "panel",
+      "purpose": "Birimleri ve bölümlerini listeler.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/yonetim/birimler",
+      "client": "panel",
+      "purpose": "Birim ekler.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/yonetim/birimler/{birimId}",
+      "client": "panel",
+      "purpose": "Birim adını, türünü ya da etkinliğini değiştirir.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/yonetim/birimler/{birimId}/bolumler",
+      "client": "panel",
+      "purpose": "Birime bölüm ekler.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/yonetim/donemler",
+      "client": "panel",
+      "purpose": "Dönemleri listeler.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/yonetim/donemler",
+      "client": "panel",
+      "purpose": "Dönem açar (akademik yıl, yarıyıl).",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/yonetim/takvimler",
+      "client": "panel",
+      "purpose": "Bir dönem için takvim açar.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/yonetim/takvimler/{takvimId}",
+      "client": "panel",
+      "purpose": "Takvim tarihlerini, tatilleri ve sınav haftalarını yazar; etkilenen oturumların yeniden hesaplanma işini aynı işlemde kuyruğa koyar; beklenen değişiklik sürümü uyuşmazsa 409.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/yonetim/birimler/{birimId}/donemler/{donemId}",
+      "client": "panel",
+      "purpose": "Birimi bir dönem için takvime bağlar.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/yonetim/kilitler",
+      "client": "panel",
+      "purpose": "Birim ve dönem başına son gün, kilit anı, kilit durumu ve \"dönem arası\" bilgisini verir.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/yonetim/dersler",
+      "client": "panel",
+      "purpose": "Yönetici için ders listesi (kod, ad, hoca, birim, p, durum); öğrenci listesi ve yoklama yok.",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/yonetim/dersler/{dersId}/oranlar",
+      "client": "panel",
+      "purpose": "Kuralı farklı programdaki dersin teori ve uygulama p değerlerini değiştirir.",
+      "proposed_owner": "D08"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/yonetim/dersler/{dersId}/devir",
+      "client": "panel",
+      "purpose": "Dersi onaylı başka hocaya devreder (D02-B23 sahip kararına bağlı).",
+      "proposed_owner": "D02"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/esitleme/degisenler",
+      "client": "telefon",
+      "purpose": "Değişenler akışı; D02'nin ders, program saati, oturum, tatil ve kilit satırlarını değişiklik sürümü ve silindi işaretiyle taşır.",
+      "proposed_owner": "D06"
+    }
+  ],
+  "jobs": [
+    {
+      "name": "takvim_oturumlarini_yenile",
+      "schedule": "Olay tetiklemeli: takvim, tatil ya da sınav haftası yazımıyla aynı işlemde kuyruğa girer",
+      "purpose": "Takvime bağlı birimlerin derslerinde gelecekteki oturumları parça parça, her dersi kendi işleminde yeniden hesaplar; idempotent.",
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "donem_kilidi",
+      "schedule": "Her gün 00:05 Europe/Istanbul ve işçi kapalı kaldıysa açılışta bir kez (missed: once)",
+      "purpose": "Son günü biten birim ve dönemlerde kilit etkilerini uygular: onaysız Kendi beyanı kaydını sayılmış haliyle kilitletir (D07, D09), dersleri arşivler, değişiklik sürümünü artırır; idempotent. Kilit durumu bu işten değil saatten türetildiği için iş gecikse de kilit doğru görünür.",
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "deneme_dersi_oturumlari",
+      "schedule": "Her gün bir kez, Europe/Istanbul",
+      "purpose": "Deneme dersi için 14 gün ileriye kadar 00:00 ile 24:00 (İstanbul) günlük oturumlarını üretir; deneme dersi yoksa kurar.",
+      "proposed_owner": "D02"
+    },
+    {
+      "name": "oturum_kapat",
+      "schedule": "Birkaç dakikada bir (teknik.html#sunucu-arka-plan)",
+      "purpose": "Süresi dolmuş, kapanmamış bütün oturumları kapatır; program değişince iptal gerekmez.",
+      "proposed_owner": "D04"
+    }
+  ],
+  "depends_on": [
+    "D01",
+    "D03",
+    "D06",
+    "D09",
+    "D12",
+    "D13",
+    "D14"
+  ],
+  "touches_other_domains": [
+    {
+      "domain": "D01",
+      "what": "Ders sahibi ve yönetici kimliği kökteki oturum kancasından gelir; hoca hesabı silinince dersleri arşivlenir (devir: D02-B23); inceleme hesapları yalnız deneme dersini görür (D02-B30); hoca kaydındaki bölüm listesi D02'nin bölüm tablosundan gelir; ders yükündeki hoca adı ve isteğe bağlı unvan (D02-B29, D02-C02); yönetici kapsamı (D02-B22); giriş oturumu tablosunun adı ders oturumundan ayrılmalı (D02-B41)."
+    },
+    {
+      "domain": "D03",
+      "what": "Liste satırı şubeye bağlıdır; öğrencinin oturumları şubesinden çıkar (D02-B02); sonradan eklenen öğrencide \"ilk yapılan ders\" ve ekle-bırak bitişi D02'den gelir (D02-B31); çakışma denetimi etkin liste satırlarını okur; liste satırı olan şube silinmez, pasif olur."
+    },
+    {
+      "domain": "D04",
+      "what": "Pencere anları oturumun başlangıç ve bitişinden ve dersin yoklama süresinden türetilir (D02-B26); süre seçilmemiş derste pencere ders boyunca açık kalır (bitiş D02'den); oturum kapatma işi ve ders içi süre değişikliği ile erken kapatma oturum satırındaki D04 sütunlarıdır."
+    },
+    {
+      "domain": "D05",
+      "what": "Yoklama kaydının dönemi oturumun dersinin dönemidir (tekil anahtar); kayıt oturum kimliğine bağlanır, oturum hiç silinmez, iptal edilen oturumun kimliği geçerli kalır (D02-B13)."
+    },
+    {
+      "domain": "D06",
+      "what": "Değişenler akışı D02 satırlarını taşır (değişiklik sürümü, silindi işareti, tek sayaç satırı; D02-B37); kilit durumu telefona iner ve telefon saklanan kayıtları ve kuyruk işlerini kilitte bırakır; aynı gün telafisi yalnız internetteki telefona ulaşır; \"dönem arası\" bilgisi en düşük sürüm kontrolüne gider (D02-B35)."
+    },
+    {
+      "domain": "D07",
+      "what": "Kafa sayısı oturumu \"yapıldı\" yapar (D02-B18); iptal ve \"yapılmadı\" oturumunun kayıtları sayılmaz (D02-B45); taşınan oturumun eski anları kararda kanıttır (D02-B13); öğrencinin şubesi oturumun şube kümesinde değilse kayıt listesiz derse yoklamadır; kilitte onaysız Kendi beyanı dondurulur; çakışan oturumlarda tek derse yoklama verilir; 2'lik ortak sınır dönem başınadır; QR'lı ders ayarı QR'sız kaydın kararını belirler (D02-B47)."
+    },
+    {
+      "domain": "D08",
+      "what": "T, eklenme tarihinden sonra yapılan oturumların türe göre saatleridir; kalan planlı saatler ve sonraki oturumun türe göre saati D02'nin önceden üretilmiş oturumlarından gelir (D02-B05); p alanları ders satırındadır; telafi borcu işareti D02-B15'e bağlıdır; KARAR BEKLİYOR için son oturum ve son ders günü D02'den gelir (D02-B32)."
+    },
+    {
+      "domain": "D09",
+      "what": "\"Ders yapıldı mı?\" cevapları ile program, telafi, iptal, takvim, kilit, p ve devir değişiklikleri denetim kaydına yazılır (D02-B40); kilitten sonra düzeltme denetim kaydıyla sürer; blok derste saat sayısı seçimi oturumun türe göre saatlerine dayanır; telafi işaretlemesinin sebep kodu D02-B17'tedir."
+    },
+    {
+      "domain": "D10",
+      "what": "Raporlar oturum üzerinden çalışır, tarih oturumdadır; onaysız oturum varken dönem sonu çıktısı alınamaz; telafi edilmeyen saat işareti D02'nin oturum durumlarından gelir; AKSİS özetinin ders mi şube mi başına çıkacağı D02-B42'dedir; dönem ortasında başlayan derste özet takip başlangıcını yazar (D02-B50)."
+    },
+    {
+      "domain": "D11",
+      "what": "Oturum kısa kodu (10 rakam, sunucu sırayla verir) oturum tablosundadır (D02-B38); QR yeniden açılsa da kayıtlar tek oturumda birleşir; Aşama 2'de \"QR'lı ders\" ayarı derste durur ve oturuma kopyalanır (D02-B47)."
+    },
+    {
+      "domain": "D12",
+      "what": "Dönem kimliği yoklama tablosunun tekil anahtarında ve bölme anahtarındadır (D02-B08); uuidv7, metin + CHECK, timestamptz, date ve time kuralları D02 tablolarına uygulanır; çakışma ve onaysız oturum sorgularının dizinleri D02 tablolarındadır."
+    },
+    {
+      "domain": "D13",
+      "what": "Uçlar /v1/<modül> altındadır ve yollar ASCII yazılır (D02-B41); oturum durumu, tür ve iptal nedeni x-extensible-enum taşır; tarihler metin olarak taşınır; oturum tarihle değil kimlikle adreslenir; eşzamanlı düzenleme için beklenen sürüm başlığı ve 409 zarfı (D02-B48)."
+    },
+    {
+      "domain": "D14",
+      "what": "takvim_oturumlarini_yenile, donem_kilidi ve deneme_dersi_oturumlari işleri pg-boss'ta, İstanbul saatiyle zamanlanır, missed: once ile; oturum_kapat işi D04'ündür."
+    },
+    {
+      "domain": "D15",
+      "what": "Eski saat belgesi ve QR anahtarları en az dönem kilidine kadar saklanır, kilit anı buradan okunur; yük testi hacmi haftada en az 1 oturum ve yılda 28 hafta varsayımına dayanır."
+    }
+  ]
+}

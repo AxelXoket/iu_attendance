@@ -1,0 +1,142 @@
+== R12-K01 | Telefon: sürüm hattı
+REC: expo en az 57.0.17 olmalı (şu an 57.0.26); bütün yerel paketler npx expo install ile, SDK 57 nin sabitlediği sürümlerde kurulmalı.
+VALUES: [{"name":"expo","value":">=57.0.17, şu an 57.0.26 (2026-09-29)","note":"bellek ve açılış geriletmeleri bu ara sürümlerde kapandı"},{"name":"react-native","value":"0.86.3","note":""},{"name":"react","value":"19.2.3","note":""},{"name":"react-native-reanimated","value":"4.5.1","note":""},{"name":"react-native-worklets","value":"0.10.1","note":""},{"name":"react-native-gesture-handler","value":"~2.32.0","note":"3.x geçişi SDK yükseltmesiyle"},{"name":"react-native-screens","value":"~4.26.0","note":""},{"name":"expo-router","value":"~57.0.24","note":""},{"name":"@expo/ui","value":"~57.0.21","note":""},{"name":"expo-haptics","value":"~57.0.3","note":""},{"name":"expo-font","value":"~57.0.4","note
+BASED: ["R12-F01","R12-F02","R12-F03","R12-F07"]
+
+== R12-K02 | Telefon: hareket motoru
+REC: Telefondaki bütün etkileşim hareketleri tek motorla, Reanimated 4 ile yazılmalı: basılma, renk ve görünürlük gibi durum değişimleri için CSS tarzı geçişler ve tokendan gelen cubicBezier eğrileri; parmağı izleyen hareketler için withTiming ve withSpring; liste ve panel giriş çıkışları için layout animasyonları. reduceMotion hiçbir yerde ReduceMotion.Never yapılmamalı.
+VALUES: [{"name":"transitionTimingFunction","value":"cubicBezier(x1, y1, x2, y2)","note":"sayılar token dosyasından gelir"},{"name":"reduceMotion","value":"ReduceMotion.System","note":"varsayılan, değiştirilmez"},{"name":"useReducedMotion","value":"uygulama açılışındaki durumu verir","note":"uygulama açıkken yapılan ayar değişikliğini görmez"}]
+BASED: ["R12-F03","R12-F04","R12-F05","R12-F08"]
+
+== R12-K03 | Token: yay (spring) değerleri
+REC: DTCG de yay tipi olmadığı için yaylar $extensions altında tek bir üretici anahtarıyla ve yalnızca süre tabanlı aileyle (duration, dampingRatio) tutulmalı; stiffness ve damping ile karıştırılmamalı. Yay tokenlarını yalnız telefon üreticisi okumalı.
+VALUES: [{"name":"$extensions anahtarı","value":"ters alan adı biçiminde tek anahtar","note":"spesifikasyon örneği \"org.example.toolname\""},{"name":"yay alanları","value":"duration (ms) ve dampingRatio","note":""},{"name":"Reanimated varsayılanları","value":"duration 550, dampingRatio 1, mass 4","note":"yalnız başvuru içindir, tasarım değeri değildir"}]
+BASED: ["R12-F06","R12-F16"]
+
+== R12-K04 | Telefon: stil katmanı
+REC: React Native StyleSheet ile DTCG kaynağından üretilen tipli bir tokens.ts modülü kullanılmalı; tokens.ts elle düzenlenmemeli. Koyu tema gündeme gelirse Unistyles 3 değerlendirilmeli.
+VALUES: [{"name":"stil API si","value":"React Native StyleSheet","note":""},{"name":"token modülü","value":"tokens.ts (üretilmiş, as const)","note":""},{"name":"tema","value":"şimdilik tek açık tema","note":"koyu tema telefon ayarını izleyecekse Unistyles 3 adayı"}]
+BASED: ["R12-F13","R12-F14","R12-F15","R12-F01"]
+
+== R12-K05 | Telefon: sheet ve menüler
+REC: Panel benzeri alt sayfalar expo-router formSheet ile yerel sheet olarak açılmalı; köşe yarıçapı tokena bağlanmalı. Menüler ve ekran içi sheet ler için @expo/ui kullanılmalı.
+VALUES: [{"name":"presentation","value":"'formSheet'","note":""},{"name":"sheetAllowedDetents","value":"en fazla 3 durak (Android sınırı)","note":"biçim örneği [0.25, 0.5, 1] veya 'fitToContents'"},{"name":"sheetCornerRadius","value":"köşe yarıçapı tokenı (piksel)","note":"köşeli görünüm için küçük değer"},{"name":"menü","value":"@expo/ui Menu ve ContextMenu (SwiftUI), DropdownMenu (Jetpack Compose)","note":""},{"name":"ekran içi sheet","value":"@expo/ui Universal BottomSheet","note":""}]
+BASED: ["R12-F09","R12-F10","R12-F11","R12-F12"]
+
+== R12-K06 | Telefon: yoklama başarı hareketi ve dokunsal onay
+REC: Yoklama alındı ekranındaki tik işareti react-native-svg ve Reanimated ile çizilmeli; dokunsal onay Android de performAndroidHapticsAsync, iOS ta notificationAsync ile verilmeli ve onay her zaman ekranda da görünmeli.
+VALUES: [{"name":"çizim","value":"react-native-svg 15.15.4 ve Reanimated","note":""},{"name":"Android dokunsal","value":"Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Confirm)","note":""},{"name":"iOS dokunsal","value":"Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)","note":""}]
+BASED: ["R12-F26","R12-F27","R12-F05","R12-F04"]
+
+== R12-K07 | Token hattı (iki platform için tek kaynak)
+REC: Tokenlar depoda DTCG Format 2025.10 biçiminde tek kaynakta tutulmalı; @terrazzo/cli 2.7.1 ile panel için tokens.css (CSS değişkenleri), telefon için tokens.ts üretilmeli; check komutu commit öncesi kapıya konmalı. Renkler OKLCH bileşenleri ve color.js ile hesaplanmış hex yedeğiyle yazılmalı.
+VALUES: [{"name":"kaynak","value":"tokens/*.tokens.json","note":""},{"name":"renk","value":"{\"$type\": \"color\", \"$value\": {\"colorSpace\": \"oklch\", \"components\": [L, C, H], \"alpha\": 1, \"hex\": \"#rrggbb\"}}","note":"hex color.js ile hesaplanır"},{"name":"süre","value":"{\"$type\": \"duration\", \"$value\": {\"value\": <sayı>, \"unit\": \"ms\"}}","note":""},{"name":"eğri","value":"{\"$type\": \"cubicBezier\", \"$value\": [P1x, P1y, P2x, P2y]}","note":"x değerleri 0 ile 1 arasında"},{"name":"geçiş","value":"{\"$type\": \"transition\", \"$value\": {\"duration\": \"{...}\", \"delay\": \"{...}\", \"timingFunction\": \"{...}\"}}","note":""},{"name":"boyut","value":"{\"$type\": \"dimension\", \
+BASED: ["R12-F16","R12-F17","R12-F18","R12-F19","R12-F06"]
+
+== R12-K08 | Panel: stil yazımı
+REC: Panelde düz CSS, CSS Modules (Vite yerleşik) ve üretilmiş tokens.css içindeki CSS değişkenleri kullanılmalı.
+VALUES: [{"name":"bileşen stilleri","value":"*.module.css","note":"Vite ek paket olmadan işler"},{"name":"tokenlar","value":":root altında üretilmiş CSS değişkenleri (tokens.css)","note":""}]
+BASED: ["R12-F20"]
+
+== R12-K09 | Panel: hareket
+REC: Panelde hover, basma ve aç kapa hareketleri token değişkenlerini kullanan CSS transition ve @keyframes ile; sayfa ve panel giriş çıkışları React 19.3 <ViewTransition> ile yazılmalı. prefers-reduced-motion kuralı kendi CSS imizde tanımlanmalı.
+VALUES: [{"name":"react","value":"19.3.0","note":"ViewTransition için 19.3 gerekiyor"},{"name":"tetikleme","value":"startTransition, Suspense, useDeferredValue","note":""},{"name":"Motion (gerekirse)","value":"motion 14.0.0, m ve LazyMotion (~4.6kb) + domAnimation (+15kb)","note":"tam motion bileşeni 34kb"}]
+BASED: ["R12-F21","R12-F22","R12-F23"]
+
+== R12-K10 | Panel: erişilebilir başsız bileşenler
+REC: Panelin menü, diyalog, açılır liste, sekme ve benzeri bileşenleri @base-ui/react 1.8.0 üzerine kurulmalı; görünümün tamamı (köşeler dahil) bizim CSS imizle çizilmeli.
+VALUES: [{"name":"@base-ui/react","value":"1.8.0","note":""},{"name":"eski paket","value":"@base-ui-components/react kullanılmaz","note":"npm de kaldırılmış"}]
+BASED: ["R12-F24","R12-F25"]
+
+== R12-K11 | Fontlar
+REC: Telefonda fontlar expo-font config plugin ile derleme anında gömülmeli; panelde yalnızca WOFF2 dosyaları kendi sunucumuzdan font-display: swap ile verilmeli ve Türkçe harfleri içeren alt küme yüklenmeli.
+VALUES: [{"name":"telefon","value":"expo-font config plugin (app.json plugins)","note":"Android de fontDefinitions ile ağırlıklar"},{"name":"panel biçimi","value":"yalnızca WOFF2","note":""},{"name":"font-display","value":"swap","note":"düzen kayması istenmezse optional"},{"name":"kaynak","value":"Fontsource paketleri veya depoya konmuş WOFF2 dosyaları","note":"örnek @fontsource-variable/inter 5.3.0; font seçimi başka bir açıkta"}]
+BASED: ["R12-F28","R12-F29"]
+
+FF R12-F01 | Expo SDK 57 yerel kütüphane sürümlerini sabitliyor | lb: true
+    Expo SDK 57, React Native 0.86 ve React 19.2 ile geliyor; Reanimated, worklets, Gesture Handler, Skia, Lottie, react-native-screens ve @expo/ui gibi yerel paketlerin uyumlu sürümleri expo paketindeki bundledNativeModules.json dosyasında sabit.
+   SRC: ["https://expo.dev/changelog/sdk-57.md","https://unpkg.com/expo@57.0.26/bundledNativeModules.json","https://docs.expo.dev/versions/v57.0.0/sdk/reanimated.md"]
+FF R12-F02 | SDK 57 ara sürümlerinde bellek ve açılış geriletmeleri kapatıldı | lb: true
+    SDK 57 nin ilk ara sürümlerinde react-native-worklets veya react-native-reanimated içe aktaran uygulamalarda bellek kullanımını çok artırabilen bir Hermes V1 geriletmesi vardı; expo@57.0.9 bunu kapattı, expo@57.0.17 ise React Native i 0.86.3 e yükseltti.
+   SRC: ["https://expo.dev/changelog/sdk-57.md","https://registry.npmjs.org/expo"]
+FF R12-F03 | Reanimated 4 yalnızca Yeni Mimari ile çalışıyor, sürüm eşleşmesi sıkı | lb: true
+    Reanimated 4 sadece React Native New Architecture ile çalışıyor ve her Reanimated sürümü belirli bir worklets ve React Native aralığına bağlı.
+   SRC: ["https://docs.swmansion.com/react-native-reanimated/docs/guides/compatibility/","https://registry.npmjs.org/react-native-reanimated","https://api.github.com/repos/software-mansion/react-native-reanimated","https://api.github.com/search/issues?q=repo%3Asoftware-mansion%2Freact-native-reanimated%20is%3Aissue%20created%3A%3E%3D2026-09-06&per_page=1","https://api.github.com/search/issues?q=repo%3Asoftware-mansion%2Freact-native-reanimated%20is%3Aissue%20closed%3A%3E%3D2026-09-06&per_page=1"]
+FF R12-F04 | Reanimated CSS geçişleri cubic-bezier eğrisini doğrudan alıyor | lb: true
+    Reanimated 4 ün CSS tarzı geçiş API si web CSS teki zamanlama fonksiyonlarının karşılığını (hazır adlar, cubicBezier, linear, steps) Android, iOS ve web de destekliyor.
+   SRC: ["https://docs.swmansion.com/react-native-reanimated/docs/css-transitions/transition-timing-function/"]
+FF R12-F05 | Reanimated telefondaki hareketi azalt ayarını varsayılan olarak uyguluyor | lb: true
+    Reanimated in bütün animasyonları varsayılan olarak cihazdaki hareketi azalt ayarına uyuyor; ayar açıkken animasyonlar bitiş değerine anında gidiyor, çıkış animasyonları hiç oynamıyor.
+   SRC: ["https://docs.swmansion.com/react-native-reanimated/docs/guides/accessibility/"]
+FF R12-F06 | withSpring için iki ayrı ayar ailesi var: süre tabanlı ve fizik tabanlı | lb: false
+    Reanimated withSpring hem süre tabanlı (duration, dampingRatio) hem fizik tabanlı (stiffness, damping) ayar kabul ediyor; ikisi birlikte verilirse süre tabanlı olan geçerli oluyor.
+   SRC: ["https://docs.swmansion.com/react-native-reanimated/docs/animations/withSpring/"]
+FF R12-F07 | Gesture Handler ın güncel ana sürümü 3, Expo SDK 57 ise 2.x sabitliyor | lb: false
+    react-native-gesture-handler npm de 3.x serisinde, 2.x serisi legacy etiketiyle sürüyor; Expo SDK 57 ise 2.32 serisini sabitliyor.
+   SRC: ["https://registry.npmjs.org/react-native-gesture-handler","https://api.github.com/repos/software-mansion/react-native-gesture-handler","https://unpkg.com/expo@57.0.26/bundledNativeModules.json","https://api.github.com/search/issues?q=repo%3Asoftware-mansion%2Freact-native-gesture-handler%20is%3Aissue%20created%3A%3E%3D2026-09-06&per_page=1","https://api.github.com/search/issues?q=repo%3Asoftware-mansion%2Freact-native-gesture-handler%20is%3Aissue%20closed%3A%3E%3D2026-09-06&per_page=1"]
+FF R12-F08 | Moti bakım almıyor | lb: false
+    Moti nin son sürümü Ocak 2025 te, son commit i Mart 2025 te; son 30 günde yeni issue bile açılmamış.
+   SRC: ["https://registry.npmjs.org/moti","https://api.github.com/repos/nandorojo/moti","https://api.github.com/search/issues?q=repo%3Anandorojo%2Fmoti%20is%3Aissue%20created%3A%3E%3D2026-09-06&per_page=1"]
+FF R12-F09 | @expo/ui menü ve sheet için yerel bileşenler veriyor | lb: false
+    @expo/ui, Jetpack Compose ve SwiftUI bileşenlerini React ten kullandırıyor; menü, bağlam menüsü ve alt sheet bileşenleri ile @gorhom/bottom-sheet ve @react-native-menu/menu ile uyumlu yedek bileşenler içeriyor.
+   SRC: ["https://docs.expo.dev/versions/v57.0.0/sdk/ui.md","https://unpkg.com/expo@57.0.26/bundledNativeModules.json","https://registry.npmjs.org/@expo%2Fui"]
+FF R12-F10 | expo-router formSheet ile yerel alt sheet açılıyor, köşe yarıçapı ayarlanabiliyor | lb: true
+    Expo Router bir ekranı presentation: formSheet ile yerel sheet olarak açabiliyor; duraklar, başlangıç durağı, tutamak ve köşe yarıçapı seçenekle ayarlanıyor.
+   SRC: ["https://docs.expo.dev/router/advanced/modals/","https://unpkg.com/expo@57.0.26/bundledNativeModules.json"]
+FF R12-F11 | @gorhom/bottom-sheet Reanimated 4 ü kabul ediyor ama Mayıs 2026 dan beri commit almadı | lb: false
+    @gorhom/bottom-sheet 5 serisi peer aralığında Reanimated 4 ü kabul ediyor; son sürüm ve son commit aynı gün, Mayıs 2026.
+   SRC: ["https://registry.npmjs.org/@gorhom%2Fbottom-sheet","https://api.github.com/repos/gorhom/react-native-bottom-sheet","https://unpkg.com/expo@57.0.26/bundledNativeModules.json"]
+FF R12-F12 | zeego un son sürümü Mart 2025, üç sabit yerel pakete bağlı | lb: false
+    zeego nun son sürümü Mart 2025 te çıktı ve peer olarak üç yerel menü paketini tam sürümle sabitliyor.
+   SRC: ["https://registry.npmjs.org/zeego","https://api.github.com/repos/nandorojo/zeego","https://api.github.com/search/issues?q=repo%3Anandorojo%2Fzeego%20is%3Aissue%20closed%3A%3E%3D2026-09-06&per_page=1"]
+FF R12-F13 | Unistyles 3 temayı yeniden render olmadan uyguluyor, iki ek yerel bağımlılık istiyor | lb: false
+    Unistyles 3, StyleSheet API sini koruyup temaları C++ ve JSI üzerinden uyguluyor; Nitro Modules ve edge-to-edge paketlerini peer olarak istiyor.
+   SRC: ["https://www.unistyl.es/v3/start/introduction","https://registry.npmjs.org/react-native-unistyles","https://api.github.com/repos/jpudysz/react-native-unistyles"]
+FF R12-F14 | NativeWind in kararlı sürümü hâlâ 4.x, v5 sürüm adayı aşamasında | lb: false
+    NativeWind in npm latest sürümü 4.x; Tailwind CSS v4 tabanlı v5 Ekim 2026 itibarıyla rc etiketinde.
+   SRC: ["https://registry.npmjs.org/nativewind","https://registry.npmjs.org/react-native-css","https://api.github.com/repos/nativewind/nativewind"]
+FF R12-F15 | Tamagui ana sürüm değiştiriyor, Restyle bir buçuk yıldır sürüm çıkarmadı | lb: false
+    Tamagui 2.x kararlı, 3.0 beta aşamasında; Shopify Restyle in son npm sürümü Mart 2025.
+   SRC: ["https://registry.npmjs.org/tamagui","https://api.github.com/repos/tamagui/tamagui","https://api.github.com/search/issues?q=repo%3Atamagui%2Ftamagui%20is%3Aissue%20created%3A%3E%3D2026-09-06&per_page=1","https://registry.npmjs.org/@shopify%2Frestyle","https://api.github.com/repos/Shopify/restyle"]
+FF R12-F16 | DTCG Format Modülü 2025.10 kararlı; süre, eğri ve geçiş tipleri var, yay tipi yok | lb: true
+    Design Tokens Format Module 2025.10, 28 Ekim 2025 te Final Community Group Report olarak yayımlandı ve kararlı kabul ediliyor; duration, cubicBezier, transition ve dimension tiplerini tanımlıyor ama yay (spring) tipi yok.
+   SRC: ["https://www.designtokens.org/tr/2025.10/format/","https://api.github.com/repos/design-tokens/community-group"]
+FF R12-F17 | DTCG renk modülü oklch yi destekliyor ve hex yedeği tanımlıyor | lb: true
+    Design Tokens Color Module 2025.10 renkleri renk uzayı, bileşenler, alfa ve isteğe bağlı hex yedeğiyle tanımlıyor; desteklenen 14 renk uzayından biri oklch.
+   SRC: ["https://www.designtokens.org/tr/2025.10/color/"]
+FF R12-F18 | Style Dictionary 2025.10 biçimini henüz tam desteklemiyor | lb: true
+    Style Dictionary v4 ten beri DTCG biçimini destekliyor ama kendi belgesine göre 2025.10 sürümü için tam destek v5 içinde hâlâ yapım aşamasında.
+   SRC: ["https://styledictionary.com/info/dtcg/","https://registry.npmjs.org/style-dictionary","https://api.github.com/repos/style-dictionary/style-dictionary","https://api.github.com/search/issues?q=repo%3Astyle-dictionary%2Fstyle-dictionary%20is%3Aissue%20created%3A%3E%3D2026-09-06&per_page=1","https://api.github.com/search/issues?q=repo%3Astyle-dictionary%2Fstyle-dictionary%20is%3Aissue%20closed%3A%3E%3D2026-09-06&per_page=1"]
+FF R12-F19 | Terrazzo DTCG odaklı, CSS ve JS/TS çıktısı ile doğrulama komutu veriyor | lb: true
+    Terrazzo DTCG token JSON undan CSS, Sass, JS/TS, Swift, Tailwind ve başka çıktılar üreten bir araç; token denetimi (lint) ve DTCG ye uygunluk kontrolü yapan bir check komutu var.
+   SRC: ["https://terrazzo.app/docs/","https://registry.npmjs.org/@terrazzo%2Fcli","https://api.github.com/repos/terrazzoapp/terrazzo","https://api.github.com/search/issues?q=repo%3Aterrazzoapp%2Fterrazzo%20is%3Aissue%20created%3A%3E%3D2026-09-06&per_page=1"]
+FF R12-F20 | Tailwind v4 tokenları @theme ile CSS değişkeni yapıyor; Vite CSS Modules u kendisi destekliyor | lb: false
+    Tailwind CSS v4 te tema değişkenleri @theme yönergesiyle tanımlanan CSS değişkenleri; Vite ise .module.css ile biten her dosyayı ek paket olmadan CSS Modules olarak işliyor.
+   SRC: ["https://tailwindcss.com/docs/theme","https://registry.npmjs.org/tailwindcss","https://api.github.com/repos/tailwindlabs/tailwindcss","https://vite.dev/guide/features"]
+FF R12-F21 | React 19.3 ile <ViewTransition> kararlı oldu | lb: true
+    React 19.3 (9 Eylül 2026) View Transitions ve Fragment Refs i kararlı yaptı; <ViewTransition> öğelerin girişini, çıkışını, yer değiştirmesini ve boyut değişimini tarayıcının View Transition API si ile canlandırıyor.
+   SRC: ["https://react.dev/blog/2026/09/09/react-19-3","https://registry.npmjs.org/react"]
+FF R12-F22 | Aynı belge içi View Transitions Ekim 2025 ten beri Baseline | lb: false
+    Firefox 144 ile aynı belge içi view transition lar üç büyük tarayıcı motorunda da çalışır hale geldi ve 14 Ekim 2025 itibarıyla Baseline Newly available oldu.
+   SRC: ["https://web.dev/blog/same-document-view-transitions-are-now-baseline-newly-available"]
+FF R12-F23 | Motion 14 in tam bileşeni 34kb, LazyMotion ile ilk yük yaklaşık 4.6kb | lb: false
+    Motion (eski Framer Motion) React için farklı boyutlarda giriş noktaları sunuyor; tam motion bileşeni küçültülemiyor.
+   SRC: ["https://motion.dev/docs/react-reduce-bundle-size","https://registry.npmjs.org/motion","https://api.github.com/repos/motiondivision/motion"]
+FF R12-F24 | Base UI 1.0 Aralık 2025 te kararlı oldu, shadcn/ui Temmuz 2026 da varsayılanı Base UI yaptı | lb: true
+    Base UI biçimsiz (unstyled) erişilebilir React bileşenleri sunuyor; 11 Aralık 2025 te 1.0 kararlı sürüme ulaştı, o tarihten beri düzenli sürüm çıkarıyor ve shadcn/ui yeni projelerde varsayılan olarak onu kullanıyor.
+   SRC: ["https://base-ui.com/react/overview/releases","https://registry.npmjs.org/@base-ui%2Freact","https://registry.npmjs.org/@base-ui-components%2Freact","https://api.github.com/repos/mui/base-ui","https://api.github.com/search/issues?q=repo%3Amui%2Fbase-ui%20is%3Aissue%20created%3A%3E%3D2026-09-06&per_page=1","https://api.github.com/search/issues?q=repo%3Amui%2Fbase-ui%20is%3Aissue%20closed%3A%3E%3D2026-09-06&per_page=1","https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default"]
+FF R12-F25 | Radix ve React Aria Components bakımda; Radix in açık issue sayısı yüksek | lb: false
+    Radix Primitives ve React Aria Components 2026 da sürüm çıkarmaya devam ediyor; ikisi de biçimsiz bileşen veriyor.
+   SRC: ["https://registry.npmjs.org/radix-ui","https://api.github.com/repos/radix-ui/primitives","https://registry.npmjs.org/react-aria-components","https://api.github.com/repos/adobe/react-spectrum"]
+FF R12-F26 | Başarı animasyonu için Lottie, Rive ve Skia nın durumu | lb: false
+    Lottie Expo SDK 57 listesinde sabitli ve aktif; Rive in yeni React Native çalışma zamanı 0.x sürümünde ve Expo listesinde yok; Skia listede sabitli.
+   SRC: ["https://registry.npmjs.org/lottie-react-native","https://api.github.com/repos/lottie-react-native/lottie-react-native","https://registry.npmjs.org/rive-react-native","https://api.github.com/repos/rive-app/rive-react-native","https://registry.npmjs.org/@rive-app%2Freact-native","https://api.github.com/repos/rive-app/rive-nitro-react-native","https://registry.npmjs.org/@shopify%2Freact-native-skia","https://api.github.com/repos/Shopify/react-native-skia","https://unpkg.com/expo@57.0.26/bundledNativeModules.json"]
+FF R12-F27 | expo-haptics: Android de Vibrator yerine performAndroidHapticsAsync öneriliyor | lb: false
+    expo-haptics Android de Vibrator servisini, iOS ta Taptic Engine i kullanıyor; Android için belgenin önerisi Vibrator tabanlı çağrılar yerine performAndroidHapticsAsync.
+   SRC: ["https://docs.expo.dev/versions/v57.0.0/sdk/haptics.md","https://unpkg.com/expo@57.0.26/bundledNativeModules.json"]
+FF R12-F28 | Expo da fontlar config plugin ile derleme anında gömülmeli | lb: false
+    expo-font belgesi Android ve iOS için config plugin ile derleme anında gömmeyi öneriyor; useFonts ve loadAsync yalnızca plugin kullanılamıyorsa.
+   SRC: ["https://docs.expo.dev/versions/v57.0.0/sdk/font.md","https://unpkg.com/expo@57.0.26/bundledNativeModules.json"]
+FF R12-F29 | Web fontları: yalnızca WOFF2 ve bilinçli bir font-display seçimi | lb: false
+    web.dev font rehberi bugün yalnızca WOFF2 kullanılmasını ve font-display değerinin amaca göre seçilmesini öneriyor.
+   SRC: ["https://web.dev/articles/font-best-practices","https://registry.npmjs.org/@fontsource-variable%2Finter","https://api.github.com/repos/fontsource/fontsource"]

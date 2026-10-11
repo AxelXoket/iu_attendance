@@ -1,0 +1,118 @@
+D11.tables[6].purpose :: Hoca telefonunun QR, yedek kod ve Bluetooth gösterim aralıkları (gosterim_kaydi kuyruk öğesi, plan.html#asama23-degisme-ve-kabul).
+D11.tables[6].columns[7].note :: QR, YEDEK_KOD ya da BLUETOOTH.
+D11.tables[6].constraints[4] :: gosterim_kayitlari_tur_bt_dilim_sn_ck: CHECK (tur IN ('QR','YEDEK_KOD','BLUETOOTH') AND ((tur = 'BLUETOOTH') = (bt_dilim_sn IS NOT NULL)) AND (bt_dilim_sn IS NULL OR bt_dilim_sn BETWEEN 10 AND 15))
+D11.tables[7].columns[3].note :: ders ve dönemdeki yedek kod deneme sınırı için.
+D11.tables[7].columns[5].note :: QR, YEDEK_KOD ya da YOK (yalnız QR yeteneği bildiren kayıt).
+D11.tables[7].columns[8].note :: GECERLI, BICIM_BOZUK, SURUM_BILINMIYOR, OTURUM_UYUSMUYOR, ANAHTAR_BULUNAMADI, ANAHTAR_EMEKLI, ANAHTAR_ELE_GECIRILDI, INDIRME_KAYDI_YOK, MAC_GECERSIZ, YEDEK_KOD_ESLESMEDI, YEDEK_KOD_SINIR, YOK.
+D11.tables[7].indexes[6] :: yoklama_kanitlari_ogrenci_id_ders_id_idx: (ogrenci_id, ders_id) WHERE kanit_turu = 'YEDEK_KOD';
+D11.tables[7].indexes[6] :: yedek kod deneme sınırı
+D11.tables[7].constraints[7] :: yoklama_kanitlari_kanit_turu_dogrulama_kaynak_ck: CHECK (kanit_turu IN ('QR','YEDEK_KOD','YOK') AND (kanit_turu = 'YOK') = (dogrulama = 'YOK') AND (kaynak IS NULL OR kanit_turu <> 'YOK'))
+D11.tables[7].constraints[9] :: yoklama_kanitlari_dogrulama_kaynak_dilim_ck: CHECK (dogrulama IN ('GECERLI','BICIM_BOZUK','SURUM_BILINMIYOR','OTURUM_UYUSMUYOR','ANAHTAR_BULUNAMADI','ANAHTAR_EMEKLI','ANAHTAR_ELE_GECIRILDI','INDIRME_KAYDI_YOK','MAC_GECERSIZ','YEDEK_KOD_ESLESMEDI','YEDEK_KOD_SINIR','YOK') AND (dogrulama <> 'GECERLI' OR (kaynak IS NOT NULL AND dilim IS NOT NULL)))
+D11.exports[0].signature :: 6 rakam değilse YEDEK_KOD_ESLESMEDI */;
+D11.exports[2].signature :: QrSonucu = { kanitTuru: 'QR' | 'YEDEK_KOD' | 'YOK';
+D11.exports[2].signature :: QrDogrulama = 'GECERLI' | 'BICIM_BOZUK' | 'SURUM_BILINMIYOR' | 'OTURUM_UYUSMUYOR' | 'ANAHTAR_BULUNAMADI' | 'ANAHTAR_EMEKLI' | 'ANAHTAR_ELE_GECIRILDI' | 'INDIRME_KAYDI_YOK' | 'MAC_GECERSIZ' | 'YEDEK_KOD_ESLESMEDI' | 'YEDEK_KOD_SINIR' | 'YOK';
+D11.exports[3].signature :: tur: 'QR' | 'YEDEK_KOD' | 'BLUETOOTH';
+D11.exports[4].signature :: tur: 'QR' | 'YEDEK_KOD' | 'BLUETOOTH';
+D11.exports[9].signature :: export const DOGRULAMA = ['GECERLI', 'BICIM_BOZUK', 'SURUM_BILINMIYOR', 'OTURUM_UYUSMUYOR', 'ANAHTAR_BULUNAMADI', 'ANAHTAR_EMEKLI', 'ANAHTAR_ELE_GECIRILDI', 'INDIRME_KAYDI_YOK', 'MAC_GECERSIZ', 'YEDEK_KOD_ESLESMEDI', 'YEDEK_KOD_SINIR', 'YOK'] as const  // packages/contracts/src/projeksiyon.ts
+D11.exports[11].purpose :: Varsayılanlar: normal sınırı 10 sn (yedek kod 20 sn), ret sınırı 30 sn, projeksiyon toleransı 1 sn, eşleştirme kodu 5 dk, onay pencere açılışından 15 dk önce, 10 dk'da 5 yanlış, adres başına 10 dk'da 100 yeni tarayıcı, 200.000 bağlanmamış tarayıcı tavanı, önceki çerez 60 sn, yedek kod arama payı 60 sn ile oturumda 3 ve ders ve dönemde 10 yanlış, Bluetooth dilimi 15 sn ve yayın 180 sn, konum payı 50 m, yarıçap sınırı 100 m, imkânsız hız 300 km/sa.
+D11.tests[28].asserts :: yanlış kod YEDEK_KOD_ESLESMEDI.
+D11.tests[28].asserts :: Yedek kod YEDEK_KOD ya da QR gösterim aralığıyla kapsanır, yalnız BLUETOOTH aralığı kapsamaz (BEKLEMEDE kalır).
+D11.tests[29].name :: Yedek kod deneme sınırı
+D11.tests[29].asserts :: Aynı oturumda 3 yanlış yedek koddan sonra doğru kod da eşleştirilmeden YEDEK_KOD_SINIR (İncelemede);
+D11.resolved_gaps[5].decision :: Bağlantı açılışı ve kapanışı, ikinci kullanım, gizli değer yenilemesi, yuva ataması, iptali ve devri, anahtar indirmesi ve deneme sınırı denetim kaydına yazılır (Denetim olayları tablosu, ayrıntı alanlarıyla).
+D11.resolved_gaps[8].decision :: Amaç 0x01 QR, 0x02 yedek kod, 0x03 Bluetooth.
+D11.resolved_gaps[13].decision :: Her gösterim aralığı (açma ile kapama ya da yeniden başlatma arası) ve her tür (QR, YEDEK_KOD, BLUETOOTH) ayrı öğedir;
+D11.resolved_gaps[17].decision :: Sınır: (öğrenci, oturum) için 3, (öğrenci, ders, dönem) için 10 yanlış yedek koddan sonra yeni yedek kodlu kayıtlar eşleştirilmeden YEDEK_KOD_SINIR.
+====D09
+D09.tables[1].columns[9].note :: süre bu sürümün teslim anından başlar;
+D09.tables[1].columns[18].note :: sure_baslangic_ani + 72 saat (CHECK).
+D09.invariants[19] :: Sorun bildirimi süresi 72 saattir: kayda bağlı bildirimde kaydın sunucudaki güncel karar sürümünün telefona ulaştığı andan (D06.kararTeslimAni;
+D09.exports[9].purpose :: Süre başlangıcı, D05.kayitGetir dönüşündeki güncel kararSurumu ile çağrılan D06.kararTeslimAni(tx, { donemId, kayitId }, kararSurumu: number) sonucunun telefonaUlastiAni'sidir.
+D09.tests[16].asserts :: sorun_bildirimi öğesi KABUL, durum ACIK, sure_bitis_ani kaydın güncel karar sürümünün teslim anı artı 72 saat;
+D09.tests[19].name :: Kayıtsız bildirimde süre ders bitişinden başlar
+D09.tests[59].asserts :: Her başlangıç için bitiş = başlangıç + 72 saat;
+D09.resolved_gaps[16].decision :: Süre 72 saat.
+D09.resolved_gaps[16].decision :: Başlangıç: kayda bağlı bildirimde sunucu kaydın güncel karar sürümünü D05.kayitGetir dönüşündeki kararSurumu'ndan okur (D07 karar geçmişi sırası) ve o sürümün telefona ulaşma anını alır (D06.kararTeslimAni(tx, { donemId, kayitId }, kararSurumu: number).telefonaUlastiAni);
+D09.resolved_gaps[16].decision :: Karar değişince yeni sürümün teslimiyle süre yeniden başlar.
+====D07burada
+D07.summary :: 2'lik ortak sınır, kafa sayısı karşılaştırması ve işareti, rastgele isim ve burada değil işaretleri, dönem kilidindeki karar kapanışı ve Google iptal listesi de bu modüldedir.
+D07.tables[5].columns[5].note :: Kafa sayısı karşılaştırması ve rastgele isim liste satırını sayar: aynı numaranın iki hesabı ya da düzeltmesi de olan öğrenci bir kez sayılır.
+D07.tables[5].columns[15].note :: GECMIS_OLAYLARI listesinden (kodlar.ts): KAYIT_GELDI, YenidenNeden değerleri (dış çağıranların on bir nedeni), D07'nin iç yeniden değerlendirme nedenleri (PENCERE_DEGISTI, KAFA_SAYISI_GELDI, AYAR_KESINLESTI, KESINTI_KAPANDI, BEKLEME_SURESI_DOLDU) ve KARAR_OLAYLARI'ndaki hoca olayları (KENDI_BEYANI_ONAY, KENDI_BEYANI_RET, INCELEME_ONAY, INCELEME_RET, ISARETLI_OTURUM_RET, KARAR_DEGISTIR, SINIFTA_DEGIL, SINIFTA_DEGIL_GERI_ALINDI).
+D07.tables[5].columns[18].note :: Toplu işlemin kimliği (D09 toplu onay, burada değil);
+D07.tables[5].indexes[2] :: kayit_karar_gecmisi_oturum_id_idx (oturum_id) INCLUDE (ogrenci_id, liste_satiri_id, yeni_karar, kaynak, kayit_ulasma_ani) WHERE guncel: oturum karşılaştırması, rastgele isim ve oturum yeniden değerlendirmesi
+D07.tables[7].name :: rastgele_isim_secimleri
+D07.tables[7].purpose :: Rastgele isim seçimleri ve burada değil işaretleri;
+D07.tables[7].columns[5].note :: RASTGELE_SECIM ya da ISARETLI_OTURUM.
+D07.tables[7].columns[9].note :: SECILDI, SINIFTA_DEGIL ya da GERI_ALINDI.
+D07.tables[7].columns[10].note :: Burada değil diyen hoca;
+D07.tables[7].columns[11].note :: Son burada değil anı.
+D07.tables[7].indexes[0] :: rastgele_isim_secimleri_secim_id_idx (secim_id) WHERE secim_id IS NOT NULL: aynı basışın tekrarı
+D07.tables[7].constraints[0] :: rastgele_isim_secimleri_id_pk PRIMARY KEY (id)
+D07.tables[7].constraints[1] :: rastgele_isim_secimleri_oturum_id_ogrenci_id_uq UNIQUE (oturum_id, ogrenci_id)
+D07.tables[7].constraints[2] :: rastgele_isim_secimleri_oturum_id_fk, _donem_id_fk, _ogrenci_id_fk, _secen_kisi_id_fk, _isaretleyen_kisi_id_fk
+D07.tables[7].constraints[3] :: rastgele_isim_secimleri_kaynak_ck CHECK (kaynak IN ('RASTGELE_SECIM','ISARETLI_OTURUM'))
+D07.tables[7].constraints[4] :: rastgele_isim_secimleri_durum_ck CHECK (durum IN ('SECILDI','SINIFTA_DEGIL','GERI_ALINDI'))
+D07.tables[7].constraints[5] :: rastgele_isim_secimleri_kaynak_secim_id_ck CHECK ((kaynak = 'RASTGELE_SECIM') = (secim_id IS NOT NULL AND sira IS NOT NULL))
+D07.tables[7].constraints[6] :: rastgele_isim_secimleri_kaynak_durum_ck CHECK (kaynak = 'RASTGELE_SECIM' OR durum <> 'SECILDI')
+D07.tables[7].constraints[7] :: rastgele_isim_secimleri_durum_isaret_ani_ck CHECK (durum = 'SECILDI' OR (isaret_ani IS NOT NULL AND isaretleyen_kisi_id IS NOT NULL))
+D07.tables[7].constraints[8] :: rastgele_isim_secimleri_durum_geri_alma_ani_ck CHECK ((durum = 'GERI_ALINDI') = (geri_alma_ani IS NOT NULL))
+D07.endpoints[0].response.deger :: 32 bayt güvenli rastgele değerin dolgusuz base64url hali (43 karakter);
+D07.endpoints[2].path :: /v1/dogrulama/oturumlar/{oturumId}/rastgele-isim
+D07.endpoints[2].idempotency :: Aynı secimId aynı öğrencileri döndürür (rastgele_isim_secimleri.secim_id) ve basış sınırına sayılmaz;
+D07.endpoints[2].rate_limit :: Kafa sayısından önce oturum başına en çok RASTGELE_ISIM_BASIS_SINIRI (3) farklı secimId;
+D07.endpoints[3].response.durum :: SINIFTA_DEGIL (genişleyen enum)
+D07.endpoints[3].response.kayitlar :: dizi: { donemId, kayitId, karar: RET, gerekce: YOKLAMADA_SINIFTA_DEGIL }
+D07.endpoints[4].auth :: ayrıca işareti koyan hoca olmalı (rastgele_isim_secimleri.isaretleyen_kisi_id).
+D07.state_machines[0].transitions[3].when :: öğrenci o oturumda burada değil işaretliyse Ret YOKLAMADA_SINIFTA_DEGIL (kaynak HOCA, yapan işaretleyen hoca).
+D07.state_machines[0].transitions[10].when :: gerekçe YOKLAMADA_SINIFTA_DEGIL.
+D07.state_machines[0].transitions[11].when :: Otomatik karar ve YOKLAMADA_SINIFTA_DEGIL bu yolla değişmez (DOGRULAMA_GECIS_GECERSIZ).
+D07.state_machines[0].transitions[12].by :: POST sinifta-degil (kararDegistir, HOCA, SINIFTA_DEGIL)
+D07.state_machines[0].transitions[12].when :: Burada değil (YOKLAMADA_SINIFTA_DEGIL).
+D07.state_machines[0].transitions[13].by :: DELETE sinifta-degil (SINIFTA_DEGIL_GERI_ALINDI)
+D07.state_machines[1].transitions[1].when :: Kesinleşmeden önce fark eşiğin altına indi (burada değil, hoca reddi, kafa sayısı düzeltmesi);
+D07.state_machines[3].name :: rastgele_isim_satiri
+D07.state_machines[3].states[2] :: SINIFTA_DEGIL
+D07.state_machines[3].transitions[0].by :: POST rastgele-isim
+D07.state_machines[3].transitions[0].when :: Öğrenci bu basışta seçildi (kaynak RASTGELE_SECIM, secim_id ve sira dolu).
+D07.state_machines[3].transitions[1].to :: SINIFTA_DEGIL
+D07.state_machines[3].transitions[1].when :: Hoca seçilen öğrenci için burada değil dedi;
+D07.state_machines[3].transitions[2].to :: SINIFTA_DEGIL
+D07.state_machines[3].transitions[3].from :: SINIFTA_DEGIL
+D07.state_machines[3].transitions[4].to :: SINIFTA_DEGIL
+D07.invariants[11] :: kafa sayısından önce rastgele isim oturum başına en çok RASTGELE_ISIM_BASIS_SINIRI (3) basış verir.
+D07.invariants[13] :: Burada değil yalnız o oturumda seçilmiş öğrenciye ya da derste işaret almış (derste true) oturumdaki öğrenciye, oturumun İstanbul günü bitmeden verilir;
+D07.invariants[13] :: işaretli öğrencinin o oturuma sonra gelen kaydı da Ret YOKLAMADA_SINIFTA_DEGIL alır;
+D07.exports[3].purpose :: burada değil işareti rastgele_isim_secimleri'nden.
+D07.exports[4].purpose :: Geçmiş satırının kaynak ve yapan alanları KararSonucu.kararKaynagi ve yapanKisiId'den gelir (burada değil işaretli öğrencinin kaydında HOCA ve işaretleyen hoca).
+D07.exports[5].purpose :: İlk karardan sonraki hoca geçişlerinin tek dış yolu: D09'un Kendi beyanı, İncelemede, işaretli oturum ve karar değiştirme (KARAR_DEGISTIR) kararları ile D07'nin burada değil uçları.
+D07.files[14] :: apps/server/src/modules/dogrulama/rastgele-isim.ts
+D07.files[30] :: apps/server/test/features/dogrulama/rastgele-isim.feature
+D07.files[43] :: apps/server/test/steps/dogrulama/rastgele-isim.steps.ts
+D07.tests[1].asserts :: fast-check (10.000 deneme): rastgele uyan kural kümesinde karar en yüksek sınıftır (Ret, Beklemede, İncelemede, Var), birincil gerekçe sınıf içindeki ilk katalog kodudur, öbür uyanların hepsi ek gerekçelerdedir;
+D07.tests[2].asserts :: fast-check (10.000 deneme) rastgele kayıt dizilerinde (etiketli, etiketsiz, aynı oturuma tekrar, önce Beklemede, eklenmeyen kayıt) bir (dönem, öğrenci, ders) için ORTAK_SINIRLA_KABUL alan farklı oturum sayısı ORTAK_SINIR'ı geçmez, kullanilan azalmaz, aynı oturum ikinci hak harcamaz, başka kural uyan ya da eklenmeyen kayıt hak harcamaz.
+D07.tests[5].asserts :: HOCA olayları yalnız tablodaki geçişlere izinli: kaynağı HOCA olan karardan otomatik geçiş, etiketsiz kayda KENDI_BEYANI_RET, SON_GUNDEN_SONRA kayda onay, işaret hiç açılmamış oturumda ISARETLI_OTURUM_RET ve otomatik ya da burada değil kararında KARAR_DEGISTIR DOGRULAMA_GECIS_GECERSIZ fırlatır;
+D07.tests[5].asserts :: ilk_isaret_ani dolu oturumda ISARETLI_OTURUM_RET Var'ı Ret YOKLAMADA_SINIFTA_DEGIL yapar (işaret sonradan kalkmış olsa da);
+D07.tests[6].asserts :: otomatik Ret ve YOKLAMADA_SINIFTA_DEGIL DOGRULAMA_GECIS_GECERSIZ, başka dersin hocası DOGRULAMA_YETKISIZ_HOCA, kilitten sonra DOGRULAMA_DONEM_KILITLI fırlatır (D09 eşler).
+D07.tests[31].asserts :: İki bağlantı, 300 deneme: aynı öğrencinin iki oturumdaki kayıtlarını yeniden değerlendiren işlem ile aynı öğrencinin iki öğeli gönderimi rastgele araya girerek koşar;
+D07.tests[45].asserts :: rastgele isim cevabında sayı alanı yoktur;
+D07.tests[50].name :: Rastgele isim seçimi
+D07.tests[51].name :: Burada değil
+D07.tests[51].asserts :: Seçilen öğrencinin o oturumdaki Ret olmayan bütün kayıtları Ret YOKLAMADA_SINIFTA_DEGIL olur, denetime kim ve ne zaman yazılır;
+D07.tests[51].asserts :: işaretten sonra aynı öğrenciden gelen kayıt (ikinci cihaz, makbuz) da Ret YOKLAMADA_SINIFTA_DEGIL, kaynak HOCA;
+D07.tests[52].name :: Burada değil geri alma
+D07.tests[59].asserts :: D12.saklamaIsleyicisiniCalistir(saklamaVeritabani, 'dogrulama.donem_verisi', { sinirAni, sureAy, saat }) ile: süresi dolan dönemin kayit_karar_gecmisi, oturum_isaretleri, rastgele_isim_secimleri ve ortak_sinir_sayaclari satırları ve sınır anından eski app_attest_sayaclari satırları silinir;
+D07.tests[61].asserts :: fast-check durum makinesi testi Cucumber içinde (300 deneme): rastgele olay dizilerinde (teyit, liste, pencere, kafa sayısı, kesinti, hesap kapanışı) kaynağı HOCA olan hiçbir karar otomatik olayla değişmez ve otomatik Var hiçbir otomatik olayla İncelemede'ye geçmez.
+D07.tests[62].asserts :: Aynı rastgele olay dizilerinin sonunda her kaydın güncel geçmiş satırı ile kayıt satırındaki karar, gerekçe ve karar sürümü (sira) aynıdır;
+D07.tests[63].asserts :: rastgele isim panel çereziyle 401.
+D07.resolved_gaps[5].decision :: Rastgele isim yalnız seçilen isimleri döner, aday sayısını döndürmez;
+D07.resolved_gaps[5].decision :: kafa sayısından önce oturum başına en çok 3 basış (RASTGELE_ISIM_BASIS_SINIRI), böylece tekrar tekrar basarak kayıtlı öğrencileri saymak engellenir;
+D07.resolved_gaps[5].why :: Plan düğmenin "birkaç kişi" seçtiğini söylüyor (Rastgele isim (plan.html#hile-rastgele-isim));
+D07.resolved_gaps[7].decision :: Sunucu seçer: her basışta RASTGELE_ISIM_ADEDI (3) öğrenci, crypto.randomInt ile, güncel kararı Ret olmayan kaydı bulunanlardan, o oturumda daha önce seçilenler hariç;
+D07.resolved_gaps[7].decision :: Burada değil: seçilmiş öğrenciye ya da derste işaret almış oturumdaki öğrenciye (KAFA_SAYISI_ASIMI satırında derste true;
+D07.resolved_gaps[7].decision :: öğrencinin o oturumdaki Ret olmayan bütün kayıtları Ret YOKLAMADA_SINIFTA_DEGIL, sonra gelen kaydı da kararHesapla'da aynı Ret (kaynak HOCA).
+D07.resolved_gaps[7].why :: Plan düğmenin internetsiz çalışmadığını söylüyor (Rastgele isim (plan.html#hile-rastgele-isim)) ve sözleşmede bu iş için kuyruk öğesi türü yok;
+D07.resolved_gaps[7].why :: her burada değil farkı düşürdüğü için izin geçerli işarete bağlı olsaydı okuma yarıda kesilirdi.
+D07.resolved_gaps[9].decision :: POST /v1/dogrulama/deger 32 bayt güvenli rastgele değer verir;
+D07.resolved_gaps[23].decision :: karşılaştırma, işaret ve rastgele isim D07'de.
+D07.resolved_gaps[30].decision :: KARAR_OLAYLARI: KENDI_BEYANI_ONAY, KENDI_BEYANI_RET, INCELEME_ONAY, INCELEME_RET, ISARETLI_OTURUM_RET, KARAR_DEGISTIR (hoca kendi kararını kilide kadar değiştirir, D09-B34), SINIFTA_DEGIL ve SINIFTA_DEGIL_GERI_ALINDI;
+D07.resolved_gaps[30].decision :: ISARETLI_OTURUM_RET Var'dan Ret'e geçer: oturumun KAFA_SAYISI_ASIMI satırında ilk_isaret_ani dolu ve birim-dönem kilitli değilse, gerekçe YOKLAMADA_SINIFTA_DEGIL.

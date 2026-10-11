@@ -1,0 +1,1686 @@
+[
+ {
+  "id": "D01",
+  "outcome": "CHANGE",
+  "decision": "Her başarılı hoca girişinde (telefon ya da panel) hocaya kısa bir giriş bildirimi e-postası gider: cihaz ya da tarayıcı türü, saat; 4. giriş en eski oturumu kapattıysa bu da aynı e-postada yazılır. Böylece Tek etkenli giriş satırındaki önlem ile Hoca oturumu satırı aynı kuralı söyler. Ayrı bir 'tanınan cihaz' çerezi ya da tablosu eklenmez.",
+  "rationale": "ASVS 5.0 6.3.5 şüpheli giriş bildirimini ister (seviye 3), ASVS 7.5.2 de oturum listesini (seviye 2). 'Yalnız yeni cihazda' kuralı tanınan tarayıcı için uzun ömürlü ikinci bir çerez ve sunucuda saklanan özet ister, yani yeni durum ve yeni test yükü getirir. 'Her girişte' kuralı ek durum istemez ve Türk bankalarının her girişte bildirim alışkanlığına uyar. Asıl değer şurada: kod kandırılarak alınırsa (D03'teki sahte gönderen senaryosu) hoca beklemediği bir giriş e-postası görür. Hacim sorun değil: Workspace SMTP rölesinin kullanıcı başına sınırı günde 10.000 tekil alıcı. Bildirim kodu alan hocaya gider, tekil alıcı sayısını artırmaz. Panel oturumu en çok 24 saat, telefon oturumu en çok 30 gün sürdüğü için e-posta sayısı küçük kalır.",
+  "sources": [
+   "https://raw.githubusercontent.com/OWASP/ASVS/master/5.0/en/0x15-V6-Authentication.md",
+   "https://raw.githubusercontent.com/OWASP/ASVS/master/5.0/en/0x16-V7-Session-Management.md",
+   "https://knowledge.workspace.google.com/admin/gmail/advanced/route-outgoing-smtp-relay-messages-through-google"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Hoca oturumu' satırında (div.k 'Hoca oturumu') şu cümleyi değiştir: '4. girişte en eski oturum kapanır, hocaya e-posta gider.' Yerine şunu yaz: '4. girişte en eski oturum kapanır. Her başarılı girişte hocaya kısa bir bildirim e-postası gider: cihaz ya da tarayıcı türü ve saat; en eski oturum kapandıysa o da yazılır; \"Sen değilsen Oturumlarım ekranından kapat\".' Satırın geri kalanı aynı kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "id=\"kararlar-tek-etkenli-giris\" satırında önlemler listesindeki 'yeni cihaz girişinde e-posta' ifadesini 'her girişte bildirim e-postası (ASVS 6.3.5)' yap. Satırın geri kalanı aynı kalır."
+   },
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "'Kimlik' satırında 'Oturum anahtarı 256 bit rastgele, veritabanında yalnız SHA-256 özeti.' cümlesinden hemen sonra şunu ekle: 'Kodla giriş başarılı olunca giriş bildirimi e-postası kod e-postasıyla aynı yoldan gider (bkz. <a href=\"plan.html#kararlar-e-posta-gonderimi\">Kararlar, E-posta gönderimi</a>). E-posta gidemezse giriş geri alınmaz, durum denetim kaydına yazılır. Ayrı bir tanınan cihaz kaydı tutulmaz.'"
+   }
+  ]
+ },
+ {
+  "id": "D02",
+  "outcome": "CHANGE",
+  "decision": "iPhone'da oturum anahtarının güvenli depo ayarı AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY olur. Gönderim paketini imzalayan Secure Enclave anahtarının erişim ayarı da aynı olur: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly ve .privateKeyUsage, biyometri ya da şifre şartı olmadan. İki anahtar da 'yalnız bu cihaz' kalır, yedekten başka telefona taşınmaz. Telefon yeniden başlatılıp kilidi bir kez açılmadan arka plan gönderimi bekler.",
+  "rationale": "Apple'a göre BGProcessingTask yalnız cihaz boştayken çalışır ve kullanıcı telefonu kullanmaya başlayınca sonlanır, yani çoğunlukla kilitli telefonda çalışır. WHEN_UNLOCKED ayarlı anahtarlar kilitliyken okunamaz, bu yüzden iPhone'da arka plan gönderimi ve indirme pratikte hiç çalışmazdı. Apple, AfterFirstUnlockThisDeviceOnly ayarını arka planda erişilmesi gereken öğeler için öneriyor; bu ayarla öğe yeni cihaza taşınmaz. Apple'ın Secure Enclave örneği WhenUnlockedThisDeviceOnly kullanıyor; bu ayar anahtarı kilitliyken kullanılamaz yapar. Paket arka planda imzalandığı için bu anahtar da aynı ayara geçmeli. Yeni paket gerekmiyor: expo-secure-store bu seçeneği sunuyor. Android Keystore anahtarları varsayılan olarak kilit şartı koymadığından Android tarafında değişiklik yok.",
+  "sources": [
+   "https://developer.apple.com/documentation/security/ksecattraccessibleafterfirstunlockthisdeviceonly",
+   "https://developer.apple.com/documentation/backgroundtasks/bgprocessingtask",
+   "https://developer.apple.com/documentation/security/protecting-keys-with-the-secure-enclave",
+   "https://docs.expo.dev/versions/latest/sdk/securestore/"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "'Anahtar ve imza' satırının div.row etiketine id=\"telefon-anahtar-imza\" ekle (mevcut id yok, yenisi eklenir). Aynı satırın son cümlesini değiştir: 'Güvenli depodaki oturum anahtarı \"yalnız bu cihaz\" ayarında (<code>WHEN_UNLOCKED_THIS_DEVICE_ONLY</code>).' Yerine şunu yaz: 'Güvenli depodaki oturum anahtarı \"yalnız bu cihaz\" ayarında ve ilk kilit açılışından sonra okunabilir (<code>AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY</code>; önceki karar <code>WHEN_UNLOCKED_THIS_DEVICE_ONLY</code> idi). Sebebi: iPhone'un uzun iş görevi yalnız telefon boştayken, çoğunlukla da kilitliyken çalışır; kilitliyken okunamayan anahtarla arka planda hiçbir şey gidemezdi. Secure Enclave anahtarının erişim ayarı da aynı (<code>kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly</code> ve <code>.privateKeyUsage</code>; biyometri ya da şifre şartı yok), çünkü gönderim paketini arka planda o imzalar. İki anahtar da yedekten başka telefona taşınmaz. Telefon yeniden başlayıp kilidi bir kez açılmadan arka plan gönderimi bekler. Kilitli telefonda arka plan gönderimi kabul testinde denenir.'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "id=\"telefon-gonderme-protokolu\" satırında 'kullanıcı uygulamayı kaydırıp kapatırsa görev durur.' cümlesinden sonra şunu ekle: 'Görev çoğunlukla telefon kilitliyken çalıştığından anahtarların erişim ayarı buna göre seçildi (bkz. <a href=\"#telefon-anahtar-imza\">Anahtar ve imza</a>).'"
+   },
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Öğrenci girişi' satırında 'Anahtar güvenli depoda, \"yalnız bu cihaz\" ayarıyla; sunucuda yalnız özeti.' cümlesini şöyle yap: 'Anahtar güvenli depoda, \"yalnız bu cihaz\" ayarıyla; telefon kilitliyken de arka plan gönderimi için okunabilir, yeniden başlatmadan sonra ilk kilit açılışını bekler (ayarı: bkz. <a href=\"teknik.html#telefon-anahtar-imza\">Anahtar ve imza</a>); sunucuda yalnız özeti.'"
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "'Kurallar, internetsiz çalışma ve saat' details bloğunda expo-secure-store ve expo-background-task bağlantılarının bulunduğu li öğesinin sonuna şunu ekle: ' · <a href=\"https://developer.apple.com/documentation/security/ksecattraccessibleafterfirstunlockthisdeviceonly\">Apple, ilk kilit açılışından sonra erişim</a> · <a href=\"https://developer.apple.com/documentation/backgroundtasks/bgprocessingtask\">Apple, uzun iş görevi</a>'"
+   }
+  ]
+ },
+ {
+  "id": "D03",
+  "outcome": "CHANGE",
+  "decision": "DMARC'ı ben değiştiremem, plan da buna bağlı kalmaz. Benim tarafımda üç şey olur: (1) Kod e-postasında ve giriş bildiriminde sabit bir uyarı cümlesi durur: uygulama kodu e-postayla, telefonla ya da başka bir yolla asla istemez; kod yalnız uygulamaya ya da panele girilir. (2) E-postalarda bağlantı olmaz, yalnız kod olur; böylece 'bağlantıya tıkla' diyen sahte e-posta gerçeğinden kolay ayrılır. (3) Kod kandırılarak alınırsa her girişte giden bildirim (D01) hocayı uyarır. Bunlara ek olarak BİDB'ye giden resmî yazıda DMARC'ın Google'ın önerdiği sırayla kademeli olarak quarantine düzeyine çekilmesi öneri olarak yazılır; karar BİDB'nindir.",
+  "rationale": "DNS sorgusu (6 Ekim 2026): _dmarc.istanbul.edu.tr = 'v=DMARC1; p=none; sp=none; ...'. Google'a göre p=none, kimlik doğrulamasından geçmeyen iletiye bile 'işlem yapma, teslim et' demek; yani yoklama@istanbul.edu.tr adına sahte e-posta gelen kutusuna düşebilir. DMARC'ı değiştirmek üniversitenin bütün postasını etkiler ve BİDB'nin kararıdır; plan buna bağlanırsa kontrolüm dışındaki bir şeye bağlanmış olur. Uyarı metni ve bağlantısız e-posta sıfır maliyetli, hiçbir yeni parça eklemiyor. Giriş bildirimi D01'deki kararla zaten geliyor.",
+  "sources": [
+   "https://knowledge.workspace.google.com/admin/security/set-up-dmarc",
+   "https://knowledge.workspace.google.com/admin/gmail/advanced/route-outgoing-smtp-relay-messages-through-google"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "id=\"kararlar-e-posta-gonderimi\" satırında 'sunucumdan giden böyle bir e-posta doğrulamadan geçmez, istenmeyene düşebilir ya da reddedilebilir.' cümlesinden hemen sonra şunu ekle: '\"p=none\" yüzünden herkes yoklama@istanbul.edu.tr adına sahte e-posta yollayabilir ve alıcı sunucu onu yine teslim eder; bunu ben değiştiremem. Bu yüzden her kod e-postasında ve giriş bildiriminde aynı cümle durur: \"Bu kodu yalnız uygulamaya ya da panele gir; uygulama kodu e-postayla, telefonla ya da başka bir yolla asla istemez.\" E-postalarda bağlantı yok, yalnız kod var. Kod biri tarafından kandırılarak alınırsa her girişte giden bildirim e-postası hocayı uyarır.'"
+   },
+   {
+    "file": "plan.html",
+    "section": "acik",
+    "instruction": "'E-posta gönderici hesabı' maddesinin sonuna (bkz. bağlantısından önce) şunu ekle: 'Aynı resmî yazıda DMARC'ın Google'ın önerdiği sırayla kademeli olarak \"quarantine\" düzeyine çekilmesini öneririm; karar BİDB'nin, plan buna bağlı değil.' (D04'teki yeniden yazımla birleştir.)"
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "'Sunucu ve testler' details bloğunun ul listesinin sonuna yeni bir li ekle: '<li><a href=\"https://knowledge.workspace.google.com/admin/gmail/advanced/route-outgoing-smtp-relay-messages-through-google\">Google Workspace SMTP rölesi ve sınırları</a> · <a href=\"https://knowledge.workspace.google.com/admin/security/set-up-dmarc\">Google, DMARC politikaları</a></li>' (D04'teki TL-008 bağlantısı da aynı li öğesine girer.)"
+   }
+  ]
+ },
+ {
+  "id": "D04",
+  "outcome": "CHANGE",
+  "decision": "Form numarası doğrulandı: İÜ BİDB'nin E-posta Kullanım Talimatı (İÜ/BİDB/TL-008) şunu yazıyor: birimler ya da etkinlikler için kurumsal e-posta hesabı istekleri 'Kurumsal e-Posta Talep Formu (İÜ/BİDB/FR-005)' doldurularak resmî yazıyla BİDB'ye iletilir. Metin bu ayrıntılarla düzeltilir. Formda SMTP rölesi izni yok, bu yüzden röle izni aynı resmî yazıda istenir. Form birimler için olduğundan yazıyı bir birimin göndermesi gerekir; hangi birimin göndereceği açık noktaya eklenir.",
+  "rationale": "Talimatı cdn.istanbul.edu.tr'den indirdim; 2. sayfasında ve 'İlgili dokümanlar' listesinde FR-005 aynen geçiyor (ilk yayın 30.11.2016). Önceki turda numaranın kamuya açık izi bulunamamıştı, şimdi bulundu. Talimat ayrıca hesabın resmî yazı ile istendiğini ve birim ya da etkinlik hesabı olduğunu söylüyor; bu, başvuruyu kimin yapacağını açık bir soruya çeviriyor. Workspace SMTP rölesi hâlâ destekleniyor; kullanıcı başına sınır günde 10.000 tekil alıcı ve sayım röledeki gönderici adresine göre yapılıyor.",
+  "sources": [
+   "https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=iu-bidb-tl-008-e-posta-kullanim-talimati.pdf",
+   "https://knowledge.workspace.google.com/admin/gmail/advanced/route-outgoing-smtp-relay-messages-through-google"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "id=\"kararlar-e-posta-gonderimi\" satırında 'BİDB'den (Bilgi İşlem Daire Başkanlığı) FR-005 formuyla gönderici hesap (ör. yoklama@istanbul.edu.tr) ve sunucu adresime Google SMTP rölesi izni isterim;' kısmını şöyle yap: 'BİDB'den (Bilgi İşlem Daire Başkanlığı) \"Kurumsal e-Posta Talep Formu\" (İÜ/BİDB/FR-005) ve bir birimin resmî yazısıyla gönderici hesap (ör. yoklama@istanbul.edu.tr) isterim; formda röle yok, sunucu adresime Google SMTP rölesi iznini aynı yazıda isterim (rölenin sınırı gönderici hesap başına günde 10.000 tekil alıcı);'. Cümlenin geri kalanı ('röle olmazsa aynı hesapla OAuth2.') aynı kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "acik",
+    "instruction": "'E-posta gönderici hesabı' maddesini şöyle yap: '<strong>E-posta gönderici hesabı:</strong> FR-005 (Kurumsal e-Posta Talep Formu) birimler ve etkinlikler için ve resmî yazıyla gidiyor: yazıyı hangi birim gönderir? Aynı yazıda Google SMTP rölesi izni verilir mi? Aynı resmî yazıda DMARC'ın Google'ın önerdiği sırayla kademeli olarak \"quarantine\" düzeyine çekilmesini öneririm; karar BİDB'nin, plan buna bağlı değil. (bkz. <a href=\"#kararlar-e-posta-gonderimi\">E-posta gönderimi</a>)' (D03'teki DMARC cümlesi burada birleşmiş hâliyle durur, ikinci kez eklenmez.)"
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "D03'te 'Sunucu ve testler' bloğuna eklenen li öğesinin başına şu bağlantıyı ekle: '<a href=\"https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=iu-bidb-tl-008-e-posta-kullanim-talimati.pdf\">İÜ BİDB E-posta Kullanım Talimatı (TL-008; FR-005, FR-006)</a> · '. Bağlantılar tek li öğesinde kalır, ayrı tekrar edilmez."
+   }
+  ]
+ },
+ {
+  "id": "D05",
+  "outcome": "OPEN_POINT",
+  "decision": "Tasarım değişmez: AKSİS'e otomatik bağlantı yok, hoca değerleri AKSİS özetinden elle girer (sabit kısıt). AKSİS'in devamsızlık ekranının dosyadan yükleme alıp almadığı açık soru olarak kaydedilir. Alıyorsa AKSİS özeti o şablonla da indirilebilir, dosyayı hoca kendisi yükler ve otomatik bağlantı yine olmaz. Almıyorsa elle giriş kalır.",
+  "rationale": "İÜ'nün AKSİS kılavuzu (BİDB, OBS modülü) yalnız öğrenci ekranlarını anlatıyor; hoca tarafındaki devamsızlık girişine ve dosyadan yüklemeye dair kamuya açık bir belge bulamadım. Cevap yalnız AKSİS'i kullanan bir hocada ya da BİDB'de var. Plan bu cevaba bağlı değil: elle giriş her durumda çalışır, şablon yalnız bir kolaylık olur.",
+  "sources": [
+   "https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=aksis-obs-kullanim-kilavuzu-1.pdf"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "acik",
+    "instruction": "'<strong>AKSİS:</strong>' ile başlayan maddenin sonuna şunu ekle: ' AKSİS'in devamsızlık ekranı dosyadan (Excel) yükleme alıyor mu? Alıyorsa AKSİS özeti o şablonla da indirilir, dosyayı hoca kendisi yükler, otomatik bağlantı yine olmaz; almıyorsa elle giriş kalır. (Kamuya açık AKSİS kılavuzu yalnız öğrenci ekranlarını anlatıyor.)'"
+   },
+   {
+    "file": "plan.html",
+    "section": "tek-bakista",
+    "instruction": "'<strong>AKSİS:</strong>' maddesinin sonuna şunu ekle: ' Dosyadan yükleme sorusu: bkz. <a href=\"#acik\">Açık noktalar</a>.' 'elle girer' ifadesi aynen kalır."
+   }
+  ]
+ },
+ {
+  "id": "D06",
+  "outcome": "CHANGE",
+  "decision": "'Derse gelip yok yazılmak' iddiası 6 Ekim 2026'da yeniden doğrulandı ve kalır; yanına kaynak ve tarih eklenir. 'En çok istenen özellik' iddiası doğrulanamadı ('en çok' diyebilecek bir sayım yok) ve yumuşatılır: öğrencilerin Play yorumlarında övdüğü, çalışmayınca da şikâyet ettiği özellik.",
+  "rationale": "Proliz'in Play sayfasında bugün görünen yorumlarda şu cümle aynen geçiyor: 'Resmen derse gelip yok yazılıyoruz.' Başka yorumlar da giriş hatası ve Bluetooth yüzünden 'yok yazılıyorum' diyor. UBYS Mobil yorumunda ise 'İnternetin çekmediği bir kampüste online yoklama' şikâyeti var. Öğrencinin kendi kaydını görmesiyle ilgili iki yorum buldum: biri övgü ('devamsızlıklarımı tek uygulamadan takip edebilmek çok iyi', UBYS Mobil), biri şikâyet ('yoklama listesini görmek istediğimde hata alıyorum', Proliz). Bu, özelliğin önemli olduğunu gösteriyor ama 'en çok istenen' demeye yetmiyor. Çıkarılan yorumlar: scratchpad/d1/play_reviews_2026-10-06.txt.",
+  "sources": [
+   "https://play.google.com/store/apps/details?id=com.prolizyazilim.mobil&hl=tr&gl=TR",
+   "https://play.google.com/store/apps/details?id=com.ubys.mobile&hl=tr&gl=TR"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "tek-bakista",
+    "instruction": "'<strong>Neden internetsiz:</strong>' maddesinde 'sık şikâyeti \"derse gelip yok yazılmak\" (giriş hataları, kampüste çekmeyen internet).' kısmını şöyle yap: 'sık şikâyeti \"derse gelip yok yazılmak\" (giriş hataları, kampüste çekmeyen internet; Proliz ve UBYS Mobil Play yorumları, 6 Ekim 2026'da yeniden bakıldı).' Maddenin geri kalanı aynı kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Öğrencinin ekranı' satırında 'Türkiye'deki uygulamalarda en çok istenen özellik.' ifadesini şöyle yap: 'Türkiye'deki uygulamaların Play yorumlarında öğrencilerin övdüğü, çalışmayınca da şikâyet ettiği özellik (UBYS Mobil, Proliz; Ekim 2026).'"
+   }
+  ]
+ },
+ {
+  "id": "D07",
+  "outcome": "CHANGE",
+  "decision": "İddia birincil kaynakla doğrulandı ve kapsamı genişliyor; parantez buna göre düzeltilir. İÜ E-posta Kullanım Talimatı'na (TL-008) göre @istanbul.edu.tr bütün çalışanlarda (idari personel dahil) ve emekli personelde var; emeklilerin hesabı silinmiyor. Misafir ve geçici görevli personel FR-006 ile, birim ve etkinlik hesapları FR-005 ile adres alıyor. Yönetici onayı kararı aynen kalır ve artık doğrulanmış bir gerekçeye dayanıyor.",
+  "rationale": "TL-008 şöyle diyor: '\"istanbul.edu.tr\" alan adıyla e-posta alma ve gönderme hakkı sadece İstanbul Üniversitesi çalışanları ve emekli personeline aittir.' Ayrıca 'emeklilik haricinde İÜ ile ilişiği kesilmiş kullanıcıların' adreslerinin silindiğini, misafir öğretim üyelerine ve geçici görevli personele FR-006 ile adres açıldığını, birimler ve etkinlikler için FR-005 ile kurumsal hesap açıldığını yazıyor. Bu yüzden alan adı tek başına 'hoca' anlamına gelmiyor ve yönetici onayı gerekli.",
+  "sources": [
+   "https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=iu-bidb-tl-008-e-posta-kullanim-talimati.pdf"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Hoca kaydı' satırında '(alan adı idari personel ve emeklilerde de var)' parantezini şöyle yap: '(alan adı bütün çalışanlarda, idari personel dahil; emeklilerde, çünkü emeklinin hesabı silinmiyor; FR-006 ile açılan misafir ve geçici görevli personelde ve FR-005 ile açılan birim hesaplarında da var: İÜ BİDB E-posta Kullanım Talimatı, TL-008)'. Kaynak bağlantısı D04'te Kaynaklar'a eklenen TL-008 bağlantısıdır; ikinci kez eklenmez."
+   }
+  ]
+ },
+ {
+  "id": "D08",
+  "outcome": "CHANGE",
+  "decision": "'Dahil' ifadesi daha kesin yazılır. Google Play Console'un ücreti bir kerelik 25 USD kayıt ücretidir. Android geliştirici doğrulamasını Play Console'dan yapan geliştiricinin kimliği Play'in doğrulamasıyla zaten doğrulanmış sayılır; Google yeni bir adım ya da ek ücret yazmıyor. SSS'deki 25 USD ayrı Android Developer Console tam dağıtım hesabının ücretidir ve bana düşmez, çünkü ayrı Android Developer Console hesabı açmıyorum. GitHub APK'sı da Play Console'dan 'Play dışında dağıtılan uygulama' olarak kaydedilir.",
+  "rationale": "SSS: '25 USD ücret Android Developer Console'daki Full Distribution hesabı içindir, Play'in 25 USD kayıt ücretine benzer.' Ayrıca 'Play Console hesabı olan geliştiriciler onu bütün doğrulama gereksinimleri için tek yer olarak kullanabilir, Play dışında dağıttıkları uygulamalar dahil.' Play Console rehberi ve Mart 2026 duyurusu: 'Play geliştiricilerinin çoğu için kimlik doğrulamada yeni bir adım gerekmiyor'; Play Console'un kimlik doğrulamasını tamamlayan geliştiricinin kimliği zaten doğrulanmış sayılıyor. Play dışında dağıtılan uygulamalar da Play Console'dan kaydedilebiliyor. Hiçbir sayfa Play Console yolu için ek ücret yazmıyor.",
+  "sources": [
+   "https://developer.android.com/developer-verification/guides/faq",
+   "https://developer.android.com/developer-verification/guides/google-play-console",
+   "https://android-developers.googleblog.com/2026/03/android-developer-verification-rolling-out-to-all-developers.html"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "acik",
+    "instruction": "id=\"acik-hesap-ucretleri\" maddesinde 'Google Play Console (bir kerelik 25 USD, Android geliştirici doğrulaması dahil)' kısmını şöyle yap: 'Google Play Console (bir kerelik 25 USD kayıt ücreti; Android geliştirici doğrulaması Play Console'dan ek ücretsiz: Play'in kimlik doğrulamasından geçen hesapta yeni bir adım yok; Google'ın yazdığı ayrı 25 USD yalnız Android Developer Console hesabı içindir, o hesabı açmam)'. Maddenin geri kalanı aynı kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "dagitim",
+    "instruction": "'Google doğrulaması' satırında 'Doğrulama Play Console hesabımdan (kimlik, bir kerelik 25 USD); ayrı Android Developer Console hesabı açmam.' cümlesini şöyle yap: 'Doğrulama Play Console hesabımdan: Play'in kimlik doğrulaması yeterli, ücret Play'in bir kerelik 25 USD kayıt ücreti (bkz. <a href=\"#acik-hesap-ucretleri\">Hesap ücretleri</a>); ayrı Android Developer Console hesabı ve onun 25 USD'si yok. GitHub APK'sı Play Console'dan Play dışında dağıtılan uygulama olarak da kaydedilebilir.' Satırın geri kalanı aynı kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "'Dağıtım ve cihazlar' details bloğunda Android geliştirici doğrulaması SSS bağlantısının bulunduğu li öğesinin sonuna şunu ekle: ' · <a href=\"https://developer.android.com/developer-verification/guides/google-play-console\">Play Console'dan doğrulama</a> · <a href=\"https://android-developers.googleblog.com/2026/03/android-developer-verification-rolling-out-to-all-developers.html\">Google duyurusu (Mart 2026)</a>'"
+   }
+  ]
+ },
+ {
+  "id": "D09",
+  "outcome": "CHANGE",
+  "decision": "Cümle doğru, yumuşatılmaz. Android'in birincil kaynağı (AOSP BLE sayfası) açıkça söylüyor: konum servisi kapatılınca Bluetooth taraması da kapanır; Android 12 ve üstünde bu yalnız neverForLocation bildiren uygulamalar için kalkar. Biz neverForLocation bildiremediğimiz için her sürümde hem konum izni hem açık konum gerekir. Eksik kalan tasarım boşluğu kapatılır: modül taramadan önce konum servisinin açık olup olmadığını denetler, kapalıysa öğrenciden açmasını ister, açılmazsa kayıt \"Bluetooth yok\" olur ve öğrencinin aleyhine kullanılmaz (kilitli iPhone ekranıyla aynı kural).",
+  "rationale": "Birincil kaynak doğrudan doğruluyor: 'Turning off location services turns off Bluetooth scanning.' ve 'In Android 12 and higher, apps that declare neverForLocation can get Bluetooth scanning results even when location services are off.' Belirsizlik yok, cihaz denemesine bırakmak gereksiz. Konum kapalıyken taramanın sessizce boş dönmesi öğrenciyi haksız yere 'görülmedi' gösterebileceğinden, önceden denetim tek satırlık ve hareketli parça eklemeyen bir koruma.",
+  "sources": [
+   "https://source.android.com/docs/core/connect/bluetooth/ble",
+   "https://developer.android.com/develop/connectivity/bluetooth/bt-permissions"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "asama23",
+    "instruction": "'Sınırlar:' maddesinde 'Android'de Bluetooth taraması da konum izni ve açık konum ister:' ifadesini koru. Aynı cümlenin sonundaki '... diye bildirilemez;' kısmından sonra, 'Bluetooth'u açma penceresi de ayrı izin ister' öncesine şunu ekle: 'konum servisi kapalıyken Android tarama sonucu vermez; uygulama taramadan önce bunu denetler, kapalıysa öğrenciden açmasını ister, açılmazsa kayıt \"Bluetooth yok\" sayılır, öğrencinin aleyhine kullanılmaz;'. Var olan bkz. bağlantısı yerinde kalır."
+   },
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "id=\"telefon-bluetooth\" satırında 'tarama için konum izni (\"konum için kullanılmaz\" anlamındaki <code>neverForLocation</code> bildirilemez)' ifadesinden sonra şu yan cümleyi ekle: '; bu yüzden konum servisi kapalıyken tarama sonuç vermez (Android 12 ve üstünde bu şart yalnız <code>neverForLocation</code> bildirenler için kalkar), modül taramadan önce konum servisinin açık olduğunu denetler'. Cümlenin geri kalanı (BLUETOOTH_CONNECT ile devam eden kısım) değişmez."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "'Kurallar, internetsiz çalışma ve saat' listesinde '<a href=\"https://developer.android.com/develop/connectivity/bluetooth/bt-permissions\">Android Bluetooth izinleri</a>' bağlantısından sonra ' · <a href=\"https://source.android.com/docs/core/connect/bluetooth/ble\">Android: konum kapalıyken Bluetooth taraması</a>' ekle."
+   }
+  ]
+ },
+ {
+  "id": "D10",
+  "outcome": "CHANGE",
+  "decision": "Sarılı aktarım (importWrappedKey) kullanılmaz; düz aktarım kalır ve kısa bellek süresi bilerek kabul edilir. Anahtar sunucudan TLS ile gelir, Android'de KeyStore.setEntry ile yalnız imzalama (MAC) amacıyla Keystore'a aktarılır, bayt dizisi aktarımdan hemen sonra sıfırlanır. StrongBox hiç istenmez (setIsStrongBoxBacked çağrılmaz); böylece 'StrongBox yoksa düşüş' diye ikinci bir yol da olmaz, anahtar telefonun normal Keystore'unda (donanım destekliyse TEE'de) durur.",
+  "rationale": "importWrappedKey Android 9 (API 28) ve Keymaster 4 istiyor; alt sınırımız Android 7 olduğundan ikinci bir aktarım yolu, cihazda PURPOSE_WRAP_KEY anahtar çifti ve sunucuda ASN.1 SecureKeyWrapper üreten kod gerekir: üç yeni hareketli parça. Kazanç da sınırlı: iPhone'da Secure Enclave yalnız P-256 anahtarlarıyla çalıştığından HMAC anahtarı Keychain'den her kullanımda zaten uygulama belleğine okunur (Apple: anahtarı kullanmak için düz halini kısa süre belleğe kopyalamak gerekir), anahtar 5 günlük ve cihaza özel. Android belgesi StrongBox'ın daha yavaş, daha kısıtlı olduğunu ve çoğu uygulama için gerekmediğini söylüyor; QR her 5 saniyede MAC ürettiğinden StrongBox'ı istememek hem basit hem hızlı.",
+  "sources": [
+   "https://developer.android.com/privacy-and-security/keystore",
+   "https://developer.apple.com/documentation/security/protecting-keys-with-the-secure-enclave"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "'Anahtar ve imza' satırına (k sütunu 'Anahtar ve imza' olan div.row) id=\"telefon-anahtar\" ekle. Satırın sonuna, 'Güvenli depodaki oturum anahtarı \"yalnız bu cihaz\" ayarında (<code>WHEN_UNLOCKED_THIS_DEVICE_ONLY</code>).' cümlesinden sonra şu cümleleri ekle: 'Hocanın 5 günlük QR anahtarları (HMAC-SHA256) sunucudan TLS ile gelir; Android'de <code>KeyStore.setEntry</code> ve <code>KeyProtection</code> ile yalnız imzalama amacıyla Keystore'a aktarılır, bayt dizisi aktarımdan hemen sonra sıfırlanır. Sarılı aktarım (<code>importWrappedKey</code>) kullanılmaz: Android 9 ve Keymaster 4 istiyor, alt sınır Android 7 olduğundan ikinci bir yol, cihazda sarma anahtarı ve sunucuda ASN.1 sarma kodu gerekirdi; iPhone'da da Secure Enclave yalnız P-256 anahtarı tuttuğundan HMAC anahtarı her kullanımda uygulama belleğine okunur. StrongBox istenmez (<code>setIsStrongBoxBacked</code> çağrılmaz): Android'e göre daha yavaş ve çoğu uygulama için gereksiz; anahtar telefonun Keystore'unda, donanım destekliyse TEE'de durur.'"
+   },
+   {
+    "file": "plan.html",
+    "section": "asama23",
+    "instruction": "Aşama 2 'Anahtar:' maddesinde 'Android'de Keystore'da dışarı çıkarılamayan HMAC anahtarı, iPhone'da güvenli depoda \"yalnız bu cihaz\" olarak durur.' cümlesinden sonra şunu ekle: 'Anahtar indirilirken bir an uygulama belleğinde durur; bu kabul edildi (iPhone'da her kullanımda zaten öyle; aktarım ayrıntısı: bkz. <a href=\"teknik.html#telefon-anahtar\">Anahtar ve imza</a>).'"
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "'Kurallar, internetsiz çalışma ve saat' listesinde '<a href=\"https://developer.android.com/privacy-and-security/security-key-attestation\">Android anahtar kanıtı</a>' bağlantısından sonra ' · <a href=\"https://developer.android.com/privacy-and-security/keystore\">Android Keystore (sarılı aktarım, StrongBox)</a> · <a href=\"https://developer.apple.com/documentation/security/protecting-keys-with-the-secure-enclave\">Secure Enclave anahtar sınırı</a>' ekle."
+   }
+  ]
+ },
+ {
+  "id": "D11",
+  "outcome": "CHANGE",
+  "decision": "Rakam doğrulandı ve kaynağı zaten Kaynaklar'daki UIC yardım sayfası; yumuşatılmaz, koşuluyla birlikte kesin yazılır: uygulama herkeste kuruluysa sınıftakilerin ortalama %95'inden fazlası, ilk derste öğrencilere gösterilip deneme yapılırsa yaklaşık %98'i yakalanıyor. Aktarmalı yöntem Acadly'nin kendi sayfasından (Bluetooth ağı, 2,5 dakika) kaynaklara eklenir. Hedefler'deki %2 ile 5 cümlesine aynı koşul eklenir.",
+  "rationale": "UIC yardım sayfası: 'If everyone has the app installed, on average, more than 95% of all students present in a class should be marked present.' ve 'If someone trains students and does dry runs in the first lecture, this number is ~98%.' Acadly'nin UIC sayfası: 'Acadly uses Bluetooth based mesh-networking' ve 'once started, it runs for only 2.5 minutes'. Koşulu yazmak, ilk denememizde hedefi doğru kıyaslamamızı sağlar (bizde ilk derste deneme yapılıp yapılmadığı).",
+  "sources": [
+   "https://help.uillinois.edu/TDClient/37/uic/KB/PrintArticle?ID=2353",
+   "https://pages.acadly.com/uic"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "benzer",
+    "instruction": "'Bluetooth:' maddesinde 'Acadly %95 ile 98 yakalama bildiriyor (üretici verisi, öğrenci telefonları arası aktarmalı yöntem).' cümlesini şununla değiştir: 'Acadly, uygulama herkeste kuruluysa sınıftakilerin ortalama %95'inden fazlasını, ilk derste öğrencilere gösterilip deneme yapılırsa yaklaşık %98'ini yakaladığını bildiriyor (üretici verisi; öğrenci telefonları arası aktarmalı Bluetooth ağı, yoklama 2,5 dakika sürüyor; yakalanmayan öğrenci elle eklenmeye yönlendiriliyor).' Maddenin geri kalanı değişmez."
+   },
+   {
+    "file": "plan.html",
+    "section": "hedefler",
+    "instruction": "'Bluetooth (Aşama 3)' satırında '%2 ile 5 kaçırma oranı, öğrenci telefonları arası aktarmalı Acadly'den;' ifadesini şununla değiştir: '%2 ile 5 kaçırma oranı, öğrenci telefonları arası aktarmalı Acadly'den (uygulama herkeste kuruluyken; %2, ilk derste deneme yapıldığında);'. Satırın geri kalanı değişmez."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "'Benzer sistemler' listesinde '<a href=\"https://help.uillinois.edu/TDClient/37/uic/KB/PrintArticle?ID=2353\">Acadly (UIC yardım sayfası)</a>' bağlantısının metnini 'Acadly (UIC yardım sayfası, %95 ve %98)' yap ve hemen arkasına ' · <a href=\"https://pages.acadly.com/uic\">Acadly, Bluetooth ağı yöntemi</a>' ekle."
+   }
+  ]
+ },
+ {
+  "id": "D12",
+  "outcome": "CHANGE",
+  "decision": "Manchester ve Uppsala 30 sn ikisi de birincil kaynakla doğrulandı. 'Altı haneli kod ders boyunca geçerli' doğrulanamadı; Manchester'ın kendi duyurusu ise asıl dersi veriyor: SEAtS artık önce 30 sn'de bir yenilenen canlı kodu gösteriyor ama hoca açılır menüden sabit 'class code' (ders kodu) seçmeye devam edebiliyor. Cümle doğrulanmış biçimle yeniden yazılır, ders (sabit kod paylaşıldı) korunur.",
+  "rationale": "Manchester staffnet: 'Live codes refresh every 30 seconds and reduce the chance of students sharing codes with those not attending.' ve sabit kodun 'class code' seçeneğiyle hâlâ gösterilebildiği. Öğrenci gazetesi: öğrenci QR ya da PIN girer, bir öğrenci 'I can already see some (international students) sharing codes and not showing up' diyor; kodun uzunluğu ve geçerlilik süresi hiçbir kaynakta yok. Uppsala: 'a dynamic QR code appears that refreshes every 30 seconds'. Bilgi kaybı yok: altı haneli ifadesi doğrulanamadığı için kaynaklı karşılığıyla değiştirilir.",
+  "sources": [
+   "https://www.staffnet.manchester.ac.uk/news/display/?id=33282",
+   "https://mancunion.com/2024/11/20/university-implements-seats-attendance/",
+   "https://www.uu.se/en/staff/gateway/teaching/news/archive/2025-12-12-new-in-studium-register-attendance-via-qr-code"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "benzer",
+    "instruction": "'Dönen QR süreleri:' maddesinde 'Manchester'da QR'la birlikte gösterilen altı haneli kod ders boyunca geçerli; öğrenciler kodun paylaşılıp derse gelinmediğini açıkça yazdı.' kısmını şununla değiştir: 'Manchester'da (SEAtS) 30 sn'lik canlı kod varsayılan oldu ama hoca sabit ders kodunu seçmeye devam edebiliyor; öğrenci QR okutuyor ya da kodu yazıyor, öğrenciler kodun paylaşılıp derse gelinmediğini açıkça yazdı (kodun uzunluğu ve geçerlilik süresi kaynaklarda yok).' 'Edusign 5 sn, ... Manchester ve Uppsala 30 sn.' kısmı değişmez."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "'Benzer sistemler' listesinde '<a href=\"https://www.staffnet.manchester.ac.uk/news/display/?id=33282\">Manchester, SEAtS 30 sn kod</a>' bağlantı metnini 'Manchester, SEAtS 30 sn canlı kod ve sabit ders kodu' yap; '<a href=\"https://www.uu.se/...\">Uppsala QR yoklama</a>' metnini 'Uppsala QR yoklama (30 sn)' yap. Adresler değişmez."
+   }
+  ]
+ },
+ {
+  "id": "D13",
+  "outcome": "NO_CHANGE",
+  "decision": "Cümle doğru ve kaynağı Kaynaklar'da zaten var ('D.Ü. Mobil sürüm notları', App Store). Sayfada geliştirici T.C. Düzce Üniversitesi; 13 Mayıs tarihli 'Sertifika doğrulama hatası' başlıklı yorum '08.05.2026 tarihinden itibaren kullanamıyorum. Uygulamayı silip yükledim düzelmedi' diyor; 1.1.3 sürümü 18 Mayıs'ta 'Sertifika hataları giderildi' notuyla çıktı; geliştiricinin 22 Mayıs yanıtı 'Uygulamamız güncellenmiştir. Uygulamayı güncelleyip kullanabilirsiniz' diyor. Yani 8 ile 18 Mayıs aralığı ve düzeltmenin yeni sürüm istemesi doğrulandı.",
+  "rationale": "Mağaza sayfası birincil kaynak ve okundu; ekleme ya da işaretleme gerekmiyor. Yorumcu adı gizlilik gereği belgeye girmez.",
+  "sources": [
+   "https://apps.apple.com/tr/app/d-%C3%BC-mobil/id6752337210"
+  ],
+  "edits": []
+ },
+ {
+  "id": "D14",
+  "outcome": "CHANGE",
+  "decision": "Doğrulandı: UBYS MOBİL'in Google Play sayfası 28 Eylül 2026'da güncellenmiş, 'Yenilikler' notu: 'QR yoklamada kameranın geniş açıda takılı kalmasına neden olan sorun giderildi. Artık QR kodu okutmak için kamerayı yakınlaştırıp uzaklaştırabilirsiniz.' Play yalnız son sürümün notunu gösterdiğinden bir sonraki güncellemede bu not kaybolacak; bu yüzden cümle notun özüyle ve tarihiyle kesinleştirilir, kaynak bağlantısının metnine tarih yazılır.",
+  "rationale": "Kaynak zaten Kaynaklar'da (com.ubys.mobile) ama içerik geçici. Notun ne söylediği belgeye geçerse bilgi kalıcı olur; ayrıca not, bizim 'kamera 0,5x açılmaz, 2x yakınlaştırılır' kararımızı (#asama23-okutma) doğrudan destekliyor: başka bir üretici de geniş açıda takılan kamerayı düzeltmek zorunda kaldı.",
+  "sources": [
+   "https://play.google.com/store/apps/details?id=com.ubys.mobile&hl=tr&gl=TR"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "benzer",
+    "instruction": "Türkiye'de altındaki 'Kalabalık amfide QR okutmak sorun:' maddesinde 'UBYS MOBİL Eylül 2026'da QR kamera yakınlaştırmasını düzeltti;' ifadesini şununla değiştir: 'UBYS MOBİL 28 Eylül 2026 sürümünde QR yoklamada kameranın geniş açıda takılı kalmasını giderdi, yakınlaştırıp uzaklaştırmayı ekledi (mağaza sürüm notu);'. Maddenin geri kalanı değişmez."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "'Benzer sistemler' listesinde '<a href=\"https://play.google.com/store/apps/details?id=com.ubys.mobile\">UBYS Mobil</a>' bağlantı metnini 'UBYS Mobil (sürüm notu, 28 Eylül 2026)' yap. Adres değişmez."
+   }
+  ]
+ },
+ {
+  "id": "D15",
+  "outcome": "CHANGE",
+  "decision": "Aksaray yönergesi PDF'ten okundu ve doğrulandı (Ders Devamının Takibi Uygulama Yönergesi, Senato 15.01.2025, karar 2025/01-04): Md.5/2 internet erişimi yokluğu gibi mücbir sebeplerde yoklamanın öğretim elemanınca imza karşılığı alınıp 1 hafta içinde Elektronik Yoklama Sistemi'ne işlendiğini söylüyor; Md.5/3 sınıfta olup sistemle sorun yaşayan öğrencinin aynı gün elle eklendiğini söylüyor. Bu ikinci kural bizim 'hoca elle ekler' kararımızla aynı yönde, eklenir. Proliz için 'Mart 2026' doğrulanamadı; Proliz Mobil'in Google Play sayfasındaki yorumlar olayı Nisan 2026'ya koyuyor (14 Nisan: son güncellemeden sonra üniversite seçilince yükleme ekranında takılıyor; 21 Nisan: son güncellemeden sonra giriş yapamıyor, 2 haftadır derse gelip yok yazılıyor). Tarih Nisan 2026 diye düzeltilir, kaynağın mağaza yorumları olduğu yazılır.",
+  "rationale": "Yönerge birincil kaynak ve okundu (PDF metni). Proliz'de tek ulaşılabilir birincil kaynak mağaza sayfası; yorum tarihleri Mart'ı değil Nisan'ı gösteriyor, bu yüzden tarih düzeltilir, olay silinmez. Yorumcu adları gizlilik gereği yazılmaz.",
+  "sources": [
+   "https://ogris.aksaray.edu.tr/indir/8e182fcf-d4bf-493a-8d29-7634355fc1ca.pdf",
+   "https://play.google.com/store/apps/details?id=com.prolizyazilim.mobil&hl=tr&gl=TR"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "benzer",
+    "instruction": "Türkiye'de altındaki 'Sık şikâyet derse gelip \"yok\" yazılmak.' maddesinde 'girişi kilitleyen bir güncelleme (Proliz, Mart 2026).' ifadesini 'girişi kilitleyen bir güncelleme (Proliz Mobil, Nisan 2026, mağaza yorumları: giriş yapılamadı, öğrenci 2 hafta derse gelip yok yazıldı).' ile değiştir. 'Aksaray Üniversitesi yönergesi (Senato, 15.01.2025): internet yokken yoklama imzayla alınır, 1 hafta içinde sisteme girilir.' cümlesini şununla değiştir: 'Aksaray Üniversitesi Ders Devamının Takibi Uygulama Yönergesi (Senato, 15.01.2025, karar 2025/01-04): internet erişimi yokluğu gibi mücbir sebeplerde yoklama imza karşılığı alınır, 1 hafta içinde sisteme işlenir (Md.5/2); sınıfta olup sistemle sorun yaşayan öğrenciyi hoca aynı gün elle ekler (Md.5/3).'"
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "'Benzer sistemler' listesinde '<a href=\"https://ogris.aksaray.edu.tr/indir/8e182fcf-d4bf-493a-8d29-7634355fc1ca.pdf\">Aksaray Üniversitesi yoklama yönergesi (2025)</a>' bağlantı metnini 'Aksaray Üniversitesi yoklama yönergesi (2025, Md.5)' yap; '<a href=\"https://play.google.com/store/apps/details?id=com.prolizyazilim.mobil\">Proliz</a>' bağlantı metnini 'Proliz (Nisan 2026 yorumları)' yap. Adresler değişmez."
+   }
+  ]
+ },
+ {
+  "id": "D16",
+  "outcome": "CHANGE",
+  "decision": "Birincil kaynak var ve Kaynaklar'da zaten duruyor: github.com/1vke/iclicker-exploit-poc (Mart 2024'te açılmış, Haziran 2024'te son değişiklik, Eylül 2025'te arşivlenmiş). Betiğin açıklaması 'spoof geolocation to instructor's', README'ye göre iClicker oturumun tam konumunu istemciye gönderiyor, betik bu konumu alıp sahte konum olarak geri yolluyor. Gerekçe genelleştirilmez; cümle olanı doğru anlatacak biçimde kesinleştirilir ('bir hata' yerine 'sunucu oturumun tam konumunu öğrenciye gönderiyordu'; tek betik, 2024). #asama23-gps'teki karar ve parantez içi gerekçe doğru kalır.",
+  "rationale": "Kaynak okundu: 'iClicker just sends the exact location of the session'; mekanizma: sahte konum gönder, gerçek oturum konumunu geri al, sonraki isteklerde onu yolla. Bu, 'sınıfın konumu öğrenci telefonuna gönderilmez' kararının tam gerekçesi; genel 'tarayıcı konumu kolay taklit edilir' cümlesi daha zayıf olurdu. Yamalanıp yamalanmadığı kaynakta yok, bu yüzden 'gönderiyordu' (2024 itibarıyla) denir.",
+  "sources": [
+   "https://github.com/1vke/iclicker-exploit-poc",
+   "https://api.github.com/repos/1vke/iclicker-exploit-poc"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "benzer",
+    "instruction": "'Konum her üründe zayıf halka:' maddesinde 'iClicker'da bir hatayla sınıfın konumu sızdı, sahte konum betikleri yazıldı;' ifadesini şununla değiştir: 'iClicker'ın sunucusu oturumun tam konumunu öğrencinin tarayıcısına gönderiyordu; 2024'te bu konumu alıp sahte konum olarak geri yollayan bir betik yayımlandı (yamalanıp yamalanmadığı bilinmiyor);'. 'Poll Everywhere geniş alan seçmeyi öneriyor.' kısmı değişmez."
+   }
+  ]
+ },
+ {
+  "id": "D17",
+  "outcome": "CHANGE",
+  "decision": "Türkiye'deki QR yoklama yayılması satırındaki iddiaların hepsi birincil ya da haber kaynağıyla doğrulandı ve tarihleri kesinleştirilir: Sözcü haberi 18 Nisan 2025 (Hacettepe ve Üsküdar, 15 saniyede değişen QR, \"fişleme\" eleştirisi); Düzce: D.Ü. Mobil 13 Şubat 2026 sürümüyle bütün öğrencilere açıldı, açıklamasında QR ile yoklama var; BUÜ: 28 Eylül 2026'dan itibaren web tabanlı, ayrı uygulama istemeyen, tarayıcıdan QR okutulan sistem; İstanbul Atlas: DHA 12 Aralık 2025, MyAtlas'ta Bluetooth, sorun olunca numara girişi ya da QR devreye giriyor. Anadolu Üniversitesi (13 Şubat 2026, kartlıdan QR'a geçiş, uygulama üniversite internet ağı üzerinden, telefonu olmayana hoca elle yoklama) eklenir; plana katkısı var (internet şartı ve telefonsuz öğrenci). \"Türkiye'deki uygulamaların hepsi internet istiyor\" genellemesi incelenen uygulamalarla sınırlanır, çünkü Atlas kaynağı internetten söz etmiyor.",
+  "rationale": "Her iddia okunan kaynakla eşleşti; kaynaksız kalan yok. Genelleme kaynakların söylediğinden geniş olduğu için daraltılır, bilgi silinmez. Anadolu, plandaki internetsiz kayıt ve telefonsuz öğrenciyi elle ekleme kararlarını destekleyen güncel bir örnek.",
+  "sources": [
+   "https://www.sozcu.com.tr/universite-ogrencileri-qr-kodla-fislenecek-p164076",
+   "https://apps.apple.com/tr/app/d-%C3%BC-mobil/id6752337210",
+   "https://www.gazetebirlik.com/egitim/buude-akilli-yoklama-sistemi-2026-2027-egitim-ogretim-doneminde-basliyor/1101949",
+   "https://www.dha.com.tr/egitim/bluetooth-tabanli-dijital-yoklama-yesil-cevreye-destek-ve-zaman-tasarrufu-sagliyor-2776335",
+   "https://www.anadolu.edu.tr/duyurular/qr-kodlu-yoklama-sistemine-gecilmistir-1770989551"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "benzer",
+    "instruction": "\"Türkiye'de\" listesinde \"QR yoklama 2025'te basında \"fişleme\" diye eleştirildi; ...\" ile başlayan maddeyi şununla değiştir: \"QR yoklama Nisan 2025'te basında \"fişleme\" diye eleştirildi (Hacettepe ve Üsküdar, 15 saniyede değişen QR); 2025 ile 2026'da hızla yayıldı: Düzce'nin D.Ü. Mobil uygulaması Şubat 2026'da bütün öğrencilere açıldı (QR ile yoklama), Anadolu Şubat 2026'da kartlı yoklamadan QR'a geçti (uygulama üniversitenin internet ağı üzerinden çalışıyor, telefonu olmayana hoca elle yoklama alıyor), BUÜ 28 Eylül 2026'da web tabanlı QR yoklamaya başladı (ayrı uygulama yok, telefonun tarayıcısından okutuluyor). İstanbul Atlas'ın Bluetooth'a geçişi yukarıda. İncelediğim QR uygulamalarının hepsi yoklama anında internet istiyor; Bluetooth kullanan Atlas'ın kaynağı internetten söz etmiyor.\""
+   },
+   {
+    "file": "plan.html",
+    "section": "benzer",
+    "instruction": "\"Bluetooth cihaz modeline ve izinlere göre değişiyor; İstanbul Atlas Bluetooth'a geçti ama numara ve QR'ı yedek tuttu.\" maddesinin sonuna \" (Aralık 2025)\" ekle; cümlenin geri kalanı aynen kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "\"Benzer sistemler\" details'indeki <li> içinde \"Sözcü, \"fişleme\" eleştirisi (2025)\" bağlantı metnini \"Sözcü, \"fişleme\" eleştirisi (Nisan 2025)\" yap; aynı <li>'de \"BUÜ akıllı yoklama\" bağlantısından sonra \" · <a href=\\\"https://www.gazetebirlik.com/egitim/buude-akilli-yoklama-sistemi-2026-2027-egitim-ogretim-doneminde-basliyor/1101949\\\">BUÜ, 28 Eylül 2026 başlangıcı ve web tabanlı oluşu (Yeni Birlik)</a>\" ekle. Aynı details'e yeni bir <li> ekle: <a href=\"https://www.dha.com.tr/egitim/bluetooth-tabanli-dijital-yoklama-yesil-cevreye-destek-ve-zaman-tasarrufu-sagliyor-2776335\">İstanbul Atlas, Bluetooth ve numara ile QR yedeği (DHA, Aralık 2025)</a> · <a href=\"https://www.anadolu.edu.tr/duyurular/qr-kodlu-yoklama-sistemine-gecilmistir-1770989551\">Anadolu Üniversitesi QR yoklama duyurusu (Şubat 2026)</a>"
+   }
+  ]
+ },
+ {
+  "id": "D18",
+  "outcome": "CHANGE",
+  "decision": "Kaynak var ve zaten Kaynaklar'da bağlı (Şikayetvar, 5 Ocak 2024). Ama bu tek bir öğrencinin şikâyeti; 25 ile 30 sayısı öğrencinin kendi beyanı. Cümle bunu söyleyecek şekilde yeniden yazılır ve şikâyetteki somut ayrıntı (dört yoklamanın ikisi görünmedi, sorun tek derste) eklenir.",
+  "rationale": "Şikâyet metni okundu: \"Başladığım günlerde dört yoklama yapılmışsa, sadece ikisine katılmış olarak görünüyorum ... Sınıfımda da 25-30 kişinin durumu benzer ... Sorun sadece bir dersim için geçerli.\" Plan cümlesi sayıyı kesin olgu gibi veriyor; kaynak türüne uygun hale getirilir, bilgi kaybı olmaz.",
+  "sources": [
+   "https://www.sikayetvar.com/nisantasi-universitesi/nisantasi-universitesi-qr-devamsizlik-sorunu"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "benzer",
+    "instruction": "\"Nişantaşı'nda QR yoklamada bir derste 25 ile 30 öğrencinin kayıtları görünmedi (Ocak 2024).\" maddesini şununla değiştir: \"Nişantaşı'nda bir öğrencinin şikâyetine göre (Ocak 2024) QR yoklamada tek bir derste dört yoklamanın ikisi kaydında görünmedi; öğrenci sınıfında 25 ile 30 kişinin durumunun benzer olduğunu yazıyor.\""
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "\"Benzer sistemler\" details'inde \"Nişantaşı şikâyeti\" bağlantı metnini \"Nişantaşı öğrenci şikâyeti (5 Ocak 2024)\" yap; href aynı kalır."
+   }
+  ]
+ },
+ {
+  "id": "D19",
+  "outcome": "CHANGE",
+  "decision": "İddia doğrulandı; kaynak makale değil, Kaynaklar'da zaten bağlı olan İstanbul Tıp Fakültesi QR yoklama kılavuzu (PDF). Kılavuzda: 2018-2019 Öğretim Yılı İntörn Oryantasyon Günü Yoklama Formu, sabit bir Google Form bağlantısını açan QR, sistemin dersin ilk 2 dakikası açık tutulup kapatılması, 24 Temmuz 2018 zaman damgaları, KATILIM: 377 (sabah) ve 422 (öğleden sonra); forma erişim için @ogr.iu.edu.tr hesabıyla oturum açmak gerekiyordu. Ayrı makale künyesi eklenmez; tarih kesinleşir ve kaynak etiketi iddiayı taşıyacak şekilde adlandırılır.",
+  "rationale": "Önceki inceleme kaynağı bulamadı çünkü cümle ile PDF arasında görünür bağ yoktu. Fazladan kaynak eklemek yerine var olanı izlenebilir yapmak en az parçalı çözüm. PDF'te öğrenci adları var; plana yalnız sayılar ve tarih taşınır, ad taşınmaz.",
+  "sources": [
+   "https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=qr-kod-ile-online-yoklama-(1).pdf"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "benzer",
+    "instruction": "\"İÜ İstanbul Tıp Fakültesi 2018'de intörn oryantasyon gününde sabit QR ve Google Formuyla 2 dakikalık yoklama aldı (sabah 377, öğleden sonra 422 katılım).\" cümlesini şununla değiştir: \"İÜ İstanbul Tıp Fakültesi 24 Temmuz 2018'de intörn oryantasyon gününde sabit QR ve Google Formuyla 2 dakikalık yoklama aldı (sabah 377, öğleden sonra 422 katılım; forma öğrenci e-postasıyla oturum açılıyordu).\" Sonraki cümle (\"Sabit QR paylaşılabildiğinden ... sürüp sürmediği bilinmiyor.\") aynen kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "\"Benzer sistemler\" details'inde \"İstanbul Tıp Fakültesi QR yoklama kılavuzu\" bağlantı metnini \"İstanbul Tıp Fakültesi QR yoklama kılavuzu (24 Temmuz 2018 intörn oryantasyon günü, katılım 377 ve 422)\" yap; href aynı kalır."
+   }
+  ]
+ },
+ {
+  "id": "D20",
+  "outcome": "CHANGE",
+  "decision": "Cihazda deneme gerekmez: AOSP belgesine göre anahtar kanıtındaki uygulama kimliği (AttestationApplicationId) yalnız paket adı, sürüm ve imza sertifikası özetini taşır; kullanıcı ya da profil numarası yok, cihaza özgü kimlik (seri, IMEI) yalnız ayrı ID kanıtıyla gelir, cihaz özellikleri kanıtı da yalnız marka ve model verir. Keystore her kullanıcıda ayrı olduğundan Özel alan, Güvenli Klasör ya da ikiz uygulamadaki kopya kendi anahtarını ve geçerli kanıtını alır; sunucu bunu ayrı bir telefondan ayıramaz. Paket adını değiştiren sanal kopyalama uygulamaları ise kanıtta yanlış paket ve imza gösterdiğinden zaten reddedilir. Açığı kapatmanın en ucuz yolu: telefon kayıt sırasında uygulamanın ana kullanıcıda çalışıp çalışmadığını (UserManager.isSystemUser, API 23'ten beri) imzalı kayıt isteğine koyar; ana kullanıcı dışındaki kopya bağlanan cihaz kaydında tek evet/hayır alanıyla tutulur ve o cihazın kayıtları \"İkinci profil\" etiketiyle hocanın listesinde görünür (sayılır, reddedilmez; Cihaz doğrulanmadı ile aynı desen). Böylece madde Önlenemez'den İşaretlenir'e taşınır.",
+  "rationale": "Belgeler kopyanın kendi geçerli kanıtını alacağını zaten gösteriyor; cihaz denemesi sonucu değiştirmez. Asıl soru açığın kapanıp kapanmayacağıydı: tek bir boolean ve mevcut etiket deseniyle tek telefonda iki hesap taşıma hilesi görünür olur, yeni paket ya da izin gerekmez. Bilgi değeri telefonun bildirdiği bir değer ama değiştirilmemiş uygulamanın kanıtlı anahtarıyla imzalı geliyor; kanıtsız telefonda ise zaten \"Cihaz doğrulanmadı\" etiketi var. Kök açılmış telefonda gizlenebilir, bu sınır yazılır.",
+  "sources": [
+   "https://source.android.com/docs/security/features/keystore/attestation",
+   "https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder",
+   "https://developer.android.com/reference/android/os/UserManager",
+   "https://developer.android.com/privacy-and-security/security-key-attestation"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "hile",
+    "instruction": "\"Önlenemez\" kartındaki \"Android'de ikiz profil ya da uygulama kopyası (Özel alan, Güvenli Klasör, ikiz uygulama); iPhone'da yok\" maddesini (metin: \"Android'de ikinci profil ya da uygulama kopyası (Özel alan, Güvenli Klasör, ikiz uygulama); iPhone'da yok\") şununla değiştir: \"Kökü açılmış Android'de ikinci profil işaretini gizlemek (bkz. İşaretlenir)\". Aynı bölümde \"İşaretlenir ya da sınırlanır\" kartının listesine, \"Değiştirilmiş uygulama ve emülatör\" maddesinden önce yeni madde ekle: \"Android'de ikinci profil ya da uygulama kopyası (Özel alan, Güvenli Klasör, ikiz uygulama): kopya kendi anahtarını ve geçerli anahtar kanıtını alır, kanıtta profil bilgisi olmadığından sunucu onu ayrı telefondan ayıramaz; ama uygulama ana kullanıcıda çalışmadığını bilir ve bunu kayıtta bildirir, o telefonun kayıtları \"İkinci profil\" etiketiyle görünür (bkz. <a href=\\\"#gun\\\">Kayıt etiketleri</a>). iPhone'da yok.\""
+   },
+   {
+    "file": "plan.html",
+    "section": "gun",
+    "instruction": "\"Kayıt etiketleri\" rows listesinde \"Cihaz doğrulanmadı\" satırından hemen sonra yeni satır ekle: <div class=\"row\"><div class=\"k\"><span class=\"tag warn\">İkinci profil</span></div><div>Uygulama telefonun ana kullanıcısında değil, ikinci profilde ya da kopyada (Özel alan, Güvenli Klasör, ikiz uygulama) kurulu; kayıtta bir kez bildirilir, cihaz kaydında tutulur. Kayıt sayılır, hocanın listesinde bu etiketle görünür (bkz. <a href=\"#hile\">Hile ve sınırlar</a>).</div></div>"
+   },
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "\"Anahtar ve imza\" satırının (row, k=\"Anahtar ve imza\") açıklamasının sonuna şu cümleleri ekle: \"Android'de kayıt isteği <code>UserManager.isSystemUser()</code> sonucunu da taşır (API 23'ten beri, izin istemez); sonuç imzalı istekte gider, sunucu cihaz kaydında tek evet/hayır alanı olarak tutar ve false ise o cihazın kayıtlarına \"İkinci profil\" etiketi koyar (bkz. <a href=\\\"plan.html#gun\\\">Kayıt etiketleri</a>). Gerekçe: anahtar kanıtındaki uygulama kimliği yalnız paket adı, sürüm ve imza özeti taşır, kullanıcı ya da profil bilgisi taşımaz; ikinci profildeki kopya kendi geçerli kanıtını alır. Paket adını değiştiren sanal kopyalama uygulamaları kanıttaki paket ve imza denetiminde zaten reddedilir.\""
+   }
+  ]
+ },
+ {
+  "id": "D21",
+  "outcome": "CHANGE",
+  "decision": "boot_id okunabilirliği doğrulandı: AOSP sepolicy'de Kasım 2017'den beri /proc/sys/kernel/random (proc_random) bütün alanlara okunur (\"Make /proc/sys/kernel/random available to everyone\"); kural bugün AOSP main dalındaki private/domain.te'de duruyor (allow domain proc_random:file r_file_perms). Bu kural Android 9 ile gelen sürümlere girer; Android 7 ile 8.1'de uygulamaya kapalı olabilir. BOOT_COUNT ise Settings.Global'da API 24 (Android 7.0) ile gelen herkese açık ayar, izin istemez; desteklenen bütün sürümleri kapsar. Karar: Android'de önce BOOT_COUNT okunur, boot_id ikinci işaret; okunamayan değer değişmiş sayılmaz, ikisi de okunamazsa (iPhone'daki \"her hata yeniden başlatma\" kuralıyla aynı) yeniden başlatma sayılır. Kabul testine pahalı çoklu cihaz matrisi eklenmez; mevcut yayın öncesi Android 7.0 emülatörü denemesine ve elde bir güncel Android telefona yeniden başlatma algılama denemesi eklenir (üretici farkını yakalamak için).",
+  "rationale": "İki kaynak da birincil belgeyle doğrulandı; Android 14 ile 16 için ayrı bir SELinux değişikliği yok, kural main dalında duruyor. En eski desteklenen sürümü BOOT_COUNT kapsadığı için sıra değişir; okunamama durumunun tanımı eksikti ve güvenli tarafa (yeniden başlatma say) bağlanır. Test, var olan yayın öncesi denemeye eklenir, yeni bir iş yükü açılmaz.",
+  "sources": [
+   "https://android.googlesource.com/platform/system/sepolicy/+/9d9c370f31556c33f62e7889f64ad3a2728f1863",
+   "https://android.googlesource.com/platform/system/sepolicy/+/refs/heads/main/private/domain.te",
+   "https://developer.android.com/reference/android/provider/Settings.Global"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "\"İç sayaç ve saat\" satırında (id=\"telefon-ic-sayac\") \"<code>boot_id</code> ya da BOOT_COUNT değişmişse yeniden başlatma sayılır.\" cümlesinden hemen sonra şunu ekle: \"BOOT_COUNT <code>Settings.Global</code>'da Android 7.0'dan (API 24) beri herkese açık, izin istemez; önce o okunur. <code>boot_id</code>'yi AOSP Kasım 2017'den beri bütün uygulamalara açıyor (sepolicy: <code>allow domain proc_random:file r_file_perms</code>, Android 9 ve sonrası); Android 7 ile 8.1'de okunamayabilir. Okunamayan değer değişmiş sayılmaz; ikisi de okunamazsa yeniden başlatma sayılır.\""
+   },
+   {
+    "file": "teknik.html",
+    "section": "testler",
+    "instruction": "\"Kalite kapıları\" satırında (id=\"testler-kalite\") \"Android 7.0 emülatöründe kayıt gönderme denemesi;\" ifadesini \"Android 7.0 emülatöründe kayıt gönderme ve yeniden başlatma algılama (BOOT_COUNT, <code>boot_id</code>) denemesi, aynı algılama elde bulunan güncel bir Android telefonda da bir kez;\" ile değiştir."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "\"Kurallar, internetsiz çalışma ve saat\" details'inde \"Android TrustedTime ... Android SystemClock\" bağlantılarının bulunduğu <li>'nin sonuna \" · <a href=\\\"https://android.googlesource.com/platform/system/sepolicy/+/9d9c370f31556c33f62e7889f64ad3a2728f1863\\\">AOSP, boot_id herkese açık (2017)</a> · <a href=\\\"https://developer.android.com/reference/android/provider/Settings.Global\\\">Android BOOT_COUNT</a>\" ekle."
+   }
+  ]
+ },
+ {
+  "id": "D22",
+  "outcome": "CHANGE",
+  "decision": "Madde numaralarının hepsi Resmî Gazete 28.09.2025 tam metninden doğrulandı; önceki özet yanlıştı. Md.19/1: %70 teori, %80 uygulama, Md.35 durumları hariç; Md.19/3: devamsız öğrenci sınav öncesi otomasyon sistemi üzerinden ilan edilir. Md.35 \"Etkinliklerde görevlendirme\": spor, kültür, sanat, yarışma ve hazırlıklarına görevlendirilen öğrencinin süreleri devamsızlık hesabına girmez. Md.20/5: devamsızlık dışındaki nedenle tekrar alınan derste devam aranmaz; iki kez kalınan klinik uygulamalı derste devam zorunlu. Md.21: FD \"devamsız başarısız\", DC ve DD koşullu başarılı (Md.23'e göre isteğe bağlı tekrar). Md.28/4: AGNO'yu yükseltmek için son dönem öğrencisine sınırsız sınav hakkı; uygulamalı, uygulaması olan ve daha önce alınmamış dersler dışında devam aranmaz. Md.9/4: yönetim kurulu kararıyla geç ders kaydında aradaki süreler devamsızlıktan sayılır. Değişiklik: atıflar fıkra düzeyinde kesinleşir, Md.28/4'ün tam kapsamı yazılır, Kaynaklar satırına eksik maddeler eklenir.",
+  "rationale": "Plan içeriği doğru; yalnız atıf etiketleri bir düzey kaba ve Kaynaklar satırında Md.21 ile Md.28 yok, bu da sonraki incelemelerin doğrulayamamasına yol açtı. 2026'da İÜ ön lisans ve lisans yönetmeliğinde değişiklik bulunamadı (aramada yalnız lisansüstü yönetmelik değişikliği çıktı).",
+  "sources": [
+   "https://www.resmigazete.gov.tr/eskiler/2025/09/20250928-2.htm"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "devam",
+    "instruction": "\"<strong>Kural (Md.19):</strong>\" etiketini \"<strong>Kural (Md.19/1 ve 19/3):</strong>\" yap; metin aynı kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "devam",
+    "instruction": "\"<strong>Devamdan muaf (Md.20):</strong>\" etiketini \"<strong>Devamdan muaf (Md.20/5):</strong>\" yap. Aynı maddede \"FD ile tekrarda, iki kez kalınan klinik uygulamalı derste (Md.20/5) ve Md.28/4 kapsamındaki son dönem öğrencisinin uygulamalı derslerinde var\" kısmını \"FD (devamsız başarısız, Md.21) ile tekrarda, iki kez kalınan klinik uygulamalı derste ve Md.28/4 kapsamındaki (AGNO'sunu yükseltmek için sınırsız sınav hakkı verilen) son dönem öğrencisinin uygulamalı, uygulaması olan ya da daha önce almadığı derslerinde var\" ile değiştir; parantez içindeki yardım satırı notu ve sonraki cümle aynen kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "devam",
+    "instruction": "\"<strong>Görevli (Md.35):</strong>\" etiketi doğru, değişmez."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "\"Kurallar, internetsiz çalışma ve saat\" details'inde Resmî Gazete bağlantısından sonraki \": Md.9/4, Md.14, Md.19, Md.20, Md.35\" metnini \": Md.9/4, Md.14, Md.19, Md.20/5, Md.21 (harf notları, FD), Md.23 (DC ve DD tekrarı), Md.28/4, Md.35\" yap."
+   }
+  ]
+ },
+ {
+  "id": "D23",
+  "outcome": "CHANGE",
+  "decision": "Yönerge var ve plandaki bağlantıda (sks.istanbul.edu.tr) okunabiliyor: \"İstanbul Üniversitesi Öğrenci Sağlık Raporları Yönergesi\". Md.7/2: raporlu süreler dahil toplam devamsızlık teoride %30'u, uygulamada %20'yi aşarsa öğrenci devamsızlıktan kalır (sıradan rapor devamsızlığı silmez). Md.7/3: hastanede yatarak geçirilen sürelere ait rapor ile sağlık kurulu raporları teorik derslerin devamsızlık hesabında dikkate alınmaz. Md.6: rapor, bitiminden sonra en geç üç iş günü içinde dilekçeyle birim öğrenci işlerine verilir. Md.10: Senato'nun 24.07.2025 tarihli önceki yönergesini kaldırıyor. Plandaki kural doğru; madde numaraları eklenir ve öğrenci işlerinin bildirimine dayanak olan Md.6 süresi yazılır.",
+  "rationale": "Önceki araştırma yönergeyi bulamamıştı ama Kaynaklar'daki PDF bağlantısı çalışıyor ve metin plandaki kuralı birebir destekliyor. Madde numarası eklemek sonraki doğrulamayı kolaylaştırır; yeni parça eklenmez.",
+  "sources": [
+   "https://sks.istanbul.edu.tr//storage/files/yonerge-pdf/%C3%96%C4%9Frenci%20Sa%C4%9Fl%C4%B1k%20Raporlar%C4%B1%20Y%C3%B6nergesi.pdf"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "devam",
+    "instruction": "\"<strong>Rapor ve izin:</strong>\" maddesinde \"İÜ Öğrenci Sağlık Raporları Yönergesi'ne göre sıradan sağlık raporu devamsızlığı silmez, bir şey girilmez.\" cümlesini \"İÜ Öğrenci Sağlık Raporları Yönergesi'ne göre (Md.7/2) raporlu süreler devamsızlığa dahildir, sıradan sağlık raporu devamsızlığı silmez, bir şey girilmez.\" yap. \"Yalnız yatarak tedavi ve sağlık kurulu raporlarının kapsadığı teori saatleri devamsızlıktan düşülür:\" ifadesini \"Yalnız yatarak tedavi ve sağlık kurulu raporlarının kapsadığı teori saatleri devamsızlıktan düşülür (Md.7/3); öğrenci raporu bitiminden sonra en geç üç iş günü içinde birim öğrenci işlerine verir (Md.6):\" yap; maddenin geri kalanı aynen kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "\"Kurallar, internetsiz çalışma ve saat\" details'inde \"İÜ Öğrenci Sağlık Raporları Yönergesi\" bağlantı metnini \"İÜ Öğrenci Sağlık Raporları Yönergesi: Md.6, Md.7\" yap; href aynı kalır."
+   }
+  ]
+ },
+ {
+  "id": "D24",
+  "outcome": "CHANGE",
+  "decision": "2026-2027 takvimleri okunamadı (öğrenci işleri sayfası JavaScript ile yükleniyor; EBS yalnız genel \"2026-2027 Önlisans-Lisans Akademik Takvimi\" ve lisansüstü takvim bağlantısını veriyor). Okunabilen birincil kanıt: İÜ Eczacılık Fakültesi 2025-2026 takvim önerisi ayrı bir takvim ve içinde \"Öğrenci Devamsızlıklarının Öğrenci Otomasyon Sistemine İşlenmesi İçin Son Gün\" satırı var; güz yarıyılında bu gün ile \"Eğitim-Öğretim Bitişi\" aynı gün (2 Ocak 2026). Tasarım zaten tarihten bağımsız: yönetici son günü her dönem ve birim için girer, Gönderme süresi \"en geç 7 gün; son haftada birimin son günü\" kuralıyla bunu karşılıyor. Karar: plan bu iki yerde kesin \"lisans takviminde\" iddiası yerine kanıtı ve teyit ihtiyacını söyler; ayrı takvim listesi doğrulanan ve doğrulanmayan olarak ayrılır. Hangi birimin ayrı takvimi olduğu ve 2026-2027'de son günün dersin bittiği gün olup olmadığı öğrenci işlerine sorulacak tek soru olarak Açık noktalar'daki AKSİS maddesine eklenir.",
+  "rationale": "Kural ve kilit mekanizması tarih ne olursa olsun doğru çalışıyor; yalnız gerekçe cümlesi okunamayan bir takvime dayanıyordu. Okunan 2025-2026 Eczacılık takvimi deseni gösteriyor ama genel lisans takvimi için kanıt değil; bu yüzden teyit sorusu ayrı bir madde açmadan var olan AKSİS açık noktasına eklenir.",
+  "sources": [
+   "https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=2025-2026-akademik-takvim-onerisi-eczacilik.pdf",
+   "https://ebs.istanbul.edu.tr/home/universite/?id=takvim"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "devam",
+    "instruction": "id=\"devam-donem-sonu\" maddesinde \"Lisans takviminde bu gün dersin bittiği gün: son haftanın kayıtlarına 7 günlük pay yok.\" cümlesini şununla değiştir: \"Bu gün takvimde dersin bittiği güne denk gelebiliyor (Eczacılık'ın 2025-2026 takviminde ikisi de 2 Ocak 2026; 2026-2027 lisans takvimi okunamadı, bkz. <a href=\\\"#acik\\\">Açık noktalar</a>); bu yüzden son haftanın kayıtlarına 7 günlük pay güvenilmez, süre en geç bu gündür.\""
+   },
+   {
+    "file": "plan.html",
+    "section": "hoca",
+    "instruction": "\"Web paneli · yönetici\" listesinde \"Tek genel takvim varsayılmaz (İÜ; Tıp, Diş Hekimliği, Hukuk, AUZEF, Eczacılık ve Konservatuvar için ayrı takvim yayımlıyor).\" cümlesini şununla değiştir: \"Tek genel takvim varsayılmaz: İÜ genel ön lisans ve lisans takviminin yanında birimlere ayrı takvim yayımlıyor (Eczacılık'ın 2025-2026 takvimi ayrı; Tıp, Diş Hekimliği, Hukuk, AUZEF ve Konservatuvar için de ayrı takvim olduğu yazılmıştı, 2026-2027 takvimleri okunamadığından teyit edilmedi).\""
+   },
+   {
+    "file": "plan.html",
+    "section": "acik",
+    "instruction": "\"<strong>AKSİS:</strong>\" maddesindeki \"Devamsızlıkları otomasyona işleme son gününden (lisansta dersin bittiği gün) sonra AKSİS'te düzeltmeyi kim, hangi kararla yapar?\" metnini şununla değiştir: \"Devamsızlıkları otomasyona işleme son gününden sonra AKSİS'te düzeltmeyi kim, hangi kararla yapar? 2026-2027'de bu gün genel lisans takviminde de dersin bittiği gün mü, hangi birimlerin ayrı takvimi var? (bkz. <a href=\\\"#devam-donem-sonu\\\">Dönem sonu</a>)\""
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "\"Kurallar, internetsiz çalışma ve saat\" details'inde Resmî Gazete ve Sağlık Raporları Yönergesi bağlantılarının bulunduğu <li>'nin sonuna \" · <a href=\\\"https://cdn.istanbul.edu.tr/FileHandler2.ashx?f=2025-2026-akademik-takvim-onerisi-eczacilik.pdf\\\">İÜ Eczacılık Fakültesi 2025-2026 akademik takvimi (devamsızlık son günü)</a> · <a href=\\\"https://ebs.istanbul.edu.tr/home/universite/?id=takvim\\\">İÜ akademik takvimler (EBS)</a>\" ekle."
+   }
+  ]
+ },
+ {
+  "id": "D25",
+  "outcome": "CHANGE",
+  "decision": "Rakamlar Eylül 2026 CSV'sinden yeniden toplandı: Android 7 ve üstü %98,16 (adı tanınmayan 26.8, 26.6, 17.0, 12.2 satırları, toplam %0,31, dışarıda tutulsa da %97,85), iOS 16.4 ve üstü %97,63. Android 'yaklaşık %98' doğru kalır; iOS 'yaklaşık %97,6' olur. iOS 26 Safari'sinin kimlik metninde sürümü 18.6'da dondurması (StatCounter düzeltmesi 19 Ocak 2026'da başladı) yalnız 18.6 üstündeki sürümlerin dağılımını karıştırır; 16.4 sınırının altını etkilemez, bu yüzden toplam güvenilir.",
+  "rationale": "StatCounter'ın CSV dışa aktarımı (Türkiye, mobil, Eylül 2026) betikle toplandı: Android 7 altı 6.0 %1,49, 5.1 %0,17, 5.0 %0,07, 4.4 %0,07, 4.1 %0,02 = %1,82; iOS 16.4 altı (16.0 ile 16.3, 15.x, 12.5) = %2,30, 'Other' %0,08. Donmuş kimlik metni sorunu iOS 26 cihazlarını 18.6 ya da 18.7 gösterir; ikisi de 16.4 üstünde, sınır hesabı değişmez. Sayının kaynağı ve hesap yöntemi yazılınca iddia doğrulanabilir hale gelir.",
+  "sources": [
+   "https://gs.statcounter.com/chart.php?device=Mobile&device_hidden=mobile&statType_hidden=android_version&region_hidden=TR&granularity=monthly&statType=Android%20Version&region=Turkey&fromInt=202609&toInt=202609&fromMonthYear=2026-09&toMonthYear=2026-09&csv=1",
+   "https://gs.statcounter.com/chart.php?device=Mobile&device_hidden=mobile&statType_hidden=ios_version&region_hidden=TR&granularity=monthly&statType=iOS%20Version&region=Turkey&fromInt=202609&toInt=202609&fromMonthYear=2026-09&toMonthYear=2026-09&csv=1",
+   "https://pxlnv.com/linklog/ios-26-usage-updates/"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "dagitim",
+    "instruction": "In the row id=\"dagitim-desteklenen-surumler\", replace the sentence \"Türkiye'de Android kullanımının yaklaşık %98'i, iOS kullanımının yaklaşık %97,7'si bu aralıkta (StatCounter sürüm sayfaları, Eylül 2026).\" with \"Türkiye'de Android kullanımının yaklaşık %98'i, iOS kullanımının yaklaşık %97,6'sı bu aralıkta (StatCounter sürüm sayfalarının Eylül 2026 CSV dökümünden topladım). iOS 26'daki Safari sürümü 18.6 diye bildirdiğinden StatCounter'ın iOS 26 ara sürüm dağılımı güvenilir değil (düzeltme 19 Ocak 2026'da başladı); bu yalnız 18.6 üstünü karıştırır, 16.4 sınırının altındaki payı değiştirmez.\" Keep the rest of the row unchanged."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "In the 'Benzer sistemler' details list, on the <li> that holds the three StatCounter links, append \" · <a href=\\\"https://pxlnv.com/linklog/ios-26-usage-updates/\\\">StatCounter iOS 26 sayım düzeltmesi (Ocak 2026)</a>\" after the 'iOS sürümleri' link, inside the same <li>."
+   }
+  ]
+ },
+ {
+  "id": "D26",
+  "outcome": "CHANGE",
+  "decision": "Lisans ve imza doğrulandı: xprem'in LICENSE.md'si ee/ klasörleri dışındaki her şeyi MIT sayıyor; ee/ yalnız RBAC, SSO, denetim kaydı, telemetri, geoip, sembolleştirme gibi kurumsal parçaları içeriyor, kademeli açma ve uçtan uca kod imzası çekirdekte. SDK 57 uyumu için xprem açık bir beyan yazmıyor; xprem Expo Updates protokolünün 1. sürümünü konuşuyor, uyum okumayla değil denemeyle kanıtlanır. Karar: xprem'e bağlanmadan önce (ilk derlemede) ve her Expo SDK yükseltmesinde tek bir deneme yapılır: imzalı güncelleme yayımla, yüzde ile aç, geri al, imzası bozulmuş güncellemenin telefonda reddedildiğini gör. Deneme düşerse yedek yol zaten yazılı: aynı protokolü konuşan başka sunucu.",
+  "rationale": "Fewer moving parts: ayrıca bir uyum araştırması süreci yerine mevcut yayın öncesi deneme listesine tek madde eklenir. Protokol spesifikasyonu, imza doğrulamasını yapılandırılmış istemcide zorunlu kılıyor ('MUST verify the signature ... before it is used'), xprem README'si sunucunun her manifesti imzaladığını ve expo-updates'in doğrulanmayanı reddettiğini söylüyor; bu yüzden reddetme denemesi anlamlı ve ucuz. xprem v3.2.5 (26 Eylül 2026) ve eoas 3.2.5 MIT lisanslı; depo 5 Ekim 2026'da hâlâ etkin.",
+  "sources": [
+   "https://github.com/mercuretechnologies/xprem",
+   "https://github.com/mercuretechnologies/xprem/blob/main/LICENSE.md",
+   "https://github.com/mercuretechnologies/xprem/tree/main/ee",
+   "https://github.com/mercuretechnologies/xprem/releases",
+   "https://docs.expo.dev/technical-specs/expo-updates-1/",
+   "https://registry.npmjs.org/eoas"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "dagitim-ayrinti",
+    "instruction": "In the row whose key is \"xprem güvenliği\", after the first sentence ending \"...yayın anahtarına erişene karşı korumaz.\" insert: \"Kod imzası ve kademeli açma xprem'in MIT çekirdeğinde; <code>ee/</code> klasörlerindeki ticari kısım (yetki rolleri, SSO, denetim kaydı, telemetri) bana gerekmiyor.\" Keep the rest of the row unchanged."
+   },
+   {
+    "file": "teknik.html",
+    "section": "testler",
+    "instruction": "In the row id=\"testler-kalite\", inside the \"Yayından önce:\" list, after \"Android 7.0 emülatöründe kayıt gönderme denemesi;\" insert: \"xprem denemesi (ilk derlemede ve her Expo SDK yükseltmesinde; xprem SDK uyumunu ayrıca yazmıyor): imzalı güncelleme yayımlanır, yüzde ile açılır, geri alınır, imzası bozulmuş güncellemenin telefonda reddedildiği görülür; düşerse yedek yol: bkz. <a href=\\\"plan.html#dagitim-guncelleme\\\">Dağıtım, Güncelleme</a>;\" Keep everything else unchanged."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "On the <li> with the Expo Updates protokolü, xprem and xprem belgeleri links, append \" · <a href=\\\"https://github.com/mercuretechnologies/xprem/blob/main/LICENSE.md\\\">xprem lisansı (MIT çekirdek, ee/ ticari)</a>\" inside the same <li>."
+   }
+  ]
+ },
+ {
+  "id": "D27",
+  "outcome": "NO_CHANGE",
+  "decision": "Cümle doğru kalır. Samsung'un Türkiye destek sayfası, plan.html kaynaklarında zaten bağlı olan sayfa, birebir şunu yazıyor: \"Otomatik Engelleyici özelliği kapalıysa ve uygulama yetkili bir mağaza dışındaki bir kaynaktan indirildiyse, Otomatik Engelleyici özelliği açıkken bu uygulama güncellenemez.\" Yani engelleyici kapalıyken kurulan GitHub APK'sı, engelleyici yeniden açılınca güncellenemez; plandaki 'yeniden açılırsa sonraki güncelleme yine engellenir' bunun aynısı.",
+  "rationale": "Birincil kaynak Samsung'un kendi destek sayfası ve zaten plan.html Kaynaklar listesinde 'Samsung Otomatik Engelleyici' adıyla bağlı; telefonda deneme ya da yumuşatma gerekmiyor.",
+  "sources": [
+   "https://www.samsung.com/tr/support/mobile-devices/galaxy-cihazinizi-yeni-otomatik-engelleyici-ozelligi-ile-koruyun"
+  ],
+  "edits": []
+ },
+ {
+  "id": "D28",
+  "outcome": "CHANGE",
+  "decision": "'5 dakika' sayısı kaldırılır, gerekçe genel ve doğru haliyle yazılır: Windows dokunulmayan ekranı güç ayarına göre birkaç dakikada karartır; Microsoft'un enerji önerisi 3 ya da 10 dakika, kürsü bilgisayarının ayarı bilinmiyor. Ölçmeye gerek yok: Screen Wake Lock her durumda ekranı açık tutar, karar sayıya bağlı değil.",
+  "rationale": "Microsoft'un kendi enerji önerileri sayfası ekranı kapatma süresini sisteme göre '3 (or 10) minutes' olarak veriyor; tek bir varsayılan yok, sürüm, güç planı ve üreticiye göre değişiyor. Karar (Wake Lock) süre ne olursa olsun aynı kaldığı için en sade doğru ifade sayıyı bağlamamak. Screen Wake Lock Chrome 84, Firefox 126, Safari 16.4'ten beri var (MDN browser-compat-data 8.1.4).",
+  "sources": [
+   "https://support.microsoft.com/en-US/Windows/Experience/power-battery/learn-more-about-energy-recommendations",
+   "https://unpkg.com/@mdn/browser-compat-data/data.json"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "hoca",
+    "instruction": "In the <li> that starts \"Projeksiyon sayfası (Aşama 2;\", replace \"çünkü Windows ekranı 5 dakikada karartabiliyor.\" with \"çünkü Windows dokunulmayan ekranı güç ayarına göre birkaç dakikada karartır (Microsoft'un enerji önerisi 3 ya da 10 dakika; kürsü bilgisayarının ayarını bilmiyorum).\" Keep the link and the rest of the item unchanged."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "In the 'Web paneli' details list, add a new <li> at the end: \"<li><a href=\\\"https://support.microsoft.com/en-US/Windows/Experience/power-battery/learn-more-about-energy-recommendations\\\">Windows enerji önerileri (ekran kapanma süresi)</a> · <a href=\\\"https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API\\\">Screen Wake Lock</a> · <a href=\\\"https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@page\\\">CSS @page (sayfa kenar kutuları)</a></li>\". If D29's edit adds the @page link separately, add it only once."
+   }
+  ]
+ },
+ {
+  "id": "D29",
+  "outcome": "CHANGE",
+  "decision": "İddia doğrulandı, kaynakla ve kesin sürümle yazılır: sayfa numarasını basan CSS sayfa kenar kutuları Chrome ve Edge'de 131'den beri var, Firefox ve Safari'de yok (MDN browser-compat-data 8.1.4, 1 Ekim 2026). Sonuç aynı: sayfa numarası şart değil. Baskı denemesine gerek yok.",
+  "rationale": "MDN'in uyumluluk verisi (makine okunur JSON, sürüm 8.1.4) @page altındaki top-center, bottom-center ve diğer 16 kenar kutusu için chrome 131, edge 131, firefox false, safari false veriyor. Mevcut cümle doğru; yalnız kaynağı ve sürümü eksikti.",
+  "sources": [
+   "https://unpkg.com/@mdn/browser-compat-data/data.json",
+   "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@page"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "hoca",
+    "instruction": "In the <li> that starts \"Raporlar: ders, öğrenci, tarih aralığı.\", replace \"Sayfa numarası yalnız Chrome ve Edge'de çıktığı için şart değil.\" with \"Sayfa numarası (CSS sayfa kenar kutuları) yalnız Chrome ve Edge'de, 131. sürümden beri çıkıyor, Firefox ve Safari'de çıkmıyor; bu yüzden şart değil.\""
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "Ensure the 'Web paneli' details list contains exactly one link \"<a href=\\\"https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@page\\\">CSS @page (sayfa kenar kutuları)</a>\" (the new <li> described in D28 carries it; do not add a second copy)."
+   }
+  ]
+ },
+ {
+  "id": "D30",
+  "outcome": "CHANGE",
+  "decision": "Kural kaynakla kesinleşir, cümle kaynağa dayanacak biçimde yeniden yazılır: Google'da kayıt 'paket adı ile imza sertifikası parmak izi' çiftidir; Play App Signing kullanan uygulama kendiliğinden kaydolur; Play Console hesabı Play dışında dağıtılan uygulamaları da kapsar. GitHub APK, Play'in aynı uygulama imza anahtarıyla imzaladığı evrensel APK olduğundan aynı çifte düşer ve kapsanır. Doğrulama Türkiye'ye gelince Play Console'da kayıt durumunu bir kez kontrol ederim.",
+  "rationale": "Developer verification SSS'i: 'If you use Play App Signing ... Your eligible apps will be part of the automatic registration process' ve 'developers with a Play Console account can use it as the single place to manage all their verification requirements, including for their apps distributed outside of Play.' Developer ID Status API sayfası kaydı 'package name and certificate fingerprint pair' olarak tanımlıyor. Üçü birlikte cümleyi doğrudan destekliyor; tek eksik, kendi hesabımda gerçekleştiğini görmek, o da bir kontrol adımı.",
+  "sources": [
+   "https://developer.android.com/developer-verification/guides/faq",
+   "https://developer.android.com/developer-verification/guides/check-registration-status"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "dagitim",
+    "instruction": "In the row with key \"Google doğrulaması\", replace \"Paket adı uygulama Play'de açılınca, imza anahtarı Play App Signing ile kaydolur; aynı anahtarla imzalandığı için GitHub APK da kapsanır.\" with \"Google'da kayıt, paket adı ile imza sertifikası parmak izi çiftidir; Play App Signing kullanan uygulama kendiliğinden kaydolur ve Play Console hesabı Play dışında dağıtılan uygulamaları da kapsar. GitHub APK aynı paket adını ve Play'in aynı imza anahtarını taşıdığından aynı kayda girer. Doğrulama Türkiye'ye gelince kayıt durumunu Play Console'da bir kez kontrol ederim.\""
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "On the <li> holding \"Android geliştirici doğrulaması, SSS\" and \"Google duyurusu (Haziran 2026)\", append \" · <a href=\\\"https://developer.android.com/developer-verification/guides/check-registration-status\\\">Kayıt: paket adı ile sertifika parmak izi</a>\" inside the same <li>."
+   }
+  ]
+ },
+ {
+  "id": "D31",
+  "outcome": "CHANGE",
+  "decision": "SDK 58'in alt sınırları doğrulandı: expo/expo deposunun sdk-58 dalında şablonun Podfile'ı iOS dağıtım hedefini 16.4 veriyor; React Native 0.88-stable dalında minSdk 24 (Android 7.0). Yani 'Expo SDK 57 ve 58'in alt sınırı' cümlesi doğru kalır. teknik.html'de yalnız 58 beta'nın React Native 0.88 sürüm adayını kullandığı ve alt sınırların sayısı açık yazılır; kaynaklar eklenir. Tek değişen: 58'in compileSdk'sı 37 (57'de 36), alt sınırı etkilemez.",
+  "rationale": "SDK 58 beta duyurusu (15 Eylül 2026) alt sınırları yazmıyor ama 'React Native 0.88 (Release Candidate)' diyor; asıl değer kaynak kodunda: sdk-58 dalı package.json 58.0.0-preview.8, react 19.3.0, react-native 0.88.0-rc.2; Podfile platform :ios '16.4'; RN 0.88-stable libs.versions.toml minSdk = \"24\". Expo'nun sürüm tablosu 57 için Android 7+, iOS 16.4+ veriyor.",
+  "sources": [
+   "https://expo.dev/changelog/sdk-58-beta.md",
+   "https://docs.expo.dev/versions/latest/",
+   "https://raw.githubusercontent.com/expo/expo/sdk-58/templates/expo-template-bare-minimum/ios/Podfile",
+   "https://raw.githubusercontent.com/facebook/react-native/0.88-stable/packages/react-native/gradle/libs.versions.toml",
+   "https://raw.githubusercontent.com/expo/expo/sdk-58/packages/expo/package.json"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "In the row with key \"Çatı\", replace \"58 beta'da (React Native 0.88, React 19.3), alt sınırları aynı.\" with \"58 beta'da (React Native 0.88 sürüm adayı, React 19.3), alt sınırları aynı: Android 7 (minSdk 24), iOS 16.4.\" Keep the rest unchanged."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "On the <li> that starts with the link \"Expo SDK sürümleri ve desteklenen işletim sistemleri\", insert after the \"Expo SDK 57\" link: \" · <a href=\\\"https://expo.dev/changelog/sdk-58-beta\\\">Expo SDK 58 beta</a> · <a href=\\\"https://github.com/expo/expo/blob/sdk-58/templates/expo-template-bare-minimum/ios/Podfile\\\">SDK 58 iOS alt sınırı</a> · <a href=\\\"https://github.com/facebook/react-native/blob/0.88-stable/packages/react-native/gradle/libs.versions.toml\\\">React Native 0.88 Android alt sınırı</a>\"."
+   }
+  ]
+ },
+ {
+  "id": "D32",
+  "outcome": "CHANGE",
+  "decision": "Şimdi geçilmez; fastify-type-provider-zod 7'de kalınır ve resmî @fastify/type-provider-zod paketinin 1.0.0'dan sonraki ilk sürümünde ona geçilir. Gerekçe: resmî 1.0.0 (19 Nisan 2026) 7.0.0'dan (24 Haziran 2026) eski; 7.0.0'daki iki düzeltme (fastify tip içe aktarımı, yanıt şemasını sunucu açılışında çözme) resmî depoya 10 Eylül 2026'da taşındı ama henüz yayımlanmadı. İki paketin dışa aktardıkları aynı (validatorCompiler, serializerCompiler, ZodTypeProvider), ikisi de encode/decode kullanıyor; resmî paket Zod 4.2 ve üstünü istiyor.",
+  "rationale": "npm kayıt verisi: @fastify/type-provider-zod tek sürüm 1.0.0, 2026-04-19, peer zod >=4.2.0, fastify ^5.5.0; fastify-type-provider-zod latest 7.0.0, 2026-06-24, peer zod >=4.1.5. Resmî depoda PR #29 'Ports two fixes already landed upstream' (Closes #19, #28) main'e girdi, sürüm yok. Topluluk deposu 4 Ekim 2026'da etkin. 1.0.0'a şimdi geçmek düzeltmeleri geri almak olur; sonraki resmî sürüm bu düzeltmeleri taşıyacağından o an geçişin doğru anı.",
+  "sources": [
+   "https://registry.npmjs.org/@fastify%2ftype-provider-zod",
+   "https://registry.npmjs.org/fastify-type-provider-zod",
+   "https://github.com/fastify/fastify-type-provider-zod",
+   "https://github.com/fastify/fastify-type-provider-zod/pull/29",
+   "https://github.com/turkerdev/fastify-type-provider-zod/releases/tag/7.0.0"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "In the row with key \"Sözleşme\", replace \"(fastify-type-provider-zod 7, sürüm sabit; Fastify'ın resmî @fastify/type-provider-zod paketi yeni sürüm yayımlayınca ona geçilir, kullanım aynı)\" with \"(fastify-type-provider-zod 7, sürüm sabit; Fastify'ın resmî @fastify/type-provider-zod paketi 19 Nisan 2026'dan beri 1.0.0 ama 7.0.0'daki düzeltmelerin gerisinde, düzeltmeler resmî depoya taşındı, yayımlanmadı; 1.0.0'dan sonraki ilk sürümünde ona geçilir, kullanım aynı, Zod 4.2 ve üstünü ister)\"."
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "On the <li> that starts with the link \"fastify-type-provider-zod\" (jsdelivr README 7.0.0), insert after that first link: \" · <a href=\\\"https://github.com/fastify/fastify-type-provider-zod\\\">@fastify/type-provider-zod (resmî)</a>\" inside the same <li>."
+   }
+  ]
+ },
+ {
+  "id": "D33",
+  "outcome": "CHANGE",
+  "decision": "Dört iddianın dördü de doğrulandı, sayı kalır ama tarihlenir, iki davranış iddiası kaynağın gösterdiği haliyle kesinleştirilir. 17 doğrudan bağımlılık: packages/better-auth/package.json'daki dependencies alanı 17 kalem. 27 duyuru: GitHub'daki güvenlik duyuruları sayfası 4 sayfa (10+10+10+7); yayın tarihi 2026 olanlar 10+10+6+1 = 27 (6 Ekim 2026 itibarıyla). Önceki turda 10 ile 16 arası bulunması yalnız ilk sayfaların okunmasından. IP: Better Auth istemci IP'sini istek başlığından okur (varsayılan x-forwarded-for; GHSA-p6v2-xcpg-h6xw sınırlayıcının anahtarı başlıktaki metin olduğu için açık çıktı); şimdi trustedProxies seçeneği var ama yine başlık zincirinden okur. Oturum anahtarı: internal-adapter.ts'de createSession token: generateId(32) değerini aynen yazar, findSession aynen arar; özet yok.",
+  "rationale": "İddia doğru olduğundan yumuşatmak bilgi kaybı olur; yalnız zamana bağlı sayıya tarih eklemek cümleyi yıllar sonra da doğru tutar. Davranış iddiaları kaynağın söylediği kadar yazılınca okuyucu plan.html'deki duyurular bağlantısıyla kendisi denetleyebilir.",
+  "sources": [
+   "https://github.com/better-auth/better-auth/security/advisories",
+   "https://github.com/better-auth/better-auth/security/advisories?page=2",
+   "https://github.com/better-auth/better-auth/security/advisories?page=3",
+   "https://github.com/better-auth/better-auth/security/advisories?page=4",
+   "https://github.com/better-auth/better-auth/blob/main/packages/better-auth/package.json",
+   "https://www.better-auth.com/docs/concepts/rate-limit",
+   "https://raw.githubusercontent.com/better-auth/better-auth/main/packages/better-auth/src/db/internal-adapter.ts",
+   "https://advisories.gitlab.com/npm/better-auth/CVE-2026-45364/"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "Kimlik satırında (<div class=\"k\">Kimlik</div>) şu parçayı: \"Better Auth bu iş için 17 doğrudan bağımlılık, 2026'da 27 güvenlik duyurusu, IP'yi yalnız başlıktan okuma, oturum anahtarını açık saklama getiriyordu;\" şununla değiştir: \"Better Auth bu iş için 17 doğrudan bağımlılık, 2026'da 27 güvenlik duyurusu (6 Ekim 2026'ya kadar, GitHub'daki yayın tarihine göre), istemci IP'sini bağlantıdan değil istek başlığından okuma (varsayılan <code>x-forwarded-for</code>), oturum anahtarını veritabanında özetlemeden aynen saklama getiriyordu;\". Cümlenin geri kalanı (\"Temmuz 2026'dan beri Vercel desteğinde olduğundan yedekte kalır.\") aynen kalır."
+   }
+  ]
+ },
+ {
+  "id": "D34",
+  "outcome": "CHANGE",
+  "decision": "Ayar doğru, cümlenin gerekçesi eksik yazılmış; doğru mekanizmayla yeniden yazılır. pnpm 12 packageManager alanında sabitlenen sürümü indirdiğinde (pmOnFail varsayılanı download) çözdüğü pnpm sürümünü pnpm-lock.yaml'ın başına ayrı bir YAML belgesi olarak packageManagerDependencies altında yazar; dosya iki belgeli olur. pnpm'in kilit dosyası sayfası: pmOnFail: ignore bu kaydı kapatır, dosya tek belge kalır. GitHub'ın Dependabot belgesi pnpm için yalnız v7 ile v10'u desteklenen sayar; iki belgeli kilit dosyasını okuyamadığı bildiriliyor. Bedeli: ignore ile pnpm yerelde sürüm uyuşmazlığını denetlemez; sürüm birliğini CI'da pnpm/setup, Docker'da resmî imaj, EAS'ta eas.json zaten sağlıyor. Dependabot belgesi pnpm 12'yi desteklenen sürümler arasında sayınca ayar kaldırılır.",
+  "rationale": "Okuyucu ayarın neden orada olduğunu ve ne zaman kaldırılacağını görmeli; aksi halde ilk temizlikte silinir ve Dependabot sessizce körleşir. Yeni parça eklemeden, tek ayarla çözüm.",
+  "sources": [
+   "https://pnpm.io/settings/cli",
+   "https://pnpm.io/lockfile",
+   "https://docs.github.com/en/code-security/dependabot/ecosystems-supported-by-dependabot/supported-ecosystems-and-repositories"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "temel",
+    "instruction": "Paket yöneticisi satırında şu cümleyi: \"Dependabot pnpm 12'nin kilit dosyasını henüz tam okuyamadığından dosya <code>pmOnFail: ignore</code> ile tek parça, kurulumdan sonra GitHub'ın bağımlılık grafiği bir kez denetlenir.\" şununla değiştir: \"pnpm 12, <code>packageManager</code>'da sabitlenen sürümü kendisi indirince bu sürümü <code>pnpm-lock.yaml</code>'ın başına ayrı bir YAML belgesi olarak yazar; Dependabot belgesinde desteklenen pnpm sürümleri v7 ile v10 ve iki belgeli kilit dosyasını okuyamıyor. Bu yüzden <code>pnpm-workspace.yaml</code>'da <code>pmOnFail: ignore</code>: pnpm sürüm kaydını yazmaz, kilit dosyası tek belge kalır. Bedeli yerelde sürüm uyuşmazlığının denetlenmemesi; sürüm birliğini CI'da pnpm/setup, Docker'da resmî imaj, EAS'ta <code>eas.json</code> sağlar. Kurulumdan sonra GitHub'ın bağımlılık grafiği bir kez denetlenir; Dependabot belgesi pnpm 12'yi desteklenen sayınca ayar kaldırılır.\" Satırın geri kalanı aynen kalır."
+   }
+  ]
+ },
+ {
+  "id": "D35",
+  "outcome": "CHANGE",
+  "decision": "Dış denetim için Caddy üzerinden giden, herkese açık tek bir uç adlandırılır: <code>GET /v1/durum</code>. /health/live ile aynı işi yapar (veritabanına ve dış bağımlılığa dokunmaz, gövdesiz 204 döner), girişsizdir, girişsiz uçların geniş IP sınırına tabidir, Zod sözleşmesindedir. Caddy /v1'i zaten API'ye ilettiği için yeni yönlendirme gerekmez. Böylece tek denetim alan adını, sertifikayı, Caddy'yi ve API sürecini birlikte sınar; /health/live ve /health/ready iç ağda kalır, veritabanı ve şema durumu iç denetimde. Panel ana sayfası seçilmez: onu Caddy tek başına sunar, API düşse de cevap verir.",
+  "rationale": "Adsız 'herkese açık uç' okuyucuya /health/live'ı düşündürüp iç ağ kuralıyla çelişki gösteriyordu. Veritabanına dokunmayan açık uç dışarıya yük kaldıracı vermez; under-pressure'ın aşırı yük denetimi ve IP sınırı korur. Yeni kütüphane ya da yönlendirme yok.",
+  "sources": [
+   "https://github.com/fastify/under-pressure",
+   "https://fastify.dev/docs/latest/Reference/Encapsulation/"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "Loglar ve izleme satırında son cümleyi: \"Dışarıdan bir erişim denetimi herkese açık bir ucu birkaç dakikada bir çağırır, sunucu cevap vermezse beni uyarır.\" şununla değiştir: \"Dışarıdan bir erişim denetimi Caddy üzerinden herkese açık <code>GET /v1/durum</code> ucunu birkaç dakikada bir çağırır, cevap gelmezse beni uyarır. Bu uç <code>/health/live</code> ile aynı işi yapar (veritabanına dokunmaz, gövdesiz 204), girişsizdir ve girişsiz uçların IP sınırı altındadır; böylece alan adı, sertifika, Caddy ve API süreci tek denetimde sınanır, sağlık uçları iç ağda kalır. Panel ana sayfası bu iş için kullanılmaz: onu Caddy tek başına sunar, API düşse de cevap verir.\""
+   }
+  ]
+ },
+ {
+  "id": "D36",
+  "outcome": "CHANGE",
+  "decision": "Ayrım yazılır: kökteki ortak altyapıda 'kimlik' yalnız oturum doğrulama kancasıdır (gelen çerezi ya da Bearer anahtarını özetleyip oturum tablosunda bulan, isteğe hocanın kimliğini ekleyen kanca). Bu kanca kimlik modülünün index.ts dış yüzünden gelir ve kökte bir kez eklenir; Fastify'da kökte kaydedilen kanca ve süsleme bütün alt eklentilere (modüllere) geçer. Giriş kodları ve oturumlar tabloları ile beş uç kimlik modülünün kendi /v1/kimlik eklentisindedir.",
+  "rationale": "Aynı kelimenin iki yerde geçmesi, okuyucuya kimliğin iki kez kurulduğunu düşündürüyordu. Kancanın kimlik modülünün dış yüzünden gelmesi modül sınırı kuralıyla (yalnız index.ts çağrılır) uyumlu; fastify-plugin gibi ek paket gerekmez çünkü kök bağlamı zaten alt bağlamlara geçer.",
+  "sources": [
+   "https://fastify.dev/docs/latest/Reference/Encapsulation/"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "Çatı satırında şu parçayı: \"Ortak altyapı (veritabanı, iş kuyruğu, kimlik, saat, e-posta) kökte bir kez kaydedilir; her modül <code>/v1/&lt;modül&gt;</code> altında kendi eklentisi.\" şununla değiştir: \"Ortak altyapı (veritabanı, iş kuyruğu, oturum doğrulama, saat, e-posta) kökte bir kez kaydedilir; her modül <code>/v1/&lt;modül&gt;</code> altında kendi eklentisi. Kökteki oturum doğrulama yalnız bir kancadır: gelen çerezi ya da Bearer anahtarını oturumla eşleştirip isteğe hocanın kimliğini ekler; kimlik modülünün <code>index.ts</code> dış yüzünden gelir, kökte eklendiği için bütün modüllerde geçerlidir. Giriş kodları, oturum tabloları ve beş uç kimlik modülünün kendi eklentisinde (aşağıdaki Kimlik satırı).\" Satırın geri kalanı aynen kalır."
+   }
+  ]
+ },
+ {
+  "id": "D37",
+  "outcome": "CHANGE",
+  "decision": "İddia doğru ama kaynağıyla kesinleştirilir: npm kayıt bilgisinde graphile-worker'ın tek yayımcısı ve yazarı Benjie Gillam (sürüm 0.18.0); proje MIT, Graphile Ltd üzerinden bağışla (sponsor) sürdürülüyor. Aynı ölçüyle pg-boss'un da npm'de tek yayımcısı Tim Jones (12.36.0). Metin 'o da tek bakımcılı (npm'de tek yayımcı, bağışla sürdürülüyor)' olur.",
+  "rationale": "'Tek kişilik' ölçüsü belirsizdi; npm'deki yayımcı listesi tekrarlanabilir bir ölçü. Sponsor desteği bilgisi eklenir, bilgi kaybolmaz, iddia doğrulanabilir hale gelir.",
+  "sources": [
+   "https://registry.npmjs.org/graphile-worker/latest",
+   "https://registry.npmjs.org/pg-boss/latest",
+   "https://github.com/graphile/worker"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "temel",
+    "instruction": "Yedek paketler satırında (id=\"temel-yedek-paketler\") şu parçayı: \"pg-boss (graphile-worker, o da tek kişilik; yalnız kaçış yolu)\" şununla değiştir: \"pg-boss (graphile-worker; o da tek bakımcılı: npm'de tek yayımcısı Benjie Gillam, Graphile Ltd üzerinden bağışla sürdürülüyor; yalnız kaçış yolu)\"."
+   }
+  ]
+ },
+ {
+  "id": "D38",
+  "outcome": "CHANGE",
+  "decision": "Control plane modu ve yüzdeyle kademeli açma MIT çekirdekte; 'MIT çekirdekle sürer' yedeği bu özelliği kapsar. xprem'in CONTRIBUTING.md'si MIT tarafını açıkça sayar: güncelleme yayımlama, kanallar, dallar, geri alma, depolama, yönetim paneli (dashboard), Prometheus ölçüleri, A/B denemesi; bir kez MIT çıkan özellik ticari kısma taşınmaz. README özellik listesinde yüzdeyle kademeli açma ve geri alma var. Control plane, PostgreSQL'i uygulamalar, kullanıcılar, kanallar ve kademeli açmalar için kullanan mod. ee/ klasörleri: apikeyrestrictions, audit, branchprotection, geoip, identity, licensing, mcptools, observe, rbac, sso, symbolication, telemetry; ticari tarafta bölge ya da kullanıcı grubuna göre hedefleme ve kendiliğinden geri alma var. Planın istediği (yüzdeyle açma, elle geri alma) bunlara dokunmuyor.",
+  "rationale": "Yedeğin geçerli olup olmadığı kullanılan özelliğin lisansına bağlı; kaynak MIT tarafında olduğunu gösteriyor. Hangi ee/ özelliklerinin kullanılmadığını yazmak, ileride biri o özellikleri açmaya kalkarsa lisans sınırını görünür kılar.",
+  "sources": [
+   "https://raw.githubusercontent.com/mercuretechnologies/xprem/main/CONTRIBUTING.md",
+   "https://github.com/mercuretechnologies/xprem/tree/main/ee",
+   "https://raw.githubusercontent.com/mercuretechnologies/xprem/main/README.md",
+   "https://railway.com/deploy/xprem--expo-open-ota"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "dagitim-ayrinti",
+    "instruction": "Güncelleme sunucusu satırında (id=\"dagitim-ayrinti-guncelleme-sunucusu\") şu parçayı: \"xprem \\\"control plane\\\" modunda (kademeli açma yalnız bu modda var);\" şununla değiştir: \"xprem \\\"control plane\\\" modunda (kademeli açma yalnız bu modda var; control plane, yönetim paneli, yüzdeyle kademeli açma ve elle geri alma MIT çekirdekte, xprem'in CONTRIBUTING.md'sine göre MIT çıkan özellik ticari kısma taşınmaz; <code>ee/</code> klasörlerindeki bölge ya da kullanıcı grubuna göre hedefleme, kendiliğinden geri alma, SSO, denetim kaydı kullanılmaz);\". Satırın geri kalanı aynen kalır."
+   }
+  ]
+ },
+ {
+  "id": "D39",
+  "outcome": "CHANGE",
+  "decision": "Elle kontrol yapıldı ve kesinleşti. SheetJS'in kendi sürüm listesi (cdn.sheetjs.com/xlsx.lst) 0.20.3'te bitiyor; 0.20.4 ve 0.21.0 paketleri CDN'de 404. git.sheetjs.com etiketlerinde v0.20.3 18 Temmuz 2024. Yedekler etkin bakımlı: read-excel-file 9.3.10 (10 Ağustos 2026), write-excel-file 4.1.1 (8 Haziran 2026), ikisi de MIT, tarayıcıda çalışır, write-excel-file sütun genişliği verir; ama ikisinin de npm'de tek yayımcısı catamphetamine, yani onlar da tek kişinin bakımında. Panel bugün SheetJS'le kalır (panel-excel satırındaki 'write-excel-file yok' kararı değişmez).",
+  "rationale": "Doğrulanmamış iddia artık tarihli ve kaynaklı; yedeklerin de tek bakımcılı olduğunun yazılması 'yedek' kelimesinin taşıdığı güveni doğru ölçüye çeker. Yeni bağımlılık eklenmez.",
+  "sources": [
+   "https://cdn.sheetjs.com/xlsx/",
+   "https://cdn.sheetjs.com/xlsx.lst",
+   "https://git.sheetjs.com/sheetjs/sheetjs/tags",
+   "https://registry.npmjs.org/read-excel-file",
+   "https://registry.npmjs.org/write-excel-file",
+   "https://github.com/catamphetamine/read-excel-file",
+   "https://github.com/catamphetamine/write-excel-file"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "temel",
+    "instruction": "Yedek paketler satırında (id=\"temel-yedek-paketler\") şu parçayı: \"SheetJS (2024'ten beri yeni sürüm yok; yedek read-excel-file ve write-excel-file);\" şununla değiştir: \"SheetJS (son sürüm 0.20.3, 18 Temmuz 2024; Ekim 2026'da SheetJS'in kendi sürüm listesi <code>cdn.sheetjs.com/xlsx.lst</code> ile denetlendi, yenisi yok; yedek read-excel-file ve write-excel-file: ikisi de MIT, tarayıcıda çalışır, 2026'da sürüm çıkardı, ama ikisi de aynı tek geliştiricinin bakımında);\"."
+   }
+  ]
+ },
+ {
+  "id": "D40",
+  "outcome": "CHANGE",
+  "decision": "Seçenek (a), (b), (c) yerine dördüncü yol: haftalık mutasyon testi Stryker'ın Vitest eklentisi yerine Stryker'ın yerleşik komut çalıştırıcısıyla koşar (testRunner: \"command\", commandRunner.command ortak kurallar paketinde vitest run). Stryker belgesine göre Vitest eklentisi coverageAnalysis ayarını yok sayar, hep perTest kullanır; yani \"all\" bir çözüm değil. #6240 Vitest 5'te perTest kapsamın yanlış eşlendiğini (skor %100'den %11,43'e) gösteriyor ve 3 Ekim 2026'da 'not planned' kapandı. Komut çalıştırıcı kapsam eşlemesi yapmaz, her mutant için bütün testleri koşar: sonuç doğru, yalnız yavaş; ortak kurallar paketi küçük ve saf olduğundan haftalık işte kabul edilir. Kırma eşiği aynen kalır. @stryker-mutator/vitest-runner bağımlılığı kalkar, Vitest sürümü tek kalır.",
+  "rationale": "(a) iki Vitest sürümü ve ayrı katalog demek, bakım yükü; (b) yanlış skorla çalışan kırma eşiği ya hep kırmızıdır ya anlamsızdır; (c) bir kalite kapısını kaybettirir. Komut çalıştırıcı Stryker'ın kendi varsayılanı, eklenti gerektirmez, Vitest'in ileriki ana sürümlerinden etkilenmez: daha az hareketli parça ve uzun ömür.",
+  "sources": [
+   "https://github.com/stryker-mutator/stryker-js/issues/6240",
+   "https://stryker-mutator.io/docs/stryker-js/vitest-runner/",
+   "https://stryker-mutator.io/docs/stryker-js/configuration/",
+   "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/vitest-runner/package.json"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "testler",
+    "instruction": "Kalite kapıları satırında (id=\"testler-kalite\") şu parçayı: \"(Stryker, kırma eşiğiyle; Vitest 5 eklentisindeki hata düzelene kadar <code>coverageAnalysis: \\\"all\\\"</code>)\" şununla değiştir: \"(Stryker, kırma eşiğiyle; Stryker'ın Vitest eklentisi yerine yerleşik komut çalıştırıcısıyla: <code>testRunner: \\\"command\\\"</code>, komut paketin <code>vitest run</code>'ı. Vitest eklentisi <code>coverageAnalysis</code> ayarını yok sayıp hep test başına kapsam kullanıyor ve bu kapsam Vitest 5'te yanlış eşleniyor; Stryker bu hatayı 3 Ekim 2026'da düzeltmeden kapattı. Komut çalıştırıcı her mutantta bütün testleri koşar: yavaş ama doğru, küçük paket için haftalık işte yeter)\". Satırın geri kalanı aynen kalır."
+   }
+  ]
+ },
+ {
+  "id": "D41",
+  "outcome": "CHANGE",
+  "decision": "İkisi de pg-boss'un kendi belgesinde ve sürüm notlarında doğrulandı, kod yazmadan önce ayrıca kurulu tiplere bakmaya gerek yok. TestClock pg-boss 12.33.0'da (16 Eylül 2026) geldi ve 'clock' kurucu ayarıyla veriliyor. deleteAllJobs(name?) jobs.md'de belgeli; ad verilmezse bütün kuyrukları TRUNCATE ile boşaltıyor, 12.35.1'de sayaç düzeltmesi aldı. Metindeki 'en az 12.36.0' ikisini de kapsıyor. 'Tek nesneden yürür' cümlesi doğru ama nasıl yürüdüğü belirsiz. Bu yüzden şunları açıkça yazıyoruz: TestClock'un adı; ortak kurallar paketinin pg-boss'a bağlanmadığı; TestClock'un yalnız pg-boss'un kendi SQL saatini kaydırdığı.",
+  "rationale": "testing.md'nin 'Controlling time' bölümü şunu söylüyor: TestClock yalnız pg-boss'un ${schema}.job_now() fonksiyonunu kaydırıyor, pg_catalog.now()'u ve uygulamanın kendi SQL'ini kaydırmıyor. Bu, metindeki 'kural için SQL'de now() kullanılmaz' kuralını doğruluyor; yazılmazsa test yazan kişi uygulama SQL'inin de kaydığını sanabilir. Aynı bölümde iki uyarı daha var: açık bir işlem tutarken tick() kilitte bekliyor; uzun sıçramada her aralık tek tek ateşleniyor, bunun için setTime() var. Bunlar kırılgan testi baştan önlüyor. Yeni bağımlılık yok, mevcut ayar kullanılıyor.",
+  "sources": [
+   "https://raw.githubusercontent.com/timgit/pg-boss/master/docs/api/testing.md",
+   "https://raw.githubusercontent.com/timgit/pg-boss/master/docs/api/constructor.md",
+   "https://raw.githubusercontent.com/timgit/pg-boss/master/docs/api/jobs.md",
+   "https://api.github.com/repos/timgit/pg-boss/releases?per_page=40"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "testler",
+    "instruction": "\"Saat ve sahteler\" satırında şu cümle parçasını bul: \"ortak kurallar paketinin sahte saati ile pg-boss'un test saati tek nesneden yürür.\" Sonundaki noktayı iki noktaya çevir ve hemen ardından şunu ekle: \"sunucu testlerinde saat arayüzü pg-boss'un <code>TestClock</code>'undan okur (12.33.0'dan beri var, <code>clock</code> ayarıyla verilir; ortak kurallar paketi pg-boss'a bağlanmaz, bağlantıyı sunucunun test kurulumu yapar). <code>TestClock</code> pg-boss'un kendi SQL'indeki saati de kaydırır, uygulamanın SQL'indeki <code>now()</code>'u kaydırmaz; kural için <code>now()</code> yasağı bu yüzden de gerekli. Test açık bir veritabanı işlemi tutarken saat ilerletilmez (<code>tick</code> kilidi bekler); uzun sıçramada <code>tick</code> değil <code>setTime</code> kullanılır.\" Aynı bölümdeki \"Veritabanı sıfırlama\" satırında geçen <code>deleteAllJobs</code> doğru; ona dokunma."
+   }
+  ]
+ },
+ {
+  "id": "D42",
+  "outcome": "NO_CHANGE",
+  "decision": "Sabit sürüm 0.20.3'te kalıyor. SheetJS'in 0.20.4 diye bir sürümü yok. Soruda adı geçen iki güvenlik duyurusu da 0.20.3'ten önce kapanmış.",
+  "rationale": "Kontrol ettiğim kaynaklar şunları gösteriyor. cdn.sheetjs.com/xlsx-latest/package/package.json sürümü 0.20.3 veriyor. cdn.sheetjs.com/xlsx-0.20.4/xlsx-0.20.4.tgz 404 dönüyor, 0.20.3 paketi ise 200. git.sheetjs.com'daki son etiket v0.20.3 (18 Temmuz 2024). GHSA-4r6h-8v6p-xvw6, CVE-2023-30533'tür ve 0.19.3'ten önceki sürümleri etkiliyor. GHSA-5pgg-2g8v-p4x9, CVE-2024-22363'tür ve 0.20.2'den önceki sürümleri etkiliyor. İkisi de 0.20.3'te kapalı. SheetJS'in duyuru sayfasında da yalnız bu iki CVE var. Arama sonucundaki 0.20.4 bilgisi yanlış. Metindeki 'yeni sürüm ve duyurular elle izlenir' kuralı ve 'Yedek paketler' satırındaki '2024'ten beri yeni sürüm yok' bilgisi doğru.",
+  "sources": [
+   "https://cdn.sheetjs.com/xlsx-latest/package/package.json",
+   "https://cdn.sheetjs.com/advisories/",
+   "https://git.sheetjs.com/api/v1/repos/sheetjs/sheetjs/tags?limit=5",
+   "https://api.github.com/advisories/GHSA-4r6h-8v6p-xvw6",
+   "https://api.github.com/advisories/GHSA-5pgg-2g8v-p4x9"
+  ],
+  "edits": []
+ },
+ {
+  "id": "D43",
+  "outcome": "CHANGE",
+  "decision": "Bölme işlemi tek kayıt kalınca biter. Tek başına da 400 ya da 413 alan kaydın akıbeti şöyle: Kayıt telefonda 'ret' işaretlenir, silinmez, kendiliğinden yeniden denenmez; kuyruk sürer. Sorun mevcut olay kaydıyla bana ulaşır: HTTP kodu ve sunucunun hata kodu yazılır, ayrı bir hata yolu açılmaz. Uygulama sürümü ya da uzaktan güncelleme değişince kayıt bir kez daha denenir, çünkü düzeltme güncellemeyle gelir. O arada öğrenci makbuz QR'ını hocaya okutarak düzeltme yaptırabilir. Makbuz durumu 'Telefonda kayıtlı, gönderilmedi' kalır ve günlük hatırlatma sürer.",
+  "rationale": "RFC 9110'a göre 400 istemci hatasıdır: aynı istek değişmeden tekrarlanırsa aynı cevabı alır. Bu yüzden kendiliğinden yeniden deneme boşa trafik ve pil harcar; 50.000 telefonda bu yük büyür. 413 de tek kayıtta geçici değildir. Planda zaten 'ret işaretlenir ama silinmez, kuyruk sürer' kararı, olay kaydı, makbuz QR'ını okutma yolu ve günlük hatırlatma var. Bu karar yeni bir parça eklemeden yalnız bitiş koşulunu ve yeniden deneme anını tanımlıyor. 'Makbuzlu kayıt kaybolmaz' sözü korunuyor: kayıt telefondan silinmiyor, sunucuya güncellemeden sonra ya da hocanın okuttuğu makbuzla ulaşıyor.",
+  "sources": [
+   "https://www.rfc-editor.org/rfc/rfc9110.txt"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "\"Yeniden deneme\" satırının dış div'ine (<div class=\"row\">) id=\"kararlar-yeniden-deneme\" ekle; mevcut id ve bağlantılara dokunma. Aynı satırda şu parçayı bul: \"ikiye bölünerek sorunlu kayıt bulunur, \"ret\" işaretlenir ama silinmez, kuyruk sürer;\" Bunu şununla değiştir: \"ikiye bölünerek sorunlu kayıt bulunur, \"ret\" işaretlenir ama silinmez, kuyruk sürer. Tek başına da reddedilen kayıt kendiliğinden yeniden denenmez (aynı istek aynı cevabı alır): sorun olay kaydıyla bana ulaşır, uygulama ya da uzaktan güncelleme değişince kayıt bir kez daha denenir. O arada makbuzu \"Telefonda kayıtlı, gönderilmedi\" kalır, öğrenci makbuz QR'ını hocasına okutarak yoklamasını düzelttirebilir;\" Cümlenin geri kalanı (\"yetki hatasında gönderim durur, ...\") aynen kalır."
+   },
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "\"Gönderme protokolü\" satırında (id=\"telefon-gonderme-protokolu\") şu parçayı bul: \"400 ya da 413'te paket ikiye bölünür;\" Bunu şununla değiştir: \"400 ya da 413'te paket tek kayıt kalana kadar ikiye bölünür; tek kayıt yine 400 ya da 413 alırsa \"ret\" işaretlenir, olay kaydına HTTP kodu ve sunucunun hata kodu yazılır, kayıt yeniden yalnız <code>runtimeVersion</code> ya da expo-updates'in güncelleme kimliği değişince bir kez denenir (davranış: bkz. <a href=\"plan.html#kararlar-yeniden-deneme\">Yeniden deneme</a>);\""
+   }
+  ]
+ },
+ {
+  "id": "D44",
+  "outcome": "CHANGE",
+  "decision": "boot_id okunmaya devam ediyor, ama okunamazsa ne olacağı yazılıyor. Android'in güvenlik politikası /proc/sys/kernel/random dosyalarını Kasım 2017'de bütün uygulamalara açtı ve bu izin AOSP main'de hâlâ duruyor. Daha eski sürümlerde (Android 7 ve 8) ya da üreticinin değiştirdiği politikada okuma reddedilebilir. O zaman yeniden başlatmayı iki sinyal gösterir: BOOT_COUNT'un artması (API 24, yani Android 7.0'dan beri var) ve elapsedRealtimeNanos'un geri gitmesi. Okuma hatası olay kaydına yazılır. Deneme Android 7.0 emülatöründe ve gerçek bir Android 15 ya da üstü telefonda yapılır.",
+  "rationale": "AOSP sepolicy private/domain.te dosyasında 'allow domain proc_random:file r_file_perms' kuralı var; bu kural untrusted_app'i de kapsıyor. Kuralı getiren commit (9d9c370f, 20 Kasım 2017) gerekçe olarak boot_id'nin uygulamalarca yaygın kullanıldığını ve okunmasının reddedildiğini yazıyor. Yani yeni Android'de okuma serbest, eski Android'de değil. Uygulamanın alt sınırı Android 7.0 olduğundan yedek yol gerekli. BOOT_COUNT, Settings.Global'da API 24'ten beri izinsiz okunabiliyor. Yedek yol yeni bağımlılık eklemiyor, aynı Kotlin modülünde kalıyor.",
+  "sources": [
+   "https://android.googlesource.com/platform/system/sepolicy/+/refs/heads/main/private/domain.te",
+   "https://android.googlesource.com/platform/system/sepolicy/+/9d9c370f31556c33f62e7889f64ad3a2728f1863%5E!",
+   "https://android.googlesource.com/platform/system/sepolicy/+/refs/heads/main/private/genfs_contexts",
+   "https://developer.android.com/reference/android/provider/Settings.Global"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "\"İç sayaç ve saat\" satırında (id=\"telefon-ic-sayac\") şu cümleyi bul: \"<code>boot_id</code> ya da BOOT_COUNT değişmişse yeniden başlatma sayılır.\" Bu cümleden hemen sonra şunu ekle: \"<code>boot_id</code>'yi bütün uygulamaların okumasına Android'in güvenlik politikası Kasım 2017'de izin verdi; daha eski sürümlerde (Android 7 ve 8) ya da üreticinin değiştirdiği politikada okuma reddedilebilir. Okunamazsa yeniden başlatma BOOT_COUNT'un artmasından (Android 7.0'dan beri var, izin istemez) ve <code>elapsedRealtimeNanos</code>'un kayıtlı değerin altına düşmesinden anlaşılır; okuma hatası olay kaydıma yazılır. Android 7.0 emülatöründe ve gerçek bir Android 15 ya da üstü telefonda denenir.\""
+   }
+  ]
+ },
+ {
+  "id": "D45",
+  "outcome": "CHANGE",
+  "decision": "16 KB şartı metinde zaten var ve tarihi doğru: Google'ın duyurusuna göre 1 Kasım 2025'ten beri Android 15 ve üstünü hedefleyen yeni uygulamalarda ve güncellemelerde geçerli. Eksik olan, denetimin nasıl yapılacağı. Bunu ekliyoruz. GitHub'daki APK, build-tools 35 ve üstünün 'zipalign -c -P 16 -v 4' komutuyla denetlenir; komutun son satırı 'Verification successful' olmalı. AAB, Play Console'un uyumluluk uyarısıyla denetlenir. Kotlin modülüm .so eklemez; denetim React Native ve Expo kütüphanelerinin .so dosyaları içindir.",
+  "rationale": "Android'in 16 KB sayfası bu komutu ve Play Console uyarısını resmi denetim yolu olarak veriyor. Aynı sayfa yalnız Java ya da Kotlin kodunun etkilenmediğini de söylüyor. GitHub APK'sı zaten derleniyor, yani ek derleme gerekmiyor; tek bir komut CI'a eklenir. Sayfa ayrıca uymayan güncellemelerin 1 Şubat 2027'den sonra yayımlanamayacağını yazıyor. Yeni uygulama için Kasım 2025 tarihi geçerli olduğundan metindeki tarih değişmiyor.",
+  "sources": [
+   "https://developer.android.com/guide/practices/page-sizes",
+   "https://android-developers.googleblog.com/2025/05/prepare-play-apps-for-devices-with-16kb-page-size.html"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "dagitim-ayrinti",
+    "instruction": "\"Derleme\" satırında (id=\"dagitim-ayrinti-derleme\") şu parçayı bul: \"(Android 15 ve üstünü hedefleyen uygulamada Kasım 2025'ten beri Play şartı), derlemede denetlenir;\" Bunu şununla değiştir: \"(Android 15 ve üstünü hedefleyen uygulamada Kasım 2025'ten beri Play şartı), derlemede denetlenir: GitHub'daki APK Android build-tools 35 ve üstünün <code>zipalign -c -P 16 -v 4</code> komutuyla (son satır \"Verification successful\"), AAB Play Console'un uyumluluk uyarısıyla; Kotlin modülüm .so eklemez, denetim React Native ve Expo kütüphanelerinin .so dosyaları için;\" Satırın geri kalanı (\"GitHub'daki APK 32 bit bir telefonda denenir. ...\") aynen kalır."
+   }
+  ]
+ },
+ {
+  "id": "D46",
+  "outcome": "CHANGE",
+  "decision": "Dört iddia da birincil kaynaktan kontrol edildi; ikisi düzeltiliyor, ikisi kesinleşiyor. (1) 'v3.2.0'dan beri eski eoas reddediliyor' iddiası tam doğru değil. v3.2.0'da yükleme protokolü değişti, xprem eoas sürümünün sunucuyla aynı olmasını istiyor ve eoas eski sunucuya ipucu veriyor. Metin buna göre düzeltiliyor; aynı sürüme sabitleme kuralı sürüyor. (2) Güvenlik politikası doğrulandı: SECURITY.md'ye göre yalnız '3.x (latest release)' destekleniyor ve düzeltme son sürüme geliyor. (3) Saatlik kullanım bildiriminin ayarı DISABLE_TELEMETRY=true. Bildirim saatte bir sunucu adresini, uygulama ve kullanıcı sayısını ve kurulum türünü üreticiye gönderiyor. (4) İmza anahtarı sunucuda duruyor: uygulama başına Expo imza anahtarları PostgreSQL'de, ana anahtarla (DB_KEYS_MASTER_KEY_B64) mühürlü. Ek olarak, imajlar cosign ile imzalı yayımlandığından yeni imaj yayından önce cosign verify ile doğrulanır.",
+  "rationale": "Kaynaklardan okunanlar şunlar. v3.2.0 sürüm notunda 'fix(eoas): hint when the server predates the 3.2.0 upload protocol' maddesi var. Değişiklik sayfası 'make sure that the version of the eoas CLI you use matches the server version' diyor. config/config.go'da IsServerTelemetryDisabled() fonksiyonu DISABLE_TELEMETRY'yi okuyor. Ana anahtar hatasının metni şöyle: 'DB mode requires a master key to seal the per-app Expo signing keys stored in Postgres'. ee/telemetry/services.go'da heartbeatInterval = time.Hour; gönderilen alanlar BaseUrl, AppsCount, UsersCount, Mode, Bucket, CDN ve Cache. SECURITY.md'de destek tablosu ve cosign doğrulama komutu var. Belgelenmemiş bir davranışa ve tahmini ayar adına dayanmak bakımı zorlaştırırdı; bu karar bu riski kaldırıyor.",
+  "sources": [
+   "https://api.github.com/repos/mercuretechnologies/xprem/releases/tags/v3.2.0",
+   "https://xprem.dev/changelog/bundle-diffing-and-cas",
+   "https://raw.githubusercontent.com/mercuretechnologies/xprem/main/SECURITY.md",
+   "https://raw.githubusercontent.com/mercuretechnologies/xprem/main/config/config.go",
+   "https://raw.githubusercontent.com/mercuretechnologies/xprem/main/ee/telemetry/services.go",
+   "https://api.github.com/repos/mercuretechnologies/xprem/releases?per_page=12"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "dagitim-ayrinti",
+    "instruction": "\"xprem güvenliği\" satırında şu parçayı bul: \"v3.2.0'dan beri eski eoas ile yayın reddediliyor, güvenlik düzeltmesi yalnız son 3.x sürüme geliyor.\" Bunu şununla değiştir: \"v3.2.0'da yükleme protokolü değişti ve xprem eoas'ın sunucuyla aynı sürümde olmasını istiyor (eski sunucuda eoas uyarı verir); güvenlik politikasına göre düzeltme yalnız son 3.x sürüme gelir, eski sürüme taşınmaz, bu yüzden 3.x içinde geride kalınmaz. İmaj cosign ile imzalı yayımlanır; yeni imaj kurulmadan önce <code>cosign verify</code> ile doğrulanır.\""
+   },
+   {
+    "file": "teknik.html",
+    "section": "dagitim-ayrinti",
+    "instruction": "\"Güncelleme sunucusu\" satırında (id=\"dagitim-ayrinti-guncelleme-sunucusu\") şu cümleyi bul: \"xprem'in saatlik kullanım bildirimi kapalı.\" Bunu şununla değiştir: \"xprem'in saatlik kullanım bildirimi (sunucu adresini, uygulama ve kullanıcı sayısını, kurulum türünü üreticiye gönderir) <code>DISABLE_TELEMETRY=true</code> ile kapalı.\""
+   },
+   {
+    "file": "teknik.html",
+    "section": "dagitim-ayrinti",
+    "instruction": "\"Korunacak anahtarlar\" satırında (id=\"dagitim-ayrinti-korunacak-anahtarlar\") \"xprem'in ana anahtarı\" ifadesini \"xprem'in ana anahtarı (<code>DB_KEYS_MASTER_KEY_B64</code>)\" yap. Satırın geri kalanı aynen kalır."
+   }
+  ]
+ },
+ {
+  "id": "D47",
+  "outcome": "CHANGE",
+  "decision": "pnpm.io'nun kendi belgesinde üç ayrıntı da doğrulandı. (1) minimumReleaseAge v11'den beri varsayılan olarak 1440 dakika (1 gün). Açıkça yazılınca minimumReleaseAgeStrict varsayılan olarak açılıyor; metin doğru. (2) audit --fix, minimumReleaseAge ayarlıysa düzeltilmiş en düşük sürümü minimumReleaseAgeExclude listesine ekliyor; bu doğru. Metinde eksik kalan şu: düz --fix ayrıca overrides ekliyor. Bu yüzden önce --fix=update kullanılacak; bu mod kilit dosyasını günceller, override eklemez. Paketin sürüm aralığı izin vermezse --fix kullanılır ve düzeltme oturunca hem bekleme istisnası hem override çıkarılır. (3) pnpm deploy 12.2.0'dan beri injectWorkspacePackages istemiyor; metin bunu zaten şart koşmuyor. Tek not şu: bir peer bağımlılık iki sürüme çözülürse deploy ERR_PNPM_DEPLOY_AMBIGUOUS_PEER hatasıyla durur ve overrides ile tek sürüme sabitlenir.",
+  "rationale": "dependency-resolution.md'de minimumReleaseAge için şu yazıyor: 'Default: 1440 (since v11)'; minimumReleaseAgeStrict için de 'true if minimumReleaseAge is explicitly configured'. audit.md'de --fix'in override eklediği, --fix=update'in (v11.0.0) kilit dosyasını güncellediği ve ikisinin de bekleme istisnası eklediği yazıyor. deploy.md'de 'Since v12.2.0, pnpm deploy no longer requires injectWorkspacePackages' cümlesi ve belirsiz peer hatası var. Unutulan override'lar ilerideki güncellemeleri sessizce dondurur; --fix=update bu kalıntıyı azaltır.",
+  "sources": [
+   "https://raw.githubusercontent.com/pnpm/pnpm.io/main/docs/settings/dependency-resolution.md",
+   "https://raw.githubusercontent.com/pnpm/pnpm.io/main/docs/cli/audit.md",
+   "https://raw.githubusercontent.com/pnpm/pnpm.io/main/docs/cli/deploy.md",
+   "https://pnpm.io/settings"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "altyapi",
+    "instruction": "\"Güncellemeler\" satırında (id=\"altyapi-guncellemeler\") şu parçayı bul: \"acil açıkta <code>pnpm audit --fix</code> paketi geçici olarak bekleme dışına alır, düzeltme oturunca çıkarılır.\" Bunu şununla değiştir: \"acil açıkta önce <code>pnpm audit --fix=update</code> çalışır: kilit dosyasını günceller, düzeltilmiş sürümü geçici olarak bekleme dışına alır (<code>minimumReleaseAgeExclude</code>). Sürüm aralığı izin vermezse <code>pnpm audit --fix</code> ayrıca <code>overrides</code> ekler. Düzeltme oturunca bekleme istisnası da override da çıkarılır.\""
+   },
+   {
+    "file": "teknik.html",
+    "section": "altyapi",
+    "instruction": "\"İmaj ve kapanış\" satırında şu parçayı bul: \"<code>pnpm deploy</code> ile yalnız sunucunun paketlerini alır;\" Bunu şununla değiştir: \"<code>pnpm deploy</code> ile yalnız sunucunun paketlerini alır (12.2.0'dan beri <code>injectWorkspacePackages</code> gerekmez; bir eş bağımlılık iki sürüme çözülürse deploy durur, <code>overrides</code> ile tek sürüme sabitlenir);\""
+   }
+  ]
+ },
+ {
+  "id": "D48",
+  "outcome": "CHANGE",
+  "decision": "Açılıştaki deneme onayı yalnız telefonda üretilir, sunucuya hiç gitmez; anahtar bozuksa Apple onay üretimini geçersiz anahtar hatasıyla reddeder, uygulama bunu böyle anlar. Sunucu App Attest sayacını anahtar başına tutar ve Apple'ın kuralını uygular: her kaydın sayacı, aynı anahtarla gelen sıra numarası daha küçük kaydın sayacından büyük olmalı; aradaki boşluk normaldir (deneme onayları boşluk bırakır). Yenilenen anahtarın sayacı sıfırdan başlar; eski anahtarla imzalı bekleyen kayıtlar eski anahtarın sayacıyla denetlenir. Sayacı artmayan kayıt reddedilmez, gerekçe koduyla İncelemede olur.",
+  "rationale": "Apple sunucu tarafında sayacın yalnız öncekinden büyük olmasını istiyor ('greater than the value from the previous assertion'), bir bir artmasını değil; bu yüzden boşluk Apple kuralına uygun. Deneme onayını sunucuya göndermek gereksiz bir istek ve sayaç sırası karmaşası getirir; anahtarın geçersizliği zaten telefonda DCError.invalidKey ile anlaşılır. teknik.html sunucu-imza-dogrulama boşluk kuralını zaten yazıyor; eksik olan deneme onayının sunucuya gitmediği, sayacın anahtar başına tutulduğu ve kural bozulunca ne olacağı.",
+  "sources": [
+   "https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server",
+   "https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity",
+   "https://developer.apple.com/documentation/devicecheck/dcerror-swift.struct/invalidkey"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "gun",
+    "instruction": "#gun-kenar-durumlar içindeki 'iPhone anahtarı bozuldu' maddesinde 'İnternet varken uygulama her açılışta küçük deneme onayı üretir;' cümlesinden sonra şunu ekle: 'deneme onayı telefonda kalır, sunucuya gitmez; anahtar bozuksa Apple onayı geçersiz anahtar hatasıyla üretmez, uygulama bunu böyle anlar;' (ardından mevcut 'anahtar bozuksa hemen yenisini alır...' metni aynen sürer; 'anahtar bozuksa' tekrarını önlemek için devamı 'bu durumda hemen yenisini alır' diye başlasın)."
+   },
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "#sunucu-imza-dogrulama satırında '...bu yüzden sunucu sayacın bir bir artmasını değil yalnız artmasını bekler (aradaki boşluk kabul edilir).' cümlesinden sonra ekle: 'Açılıştaki deneme onayı sunucuya gönderilmez, yalnız boşluk bırakır. Sayaç anahtar başına tutulur: yenilenen App Attest anahtarının sayacı sıfırdan başlar, eski anahtarla imzalı bekleyen kayıtlar eski anahtarın son sayacıyla denetlenir. Sayacı artmayan kayıt reddedilmez, gerekçe koduyla \"İncelemede\" olur (Apple kuralı: sayaç bir önceki onaydan büyük olmalı).'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "kod",
+    "instruction": "'Veri modeli (ilk taslak)' listesindeki 'Cihazlar' maddesinde 'iPhone'da son App Attest sayacı' ifadesini 'iPhone'da her App Attest anahtarının son sayacı (anahtar yenilenince eskisi de kalır)' olarak değiştir."
+   }
+  ]
+ },
+ {
+  "id": "D49",
+  "outcome": "CHANGE",
+  "decision": "iPhone'da güvenli depodaki oturum anahtarı AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY ayarına geçer: yeniden başlatmadan sonra kilit bir kez açılınca telefon kilitliyken de okunur, yedekle başka telefona geçmez. Secure Enclave'deki ikinci donanım anahtarı da aynı korumayla (kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly) üretilir; böylece arka plan görevi kilitli telefonda gönderir, indirir, ikinci çapayı kurar ve hak uyarısı çıkarır. Arka plan App Attest onayı istemez (yeni kayıt imzalamaz). Yerel veritabanı dosyası iOS'un varsayılan koruma sınıfında kalır. Yalnız yeniden başlatmadan sonra kilit hiç açılmadıysa arka plan görevi o turda bir şey yapmaz.",
+  "rationale": "Apple, AfterFirstUnlock sınıfını arka planda erişilen anahtarlık kayıtları için öneriyor ve ThisDeviceOnly sürümü yedekle taşınmıyor; Secure Enclave rehberi de WhenUnlocked ayarının arka planda çalışan uygulama dışında tercih edildiğini söylüyor. WHEN_UNLOCKED ile iPhone'un arka plan görevi (çoğunlukla gece, kilitli) hiçbir işe yaramaz. Üçüncü taraf uygulama dosyalarının varsayılan sınıfı zaten 'ilk kullanıcı doğrulamasına kadar korumalı', yani SQLite kuyruğu kilitliyken okunur. expo-secure-store kaynak kodunda AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY kullanımdan kalkmış değil (dokümandaki 'Deprecated' notu bir sonraki sabite ait, ALWAYS'un notu bu sabiti öneriyor). Yeni paket yok, yalnız ayar.",
+  "sources": [
+   "https://developer.apple.com/documentation/security/ksecattraccessibleafterfirstunlockthisdeviceonly",
+   "https://developer.apple.com/documentation/security/protecting-keys-with-the-secure-enclave",
+   "https://docs.expo.dev/versions/latest/sdk/securestore/",
+   "https://raw.githubusercontent.com/expo/expo/main/packages/expo-secure-store/src/SecureStore.ts",
+   "https://support.apple.com/guide/security/data-protection-classes-secb010e978a/web"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "'Anahtar ve imza' satırına (şu an id'siz) id=\"telefon-anahtar-imza\" ekle. Aynı satırın son cümlesi 'Güvenli depodaki oturum anahtarı \"yalnız bu cihaz\" ayarında (<code>WHEN_UNLOCKED_THIS_DEVICE_ONLY</code>).' yerine şunu yaz: 'Güvenli depodaki oturum anahtarı \"yalnız bu cihaz, ilk kilit açılışından sonra\" ayarında (<code>AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY</code>; önceki seçim <code>WHEN_UNLOCKED_THIS_DEVICE_ONLY</code> idi): arka plan görevi çoğunlukla telefon kilitliyken çalışır, Apple bu sınıfı arka planda okunan kayıtlar için önerir; kayıt yedekle başka telefona geçmez. Secure Enclave'deki ikinci anahtar da aynı korumayla (<code>kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly</code>) üretilir, böylece arka planda gönderim paketini imzalar. Yeniden başlatmadan sonra kilit hiç açılmadıysa ikisi de okunamaz. Yerel veritabanı dosyası iOS'un varsayılan koruma sınıfında (ilk kilit açılışına kadar korumalı) kalır; daha sıkı sınıf verilmez, verilirse kilitli telefonda kuyruk okunamaz.'"
+   },
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "#kararlar-gonderme satırında 'Kilitli telefonda paket imzalanamazsa o gönderimde ikinci çapa kurulmaz; bu yüzden saati yalnız ikinci çapayla kurulabilen kayıtlar (ilk çapası bozuk olanlar, ör. kayıttan önce yeniden başlatma: bkz. <a href=\"#gun-zayif-nokta\">Zayıf nokta</a>) arka planda değil, uygulama açılınca gider.' cümlesini şununla değiştir: 'Anahtarlar, yeniden başlatmadan sonra kilit bir kez açılınca telefon kilitliyken de kullanılır; arka plan görevi kilitli telefonda da gönderir, indirir ve paketi imzalar (ayar: bkz. <a href=\"teknik.html#telefon-anahtar-imza\">Anahtar ve imza</a>). Yeniden başlatmadan sonra kilit hiç açılmadıysa arka plan görevi o turda bir şey yapmaz. Paket imzalanamadığı her durumda o gönderimde ikinci çapa kurulmaz; saati yalnız ikinci çapayla kurulabilen kayıtlar (ilk çapası bozuk olanlar, ör. kayıttan önce yeniden başlatma: bkz. <a href=\"#gun-zayif-nokta\">Zayıf nokta</a>) o turda gitmez, sonraki turda ya da uygulama açılınca gider.'"
+   }
+  ]
+ },
+ {
+  "id": "D50",
+  "outcome": "CHANGE",
+  "decision": "İnceleme hesaplarının muafiyeti veritabanında da yazılır: cihazlar tablosunda 'inceleme cihazı' evet/hayır alanı olur, cihaz kaydında hesabın inceleme hesabı olup olmadığından kopyalanır; 'öğrencide tek etkin cihaz' kısmi tekil dizininin koşulu 'etkin ve inceleme cihazı değil' olur. Böylece kural gerçek öğrencilerde veritabanında korunmaya devam eder, deneme öğrencisi birden çok telefonda (Apple ve Google incelemecileri) etkin olabilir.",
+  "rationale": "PostgreSQL'de kısmi dizinin WHERE koşulu yalnız aynı tablonun sütunlarını görebilir, alt sorgu kullanamaz; muafiyet kişiler tablosundaki bir işarete bakarak yazılamaz, işaret cihaz satırında olmalı. Bu, dizini kaldırmaktan ya da muafiyeti uygulama koduna bırakmaktan daha az hareketli parça demek ve 'kod hatası bile bozuk veri yazdıramaz' ilkesini korur.",
+  "sources": [
+   "https://www.postgresql.org/docs/current/sql-createindex.html"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "veritabani",
+    "instruction": "'Kısıtlar' satırında 'Kısmi tekil dizinle korunanlar: yalnız sayılan kayıtta \"bir oturumda bir öğrenciye tek kayıt\", öğrencide tek etkin cihaz, ...' içindeki 'öğrencide tek etkin cihaz' ifadesini şöyle değiştir: 'öğrencide tek etkin cihaz (inceleme hesaplarının cihazları hariç: cihaz satırındaki \"inceleme cihazı\" evet/hayır alanı dizinin koşulunda; kısmi dizinin koşulu yalnız aynı tablonun sütunlarını görebildiğinden alan cihaz kaydında hesaptan kopyalanır; muafiyet: bkz. <a href=\"plan.html#kararlar-inceleme-hesaplari\">İnceleme hesapları</a>)'. Listenin geri kalanı aynen kalır."
+   },
+   {
+    "file": "teknik.html",
+    "section": "kod",
+    "instruction": "'Veri modeli (ilk taslak)' listesindeki 'Cihazlar' maddesinin sonundaki 'Öğrencide tek etkin cihaz.' cümlesini 'Öğrencide tek etkin cihaz; inceleme hesabının cihazları bu kuraldan muaf (cihaz satırında \"inceleme cihazı\" işareti).' olarak değiştir."
+   }
+  ]
+ },
+ {
+  "id": "D51",
+  "outcome": "CHANGE",
+  "decision": "Güncelleme sorgusu kayıt gönderiminden ayrılır. Günde en çok bir kez, iki yoldan biriyle sorulur: arka plan görevinde ya da uygulama ön plandayken son sorgudan 24 saat geçmişse. Açık yoklama penceresi varken ve gönderim sürerken sorulmaz. Sürüm kontrolü (en düşük sürüm sorusu) aynı anda yapılır. İnen güncelleme bir sonraki açılışta devreye girer, uygulama kendini yeniden başlatmaz. İndirme yükünü kademeli açma yayar. Böylece ders başı yoğunluğu korunur ve hiç kayıt göndermeyen hoca ve öğrenci de düzeltmeyi alır.",
+  "rationale": "Mevcut kural sorguyu gönderimden hemen sonraya bağladığı için hem yoğunluğa denk geliyor hem de kayıt göndermeyen kişiyi dışarıda bırakıyor. Expo, arka plan görevini expo-updates kontrolü için uygun kullanım olarak anıyor ve blogunda checkForUpdateAsync ile fetchUpdateAsync'i görev içinde gösteriyor; Android'de görev en sık 15 dakikada bir, iPhone'da sistemin seçtiği zamanda (çoğunlukla gece) çalıştığından yük kendiliğinden yayılır. 50.000 telefonun günde bir küçük sorgusu ortalama saniyede birden az istek eder. Yeni paket yok.",
+  "sources": [
+   "https://docs.expo.dev/versions/latest/sdk/background-task/",
+   "https://expo.dev/blog/goodbye-background-fetch-hello-expo-background-task"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "dagitim",
+    "instruction": "#dagitim-guncelleme altındaki 'Uzaktan güncelleme' satırında 'Güncelleme günde en çok bir kez, yoklama kaydı gönderildikten sonra sorulur; böylece ders başı yoğunluğunda güncelleme sorgusu ve indirmesi gönderimle yarışmaz.' cümlesini şununla değiştir: 'Güncelleme günde en çok bir kez, kayıt gönderiminden bağımsız sorulur: arka plan görevinde ya da uygulama ön plandayken son sorgudan 24 saat geçmişse. Açık yoklama penceresi varken ve gönderim sürerken sorulmaz; böylece ders başı yoğunluğunda güncelleme sorgusu ve indirmesi gönderimle yarışmaz, hiç kayıt göndermeyen hoca ve öğrenci de düzeltmeyi alır. İnen güncelleme bir sonraki açılışta devreye girer, uygulama kendini yeniden başlatmaz; indirme yükünü kademeli açma yayar.' 'İnternetsiz sınıfta açılış güncelleme beklemez (...)' cümlesi aynen kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "dagitim",
+    "instruction": "Aynı bölümdeki 'Sürüm kontrolü' satırında 'Uygulama günde en çok bir kez sunucuma sorar;' ifadesini 'Uygulama günde en çok bir kez, güncelleme sorgusuyla aynı anda sunucuma sorar;' olarak değiştir."
+   },
+   {
+    "file": "teknik.html",
+    "section": "dagitim-ayrinti",
+    "instruction": "#dagitim-ayrinti-guncelleme-sorgusu satırında 'İnternetsiz açılışta beklenmez: <code>fallbackToCacheTimeout</code> 0.' cümlesinden önce ekle: 'Sorgu ve indirme <code>Updates.checkForUpdateAsync</code> ile <code>Updates.fetchUpdateAsync</code>; arka plan görevinde de bu ikisi çağrılır, <code>reloadAsync</code> çağrılmaz (Expo'nun örneğinden farklı: kullanıcı ekrandayken uygulama yeniden başlamaz, güncelleme sonraki açılışta devreye girer). Son sorgu anı yerel veritabanında tutulur.'"
+   }
+  ]
+ },
+ {
+  "id": "D52",
+  "outcome": "CHANGE",
+  "decision": "İki ifade iki ayrı şeyi anlatıyor, ikisi de doğru kalır ama sınır yazılır: kayıt etiketleri (QR'sız, Kendi beyanı, Saat doğrulanamadı, Cihaz doğrulanmadı, Doğrulanmış) liste değildir, her biri ayrı evet/hayır sütunudur, bir kayıtta birden çok olabilir. Tek değer alan durum ve kod listeleri (sunucu kararı: var, beklemede, incelemede, ret; gerekçe ve sebep kodları; son durum) PostgreSQL enum değil, metin ve CHECK kısıtıdır.",
+  "rationale": "Birden çok etiket aynı anda olabildiği için tek metin alanına sığmaz; ayrı boolean sütun hem sorguda basit hem de yeni etiket eklemek PostgreSQL'de varsayılanı sabit olan yeni sütunla tabloyu yeniden yazmadan anında olur. Tek değerli listelerde enum yerine metin ve CHECK doğru: enum'dan değer çıkarılamaz, sırası değişmez; CHECK göçle değiştirilir.",
+  "sources": [
+   "https://www.postgresql.org/docs/current/datatype-enum.html",
+   "https://www.postgresql.org/docs/current/sql-altertable.html"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "gun",
+    "instruction": "'<h3>Kayıt etiketleri</h3>' başlığına id=\"gun-kayit-etiketleri\" ekle (metin değişmez)."
+   },
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "'Veritabanı erişimi' satırında 'Durum ve etiket listeleri PostgreSQL enum değil, metin ve CHECK kısıtı.' cümlesini şununla değiştir: 'Tek değer alan durum ve kod listeleri (sunucu kararı, gerekçe ve sebep kodları, son durum) PostgreSQL enum değil, metin ve CHECK kısıtı: enum'dan değer çıkarılamaz, CHECK göçle değişir. Kayıt etiketleri liste değil, her biri ayrı evet/hayır sütunu (bir kayıtta birden çok olabilir; bkz. <a href=\"plan.html#gun-kayit-etiketleri\">Kayıt etiketleri</a>); yeni etiket varsayılanı false olan yeni sütundur, PostgreSQL bunu tabloyu yeniden yazmadan ekler.'"
+   }
+  ]
+ },
+ {
+  "id": "D53",
+  "outcome": "CHANGE",
+  "decision": "İzin verilen en düşük sürüm yalnız dönem arasında yükselir: birimlerin devamsızlık işleme son günü geçtikten sonra, yeni dönem başlamadan. Dönem içinde bir sürümde kayıtların güvenilirliğini bozan hata çıkarsa en düşük sürüm yine yükseltilmez; hata o sürümün dalından uzaktan güncellemeyle düzeltilir, düzeltilemezse sunucu o sürümün yeni kayıtlarını gerekçe koduyla İncelemede alır. En düşük sürümün altındaki telefon güncelleme ekranı görür ve yeni yoklama kaydı almaz; giriş, makbuzlar ve bekleyen kayıtların gönderimi çalışır. Kayıt gönderme ucu hiçbir sürüme kapanmaz: API yalnız eklemeyle değiştiğinden eski sürümün kaydı her zaman okunur. TestFlight deneme dönemi istisnası aynen kalır.",
+  "rationale": "Üç ifade ancak böyle birlikte doğru olur: 'dönem ortasında zorunlu güncelleme yok' eşiğin yükselme zamanını, 'desteklenmeyen sürüm güncelleme ekranı görür' eşiğin etkisini, 'bekleyen kayıtlar hiçbir zaman engellenmez' gönderme ucunu belirler. 'En son kapanır' ile 'hiçbir zaman engellenmez' çelişiyordu; kapanmayan uç daha az kural ve daha az durum demek, /v1 zaten yalnız eklemeyle değişiyor. Google da tam ekran zorunlu güncellemeyi yalnız temel işlevi bozan kritik durumlar için öneriyor; burada o işi kademeli ve sürüme özel uzaktan güncelleme görüyor.",
+  "sources": [
+   "https://developer.android.com/guide/playcore/in-app-updates"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "dagitim",
+    "instruction": "#dagitim-guncelleme-ilkesi satırının metnini şununla değiştir (bilgi kaybı yok, mevcut her önerme korunuyor): 'Dönem ortasında zorunlu güncelleme yok: izin verilen en düşük sürüm yalnız dönem arasında, birimlerin devamsızlık işleme son günü geçip yeni dönem başlamadan yükseltilir (deneme dönemindeki TestFlight istisnası: bkz. Deneme satırı). Dönem içinde bir sürümde kayıtların güvenilirliğini bozan hata çıkarsa en düşük sürüm yine yükseltilmez: hata o sürümün dalından uzaktan güncellemeyle düzeltilir; düzeltilemezse sunucu o sürümün yeni kayıtlarını gerekçe koduyla \"İncelemede\" alır. Öğrenciye zorunlu yeniden giriş de yok (hoca 30 günde bir kodla girer); güncellemeler kademeli açılır. En düşük sürümün altındaki telefon güncelleme ekranı görür ve yeni yoklama kaydı almaz; giriş, makbuzlar ve bekleyen kayıtların gönderimi çalışır. Kayıt gönderme ucu hiçbir sürüme kapanmaz: API yalnız eklemeyle değiştiğinden eski sürümün kaydı her zaman okunur; bekleyen kayıtlar hiçbir zaman engellenmez.' Devamsızlık işleme son günü ifadesini <a href=\"#devam-donem-sonu\">Dönem sonu</a> bağlantısıyla ver."
+   },
+   {
+    "file": "teknik.html",
+    "section": "altyapi",
+    "instruction": "'API sürümü' satırında 'eski telefon sürümleri en düşük sürüm kontrolüyle yönetilir, kayıt gönderme ucu en son kapatılır' ifadesini 'eski telefon sürümleri en düşük sürüm kontrolüyle yönetilir (eşik yalnız dönem arasında yükselir), kayıt gönderme ucu hiçbir sürüme kapatılmaz' olarak değiştir; bağlantı aynen kalır."
+   }
+  ]
+ },
+ {
+  "id": "D54",
+  "outcome": "CHANGE",
+  "decision": "Hesap silmenin kapsamı tanımlanır. Öğrenci hesabı silinince: giriş bilgileri (e-posta adresi, giriş kodları, oturumlar), cihazların etkinliği ve telefon sayaçları silinir; telefonda bekleyen kayıtlar gittikten sonra yerel veritabanı ve anahtarlar silinir. Kalanlar: hocanın yüklediği ders listesindeki satır, yoklama kayıtları (imzalı ham metin ve imzayı doğrulayan açık anahtar dahil), düzeltmeler ve denetim kaydı; bunlar devam kararının dayanağı ve itirazda kanıt olduğundan üniversitenin saklama süresi boyunca tutulur, süre dolunca silinir ya da anonimleştirilir. Silinen öğrenci listede kalır, yeni kayıt gönderemez; sonra yeniden kaydolursa normal ilk kayıt teyidinden geçer. Hoca hesabı silinince giriş ve oturumları kapanır; dersleri silinmez, arşivlenir, yaptığı düzeltmeler denetim kaydında kalır. Silme ekranı ve web adresi neyin silinip neyin kaldığını, nedenini ve süresini yazar. Saklama süresi üniversiteye sorulur (açık nokta).",
+  "rationale": "Apple yalnız yasal olarak tutulması gerekmeyen verinin silinmesini, tutulanın kullanıcıya söylenmesini istiyor; Google Play güvenlik, dolandırıcılık önleme ve mevzuat gereği saklamaya izin veriyor, saklama pratiğinin açıkça bildirilmesini istiyor. KVKK md.5/2 bir hakkın tesisi ve korunması için zorunlu işlemeye rıza aramıyor, md.7 işleme sebebi kalkınca silmeyi istiyor. Devam kayıtları bir öğrencinin isteğiyle silinirse hocanın AKSİS'e işlediği karar dayanaksız kalır. Saklama süresi yalnız İÜ'nün kişisel veri saklama ve imha politikasından gelir.",
+  "sources": [
+   "https://developer.apple.com/support/offering-account-deletion-in-your-app/",
+   "https://support.google.com/googleplay/android-developer/answer/13327111",
+   "https://www.kvkk.gov.tr/Icerik/6649/Personal-Data-Protection-Law"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Hesap silme' satırına (şu an id'siz) id=\"kararlar-hesap-silme\" ekle. Mevcut metin aynen kalır; sonuna şunu ekle: 'Öğrenci hesabı silinince giriş bilgileri (e-posta adresi, giriş kodları, oturumlar), cihazların etkinliği ve telefon sayaçları silinir; telefonda yerel veritabanı ve anahtarlar bekleyen kayıtlar gittikten sonra silinir. Hocanın yüklediği ders listesindeki satır, yoklama kayıtları (imzalı ham metin ve imzayı doğrulayan açık anahtar dahil), düzeltmeler ve denetim kaydı kalır: devam kararının dayanağı ve itirazda kanıttır; üniversitenin saklama süresi dolunca silinir ya da anonimleştirilir (süre: bkz. <a href=\"#acik-saklama-suresi\">Açık noktalar</a>). Silinen öğrenci listede kalır, yeni kayıt gönderemez; yeniden kaydolursa ilk kayıt teyidinden geçer. Hoca hesabı silinince giriş ve oturumları kapanır; dersleri arşivlenir, düzeltmeleri denetim kaydında kalır. Silme ekranı ve web adresi neyin silinip neyin kaldığını, nedenini ve süresini yazar (Apple ve Google Play, tutulan veri kullanıcıya söylenince saklamaya izin veriyor).'"
+   },
+   {
+    "file": "plan.html",
+    "section": "acik",
+    "instruction": "Açık noktalar listesinin sonuna yeni madde ekle: '<li id=\"acik-saklama-suresi\"><strong>Saklama süresi:</strong> Hesabı silinen öğrencinin yoklama kayıtları, düzeltmeleri ve denetim kaydı kaç yıl tutulur? İÜ'nün kişisel veri saklama ve imha politikasında yoklama ve devam kayıtları için süre var mı; yoksa KVKK birimi ya da Öğrenci İşleri hangi süreyi verir? Süre gelene kadar kayıtlar silinmez (bkz. <a href=\"#kararlar-hesap-silme\">Hesap silme</a>).</li>'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "kod",
+    "instruction": "'Veri modeli (ilk taslak)' listesindeki 'Kişiler' maddesinin sonuna ekle: 'Silinen hesapta giriş alanları (e-posta, kodlar, oturumlar) silinir, kişi satırı öğrenci numarasıyla ve \"silindi\" işaretiyle kalır; yoklama kayıtları ve açık anahtarlar saklama süresi dolana kadar kalır (kapsam: bkz. <a href=\"plan.html#kararlar-hesap-silme\">Hesap silme</a>).'"
+   }
+  ]
+ },
+ {
+  "id": "D55",
+  "outcome": "CHANGE",
+  "decision": "Sunucu tek Linux sanal makinede, yurt içinde çalışır. Önceliğim üniversitenin kendi veri merkezi (BİDB); olmazsa Türkiye'de veri merkezi olan, sözleşmesi kurum kontrolünde bir sağlayıcı. Yurt dışı bulut kullanılmaz. Başlangıç boyutu 4 sanal çekirdek, 8 GB bellek, 100 GB SSD; bu bir ölçüm değil, başlangıç değeri: yayından önceki yük testi bu boyutta koşar, kesin boyut testten ve 100.000 kayıt başına tablo ölçümünden sonra yazılır. Büyüme önce dikey, sonra plandaki sırayla. Yedek deposu da yurt içinde. BİDB'nin makine verip veremeyeceği ve yurt dışından erişim açık noktaya yazılır.",
+  "rationale": "Belgelerde yük testi 'gerçek sunucu boyutunda' koşuyor, shared_buffers 'belleğin dörtte biri' deniyor ama makinenin yeri de boyutu da yazılı değil. Yer için dış kural var: 2019/12 sayılı Bilgi ve İletişim Güvenliği Tedbirleri Genelgesi madde 3, kamu kurumu verisinin bulut depolamada tutulmasını yasaklıyor; istisnası kurumun kendi sistemi ya da kurum kontrolündeki yerli sağlayıcı. Yurt dışı sunucu KVKK md.9'a göre ayrıca yeterlilik kararı ya da standart sözleşme ve 5 iş günü içinde Kurul'a bildirim ister. Bu yüzden en az parçalı ve en sürdürülebilir seçenek yurt içi tek makine. BİDB'den makine alınıp alınamayacağını ancak üniversite söyler, bu kısım açık nokta. Google Play incelemesi sunucunun yurt dışından her an erişilebilir olmasını istediğinden (plan.html#kararlar-inceleme-hesaplari) bu da BİDB'ye sorulur. Boyut yalnız başlangıç değeri olarak işaretlenir, böylece doğrulanamayan bir iddia gibi durmaz.",
+  "sources": [
+   "https://www.alomaliye.com/2019/07/06/bilgi-ve-iletisim-guvenligi-tedbirleri-2019-12/",
+   "https://www.kvkk.gov.tr/Icerik/6649/Personal-Data-Protection-Law"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "teknoloji",
+    "instruction": "'Ölçeklenme yolu' başlığının altındaki <ul> listesine, '<li><strong>Hacim:</strong>' satırından ÖNCE yeni ilk madde ekle: <li id=\"teknoloji-sunucu-yeri\"><strong>Sunucu yeri:</strong> Tek Linux sanal makine, yurt içinde. Önceliğim üniversitenin kendi veri merkezi (BİDB); olmazsa Türkiye'de veri merkezi olan, sözleşmesi kurum kontrolünde bir sağlayıcı. Yurt dışı bulut kullanmam: Bilgi ve İletişim Güvenliği Tedbirleri Genelgesi (2019/12) kamu kurumu verisini kurumun kendi sistemi ya da kurum kontrolündeki yerli sağlayıcı dışında bulut depolamada tutmaz; yurt dışındaki sunucu KVKK md.9'a göre ayrıca standart sözleşme ve Kurul'a 5 iş günü içinde bildirim ister. Yedek deposu da yurt içinde. Makine mağaza incelemesi için yurt dışından da erişilebilir olmalı (bkz. <a href=\"#kararlar-inceleme-hesaplari\">İnceleme hesapları</a>). Başlangıç boyutu ve büyüme: bkz. <a href=\"teknik.html#altyapi-sunucu-makinesi\">Sunucu makinesi</a>; BİDB'ye soru: bkz. <a href=\"#acik\">Açık noktalar</a>.</li>"
+   },
+   {
+    "file": "teknik.html",
+    "section": "altyapi",
+    "instruction": "<div class=\"rows\"> içinde, id=\"altyapi-servisler\" satırından ÖNCE yeni satır ekle: <div class=\"row\" id=\"altyapi-sunucu-makinesi\"><div class=\"k\">Sunucu makinesi</div><div>Tek Linux sanal makine, bütün Compose servisleri (Caddy, API, işçi, göç servisi, PostgreSQL, xprem) üzerinde; yer kararı: bkz. <a href=\"plan.html#teknoloji-sunucu-yeri\">Sunucu yeri</a>. Başlangıç boyutu 4 sanal çekirdek, 8 GB bellek, 100 GB SSD (PostgreSQL'in <code>shared_buffers</code> değeri buna göre yaklaşık 2 GB). Bu ölçülmüş değil, başlangıç değeri: yayından önceki ders çıkışı yük testi bu boyutta koşar (bkz. <a href=\"#testler-kalite\">Kalite kapıları</a>), boyut testten ve 100.000 kayıt başına ölçülen tablo boyutundan (bkz. <a href=\"#veritabani\">Veritabanı, Dönem alanı</a>) sonra kesinleşip buraya yazılır. Büyüme önce dikey (çekirdek, bellek, disk), sonra plandaki sırayla (bkz. <a href=\"plan.html#teknoloji\">Ölçeklenme yolu</a>). Yedekler bu makinede değil (bkz. <a href=\"#veritabani-yedek\">Yedek</a>).</div></div>"
+   },
+   {
+    "file": "teknik.html",
+    "section": "testler",
+    "instruction": "id=\"testler-kalite\" satırında 'Yayından önce: gerçek sunucu boyutunda,' ifadesini 'Yayından önce: gerçek sunucu boyutunda (bkz. <a href=\"#altyapi-sunucu-makinesi\">Sunucu makinesi</a>),' yap."
+   },
+   {
+    "file": "teknik.html",
+    "section": "veritabani",
+    "instruction": "id=\"veritabani-yedek\" satırında 'Yedek deposu sunucu dışında (S3 uyumlu depo ya da SFTP ile başka makine), şifreli;' ifadesini 'Yedek deposu sunucu dışında ve yurt içinde (S3 uyumlu depo ya da SFTP ile başka makine; gerekçe: bkz. <a href=\"plan.html#teknoloji-sunucu-yeri\">Sunucu yeri</a>), şifreli;' yap."
+   },
+   {
+    "file": "plan.html",
+    "section": "acik",
+    "instruction": "'Yedek deposu' maddesinde 'Her durumda sunucu dışında ve şifreli' ifadesini 'Her durumda sunucu dışında, yurt içinde ve şifreli' yap. Ardından 'Sunucu sertifikası' maddesinden ÖNCE yeni madde ekle: <li><strong>Sunucu makinesi:</strong> BİDB üniversitenin veri merkezinde Linux sanal makine verebilir mi (4 çekirdek, 8 GB bellek, 100 GB SSD ile başlayıp büyütülebilen), alan adı ve 443 portu internete, mağaza incelemesi için yurt dışına da açılabilir mi, yedek için ayrı bir depo verilebilir mi? Verilemezse Türkiye'de veri merkezi olan bir sağlayıcıyı kurum adına kullanmak uygun mu? (bkz. <a href=\"#teknoloji-sunucu-yeri\">Sunucu yeri</a>)</li>"
+   },
+   {
+    "file": "plan.html",
+    "section": "kaynaklar",
+    "instruction": "'Kurallar, internetsiz çalışma ve saat' details bloğundaki <ul class=\"src\"> listesinin ilk maddesinden sonra yeni madde ekle: <li><a href=\"https://www.alomaliye.com/2019/07/06/bilgi-ve-iletisim-guvenligi-tedbirleri-2019-12/\">Bilgi ve İletişim Güvenliği Tedbirleri Genelgesi 2019/12 (metin)</a> · <a href=\"https://www.kvkk.gov.tr/Icerik/6649/Personal-Data-Protection-Law\">KVKK (6698), md.4 ve md.9</a></li>"
+   }
+  ]
+ },
+ {
+  "id": "D56",
+  "outcome": "CHANGE",
+  "decision": "Sınıf listesi yalnız o dersin hocasının telefonuna iner. Öğrenci telefonuna yalnız kendi dersleri, ders saatleri, oturumları, tatiller ve kendi liste satırı (şube, eklenme tarihi, muaf mı) iner; başka öğrencinin adı ya da numarası öğrenci telefonuna hiç gitmez. Hoca telefonunda liste, internetsiz elle ekleme ve telafi işaretlemesi için durur; hoca çıkış yapınca indirilen listeler telefondan silinir (gönderilmemiş işler hariç).",
+  "rationale": "Şu an plan 'Program ve listelerden değişenler çekilir', teknik 'Telefona inen tablolar (... listeler ...)' diyor ve kimin telefonuna indiği belirsiz. KVKK md.4 verinin 'işlendikleri amaçla bağlantılı, sınırlı ve ölçülü' olmasını istiyor. Öğrencinin kayıt vermek, makbuzunu ve kalan hakkını görmek için başkalarının adına ihtiyacı yok, kendi satırı yetiyor. Hocanın ise internetsiz sınıfta elle ekleme ve telafi dersinde listeden işaretleme için listeye ihtiyacı var (plan.html#kararlar, Telafi dersi ve #gun-kenar-durumlar). Sunucu indirmeyi role göre süzeceğinden yeni parça gerekmiyor. Ayrıca 50.000 öğrencide her telefona bütün sınıf listelerini indirmemek indirme yükünü de düşürüyor.",
+  "sources": [
+   "https://www.kvkk.gov.tr/Icerik/6649/Personal-Data-Protection-Law"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "id=\"kararlar-indirme\" satırında '<div class=\"k\">İndirme</div><div>' sonrasındaki ilk cümleden ('... silinenler silindi işaretiyle iner.') hemen sonra şu cümleleri ekle: 'Herkes yalnız kendine gerekeni indirir: sınıf listesi yalnız o dersin hocasının telefonuna iner (internetsiz elle ekleme ve telafi işaretlemesi için); öğrenci telefonuna yalnız kendi dersleri, ders saatleri, oturumları, tatiller ve kendi liste satırı iner, başka öğrencinin adı ya da numarası hiç inmez (KVKK md.4, amaçla sınırlı veri). Hoca çıkış yapınca indirilen listeler telefondan silinir; gönderilmemiş işleri kuyrukta kalır.'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "kod",
+    "instruction": "'Veri modeli (ilk taslak)' listesinde '<strong>Telefona inen tablolar</strong> (dersler, ders saatleri, oturumlar, listeler, tatiller): her satırda değişiklik sürümü ve silindi işareti; sürüm tek sayaç satırından, eşitleme belirtecinde veritabanı nesli.' maddesinin sonuna şu cümleyi ekle: 'Sunucu indirmeyi role göre süzer: listelerin tamamı yalnız dersin hocasına, öğrenciye yalnız kendi liste satırı (karar: bkz. <a href=\"plan.html#kararlar-indirme\">İndirme</a>).'"
+   }
+  ]
+ },
+ {
+  "id": "D57",
+  "outcome": "CHANGE",
+  "decision": "Aşama 2'de QR'ı internetsiz gösteren hoca telefonunun saat payı da hesaba girer: gecikme sınırları (10 ve 30 saniye) öğrencinin payıyla hoca telefonunun payı toplanarak uygulanır. Hoca telefonu QR'ı hangi saat belgesiyle ve belgeden ne kadar sonra gösterdiğini bir 'QR gösterim kaydı' olarak ortak kuyruktan gönderir (ikinci çapası da kurulur); sunucu hoca telefonunun payını öğrenci kaydındaki kuralla hesaplar. Bu kayıt gelene kadar o oturumun QR kayıtlarının gecikmesi kesinleşmez, beklemede kalır. Projeksiyondan gösterilen QR'da kodları sunucu verdiğinden ayrı pay eklenmez.",
+  "rationale": "Şimdiki metin hoca telefonunun QR zaman dilimini saat belgesi ve iç sayaçtan hesapladığını söylüyor ama bu hesabın belirsizliği (belge isteği süresi ve geçen sürenin milyonda 100'ü, 5 günlük anahtar ufkunda 40 saniyeye yakın) gecikme kuralına girmiyor. Hoca telefonu hızlı ya da yavaşsa doğru okutmalar haksız yere incelemeye ya da redde düşer, ya da tersine geç okutma normal görünür. QR'daki anahtar cihaza özel olduğundan sunucu QR'ı hangi telefonun ürettiğini zaten biliyor; eksik olan yalnız o telefonun çapası, bu da mevcut ortak kuyruğa bir kayıt türü daha eklemekle geliyor, yeni parça yok. RFC 6238 (TOTP) de doğrulayıcının iki taraf arasındaki saat kaymasını sınırlı bir pencereyle kabul etmesini ve tespit edilen kaymayı cihaz başına kaydetmesini öneriyor; aynı yaklaşım.",
+  "sources": [
+   "https://www.rfc-editor.org/rfc/rfc6238"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "asama23",
+    "instruction": "id=\"asama23-degisme-ve-kabul\" maddesinde 'geçerli belge yoksa QR yine üretilir ama ders işaretlenir.' cümlesinden hemen sonra şunu ekle: 'Hoca telefonunun da saat payı var: internetsiz gösterilen QR'da 10 ve 30 saniyelik sınırlar öğrencinin payıyla hoca telefonunun payı toplanarak uygulanır. Hoca telefonu QR'ı hangi saat belgesiyle ve belgeden ne kadar sonra gösterdiğini QR gösterim kaydı olarak ortak kuyruktan gönderir, ikinci çapası da kurulur; sunucu payı öğrenci kaydındaki kuralla hesaplar (QR'daki anahtar cihaza özel olduğundan hangi telefonun ürettiği bellidir). Bu kayıt gelene kadar o oturumun QR kayıtlarının gecikmesi kesinleşmez, kayıtlar beklemede kalır. Projeksiyonda kodları sunucu verir, sayfa sunucu saatiyle gösterir; ayrı pay eklenmez.'"
+   },
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Ortak kuyruk' satırında 'hocanın kafa sayısı, erken kapatma, süre değişikliği, elle ekleme, makbuz okutma.' ifadesini 'hocanın kafa sayısı, erken kapatma, süre değişikliği, elle ekleme, makbuz okutma, Aşama 2'de QR gösterim kaydı (bkz. <a href=\"#asama23-degisme-ve-kabul\">Değişme ve kabul</a>).' yap."
+   }
+  ]
+ },
+ {
+  "id": "D58",
+  "outcome": "CHANGE",
+  "decision": "Devam oranı derste tek alan değil iki alan: teori oranı (varsayılan 70) ve uygulama oranı (varsayılan 80). Hak formülü her tür için kendi T ve p'siyle ayrı çalışır; yönetici kuralı farklı programda iki oranı ayrı ayrı değiştirir (ör. hazırlıkta ikisi de 80).",
+  "rationale": "İÜ yönetmeliği Md.19 teoriye en az %70, uygulamaya en az %80 devamı ayrı şart olarak koyuyor; plan da ikisini ayrı hesaplıyor ve AKSİS özetinde ayrı sütunlar tutuyor. Ama teknik.html'deki veri modelinde 'p değeri' tek alan, plan da 'dersin oranını (p)' tekil yazıyor. Tek alanla ya teori ya uygulama yanlış hesaplanır. İki sabit sütun en az parçalı çözüm: ayrı tablo ya da tür başına oran listesi gerekmiyor, çünkü yönetmelikte yalnız iki tür var.",
+  "sources": [
+   "https://www.resmigazete.gov.tr/eskiler/2025/09/20250928-2.htm"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "devam",
+    "instruction": "'Kural (Md.19)' maddesinde 'yönetici dersin oranını (p) değiştirir.' ifadesini 'yönetici dersin teori ve uygulama oranlarını (iki ayrı p) değiştirir.' yap."
+   },
+   {
+    "file": "plan.html",
+    "section": "devam",
+    "instruction": "'Hak formülü ve test notları' details içindeki ilk maddede '<strong>p:</strong> dersin oranı, varsayılan 70 (teori) ya da 80 (uygulama).' ifadesini '<strong>p:</strong> dersin o türdeki oranı; derste teori ve uygulama için iki ayrı alan, varsayılan teoride 70, uygulamada 80. Formül her tür için kendi T ve p'siyle ayrı çalışır.' yap."
+   },
+   {
+    "file": "plan.html",
+    "section": "hoca",
+    "instruction": "'Web paneli · yönetici' listesinde 'Kuralı farklı programdaki dersin devam oranı (p)' ifadesini 'Kuralı farklı programdaki dersin devam oranları (teori ve uygulama için ayrı p)' yap; bağlantı aynen kalır."
+   },
+   {
+    "file": "teknik.html",
+    "section": "kod",
+    "instruction": "'Veri modeli (ilk taslak)' listesinde '<strong>Dersler, ders saatleri ve şubeler:</strong> gün, yerel saat, derslik, teori ya da uygulama, yoklama süresi, p değeri.' ifadesini '<strong>Dersler, ders saatleri ve şubeler:</strong> gün, yerel saat, derslik, teori ya da uygulama, yoklama süresi; derste teori ve uygulama için iki ayrı p değeri (varsayılan 70 ve 80; bkz. <a href=\"plan.html#devam\">Devamsızlık hesabı</a>).' yap; maddenin geri kalanı aynen kalır."
+   }
+  ]
+ },
+ {
+  "id": "D59",
+  "outcome": "CHANGE",
+  "decision": "Göç tek betikte: db:migrate (önce Drizzle göçleri, sonra pg-boss'un kendi CLI'sıyla pg-boss migrate). Yayındaki göç servisi, pnpm dev ve test koordinatörü (şablon veritabanına) aynı betiği çalıştırır. Testler yayın PostgreSQL servisini değil, Compose'ta yalnız test profilindeki ayrı postgres-test servisini kullanır: verisi tmpfs'te, fsync, full_page_writes ve synchronous_commit yalnız bu servisin komut satırında kapalı. CI de GitHub servis kabı yerine aynı servisi docker compose --profile test up --wait ile açar; imaj etiketi ve C.UTF-8 yereli tek tanımda kalır.",
+  "rationale": "PostgreSQL 18 belgesine göre fsync ve full_page_writes 'yalnız postgresql.conf ya da sunucu komut satırında' ayarlanır, veritabanı başına açılıp kapanamaz. Bu yüzden testler profilsiz yayın PostgreSQL servisini paylaştıkça 'yayında asla' kuralı yapı gereği korunamaz; ayrı servis gerekiyor. Compose belgesine göre profili olan servis yalnız o profil açılınca başlar, böylece yayın makinesinde test servisi hiç kalkmaz. GitHub'ın Ubuntu 24.04 makinelerinde Docker Compose 2.38 kurulu; CI'ın aynı Compose tanımını kullanması, servis kabında komut satırı ayarı verip veremeyeceğimiz sorusunu da ortadan kaldırıyor ve iki ayrı tanımın kayması riskini siliyor. pg-boss'un resmî CLI'sı migrate komutunu bağlantı adresi ya da veritabanı adıyla herhangi bir veritabanına uyguluyor, dolayısıyla şablona da uygulanır. Tek betik, geliştirme ve test şemasının yayındakinden ayrışmasını önlüyor.",
+  "sources": [
+   "https://www.postgresql.org/docs/18/runtime-config-wal.html",
+   "https://docs.docker.com/reference/compose-file/services/",
+   "https://pgboss.io/cli",
+   "https://github.com/timgit/pg-boss",
+   "https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "altyapi",
+    "instruction": "'İmaj ve kapanış' satırında 'Aynı imaj API, işçi ve tek seferlik göç servisi olur; API ve işçi göçlerin bitmesini bekler.' cümlesinden sonra ekle: 'Göç servisi tek betiği çalıştırır: <code>db:migrate</code> (önce Drizzle göçleri, sonra pg-boss'un kendi CLI'sıyla <code>pg-boss migrate</code>); geliştirme ortamı ve test koordinatörü de aynı betiği kullanır, göç adımı başka yerde yazılmaz.'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "altyapi",
+    "instruction": "id=\"altyapi-servisler\" satırında 'Mailpit yalnız <code>dev</code> profilinde.' ifadesini 'Mailpit yalnız <code>dev</code> profilinde, test PostgreSQL'i (<code>postgres-test</code>) yalnız <code>test</code> profilinde (bkz. <a href=\"#testler\">Testler, Veritabanı sıfırlama</a>).' yap."
+   },
+   {
+    "file": "teknik.html",
+    "section": "testler",
+    "instruction": "'Veritabanı sıfırlama' satırında 'Testcontainers yok: testler yerelde zaten açık Docker Compose PostgreSQL'ini, CI'da GitHub Actions'ın PostgreSQL servis kabını kullanır (ikisinde aynı imaj etiketi ve C.UTF-8 yereli).' cümlesini şununla değiştir: 'Testcontainers yok: testler yayın PostgreSQL servisini değil, Compose'ta yalnız <code>test</code> profilindeki ayrı <code>postgres-test</code> servisini kullanır; yerelde de CI'da da <code>docker compose --profile test up --wait</code> ile açılır (GitHub'ın Ubuntu makinelerinde Docker Compose kurulu), böylece imaj etiketi ve C.UTF-8 yereli tek tanımda kalır, ayrı GitHub servis kabı tanımı yok.' Aynı satırda 'göçleri şablona uygular,' ifadesini 'şablonu yayındaki göç betiğiyle kurar (<code>db:migrate</code>: Drizzle göçleri, sonra <code>pg-boss migrate</code>; bkz. <a href=\"#altyapi\">İmaj ve kapanış</a>),' yap. Aynı satırda 'Test veritabanında dayanıklılık ayarları kapalı (fsync, synchronous_commit, full_page_writes; CI'da veri klasörü bellekte); yayında asla.' cümlesini 'Dayanıklılık ayarları (fsync, synchronous_commit, full_page_writes) yalnız <code>postgres-test</code> servisinin komut satırında kapalı, verisi her yerde bellekte (tmpfs); fsync ve full_page_writes sunucu düzeyinde ayarlandığından veritabanı başına kapatılamaz, bu yüzden test servisi ayrı; yayın PostgreSQL servisi bu ayarları hiç taşımaz.' ile değiştir."
+   },
+   {
+    "file": "teknik.html",
+    "section": "kod",
+    "instruction": "id=\"kod-gelistirme-ortami\" altındaki ilk maddede 'PostgreSQL'de <code>pg_isready</code> sağlık denetimi), sonra uygulamaları açar.' ifadesini 'PostgreSQL'de <code>pg_isready</code> sağlık denetimi), sonra yayındaki göç betiğini (<code>db:migrate</code>, bkz. <a href=\"#altyapi\">İmaj ve kapanış</a>) çalıştırır, sonra uygulamaları açar. Testler kendi <code>postgres-test</code> servisini açar (bkz. <a href=\"#testler\">Testler, Veritabanı sıfırlama</a>).' yap."
+   }
+  ]
+ },
+ {
+  "id": "D60",
+  "outcome": "CHANGE",
+  "decision": "İlk yönetici kayıt sayfasından değil, sunucu makinesinde bir kez çalışan komutla açılır: sunucu imajındaki küçük bir 'yonetici-ekle' komutu, docker compose run --rm ile göç servisinin imajından çalışır, verilen @istanbul.edu.tr adresine onaylı yönetici hesabı açar ve denetim kaydına 'komut satırı' diye yazar. Şifre ya da kod üretmez; yönetici normal e-posta koduyla girer. HTTP ucu, ortam değişkeniyle kurulan açılış hesabı ve ilk gelene yönetici yapan kurulum sayfası yok. Komutu yalnız sunucuya SSH'la giren çalıştırır; bütün yöneticiler erişimini kaybederse kurtarma yolu da bu. Geliştirme ve testlerde yönetici veri kurucuyla açılır.",
+  "rationale": "Plan 'İlk yönetici benim' diyor ama hesabın nasıl doğduğu yazılı değil; hoca kaydı da yönetici onayına bağlı olduğundan ilk yönetici olmadan sistem açılamaz. Yaygın ve kanıtlanmış yol sunucuda elle çalışan tek komut: Mastodon ilk sahibini 'tootctl accounts create ... --role Owner' ile açıyor. Bu yol saldırı yüzeyi eklemiyor (açık kalan kurulum sayfası ya da ortam değişkeninde unutulan hesap yok), aynı imajı kullandığı için yeni parça getirmiyor ve kurtarma yolunu da çözüyor.",
+  "sources": [
+   "https://docs.joinmastodon.org/admin/setup/"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Roller' satırında 'İlk yönetici benim; bölüm başkanını sonra kaydettiririm, diğer yöneticileri o ekler.' cümlesinden sonra ekle: 'İlk yönetici kayıt sayfasından değil, sunucu makinesinde bir kez çalışan komutla açılır; aynı komut bütün yöneticiler erişimini kaybederse kurtarma yolu (bkz. <a href=\"teknik.html#sunucu-ilk-yonetici\">İlk yönetici</a>).'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "'Kimlik' satırından hemen SONRA yeni satır ekle: <div class=\"row\" id=\"sunucu-ilk-yonetici\"><div class=\"k\">İlk yönetici</div><div>Sunucu imajındaki küçük bir komut (<code>yonetici-ekle</code>), sunucu makinesinde <code>docker compose run --rm</code> ile göç servisinin imajından çalışır: verilen <code>@istanbul.edu.tr</code> adresine onaylı yönetici hesabı açar, denetim kaydına \"komut satırı\" diye yazar. Şifre ya da kod üretmez; yönetici normal e-posta koduyla girer. HTTP ucu, ortam değişkeniyle kurulan açılış hesabı ve ilk gelene yönetici yapan kurulum sayfası yok (açık kalan kurulum sayfası ele geçirilebilir). Komutu yalnız sunucuya SSH'la giren çalıştırır; bütün yöneticiler erişimini kaybederse kurtarma yolu da bu. Mastodon da ilk sahibini sunucudaki komutla açıyor (tootctl). Geliştirmede ve testlerde yönetici veri kurucuyla açılır. Karar: bkz. <a href=\"plan.html#kararlar\">Kararlar, Roller</a>.</div></div>"
+   },
+   {
+    "file": "teknik.html",
+    "section": "kod",
+    "instruction": "'Klasör yapısı' altındaki <pre><code> bloğunda '  jobs/             iş kuyruğu görevleri' satırından sonra yeni satır ekle: '  cli/              sunucu makinesinde elle çalışan komutlar (ilk yönetici)'. Hizalama öbür satırlarla aynı (açıklama sütunu aynı hizada)."
+   }
+  ]
+ },
+ {
+  "id": "D61",
+  "outcome": "CHANGE",
+  "decision": "Apple hesabı ilk TestFlight'tan önce değil, ilk iPhone geliştirme derlemesinden önce, yani iş sırasının 6. adımının başında kesinleşir. Gerekçe App Group ya da App Attest değil (Apple ikisini ücretsiz hesaba da açıyor), imza: Mac olmadığından iPhone'a kurulan her EAS derlemesi, geliştirme derlemesi de, ücretli Apple Developer Program hesabıyla imzalanır. Sıra şöyle: 5.1.1(ix) sorusunu App Review görüşmesinde 6. adımdan önce sorarım (Meet with Apple etkinlikleri ücretsiz kayıtlı geliştiriciye de açık), sonra seçilen hesabı alırım. Hesap ilk TestFlight'tan önce yine de değişirse yalnız benim deneme telefonlarım yeniden kurulur; öğrenci kurulumundan sonra değişirse her iPhone öğrencisi cihaz değişiminden geçer.",
+  "rationale": "Expo belgesi: 'All builds that run on an iPhone device require a paid Apple Developer account for build signing.' Plan ise hesap kararını 8. adıma (dağıtım) koyuyor, oysa 6. adım (telefon uygulaması) iPhone geliştirme derlemesi istiyor; sıra çelişiyor. Kaydın kendisindeki 'App Group ve App Attest ücretli hesap ister' gerekçesi Apple'ın yetenek tablosuna göre yanlış (ikisi de ücretsiz Apple Developer hesabında işaretli), bu yüzden gerekçe imza olarak düzeltilir. Ekip kimliğine bağlılık (App Attest, App Group, anahtarlık) zaten plan.html#dagitim-hesap'ta yazılı. Görüşmeyi satın almadan önce yapmak, yanlış hesap türüne para vermeyi önlüyor. Apple'ın üyelik karşılaştırma sayfası Meet with Apple etkinliklerini ücretsiz kayıtlı geliştiriciye açık gösteriyor; App Review randevusu sayfası üyelik şartı yazmıyor.",
+  "sources": [
+   "https://docs.expo.dev/develop/development-builds/create-a-build",
+   "https://developer.apple.com/help/account/reference/supported-capabilities-ios",
+   "https://developer.apple.com/support/compare-memberships/",
+   "https://developer.apple.com/help/app-review/before-submitting-for-review/app-review-appointment"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "dagitim",
+    "instruction": "id=\"dagitim-hesap\" satırında 'Apple yayın hesabım ilk TestFlight derlemesinden önce kesinleşir, sonra değişmez: App Attest anahtarı ve anahtarlık kayıtları Apple ekip kimliğine bağlı; hesap değişirse her iPhone öğrencisi cihaz değişiminden geçer.' ifadesini şununla değiştir: 'Apple hesabım ilk iPhone geliştirme derlemesinden önce, iş sırasının 6. adımının başında kesinleşir (bkz. <a href=\"#baslangic\">Başlangıç</a>): Mac olmadığından iPhone'a kurulan her EAS derlemesi, geliştirme derlemesi de, ücretli Apple Developer Program hesabıyla imzalanır (App Group ve App Attest ücretsiz hesapta da var; şart imzadan geliyor). Hesap sonra değişmez: App Attest anahtarı, App Group ve anahtarlık kayıtları Apple ekip kimliğine bağlı; hesap öğrenci kurulumundan sonra değişirse her iPhone öğrencisi cihaz değişiminden geçer, ilk TestFlight derlemesinden önce değişirse yalnız benim deneme telefonlarım yeniden kurulur.' Aynı satırda 'Bireysel hesapla gidip gidemeyeceğimi ilk derlemeden önce Apple'ın birebir App Review görüşmesinde sorarım;' ifadesini 'Bireysel hesapla gidip gidemeyeceğimi hesabı almadan, 6. adımdan önce Apple'ın birebir App Review görüşmesinde sorarım (Apple'ın üyelik karşılaştırmasına göre Meet with Apple etkinlikleri ücretsiz kayıtlı geliştiriciye de açık; randevu üyelik isterse bireysel hesapla başlayıp sorarım);' yap; cümlenin geri kalanı ('bireysel hesapta satıcı olarak adım görünür.') aynen kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "baslangic",
+    "instruction": "'İş sırası' listesinde 6. madde '<strong>Telefon uygulaması:</strong> ortak sözleşme ve fetch yardımcısıyla; önce öğrenci, sonra hoca modu.' ifadesini '<strong>Telefon uygulaması:</strong> ilk iPhone geliştirme derlemesinden önce Apple hesabı kararı (bkz. <a href=\"#dagitim-hesap\">Dağıtım, iPhone, Hesap</a>); ortak sözleşme ve fetch yardımcısıyla; önce öğrenci, sonra hoca modu.' yap. 8. maddede '<strong>Dağıtım:</strong> Apple hesabı kararı (ilk TestFlight derlemesinden önce), inceleme hesapları,' ifadesini '<strong>Dağıtım:</strong> inceleme hesapları (Apple hesabı 6. adımda kesinleşmiş olur),' yap; maddenin geri kalanı aynen kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "acik",
+    "instruction": "'Apple hesabı' maddesinde '(bkz. <a href=\"#dagitim-hesap\">Dağıtım, iPhone, Hesap</a>)' bağlantısından önce şunu ekle: 'Cevap, iş sırasının 6. adımında ilk iPhone geliştirme derlemesinden önce gerekir.'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "'Çatı' satırında 'Mac olmadığından modülün her iPhone değişikliği bir EAS derlemesi harcar:' ifadesini 'Mac olmadığından modülün her iPhone değişikliği bir EAS derlemesi harcar ve iPhone'a kurulan her EAS derlemesi ücretli Apple hesabıyla imzalanır (hesap kararı: bkz. <a href=\"plan.html#dagitim-hesap\">Dağıtım, iPhone, Hesap</a>):' yap."
+   }
+  ]
+ },
+ {
+  "id": "D62",
+  "outcome": "CHANGE",
+  "decision": "Gizli anahtar listesi tamamlanır: giriş kodu özet anahtarı (HMAC) ayrı, tek işe ayrılmış bir anahtardır; inceleme hesabının sabit kodu ve pgBackRest'in depo şifreleme parolası ile depo erişim bilgisi de Compose secrets ile yalnız gereken kaba verilir. Giriş kodu özet anahtarı da açılışta üretilmez, yoksa sunucu açılmaz. pgBackRest depo parolası çevrimdışı yedeklenir (kaybolursa şifreli yedekler açılamaz); giriş kodu özet anahtarı ve inceleme kodu yedeklenmez, kaybolursa yenisi üretilir.",
+  "rationale": "Plan 'Hoca girişi' satırı kodların sunucunun gizli anahtarıyla HMAC'lendiğini, 'İnceleme hesapları' satırı sabit kodun sunucunun gizli ayarında durduğunu söylüyor; teknik 'Ayarlar' listesinde ikisi de yok. OWASP anahtar yönetimi rehberi (NIST'e dayanarak) bir anahtarın tek amaçla kullanılmasını istiyor, bu yüzden saat belgesi anahtarı paylaşılmaz. Docker belgesi secrets'ın yalnız izin verilen servise /run/secrets altında dosya olarak geldiğini ve ortam değişkenine göre daha dar erişim sağladığını yazıyor. İnceleme sırasında bulunan ek eksik: pgBackRest'in depo şifreleme parolası (repo-cipher-pass) ve S3 ya da SFTP erişim bilgisi de gizli anahtar; parola kaybolursa şifreli yedek açılamadığından korunacak anahtarlara girmeli. Giriş kodu anahtarı kaybolursa yalnız o anki 5 dakikalık kodlar geçersiz olur, yedek gerekmez.",
+  "sources": [
+   "https://cheatsheetseries.owasp.org/cheatsheets/Key_Management_Cheat_Sheet.html",
+   "https://docs.docker.com/compose/how-tos/use-secrets/",
+   "https://pgbackrest.org/configuration.html"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "'Ayarlar' satırına (row div) id=\"sunucu-ayarlar\" ekle. Aynı satırda 'Gizli anahtarlar (saat belgesi anahtarı, QR anahtar kaynağı, SMTP ve veritabanı parolaları)' parantezini şöyle değiştir: 'Gizli anahtarlar (saat belgesi anahtarı, QR anahtar kaynağı, giriş kodu özet anahtarı, inceleme hesabının sabit kodu, SMTP ve veritabanı parolaları; pgBackRest'in depo şifreleme parolası ve depo erişim bilgisi yalnız PostgreSQL kabına)'. Ardından gelen 'Saat belgesi ve QR anahtarı açılışta üretilmez; yoksa sunucu açılmaz.' cümlesini şöyle değiştir: 'Saat belgesi, QR ve giriş kodu özet anahtarı açılışta üretilmez; yoksa sunucu açılmaz. Her anahtar tek iş içindir: giriş kodu özet anahtarı saat belgesi ya da QR anahtarıyla paylaşılmaz.' Satırın geri kalanı (kid ve eski anahtarın saklanması) aynen kalır."
+   },
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "'Kimlik' satırında 'Kodlar HMAC'le saklanır;' ifadesini şöyle değiştir: 'Kodlar kendine ayrılmış giriş kodu özet anahtarıyla HMAC'le saklanır (bkz. <a href=\"#sunucu-ayarlar\">Ayarlar</a>); inceleme hesabının sabit kodu da gizli ayardan okunur ve aynı sabit süreli karşılaştırmayla denetlenir;'. Cümlenin devamı (tek kullanım, timingSafeEqual) aynen kalır."
+   },
+   {
+    "file": "teknik.html",
+    "section": "dagitim-ayrinti",
+    "instruction": "'Korunacak anahtarlar' satırının (id=\"dagitim-ayrinti-korunacak-anahtarlar\") ilk cümlesindeki çevrimdışı yedeklenen listeye 'QR anahtar kaynağı' sonrasına ', pgBackRest depo şifreleme parolası (kaybolursa şifreli yedekler açılamaz)' ekle. Satırın sonuna şu cümleyi ekle: 'Giriş kodu özet anahtarı ve inceleme hesabının sabit kodu yedeklenmez: kaybolursa yenisi üretilir; ilkinde yalnız o anda geçerli 5 dakikalık kodlar düşer, ikincisinde yeni kod mağaza panellerine yazılır.'"
+   },
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Hoca girişi' satırında '(HMAC; 1 milyon olasılıkta düz özet işe yaramaz)' parantezini '(HMAC, kendine ayrılmış anahtarla; 1 milyon olasılıkta düz özet işe yaramaz; anahtar listesi: bkz. <a href=\"teknik.html#sunucu-ayarlar\">Ayarlar</a>)' yap."
+   }
+  ]
+ },
+ {
+  "id": "D63",
+  "outcome": "CHANGE",
+  "decision": "PostgreSQL için kendi imajım olur: depo kökünde docker/postgres/Dockerfile, tabanı resmî postgres:18.6-trixie; resmî imajda zaten tanımlı PostgreSQL apt deposundan (apt.postgresql.org) yalnız pgbackrest paketi tam sürümüyle (şu an 2.59.3-1.pgdg13+1) kurulur, başka değişiklik yok. İmajın adı iu-attendance-postgres:18.6-pgbackrest2.59.3; Compose'daki PostgreSQL servisi bu dosyadan build ile derlenir, kayıt deposu (registry) gerekmez. Geliştirmede, CI'da ve sunucuda aynı imaj kullanılır: CI da GitHub Actions servis kabı yerine aynı Compose servisini açar (servis kabı Dockerfile derleyemez). Dependabot FROM satırını günceller; pgBackRest paket sürümü elle yükseltilir. Eski paket apt.postgresql.org'dan kalkarsa apt-archive.postgresql.org'dan alınır.",
+  "rationale": "Resmî imajın Dockerfile'ı PGDG apt deposunu /etc/apt/sources.list.d/pgdg.list olarak ekliyor ve imajda bırakıyor; Docker Hub sayfası Debian tabanlı imajda ek paketin doğrudan kurulabileceğini yazıyor. pgBackRest kullanım kılavuzu Debian paketinin apt.postgresql.org'da 'pgbackrest' adıyla olduğunu söylüyor; depoda 2.59.3-1.pgdg13+1 (trixie) var. Depo havuzunda yalnız son birkaç sürüm duruyor, eskiler apt-archive.postgresql.org'a geçiyor; tam sürüm sabitlemesi bu yüzden arşiv yolunu da yazmalı. Compose build ile ayrı kayıt deposu ve kimlik bilgisi gerekmez (daha az parça). Testlerin 'aynı imaj' kuralı ancak CI'nın da aynı Compose servisini açmasıyla tek kaynaktan sağlanır.",
+  "sources": [
+   "https://raw.githubusercontent.com/docker-library/postgres/master/18/trixie/Dockerfile",
+   "https://hub.docker.com/_/postgres",
+   "https://pgbackrest.org/user-guide.html",
+   "https://pgbackrest.org/user-guide-rhel.html",
+   "https://apt.postgresql.org/pub/repos/apt/pool/main/p/pgbackrest/",
+   "https://apt-archive.postgresql.org/"
+  ],
+  "edits": [
+   {
+    "file": "teknik.html",
+    "section": "veritabani",
+    "instruction": "'Yedek' satırında (id=\"veritabani-yedek\") 'pgBackRest, arşiv komutunu çalıştırabilsin diye PostgreSQL kabında' ifadesinden sonra, '(yedeği: bkz. Yedek paketler)' parantezinden önce değil sonra, şu cümleleri ekle: 'Resmî imajda pgBackRest yok; bu yüzden kendi imajım: depo kökünde docker/postgres/Dockerfile, tabanı postgres:18.6-trixie, içine resmî imajda zaten tanımlı PostgreSQL apt deposundan (apt.postgresql.org) yalnız pgbackrest paketi tam sürümüyle (şu an 2.59.3-1.pgdg13+1) kurulur, başka değişiklik yok. İmajın adı iu-attendance-postgres:18.6-pgbackrest2.59.3; Compose'daki PostgreSQL servisi onu bu dosyadan build ile derler, ayrı kayıt deposu (registry) yok. Geliştirmede, CI'da ve sunucuda aynı imaj. Sabitlenen paket apt.postgresql.org'dan kalkarsa apt-archive.postgresql.org'dan alınır.'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "veritabani",
+    "instruction": "'Sürüm' satırında 'imaj tam ara sürüme sabit (şu an 18.6)' ifadesini 'imaj tam ara sürüme sabit (şu an 18.6; kendi imajımın tabanı, bkz. <a href=\"#veritabani-yedek\">Yedek</a>)' yap."
+   },
+   {
+    "file": "teknik.html",
+    "section": "testler",
+    "instruction": "'Veritabanı sıfırlama' satırında 'CI'da GitHub Actions'ın PostgreSQL servis kabını kullanır (ikisinde aynı imaj etiketi ve C.UTF-8 yereli)' ifadesini şöyle değiştir: 'CI'da da aynı Compose servisini docker compose up --wait postgres ile açar; GitHub Actions'ın servis kabı Dockerfile derleyemediğinden kullanılmaz, imaj tek yerde tanımlı kalır (her yerde aynı imaj ve C.UTF-8 yereli; imaj: bkz. <a href=\"#veritabani-yedek\">Yedek</a>)'. 'Testcontainers yok' ve satırın geri kalanı aynen kalır."
+   },
+   {
+    "file": "teknik.html",
+    "section": "altyapi",
+    "instruction": "'Servisler' satırında 'PostgreSQL profilsiz;' ifadesini 'PostgreSQL profilsiz (kendi imajım, bkz. <a href=\"#veritabani-yedek\">Yedek</a>);' yap. 'Güncellemeler' satırında (id=\"altyapi-guncellemeler\") 'Dependabot npm'in yanında GitHub Actions, Docker ve Docker Compose imajlarını da günceller.' cümlesinden sonra şunu ekle: 'docker/postgres/Dockerfile'daki taban imajı da Dependabot günceller; içindeki pgBackRest paket sürümü onun dışında kalır, pgBackRest yayınları GitHub'da izlenip elle yükseltilir.'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "kod",
+    "instruction": "'Klasör yapısı' listesine packages/contracts satırından sonra yeni madde ekle: 'docker/postgres: pgBackRest eklenmiş PostgreSQL imajının Dockerfile'ı (bkz. <a href=\"#veritabani-yedek\">Yedek</a>)'."
+   }
+  ]
+ },
+ {
+  "id": "D64",
+  "outcome": "CHANGE",
+  "decision": "Seviyeler durumdan hesaplanır; aynı anda birden çok seviyenin koşulu sağlanırsa yalnız en yüksek seviyenin mesajı gider, atlanan seviyelerin mesajı sonradan gönderilmez. Seviye ilk devamsızlıktan önce de hesaplanır, küçük hakta öğrenci ilk günden uyarı görebilir. Telefonda her ders ve tür (teori, uygulama) için tek bildirim vardır; yeni seviye aynı bildirim kimliğiyle eskisinin yerine geçer, uyarılar yığılmaz.",
+  "rationale": "Plan 'Uyarı seviyeleri' dört mesaj veriyor, 'Hak formülü ve test notları' küçük haklarda seviyelerin çakıştığını (%80'de T=3 için hak 0, T=5 için hak 1) yazıyor ama hangi mesajın gideceğini söylemiyor. Hesap: T=3, p=80 için hak = 3 - (240+99) div 100 = 0; T=5 için 5 - (400+99) div 100 = 1. Hak 1'de ilk devamsızlık 1., 2. ve 3. seviyeyi birlikte tetikler; en yüksek seviye ('Hakkın kalmadı') öğrencinin gerçek durumunu söyleyen tek mesajdır. Android belgesi aynı kimlikle notify çağrısının bildirimi güncellediğini ve sık güncellemelerin düşürülebileceğini yazıyor; ders ve tür başına tek bildirim kimliği yığılmayı da önler.",
+  "sources": [
+   "https://developer.android.com/develop/ui/views/notifications/build-notification"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "devam",
+    "instruction": "'Uyarı seviyeleri' başlığının altındaki 'Öğrenciye uyarı yalnız seviye değişince gider; seviye teori ve uygulama için ayrı hesaplanır, mesajda hangisi olduğu yazar:' paragrafını şöyle değiştir: 'Öğrenciye uyarı yalnız seviye değişince gider; seviye teori ve uygulama için ayrı hesaplanır, mesajda hangisi olduğu yazar. Seviye durumdan hesaplanır: aynı anda birden çok seviyenin koşulu sağlanırsa yalnız en yüksek seviyenin mesajı gider, atlanan seviyelerin mesajı sonradan gönderilmez. Seviye ilk devamsızlıktan önce de hesaplanır; küçük hakta öğrenci ilk günden uyarı görebilir. Telefonda her ders ve tür için tek bildirim durur, yenisi eskisinin yerine geçer (bkz. <a href=\"teknik.html#telefon-arka-plan\">Arka plan ve bildirim</a>):'. Liste aynen kalır."
+   },
+   {
+    "file": "plan.html",
+    "section": "devam",
+    "instruction": "'Hak formülü ve test notları' içindeki 'Küçük haklarda çakışabilen seviyeler (%80'de hak T=3 için 0, T=5 için 1) ayrı test tablosuyla denenir.' maddesini şöyle değiştir: 'Küçük haklarda çakışabilen seviyeler (%80'de hak T=3 için 0, T=5 için 1) ayrı test tablosuyla denenir; tabloda beklenen mesaj en yüksek seviyenin mesajıdır. 1 saatlik oturumlarla: T=3'te ilk günden \"Hakkın kalmadı\"; T=5'te ilk günden \"Bir ders daha kaçırırsan hakkın biter\", ilk devamsızlıkta yalnız \"Hakkın kalmadı\".'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "'Arka plan ve bildirim' satırının (id=\"telefon-arka-plan\") sonuna şu cümleyi ekle: 'Hak uyarısı her ders ve tür (teori, uygulama) için sabit bir bildirim kimliğiyle gösterilir; yeni seviye aynı kimlikle eskisinin yerine geçer, art arda birden çok uyarı yığılmaz (kural: bkz. <a href=\"plan.html#devam\">Devamsızlık, Uyarı seviyeleri</a>).'"
+   }
+  ]
+ },
+ {
+  "id": "D65",
+  "outcome": "NO_CHANGE",
+  "decision": "Değişiklik yok. Plan 'Sürüm kontrolü' satırı (section dagitim, id dagitim-guncelleme yakınında) güncelleme ekranının Play kurulumunda Play sayfasını, iPhone'da App Store sayfasını (deneme döneminde TestFlight'ı), GitHub APK kurulumunda GitHub'daki son sürüm bağlantısını açtığını zaten yazıyor; 'diğerlerinde GitHub bağlantısı' ifadesi iki belgede de artık yok.",
+  "rationale": "plan.html ve teknik.html'de 'diğerlerinde' araması sonuç vermedi; plan.html 489. satır üç kurulum yolunu ayrı ayrı sayıyor ve iPhone için App Store ile TestFlight'ı doğru gösteriyor. Apple belgesi TestFlight genel bağlantısının (public link) paylaşılıp açıldığını, 10.000 kişi sınırını ve bağlantının kapatılabildiğini doğruluyor; plandaki deneme dönemi akışıyla uyumlu.",
+  "sources": [
+   "https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers"
+  ],
+  "edits": []
+ },
+ {
+  "id": "D66",
+  "outcome": "CHANGE",
+  "decision": "Makbuz QR'ı kaydın imzalı zarfını aynen taşır (kayıt metni, imza türü, imza). Hoca okutunca telefonu yalnız kaydın kendi dersine ait olduğunu denetler ve zarfı ortak kuyruğa 'makbuz okutma' olarak koyar; zarf hocanın oturumuyla gider, sunucu öğrencinin cihaz imzasını normal gönderimdeki gibi doğrular ve aynı kurallarla karar verir. Hoca kaydı değiştiremez (imza bozulur), kayıt zaten ulaştıysa 'zaten var' döner, ulaşma anı hocanın gönderiminin sunucuya ulaştığı andır. Kayıtta geliş yolu (öğrencinin telefonu ya da okutan hoca ve okutma zamanı) saklanır; sonuç düzeltme değil normal kayıttır. Her kayıt ayrı QR'dır, bekleyenler sırayla gösterilir. QR bayt kipinde, L düzeyinde; tahmini 600 ile 900 bayt (sürüm 20 ile 25 arası), yakından okunduğu için sorun değil, gerçek boyut ilk kayıtla ölçülür.",
+  "rationale": "Makbuz QR'ı öğrencinin kaydı sunucuya hiç gönderemediği durum için var; QR yalnız kimlik ya da özet taşısaydı sunucuda doğrulanacak kayıt olmazdı ve hoca 'beyana dayalı' düzeltmeye düşerdi. Zarfın kendisini taşımak en az parçalı yol: yeni format, yeni imza ya da yeni uç yok; aynı doğrulama kodu ve (cihaz, sıra numarası) tekilliği kullanılır, hoca sahte kayıt üretemez. Plan 'Ortak kuyruk' zaten 'makbuz okutma'yı hocanın kuyruk işleri arasında sayıyor, teknik 'Kamera ve QR' Aşama 1'den itibaren makbuz okutmayı yazıyor. Kapasite: bayt kipinde L düzeyinde sürüm 20 en çok 858, sürüm 25 en çok 1273 bayt; Android P-256 imzası ve iPhone App Attest onayı base64 ile birkaç yüz karakter ekler, toplam bu aralığa sığar (tahmin olarak işaretlenir).",
+  "sources": [
+   "https://www.thonky.com/qr-code-tutorial/character-capacities"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Kayıt ve makbuz' satırına (row div) id=\"kararlar-kayit-ve-makbuz\" ekle. Satırın sonuna ('Ulaşanlar da dönem kilitlenene kadar telefonda saklanır.' cümlesinden sonra) şunu ekle: 'Makbuz QR'ı kaydın imzalı zarfını aynen taşır (kayıt metni, imza türü, imza; biçim: bkz. <a href=\"teknik.html#telefon-kamera-qr\">Kamera ve QR</a>). Hoca okutunca telefonu yalnız kaydın kendi dersine ait olduğunu denetler, zarfı ortak kuyruğa \"makbuz okutma\" olarak koyar; zarf hocanın oturumuyla gider, sunucu öğrencinin cihaz imzasını normal gönderimdeki gibi doğrular ve aynı kurallarla karar verir. Hoca kaydı değiştiremez, imza bozulur. Kayıt zaten ulaştıysa \"zaten var\" döner; ulaşma anı hocanın gönderiminin sunucuya ulaştığı an. Kayıtta geliş yolu (öğrencinin telefonu ya da okutan hoca) saklanır; sonuç düzeltme değil, normal kayıttır. Öğrencinin telefonu sonra eşitlediğinde makbuz \"Sunucuya ulaştı\" olur. Her kayıt ayrı QR; birden çok bekleyen kayıt sırayla gösterilir.'"
+   },
+   {
+    "file": "plan.html",
+    "section": "gun",
+    "instruction": "'Kenar durumlar' içindeki 'Öğrenci hiç göndermiyor' maddesinde 'makbuz QR'ını gösterirse hoca telefonuyla okutup düzeltir' ifadesini şöyle değiştir: 'makbuz QR'ını gösterirse hoca telefonuyla okutur, kayıt hocanın telefonundan aynen sunucuya gider ve normal kayıt gibi karara bağlanır (düzeltme sayılmaz; bkz. <a href=\"#kararlar-kayit-ve-makbuz\">Kayıt ve makbuz</a>)'. 'gösteremezse \"beyana dayalı\" koduyla düzeltilir' kısmı aynen kalır."
+   },
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "'Kamera ve QR' satırında (id=\"telefon-kamera-qr\") 'hoca makbuz QR'ını okutur, öğrencinin telefonu makbuzu çizer (kareler düz görünümlerle; react-native-qrcode-svg yok)' ifadesinden sonra şunu ekle: '. Makbuz QR'ının içeriği imza zarfının kendisi (bkz. <a href=\"#sunucu-imza-dogrulama\">İmza doğrulama</a>), yeniden biçimlendirilmez; bayt kipinde, L düzeyinde. Tahmini boyut 600 ile 900 bayt, yani sürüm 20 ile 25 arası (L düzeyinde sürüm 20 en çok 858, sürüm 25 en çok 1273 bayt); yakından okutulduğu için büyük QR sorun değil, gerçek boyut ilk kayıtla ölçülür (karar: bkz. <a href=\"plan.html#kararlar-kayit-ve-makbuz\">Kayıt ve makbuz</a>)'. Satırın 'Aşama 2'de de aynı ikisi.' kısmı ve devamı aynen kalır."
+   },
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "'İmza doğrulama' satırında (id=\"sunucu-imza-dogrulama\") 'aynı kayıt yeniden gelirse sayaca bakılmadan \"zaten var\" döner.' cümlesinden sonra şunu ekle: 'Hocanın okuttuğu makbuz aynı doğrulamadan geçer; zarfı getiren hocanın oturumu kaydı değiştirmez, yalnız geliş yolu olarak saklanır.'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "kod",
+    "instruction": "'Veri modeli (ilk taslak)' altındaki 'Yoklama kayıtları' maddesinde 'sunucuya ulaşma zamanı,' ifadesinden sonra 'geliş yolu (öğrencinin telefonu ya da makbuzu okutan hoca ve hocanın telefonundaki okutma zamanı),' ekle."
+   }
+  ]
+ },
+ {
+  "id": "D67",
+  "outcome": "CHANGE",
+  "decision": "Sayımı etiket değil sunucu kararı belirler. 'Kendi beyanı' kaydın kararı 'var'dır, onaydan önce de geçici olarak sayılır; hoca toplu onaylar, reddederse kayıt Yok olur, seviye yeniden hesaplanır ve öğrenciye bildirilir; onay bekleyen varken AKSİS özeti geçici kalır; dönem kilidine kadar onaylanmayan kayıt sayılmış haliyle kilitlenir, denetim kaydına onaysız kilitlendiği yazılır. 'QR'sız' Aşama 1 dersinde sayılır; QR'lı (Aşama 2) derste QR'sız gelen kayıt İncelemede kalır, hoca onaylayana kadar sayılmaz. Yedek kodla alınan kayıt için yeni etiket: 'Yedek kodlu'; Doğrulanmış etiketi almaz, 2'lik ortak sınır içinde sayılır, sınırı aşan İncelemede.",
+  "rationale": "Süre seçilmemiş derste plan 'yoklama takip edilmiyor olabilir' diyor; kayıtlar onaya kadar sayılmasaydı hocanın hiç onaylamadığı derste bütün öğrenciler devamsız görünür, yanlış 'Hakkını aştın' uyarıları giderdi. Geçici sayım bu hatayı önler; AKSİS özetindeki 'KARAR BEKLİYOR' ve 'geçici' kuralı zaten belirsizliği hocaya gösteriyor. Aşama 1'de her kayıt QR'sız olduğundan QR'sız etiketin sayımı kesmesi Aşama 1'i işlemez kılar; QR'lı derste ise QR kanıttır, QR'sız kayıt plandaki 'ayrı kalır, hoca isterse onaylar' kuralına uygun olarak incelemeye düşer. Yedek kodlu kayıtlar 2'lik ortak sınıra girdiğinden sayılabilmeleri ve ölçülebilmeleri için ayrı evet/hayır alanı gerekir; veri modeli zaten etiketleri ayrı alanlarda tutuyor, yeni tablo gerekmez. Benzer sistem: Moodle Attendance oturumu öğrencinin kendi yoklamasını kaydetmesine açabiliyor.",
+  "sources": [
+   "https://github.com/danmarsden/moodle-mod_attendance"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "gun",
+    "instruction": "'Kayıt etiketleri' başlığına (ya da onu taşıyan öğeye) id=\"gun-kayit-etiketleri\" ekle. 'QR'sız' satırının açıklamasını şöyle değiştir: 'Aşama 1'deki her kayıt; sınıfta olduğu doğrulanmamıştır. Aşama 1 dersinde sayılır; QR'lı derste QR'sız gelen kayıt İncelemede kalır, hoca onaylayana kadar sayılmaz.' 'Kendi beyanı' satırının açıklamasını şöyle değiştir: 'Süre seçilmemiş dersteki kayıt; kararı var, onaydan önce de geçici olarak sayılır; hoca toplu onaylar. Reddederse kayıt Yok olur, seviye yeniden hesaplanır, öğrenciye bildirilir. Onay bekleyen varken AKSİS özeti geçici kalır (bkz. <a href=\"#devam\">Devamsızlık</a>). Dönem kilidine kadar onaylanmayan kayıt sayılmış haliyle kilitlenir, denetim kaydına onaysız kilitlendiği yazılır.' 'Doğrulanmış' satırından önce yeni satır ekle: k='Yedek kodlu', açıklama='QR yerine hocanın telefonunda gösterilen yedek kodla alınan kayıt (Aşama 2); Doğrulanmış etiketi almaz; 2'lik ortak sınır içinde sayılır, sınırı aşan İncelemede kalır (bkz. <a href=\"#hile-otomatik-kabul-kurali\">Otomatik kabul kuralı</a>).' Listenin altındaki 'Kayıtta birden çok etiket olabilir; ...' paragrafının başına şu cümleyi ekle: 'Sayımı etiket değil sunucu kararı belirler.'"
+   },
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Süre seçilmediyse' satırında 'hoca bunları toplu onaylar (yoklama takip edilmiyor olabilir).' ifadesini 'hoca bunları toplu onaylar (yoklama takip edilmiyor olabilir); onaya kadar geçici olarak sayılır (bkz. <a href=\"#gun-kayit-etiketleri\">Kayıt etiketleri</a>).' yap."
+   },
+   {
+    "file": "plan.html",
+    "section": "asama23",
+    "instruction": "'QR'sız kayıtlar ayrı kalır, hoca isterse onaylar.' maddesini 'QR'lı derste QR'sız gelen kayıtlar İncelemede kalır (sayılmaz), hoca isterse onaylar (bkz. <a href=\"#gun-kayit-etiketleri\">Kayıt etiketleri</a>).' yap. 'Yedek kod' maddesinde '2'lik ortak sınıra girer.' cümlesini '2'lik ortak sınıra girer; kayıt \"Yedek kodlu\" etiketi alır.' yap."
+   },
+   {
+    "file": "plan.html",
+    "section": "sozluk",
+    "instruction": "'Kendi beyanı: Süre seçilmemiş derste verilen, hoca onayı bekleyen kayıt.' tanımını 'Kendi beyanı: Süre seçilmemiş derste verilen, hoca onayına kadar geçici olarak sayılan kayıt.' yap."
+   }
+  ]
+ },
+ {
+  "id": "D68",
+  "outcome": "CHANGE",
+  "decision": "(1) 'Olay kaydı' ile 'günlük sayaçlar' aynı şeydir; tek terim 'günlük sayaçlar' kalır: telefon hataları hata türü ve ekran adına göre sayar, hata metni ve kişisel veri gitmez. (2) Veritabanı nesli elle tutulmaz: PostgreSQL'in küme kimliği (pg_control_system().system_identifier) ile zaman çizelgesi (pg_control_checkpoint().timeline_id) ikilisidir; pgBackRest'ten geri yükleme yeni zaman çizelgesi açar, pg_dump'tan dönüş yeni küme kurar, ikisinde de nesil kendiliğinden değişir. API her indirmede değişenler sorgusuyla aynı işlemde okur. (3) 'Eşitleme belirteci' terimi kalkar, plandaki 'imleç' kullanılır: telefonun son aldığı değişiklik sürümü ile veritabanı nesli; sözlüğe girer. (4) 'Tarafsız sebep kodu' Son durumlar listesine 'QR okutamadı' adıyla girer (Elle eklendi'ye bağlı, öğrenciyi suçlamaz), yanına 'telefonu yok ya da çalışmıyor' kodu. (5) Gece sınıflandırma işi kararı değiştirmez; kararlar kayıt geldiğinde ya da ilgili olay olduğunda (teyit, ayar değişikliği, kafa sayısı) aynı işlemde verilir. Gece işi bekleyen incelemeleri ve sorun bildirimlerini sıralayıp her hocanın ertesi gün göreceği küçük partiye koyar: önce öğrencinin devam sonucunu değiştirebilecekler, sonra en eskiler; parti boyu başlangıç değeri hoca başına 20, kullanımla ayarlanır; kalanlar sonraki geceye devreder.",
+  "rationale": "Plan 'Ölçüm' ayrı ham olay tablosu olmadığını ve telefondan yalnız günlük toplam geldiğini söylüyor, teknik veri modeli 'Telefon sayaçları' diyor; 'Olay kaydı' (plan Ortak kuyruk) ve 'olay kaydıma yazar' (teknik Arka plan ve bildirim) ikinci bir yapı varmış gibi okunuyor. Nesil için elle artırılan bir değer geri yükleme adımında unutulabilir; PostgreSQL belgesi system_identifier ve timeline_id'yi denetim fonksiyonlarından veriyor, PostgreSQL 18 kaynağındaki system_functions.sql bu fonksiyonlara yetki kısıtı koymuyor, pgBackRest kılavuzu geri yüklemede yeni zaman çizelgesi seçildiğini gösteriyor. Yanlış pozitif (ör. büyük sürüm geçişi nesli değiştirirse) yalnız bir kez baştan indirmedir, zararsız; yanlış negatif mümkün değil. Plan 'İndirme' satırı 'imleç', teknik 'eşitleme belirteci' diyerek aynı şeye iki ad veriyor. Hile bölümündeki 'tarafsız sebep kodu' Son durumlar'ın 'her sebep kodu tek bir son duruma bağlıdır' kuralına bağlanmamıştı. Gece işi teknikte yalnız zamanlamasıyla yazılı, planda ise yalnız 'her gece aşamalı sorulur' deniyor; işi kararları değil yalnız sıralamayı yapan, iki kez çalışsa da sonucu değişmeyen bir iş olarak tanımlamak teknikteki missed: once kuralıyla uyumlu ve en az parçalı yol.",
+  "sources": [
+   "https://www.postgresql.org/docs/18/functions-info.html",
+   "https://raw.githubusercontent.com/postgres/postgres/REL_18_STABLE/src/backend/catalog/system_functions.sql",
+   "https://pgbackrest.org/user-guide.html"
+  ],
+  "edits": [
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Ortak kuyruk' satırında 'Olay kaydı yoklama kayıtlarından sonra gider.' cümlesini 'Günlük sayaçlar (bkz. <a href=\"#kararlar-olcum\">Ölçüm</a>) yoklama kayıtlarından sonra gider.' yap."
+   },
+   {
+    "file": "teknik.html",
+    "section": "telefon",
+    "instruction": "'Arka plan ve bildirim' satırında (id=\"telefon-arka-plan\") 'Ekranların hata sınırları ve genel hata yakalayıcı hataları olay kaydıma yazar.' cümlesini 'Ekranların hata sınırları ve genel hata yakalayıcı hataları günlük sayaçlara yazar: hata türü ve ekran adına göre sayı; hata metni ve kişisel veri gitmez (bkz. <a href=\"plan.html#kararlar-olcum\">Ölçüm</a>).' yap."
+   },
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'İndirme' satırında (id=\"kararlar-indirme\") 'İmleç veritabanı neslini taşır;' ifadesini şöyle değiştir: 'İmleç (telefonun son aldığı değişiklik sürümü) veritabanı neslini taşır. Nesil elle tutulmaz: PostgreSQL'in küme kimliği ile zaman çizelgesinden oluşur; pgBackRest'ten geri yükleme yeni zaman çizelgesi açar, pg_dump'tan dönüş yeni küme kurar, ikisinde de nesil kendiliğinden değişir (ayrıntı: bkz. <a href=\"teknik.html#kod\">Veri modeli</a>);'. Cümlenin devamı ('sunucu imleci tanımazsa ...') aynen kalır."
+   },
+   {
+    "file": "teknik.html",
+    "section": "kod",
+    "instruction": "'Veri modeli (ilk taslak)' altındaki 'Telefona inen tablolar' maddesinde 'sürüm tek sayaç satırından, eşitleme belirtecinde veritabanı nesli.' ifadesini şöyle değiştir: 'sürüm tek sayaç satırından; telefonun imlecinde (bkz. <a href=\"plan.html#kararlar-indirme\">İndirme</a>) veritabanı nesli. Nesil: pg_control_system() fonksiyonunun system_identifier değeri ile pg_control_checkpoint() fonksiyonunun timeline_id değeri; API her indirmede değişenler sorgusuyla aynı işlemde okur, ayrı tablo ya da elle adım yok. Büyük sürüm geçişi nesli değiştirirse bu yalnız bir kez baştan indirmedir. Yedekten dönüş denemesinde (bkz. <a href=\"#veritabani-yedek\">Yedek</a>) neslin değiştiği de denetlenir.'"
+   },
+   {
+    "file": "plan.html",
+    "section": "sozluk",
+    "instruction": "'Kısa sözlük' listesine 'Gönderme' tanımından sonra iki madde ekle: 'İmleç: Telefonun indirmede sunucuya verdiği, son aldığı değişiklik sürümü ile veritabanı nesli.' ve 'Veritabanı nesli: PostgreSQL'in küme kimliği ile zaman çizelgesi; yedekten dönüşte kendiliğinden değişir, telefonlara \"baştan indir\" dedirtir.'"
+   },
+   {
+    "file": "plan.html",
+    "section": "gun",
+    "instruction": "'Son durumlar' (id=\"gun-son-durumlar\") paragrafında 'beyana dayalı düzeltme ve elle ekleme Elle eklendi.' ifadesini şöyle değiştir: 'beyana dayalı düzeltme ve elle ekleme Elle eklendi; elle eklemenin sebep kodları \"telefonu yok ya da çalışmıyor\" ve \"QR okutamadı\" (öğrenciyi suçlamayan tarafsız kod).'"
+   },
+   {
+    "file": "plan.html",
+    "section": "hile",
+    "instruction": "'Otomatik kabul kuralı' paragrafında (id=\"hile-otomatik-kabul-kurali\") 'QR okuyamayan öğrenciyi hoca tarafsız sebep koduyla elle ekler.' cümlesini 'QR okuyamayan öğrenciyi hoca \"QR okutamadı\" sebep koduyla elle ekler (tarafsız kod, son durumu Elle eklendi; bkz. <a href=\"#gun-son-durumlar\">Son durumlar</a>).' yap."
+   },
+   {
+    "file": "plan.html",
+    "section": "kararlar",
+    "instruction": "'Şüpheli kayıt' satırına (row div) id=\"kararlar-supheli-kayit\" ekle ve açıklamasını şöyle değiştir: '\"İncelemede\" kalır, hoca onaylayana kadar sayılmaz; her gece aşamalı sorulur (dönem sonunda yığılmasın). Gece sınıflandırma işi kararı değiştirmez: kararlar kayıt geldiğinde ya da ilgili olay olduğunda (teyit, ayar değişikliği, kafa sayısı) aynı işlemde verilir. Gece işi bekleyen incelemeleri ve sorun bildirimlerini sıralayıp her hocanın ertesi gün göreceği küçük partiye koyar: önce öğrencinin devam sonucunu değiştirebilecekler, sonra en eskiler. Parti boyu başlangıç değeri hoca başına 20, kullanımla ayarlanır; kalanlar sonraki geceye devreder. Aynı girdiyle iki kez çalışsa da sonuç değişmez (zamanlama: bkz. <a href=\"teknik.html#sunucu\">Arka plan işleri</a>).'"
+   },
+   {
+    "file": "teknik.html",
+    "section": "sunucu",
+    "instruction": "'Arka plan işleri' satırında 'Gece sınıflandırması İstanbul saatiyle zamanlanır;' ifadesini 'Gece sınıflandırması (ne yaptığı: bkz. <a href=\"plan.html#kararlar-supheli-kayit\">Şüpheli kayıt</a>) İstanbul saatiyle, yoğunluk dışı ve gecelik pg_dump'la çakışmayan bir saatte zamanlanır;' yap. 'işçi kapalıysa açılınca bir kez çalışır (missed: once)' kısmı aynen kalır."
+   }
+  ]
+ }
+]

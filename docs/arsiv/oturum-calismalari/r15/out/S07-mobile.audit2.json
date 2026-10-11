@@ -1,0 +1,328 @@
+{
+ "verdicts": [
+  {
+   "id": "S07-F03",
+   "verdict": "CONFIRMED",
+   "note": "Both quotes verified on the live pages; npm latest 5.104.1 (time.modified 2026-10-02, no v6 tag). The finding is right that student data should be read only from SQLite. Whether the phone needs TanStack Query at all is a judgment call; the claimed saving is small, see recommendation_issues.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://developer.android.com/topic/architecture/data-layer/offline-first", "quote": "The local data source is the canonical source of truth for the app. It should be the exclusive source of any data that higher layers of the app read.", "date": "accessed 2026-10-05"},
+    {"url": "https://tanstack.com/query/latest/docs/framework/react/react-native", "quote": "React Query already supports auto refetch on reconnect in web browser. To add this behavior in React Native you have to use React Query `onlineManager`", "date": "accessed 2026-10-05"},
+    {"url": "https://www.npmjs.com/package/@tanstack/react-query", "quote": "npm view: dist-tags latest 5.104.1, previous 4.44.0; time.modified 2026-10-02T10:04:57.363Z", "date": "2026-10-02"}
+   ]
+  },
+  {
+   "id": "S07-F04",
+   "verdict": "CORRECTED",
+   "note": "Confirmed: Drizzle's Expo guide installs drizzle-orm@rc and drizzle-kit@rc, adds the inline-import Babel plugin and config.resolver.sourceExts.push('sql'), and uses dialect 'sqlite' with driver 'expo'; expo-sqlite documents the PRAGMA user_version pattern, enableChangeListener and addDatabaseChangeListener. Wrong or overstated: issue #5241 carries the label bug/fixed-in-beta, so it is not an open bug on the 1.0 RC line the plan pins; #4617 is open with no maintainer reply and was filed in mid 2025, so its effect on rc.4 is unknown. 'Removes 3 packages' is overstated in this monorepo: drizzle-orm and drizzle-kit stay in the lockfile for the server (lines 534, 583).",
+   "correction": "Open-bug evidence reduces to #4617 (open since 2025-06-05, no maintainer reply, version applicability unknown); #5241 is marked fixed in beta. The repo-level saving from dropping Drizzle on the phone is one package that exists only for the phone (babel-plugin-inline-import), the Babel and Metro edits and a second drizzle config; drizzle-orm and drizzle-kit remain in the repo for the server.",
+   "evidence": [
+    {"url": "https://github.com/drizzle-team/drizzle-orm/issues/5241", "quote": "[BUG]: Expo SQLite generatedAlwaysAs wrong migration ... Labels: bug, bug/fixed-in-beta, db/sqlite, drizzle/kit", "date": "opened 2026-01-09, accessed 2026-10-05"},
+    {"url": "https://github.com/drizzle-team/drizzle-orm/issues/4617", "quote": "[Bug]: Expo SQLite Migrator fails with \"Missing migration\" despite correct MigrationConfig", "date": "opened 2025-06-05, open, no comments, accessed 2026-10-05"},
+    {"url": "https://orm.drizzle.team/docs/get-started/expo-new", "quote": "npm i drizzle-orm@rc ... npm i -D drizzle-kit@rc ... config.resolver.sourceExts.push('sql');", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/versions/latest/sdk/sqlite/", "quote": "await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);", "date": "SDK 57 docs, accessed 2026-10-05"},
+    {"url": "https://www.npmjs.com/package/drizzle-orm", "quote": "npm view: dist-tags latest 0.45.3, rc 1.0.0-rc.4; time.modified 2026-09-21T10:06:40.431Z", "date": "2026-09-21"}
+   ]
+  },
+  {
+   "id": "S07-F05",
+   "verdict": "CONFIRMED",
+   "note": "OkHttpClientProvider.kt on main still reads '// No timeouts by default' with 0 ms connect, read and write timeouts. The research missed that in Expo SDK 57 the global fetch is expo/fetch, not React Native's own fetch; this does not change the conclusion, because ExpoFetchModule builds its client from OkHttpClientProvider.createClient(reactContext) and adds only interceptors, no timeouts. The finding limits the no-timeout default to Android, which matches the sources. expo-network and Better Auth quotes verified.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://github.com/facebook/react-native/blob/main/packages/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/network/OkHttpClientProvider.kt", "quote": "// No timeouts by default ... .connectTimeout(0, TimeUnit.MILLISECONDS) .readTimeout(0, TimeUnit.MILLISECONDS) .writeTimeout(0, TimeUnit.MILLISECONDS)", "date": "main branch, accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/versions/latest/sdk/expo/", "quote": "On Android and iOS, `expo/fetch` is also installed as the global `fetch`.", "date": "SDK 57 docs, accessed 2026-10-05"},
+    {"url": "https://github.com/expo/expo/blob/main/packages/expo/android/src/main/java/expo/modules/fetch/ExpoFetchModule.kt", "quote": "OkHttpClientProvider.createClient(reactContext) .newBuilder() .addInterceptor(OkHttpFileUrlInterceptor(reactContext)) .addInterceptor(TransparentCompressionInterceptor) .build()", "date": "main branch, accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/versions/latest/sdk/network/", "quote": "On iOS, this value will always be the same as `isConnected`.", "date": "SDK 57 docs, accessed 2026-10-05"},
+    {"url": "https://www.better-auth.com/docs/integrations/expo", "quote": "npm install better-auth @better-auth/expo expo-secure-store expo-network", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S07-F06",
+   "verdict": "CONFIRMED",
+   "note": "RFC 6585 section 4 and the under-pressure README verified; @fastify/rate-limit sends retry-after on 429 by default. The finding is right; the recommendation needs two additions, see recommendation_issues.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://www.rfc-editor.org/rfc/rfc6585.html#section-4", "quote": "The response representations SHOULD include details explaining the condition, and MAY include a Retry-After header indicating how long to wait before making a new request.", "date": "2012-04"},
+    {"url": "https://github.com/fastify/under-pressure", "quote": "You can configure the error message and the `Retry-After` header.", "date": "accessed 2026-10-05"},
+    {"url": "https://github.com/fastify/fastify-rate-limit", "quote": "keyGenerator: a sync or async function to generate a unique identifier for each incoming request. Defaults to `(request) => normalizeIP(request.ip, ipv6Subnet)`", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S07-F10",
+   "verdict": "CONFIRMED",
+   "note": "All four facts verified. expo-secure-store's config plugin option configureAndroidBackup (default true) excludes SecureStore data from Android backup, which supports the claim that keys and SecureStore entries do not come back while the database does. Apple's own App Attest page states the key limits. The finding is right; its allowBackup fix is incomplete on Android 12+ targets, see recommendation_issues.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://docs.expo.dev/versions/latest/sdk/securestore/", "quote": "Data saved using `expo-secure-store` will persist across app uninstallations if the app is reinstalled with the same bundle ID.", "date": "SDK 57 docs, accessed 2026-10-05"},
+    {"url": "https://developer.android.com/identity/data/autobackup", "quote": "Data is restored whenever the app is installed, whether from the Play Store, during device setup (when the system installs previously installed apps), or by running `adb` install.", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/versions/latest/config/app/", "quote": "Defaults to the Android default, which is `true`.", "date": "SDK 57 docs, accessed 2026-10-05"},
+    {"url": "https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity", "quote": "The keys that you generate remain valid through regular app updates, but don't survive app reinstallation, device migration, or restoration of a device from a backup.", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S07-F11",
+   "verdict": "CONFIRMED",
+   "note": "Both Expo quotes verified, and the Expo docs say nothing about local database compatibility on fallback, so the gap is real. The plan's update server is xprem, not EAS Update, but the Expo Updates protocol it implements has the same rollBackToEmbedded directive. The PRAGMA user_version example in the expo-sqlite docs already returns early when the stored version is higher than the code's, so 'old code keeps running on a newer database' is cheap if migrations stay add-only.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://docs.expo.dev/versions/latest/sdk/updates/", "quote": "In very rare cases, it's possible that `expo-updates` may need to fall back to the update that's embedded in the app binary, even after newer updates have been downloaded and run (an \"emergency launch\").", "date": "SDK 57 docs, accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/eas-update/rollbacks/", "quote": "The above command instructs the client to run the update embedded in the build.", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/technical-specs/expo-updates-1/", "quote": "directs the expo-updates library to use the update embedded in the host application instead of any other downloaded updates", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S07-F12",
+   "verdict": "CONFIRMED",
+   "note": "Plan text checked: line 172 sits under 'Derste, internet olmasa da'; lines 98 and 425 put duration change and early close in instructor mode; line 145 (problem report) and line 151 (event log) are phone writes; line 677 describes only attendance records. Android quote verified. The 'same signature' part of the recommendation over-reaches, see recommendation_issues.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://developer.android.com/topic/architecture/data-layer/offline-first", "quote": "When you have an object you want to write, insert it into a queue. When the app gets back online, drain the queue with exponential backoff.", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S07-F08",
+   "verdict": "CONFIRMED",
+   "note": "Google quote verified. The plan's own restore tools (pgBackRest point-in-time recovery and nightly pg_dump, line 633) make the 'cursor ahead of the server' case real. The matching upload-side gap (records the server lost after a restore) is listed in misses.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://developers.google.com/workspace/calendar/api/guides/sync", "quote": "In such cases, the server will respond to an incremental request with a response code `410`. This should trigger a full wipe of the client's store and a new full sync.", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S07-F01",
+   "verdict": "CONFIRMED",
+   "note": "Verified: npm expo latest 57.0.26, next 58.0.3; expo@58.0.0 was published 2026-09-29 but is still only on next; react-native next is 0.88.0-rc.3 (latest 0.87.1 is used by no Expo SDK); v58 docs give RN 0.88, React 19.3.0 (npm latest), Android 7+, compileSdk 37, targetSdk 36, iOS 16.4+, Xcode 26.4+; the SDK 57 changelog gives the scene opt-in via expo@57.0.23 and ios.enableSceneSupport, default on 58. Two more facts support the 'newest stable SDK when phone work starts' wording: expo-router 58 turns @expo/ui and expo-symbols into optional peers (on 57 they are hard dependencies, so 58 ships fewer native modules), and the SDK 58 beta reworks the router core with API removals, so starting on 57 means a router migration soon after.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://www.npmjs.com/package/expo", "quote": "npm view: dist-tags latest 57.0.26, next 58.0.3; time 58.0.0 2026-09-29T15:17:26.858Z, 57.0.26 2026-09-29T10:57:08.644Z", "date": "2026-10-03"},
+    {"url": "https://docs.expo.dev/versions/v58.0.0/", "quote": "58.0.0 | 0.88 | 19.3.0 ... 58.0.0 | 7+ | 37 | 36 | 16.4+ | 26.4+", "date": "accessed 2026-10-05"},
+    {"url": "https://expo.dev/changelog/sdk-58-beta", "quote": "We will move to the stable release when React Native 0.88 ships, and release SDK 58 shortly after.", "date": "2026-09-15"},
+    {"url": "https://expo.dev/changelog/sdk-57", "quote": "On SDK 57, `expo@57.0.23` adds opt-in scene support, enabled with the `ios.enableSceneSupport` property of `expo-build-properties`.", "date": "2026-06-30"},
+    {"url": "https://www.npmjs.com/package/expo-router", "quote": "npm view expo-router@57.0.24 dependencies: \"@expo/ui\": \"^57.0.21\", \"expo-symbols\": \"^57.0.3\"; expo-router@58.0.13 peerDependenciesMeta: \"@expo/ui\": {\"optional\": true}, \"expo-symbols\": {\"optional\": true}", "date": "2026-10-03"}
+   ]
+  },
+  {
+   "id": "S07-F02",
+   "verdict": "CONFIRMED",
+   "note": "All three sources verified, including the exact op-sqlite sentence. Electric states its open-source code stays Apache 2.0, but development moves inside Databricks, which still supports 'changed hands'.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://electric.ax/blog/2026/08/11/electric-joining-databricks", "quote": "Electric Cloud is winding down. Cloud users will need to self-host or move to another provider.", "date": "2026-08-11"},
+    {"url": "https://docs.powersync.com/client-sdks/reference/react-native-and-expo", "quote": "`@op-engineering/op-sqlite` is the SQLite library used by the PowerSync SDK on React Native.", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.powersync.com/client-sdks/reference/react-native-and-expo", "quote": "Before you start, connect your source database to the PowerSync Service and deploy Sync Streams.", "date": "accessed 2026-10-05"},
+    {"url": "https://zero.rocicorp.dev/docs/offline", "quote": "Zero does not support offline writes.", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S07-F07",
+   "verdict": "CONFIRMED",
+   "note": "All quotes verified. Two more facts strengthen it: Expo says background tasks stop when the user kills the app and resume only when it is restarted (on iOS a swipe in the app switcher is a kill), and in Android's Restricted bucket job network access is disabled.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://github.com/expo/expo/blob/main/packages/expo-background-task/ios/BackgroundTaskScheduler.swift", "quote": "let request = BGProcessingTaskRequest(identifier: BackgroundTaskConstants.BackgroundWorkerIdentifier) ... request.requiresNetworkConnectivity = true", "date": "main branch, accessed 2026-10-05"},
+    {"url": "https://developer.apple.com/documentation/backgroundtasks/bgprocessingtask", "quote": "Processing tasks run only when the device is idle. The system terminates any background processing tasks running when the user starts using the device. Background refresh tasks aren't affected.", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/versions/latest/sdk/background-task/", "quote": "Background tasks are stopped if the user kills the app. Tasks resume when the app is restarted.", "date": "SDK 57 docs, accessed 2026-10-05"},
+    {"url": "https://developer.android.com/topic/performance/power/power-details", "quote": "Restricted | Once per day for up to 10 minutes", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S07-F09",
+   "verdict": "CONFIRMED",
+   "note": "SQLite quote verified. Neither expo-sqlite's iOS podspec nor its Android build.gradle defines SQLITE_DEFAULT_SYNCHRONOUS or SQLITE_DEFAULT_WAL_SYNCHRONOUS, so FULL is today's default on both platforms. Setting PRAGMA synchronous = FULL explicitly when the database opens keeps this true if Expo's build flags change.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://www.sqlite.org/pragma.html#pragma_synchronous", "quote": "A transaction committed in WAL mode with synchronous=NORMAL might roll back following a power loss or system crash.", "date": "accessed 2026-10-05"},
+    {"url": "https://raw.githubusercontent.com/expo/expo/main/packages/expo-sqlite/ios/ExpoSQLite.podspec", "quote": "-DHAVE_USLEEP=1 -DSQLITE_ENABLE_LOCKING_STYLE=0 -DSQLITE_ENABLE_BYTECODE_VTAB=1 -DSQLITE_TEMP_STORE=2", "date": "main branch, accessed 2026-10-05"},
+    {"url": "https://raw.githubusercontent.com/expo/expo/main/packages/expo-sqlite/android/build.gradle", "quote": "-DSQLITE_ENABLE_BYTECODE_VTAB=1 -DSQLITE_TEMP_STORE=2 -DSQLITE_ENABLE_SESSION=1 -DSQLITE_ENABLE_PREUPDATE_HOOK=1 -DSQLITE_ENABLE_MATH_FUNCTIONS=1 -DSQLITE_ENABLE_API_ARMOR=1", "date": "main branch, accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S07-F13",
+   "verdict": "CONFIRMED",
+   "note": "Guideline 2.1(a) text verified. Plan line 87 rules out a release-build 'show code' switch, so a reviewer mailbox (or Apple-approved demo mode) is the consistent way.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://developer.apple.com/app-store/review/guidelines/", "quote": "include demo account info (and turn on your back-end service!) if your app includes a login. If you are unable to provide a demo account due to legal or security obligations, you may include a built-in demo mode in lieu of a demo account with prior approval by Apple.", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S07-F14",
+   "verdict": "CONFIRMED",
+   "note": "Both quotes verified; the SDK 58 beta post adds that EAS Observe has been generally available since August 20. Error boundaries catch render errors only; native crashes are a separate gap listed in misses.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://docs.expo.dev/router/error-handling/", "quote": "You can export a nested `ErrorBoundary` component from any route to intercept and format component-level errors using React Error Boundaries", "date": "accessed 2026-10-05"},
+    {"url": "https://expo.dev/changelog/sdk-58-beta", "quote": "EAS Observe monitors your app's performance and errors in production, and it has been generally available since August 20.", "date": "2026-09-15"}
+   ]
+  },
+  {
+   "id": "S07-F16",
+   "verdict": "CONFIRMED",
+   "note": "Pricing and rebuild quotes verified. 'Android builds can run locally on Windows' holds for npx expo run:android; Expo does not support eas build --local on Windows (WSL only, untested), so the recommendation should name the former.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://expo.dev/pricing", "quote": "15 Android and 15 iOS builds ... Low-priority queue", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/develop/development-builds/introduction/", "quote": "When you only change your app's TypeScript/JavaScript code, there is no need to rebuild the native app.", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/build-reference/local-builds/", "quote": "On Windows, you can use WSL for local EAS Builds. However, we do not officially test against this platform and do not support Windows for local builds", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S07-F17",
+   "verdict": "CONFIRMED",
+   "note": "Quote verified on main. Expo SDK 56 and 57 run Hermes V1 (the SDK 57 changelog cites Hermes V1 regressions), and the Intl document predates V1, so per-platform Intl variance under V1 is likely but not re-verified. The recommendation (no Intl or locale-dependent calls in shared rules, UTC milliseconds) is safe either way.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://github.com/facebook/hermes/blob/main/doc/IntlAPIs.md", "quote": "We decided to consume the Android and iOS platform provided facilities for space efficiency, but at the cost of some variance in behaviours across Android and iOS platforms.", "date": "main branch, accessed 2026-10-05"},
+    {"url": "https://expo.dev/changelog/sdk-57", "quote": "the initial SDK 57 release inherited a Hermes V1 regression from SDK 56 that could drastically increase memory usage in apps importing `react-native-worklets` or `react-native-reanimated`", "date": "2026-06-30"}
+   ]
+  },
+  {
+   "id": "S07-F15",
+   "verdict": "CONFIRMED",
+   "note": "CSV exports re-fetched for September 2026. Android below 7.0: 1.49 + 0.17 + 0.07 + 0.07 + 0.02 = 1.82 (plus 0.02 Other). iOS below 16.4: 1.48 + 0.2 + 0.18 + 0.14 + 0.1 + 0.09 + 0.05 + 0.03 + 0.02 + 0.01 = 2.30 (plus 0.08 Other). Sums by hand; no scripts allowed in this audit. The plan's only StatCounter link shows the OS split, not versions.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://gs.statcounter.com/android-version-market-share/mobile/turkey", "quote": "\"6.0 Marshmallow\",1.49 ... \"7.0 Nougat\",0.39 ... \"5.1 Lollipop\",0.17 ... \"7.1 Nougat\",0.13 ... \"5.0 Lollipop\",0.07 ... \"4.4 KitKat\",0.07 ... \"4.1 Jelly Bean\",0.02 ... \"Other\",0.02", "date": "2026-09 data (CSV export), accessed 2026-10-05"},
+    {"url": "https://gs.statcounter.com/ios-version-market-share/mobile/turkey", "quote": "\"iOS 15.8\",1.48 ... \"iOS 16.3\",0.2 ... \"iOS 16.1\",0.18 ... \"iOS 12.5\",0.14 ... \"iOS 16.0\",0.1 ... \"iOS 16.2\",0.09 ... \"iOS 15.7\",0.05 ... \"iOS 15.6\",0.03 ... \"iOS 15.5\",0.02 ... \"iOS 15.4\",0.01 ... \"Other\",0.08", "date": "2026-09 data (CSV export), accessed 2026-10-05"}
+   ]
+  }
+ ],
+ "recommendation_issues": [
+  {
+   "id": "S07-F03",
+   "problem": "Removal is defensible but the gain is smaller than stated, and the evidence covers only student data. Instructor online screens (approval lists, review and problem-report lists, device-change approval; lines 427 to 433) are the cache, refresh-after-write and refetch-on-focus case TanStack Query exists for, and the library stays in the monorepo for the panel (line 546). The phone saving is one pure-JS dependency with no native code or build config, while those screens get hand-written loading and refresh code. Either choice passes the lenses; what the plan must state is the rule that matters: student data is read only from SQLite and server data is never cached in two places on the phone. Do not count this as a moving-part reduction in the compactness tally."
+  },
+  {
+   "id": "S07-F04",
+   "problem": "Net saving overstated (see CORRECTED verdict): drizzle-orm and drizzle-kit remain in the repo for the server and #5241 is fixed in beta. The removal still passes the lenses (fewer build edits, no RC migrator on 50,000 phones where a broken migration cannot be repaired by hand), but it moves migration safety onto hand-written SQL steps, which then need their own test (open an old-version database fixture, run the steps, check user_version and that pending queue rows survive), because drizzle-kit check no longer covers the phone."
+  },
+  {
+   "id": "S07-F06",
+   "problem": "Taking the larger of the phone's own backoff and Retry-After, with no spread on top, re-synchronises phones: @fastify/under-pressure sends one configured Retry-After value, so every phone refused in the same second returns in the same second. Add random spread above the Retry-After floor. Larger gap: @fastify/rate-limit keys clients by IP by default (https://github.com/fastify/fastify-rate-limit, 'Defaults to (request) => normalizeIP(request.ip, ipv6Subnet)'). If many phones share one public address (for example campus Wi-Fi behind NAT), a per-IP 429 at class exit throttles all of them together and no phone-side rule can fix that. The send endpoint's limit should be keyed on the device from the signed record, or the endpoint left to under-pressure alone."
+  },
+  {
+   "id": "S07-F10",
+   "problem": "allowBackup: false does not deliver what the recommendation claims on this app's target (targetSdk 36). Android's own page: for apps targeting Android 12 or higher, on some manufacturers' devices allowBackup=false stops cloud backup but not device-to-device transfer (https://developer.android.com/identity/data/autobackup: 'specifying android:allowBackup=\"false\" disables cloud-based backup and restore (such as Google Drive backups) but doesn't disable device-to-device transfers for the app'). Expo's app-config text ('no backup or restore of the application will ever be performed') is contradicted by that primary source. So the database can still reach a new phone without its Keystore key. The runtime check (database and key must match at every start, otherwise the device-change flow) is the real fix and must be the primary rule; allowBackup: false is optional hardening. Excluding the database from device transfer would need dataExtractionRules XML through a config plugin, which adds a moving part."
+  },
+  {
+   "id": "S07-F12",
+   "problem": "'Aynı imza' for instructor writes implies a device key and attestation for instructor phones in Phase 1, which the plan does not have (instructors log in with an emailed code and a session, up to 3 devices, line 69). Instructor writes need the same queue, the same retry rule and the trusted-time certificate (early close and head count must carry a provable time); the session at send time authenticates them. Requiring the student signature path for instructors adds work without fixing a defect. Also, if the instructor session token is kept with expo-secure-store's default WHEN_UNLOCKED, a background send on a locked iPhone cannot read it, so instructor items should be sent in the foreground."
+  }
+ ],
+ "checked_ok_disputes": [],
+ "misses": [
+  {
+   "plan_line": 148,
+   "plan_quote": "Yalnız telefonda yerel bildirim (hak uyarısı, gönderilmemiş kayıt). Push sonra.",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "Local notifications need the user's permission and the plan never asks for it. On Android 13 and later, notifications are off for a new install until the user grants POST_NOTIFICATIONS, and with expo-notifications the system prompt does not appear until a notification channel exists; iOS also needs authorization. In Turkey 73.09% of Android phones run 13 or later (StatCounter September 2026 CSV: 16.0 31.55 + 13.0 14.67 + 15.0 13.61 + 14.0 13.14 + 17.0 0.12, summed by hand). The daily reminder for unsent records (line 130) is the safety net behind the 24-hour target (line 830), and without permission it silently does nothing.",
+   "evidence": [
+    {"url": "https://developer.android.com/develop/ui/views/notifications/notification-permission", "quote": "If a user installs your app on a device that runs Android 13 or higher, your app's notifications are off by default. Your app must wait to send notifications until after you request the new permission and the user grants that permission to your app.", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/versions/latest/sdk/notifications/", "quote": "On Android 13, app users must opt-in to receive notifications via a permissions prompt automatically triggered by the operating system. This prompt will not appear until at least one notification channel is created.", "date": "SDK 57 docs, accessed 2026-10-05"},
+    {"url": "https://gs.statcounter.com/android-version-market-share/mobile/turkey", "quote": "\"16.0\",31.55 ... \"13.0\",14.67 ... \"15.0\",13.61 ... \"14.0\",13.14 ... \"17.0\",0.12", "date": "2026-09 data (CSV export), accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "Bildirim iznini ilk yoklamadan hemen sonra, ne işe yaradığını söyleyerek isterim. Android'de önce bildirim kanalını açarım, yoksa izin penceresi hiç çıkmaz. İzin verilmezse gönderilmemiş kayıt uygulama açılınca ekranın üstünde açıkça gösterilir ve izin durumu olay kaydına yazılır."
+  },
+  {
+   "plan_line": 124,
+   "plan_quote": "Öğrenci iki durumu açıkça görür: \"Telefonda kayıtlı, gönderilmedi\" ve \"Sunucuya ulaştı\".",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "The server can be restored to an earlier point (pgBackRest point-in-time recovery or the nightly pg_dump, line 633). Every record committed after the recovery target is gone from the server, but the phones already show 'Sunucuya ulaştı' and nothing in the plan makes them send again. The plan also does not say how long a phone keeps sent records and their signed bytes, which the receipt-QR correction (line 225) depends on. A restore therefore produces exactly what line 842 forbids: a receipt with no server record, and a student shown absent.",
+   "evidence": [
+    {"url": "https://www.postgresql.org/docs/18/runtime-config-wal.html", "quote": "The transactions that will be recovered are those that committed before (and optionally including) the specified one.", "date": "PostgreSQL 18 docs, accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "Telefon sunucuya ulaşan kayıtları da imzalı baytlarıyla dönem kilitlenene kadar saklar. İndirme cevabı sunucunun bu cihazdan aldığı en büyük sıra numarasını da taşır; telefon kendi 'ulaştı' bildiği daha büyük sıra numaralarını görürse o kayıtları yeniden gönderir. Kayıt kimliği aynı olduğu için çift kayıt oluşmaz ve yedekten dönüşte elle bir şey yapmak gerekmez."
+  },
+  {
+   "plan_line": 516,
+   "plan_quote": "Android 7 ve üstü, iOS 16.4 ve üstü (Expo SDK 57'nin alt sınırı).",
+   "kind": "RISK",
+   "severity": "medium",
+   "finding": "The plan does not name the server's certificate authority. If it is Let's Encrypt, Android 7.0 phones cannot connect: ISRG Root X1 is trusted from Android 7.1.1, and the cross-sign that covered older Android expired on 2024-09-30. Both fetch paths on Android go through OkHttpClientProvider (see F05) and the plan adds no custom trust configuration. Android 7.0 is 0.39% of Turkish Android phones (September 2026); those students would get 'Telefonda kayıtlı' receipts that can never be sent.",
+   "evidence": [
+    {"url": "https://letsencrypt.org/docs/certificate-compatibility/", "quote": "ISRG Root X1 ... Android >= 7.1.1", "date": "accessed 2026-10-05"},
+    {"url": "https://letsencrypt.org/2023/07/10/cross-sign-expiration", "quote": "If you use Android 7.0 or earlier, you may need to take action to ensure you can still access websites secured by Let's Encrypt certificates.", "date": "2023-07-10"},
+    {"url": "https://gs.statcounter.com/android-version-market-share/mobile/turkey", "quote": "\"7.0 Nougat\",0.39", "date": "2026-09 data (CSV export), accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/versions/latest/sdk/build-properties/", "quote": "Override the default `minSdkVersion` version number in build.gradle.", "date": "SDK 57 docs, accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "Sunucunun sertifika zincirini bir Android 7.0 telefonda ya da emülatörde denerim. Let's Encrypt seçersem Android 7.0 bu zincire güvenmez; o zaman ya Android 7.0'ın tanıdığı bir kökten sertifika alırım ya da expo-build-properties ile alt sınırı API 25'e (Android 7.1) çekip satırı 'Android 7.1 ve üstü' diye düzeltirim. expo-build-properties APK işlemci türleri için (satır 476) zaten gerekiyor, yeni parça değil."
+  },
+  {
+   "plan_line": 127,
+   "plan_quote": "Kayıtlar sırayla, en çok 200'lük paketlerle gider ve her kayıt için ayrı sonuç döner: kabul, zaten var, ret, tekrar dene.",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "Per-record results are defined, but not what the phone does when the whole request fails. The server validates bodies with Zod through fastify-type-provider-zod (line 580), and Fastify answers 400 for the entire request when any part fails validation, so one malformed record in a 200-record batch rejects all 200. Because the queue is sent in order, the same batch is retried forever and every later record waits behind it. Which failures are retryable is also undefined: retrying helps only for network errors, timeouts, 408, 429 and 5xx.",
+   "evidence": [
+    {"url": "https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/", "quote": "When schema validation fails for a request, Fastify will automatically return a status 400 response including the result from the validator in the payload.", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.cloud.google.com/storage/docs/retry-strategy", "quote": "HTTP `408`, `429`, and `5xx` response codes. ... Socket timeouts and TCP disconnects.", "date": "accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "Sunucu paketi kayıt kayıt doğrular; bozuk bir kayıt bütün paketi 400 ile düşürmez, yalnız o kayıt için 'ret' döner. Telefon yalnız ağ hatası, zaman aşımı, 408, 429 ve 5xx cevabında yeniden dener. 400 ya da 413 gelirse paketi ikiye bölerek sorunlu kaydı bulur, onu 'ret' diye işaretler ama silmez, olay kaydına yazar ve kuyruğa devam eder. 401 ya da 403 gelirse gönderimi durdurur ve cihaz durumunu gösterir."
+  },
+  {
+   "plan_line": 543,
+   "plan_quote": "Expo SDK 57, expo-sqlite ve drizzle, TanStack Query 5, @expo/app-integrity, kendi küçük yerel modülüm",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "Phase 1 already has a receipt QR: the student shows it and the instructor scans it with the phone to correct an absence (lines 225, 431). That needs a QR renderer on the student's phone and a camera scanner on the instructor's phone, but the phone stack lists expo-camera only under 'Kamera (Aşama 2)' (line 691) and no QR renderer at all. The research's compactness tally ('Additions from my findings: none', net minus 4 packages) therefore undercounts Phase 1 by a native camera module (with its iOS camera permission text) and a QR renderer; a common renderer, react-native-qrcode-svg, also requires the native react-native-svg.",
+   "evidence": [
+    {"url": "https://docs.expo.dev/versions/latest/sdk/camera/", "quote": "<CameraView barcodeScannerSettings={{ barcodeTypes: [\"qr\"], }} />", "date": "SDK 57 docs, accessed 2026-10-05"},
+    {"url": "https://www.npmjs.com/package/react-native-qrcode-svg", "quote": "npm view: version 6.3.26, peerDependencies react-native-svg >=14.0.0", "date": "2026-09-22"}
+   ],
+   "recommendation_tr": "Makbuz QR'ı Aşama 1'de olduğu için Telefon satırına iki şey eklerim: hoca modunda makbuzu okutmak için expo-camera ve öğrencinin makbuzunu çizmek için tek bir küçük QR paketi. İkisi de Aşama 2'de zaten gerekiyor (QR okutma ve hocanın telefonunun ürettiği QR), yani uygulamanın ömrü boyunca yeni parça eklemiş olmam; yalnız Aşama 1'in paket listesi doğru yazılır."
+  },
+  {
+   "plan_line": 677,
+   "plan_quote": "Gönderme kuyruğunda her kaydın kimliği, sıra numarası, imzalı baytları, durumu ve sonraki deneme zamanı durur.",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "The zero-loss logic lives on the phone (queue states, per-record results, backoff, whole-request failures, reinstall check), but the plan's test approach covers only the server (Cucumber), the shared rules (Vitest, fast-check, Stryker) and load (k6). Expo documents unit testing with Jest and the jest-expo preset and does not mention Vitest, so testing queue code that imports React Native modules would bring a second test runner into the repo.",
+   "evidence": [
+    {"url": "https://docs.expo.dev/develop/unit-testing/", "quote": "You will also use the jest-expo library, which is a Jest preset that mocks the native part of the Expo SDK.", "date": "accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "Kuyruğun durum geçişlerini, yeniden deneme ve paket bölme kurallarını React Native'e bağlı olmayan saf TypeScript olarak yazarım ve Vitest ile fast-check ile denerim: rastgele ağ hataları, zaman aşımları ve sunucu cevapları altında hiçbir kayıt kaybolmaz ve 'Sunucuya ulaştı' yalnız 'kabul' ya da 'zaten var' cevabından sonra görünür. Telefonda yalnız ince bir SQLite ve ağ katmanı kalır; ikinci bir test aracı (Jest) eklemem."
+  },
+  {
+   "plan_line": 683,
+   "plan_quote": "Hedef: Android'de Keystore'da P-256 anahtarı (kayıtta anahtar kanıtıyla), iPhone'da App Attest (her kayıt için artan sayaçlı onay).",
+   "kind": "RISK",
+   "severity": "medium",
+   "finding": "Apple says App Attest keys survive app updates but not reinstall, device migration or backup restore, and that attestKey accesses a remote Apple server, so a new key cannot be made offline in class. Apple DTS confirmed in February 2025 a known bug where keys stop working after an app is offloaded and reloaded, with the workaround to generate and attest a new key, and in January 2026 that some app instances fail with invalidKey persistently, advising to treat them as not supporting App Attest. The plan has no rule for an iPhone whose key fails at check-in time; its only key-loss path is the face-to-face device change (line 84), and its 'cannot attest' path exists only for phones without Google services (line 78). F10 covered reinstall and restore but not offload or persistent failure.",
+   "evidence": [
+    {"url": "https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity", "quote": "If the method, which accesses a remote Apple server, returns the serverUnavailable error, try attestation again later with the same key.", "date": "accessed 2026-10-05"},
+    {"url": "https://developer.apple.com/forums/thread/773767", "quote": "The issue with the keys not working when an app is offloaded/reloaded and when an app is restored from backup (or migrated to a new device) is known. ... In the meantime, the workaround is to follow the standard guidance when encountering key errors, and to generate a new key and attest it.", "date": "Apple DTS reply, 2025-02"},
+    {"url": "https://developer.apple.com/forums/thread/812308", "quote": "One solution would be to treat any app instance in this state which is running on an earlier iOS, or persistently getting this error, as not supporting AppAttest and handle that case otherwise.", "date": "Apple DTS reply, 2026-01"}
+   ],
+   "recommendation_tr": "iPhone'da App Attest anahtarı hata verirse yoklama kaybolmaz: kayıt yedek yazılım anahtarıyla imzalanır, 'Cihaz doğrulanmadı' işaretiyle saklanır ve gönderilir; internet gelince yeni anahtar üretilip doğrulanır. Aynı hatayı sürekli veren iPhone, Apple'ın önerdiği gibi App Attest desteklemeyen telefon sayılır ve Google servisleri olmayan telefonların yolundan gider (hoca teyidi, işaretli kayıt). Uygulama boşaltılıp geri gelince anahtarın bozulması yüz yüze cihaz değişimi sayılmaz; yeni anahtar, anahtar zincirinde kalan yedek anahtarın imzasıyla aynı hesaba bağlanır."
+  },
+  {
+   "plan_line": 148,
+   "plan_quote": "Yalnız telefonda yerel bildirim (hak uyarısı, gönderilmemiş kayıt). Push sonra.",
+   "kind": "MISSING",
+   "severity": "low",
+   "finding": "Without push, the 'hak uyarısı' can fire only after the phone downloads the new level. The plan describes the background task only for sending (line 689); Expo says background tasks stop when the user kills the app, and iOS processing tasks run only when the device is idle. A student close to the limit may see the warning only when opening the app, and the plan does not say so.",
+   "evidence": [
+    {"url": "https://docs.expo.dev/versions/latest/sdk/background-task/", "quote": "Background tasks are stopped if the user kills the app. Tasks resume when the app is restarted.", "date": "SDK 57 docs, accessed 2026-10-05"},
+    {"url": "https://developer.apple.com/documentation/backgroundtasks/bgprocessingtask", "quote": "Processing tasks run only when the device is idle.", "date": "accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "Arka plan görevi gönderimden sonra indirmeyi de yapar ve seviye değiştiyse yerel hak uyarısını çıkarır. Push olmadığı için uyarının uygulama açılana kadar gecikebileceğini planda açıkça yazarım; öğrenci kalan hakkını uygulamada her zaman görür."
+  },
+  {
+   "plan_line": 151,
+   "plan_quote": "Uygulama kendi olay kaydını tutar: gönderme oranı, saati doğrulanamayan oran, işaretli oran. Üçüncü taraf analitik yok.",
+   "kind": "MISSING",
+   "severity": "low",
+   "finding": "F14 covers JavaScript errors, but a crash in the app's own Kotlin or Swift module (clock, keys) ends the process before any JavaScript handler runs, and APKs installed from GitHub get no Play Console crash reports. Both systems offer first-party crash records the app can read itself: Android 11 and later through getHistoricalProcessExitReasons (89.95% of Turkish Android phones per the same CSV, summed by hand) and iOS MetricKit crash diagnostics.",
+   "evidence": [
+    {"url": "https://developer.android.com/about/versions/11/features", "quote": "Android 11 introduces the ActivityManager.getHistoricalProcessExitReasons() method, which reports the reasons for any recent process terminations. Apps can use this method to gather crash diagnostic information, such as whether a process termination is due to ANRs, memory issues, or other reasons.", "date": "accessed 2026-10-05"},
+    {"url": "https://developer.apple.com/documentation/metrickit/mxcrashdiagnostic", "quote": "An object representing a diagnostic report for an app crash.", "date": "iOS 14.0+, deprecated in 27.2 in favour of CrashDiagnostic, accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "Kendi yerel modülüm açılışta işletim sisteminin son çökme kayıtlarını okur (Android 11 ve üstünde süreç çıkış nedenleri, iPhone'da MetricKit) ve çökme türünü, uygulama sürümünü olay kaydına yazar. Yeni paket ya da dış servis eklemem."
+  }
+ ],
+ "slice_verdict": "PASS",
+ "verdict_reason": "PASS by the rule: the research has no high-severity findings, and none of its 17 findings is refuted or unverifiable (16 CONFIRMED, 1 CORRECTED: F04 overstates the open Drizzle migrator bugs and the package saving). No high-severity miss found. Before the plan is final it still needs the 5 recommendation fixes (F03 scope, F04 count and migration test, F06 spread above Retry-After and per-device rate limit, F10 device-to-device transfer, F12 no student signature path for instructors) and the 7 medium misses (notification permission, resend after a server restore, Android 7.0 trust store, whole-request failures and batch splitting, Phase 1 receipt-QR packages, queue tests without a second runner, App Attest key failures). The research's 'zero added' compactness claim does not hold for Phase 1 (camera and QR renderer). No checked_ok item is wrong; the AWS Builders' Library redirect and its 2026-06-12 republish date could not be re-checked because aws.amazon.com and docs.aws.amazon.com reset every connection, which is low stakes."
+}

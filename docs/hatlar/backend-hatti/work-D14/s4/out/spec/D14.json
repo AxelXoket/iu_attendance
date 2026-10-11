@@ -1,0 +1,1886 @@
+{
+  "id": "D14",
+  "module": "is-kuyrugu",
+  "summary": "D14 sunucunun arka plan iş altyapısını (pg-boss 12: kuyruk politikası, İstanbul saatli zamanlama, yayın adımında kuyruk kurulumu, işçi süreci ve worker.ts) ve e-posta gönderimini (şablonlar, süreç içi gönderici, adres başına gönderim sınırı) üstlenir. İşlerin ne hesapladığı her işin sorumlu modülündür; D14 işin iş kuralıyla aynı veritabanı işleminde kuyruğa girmesini, iş verisinin yalnız iç kimlik ve tarih taşımasını, her kuyruğun açık ayarla çalışmasını ve hata çıktısının değer sızdırmamasını garanti eder. Kod e-postası kuyruğa konmaz, cevaptan sonra süreç içinde gider; giriş bildirimi de aynı yoldan gider ve sonucu çağırana döner, denetim kaydını D01 yazar. Tek uygulama tablosu eposta_gonderimleri adres yerine anahtarlı özet tutar ve 7 günde silinir; pgboss şemasını pg-boss'un kendi göçü kurar, Drizzle'a girmez. Çok işli kuyruk (D08 devam_hesapla) parti işleyicisiyle alınır, her iş ayrı tamamlanır ya da başarısız sayılır; zamanlamalı işin küçük çıktısı (D08 farkSayisi) isSagligi'nda görünür. worker.ts işçinin bileşim köküdür: D15'in ayarları ve logu, D12'nin iki veritabanı girişi (yoklama_isci, yoklama_saklama) ve işleri, D13'ün uygulamaKur'u ve modüllerin iş tanımları orada bağlanır. HTTP ucu yoktur; öbür modüller beş dış yüz işlevine ve worker.ts'in topladığı iş tanımlarına bağlanır.",
+  "tables": [
+    {
+      "name": "eposta_gonderimleri",
+      "purpose": "Sınıra giren e-postaların adres başına kayan pencere sayımı (dakikada 1, saatte 5, günde 10), her gönderimin sonucu ve günlük hacim. Adres, kod ve e-posta metni tutulmaz; alıcı yalnız anahtarlı özetle durur. Satırı yalnız D14 yazar (ekleme epostaSiniriDenetle ve epostaGonder, güncelleme epostaGonder, silme eposta_gonderim_temizligi) ve 7 gün sonra siler. Reddedilen istek özet başına 24 saatte en çok bir sinirda satırı yazar, sonrakiler yalnız loglanır: tablo istek sayısıyla değil adres ve gün sayısıyla büyür. Tanım apps/server/src/infra/eposta/tablolar.ts, D12'nin tabloYardimcilari ile uygulama şemasında (kimlik(), an(), durumKisiti()); göç drizzle-kit generate ile apps/server/migrations/<14 haneli UTC>_is_kuyrugu_eposta_gonderimleri/ klasörüne (glob apps/server/migrations/??????????????_is_kuyrugu_* D14'ün; göç dosyaları spec dosya listesine değil iş paketine yazılır, klasör kuralı ve CI denetimi D12'nindir; A1).",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "null": false,
+          "default": "uuidv7()",
+          "note": "Birincil anahtar, UUIDv7 (tabloYardimcilari.kimlik()); dışa jeton olarak verilmez. epostaSiniriDenetle bunu gonderimId olarak döndürür."
+        },
+        {
+          "name": "alici_ozeti",
+          "type": "bytea",
+          "null": false,
+          "default": "",
+          "note": "Normalleştirilmiş adresin 'eposta_ozeti' amaçlı ayrı gizli anahtarla HMAC-SHA256 özeti (32 bayt). Adres hiçbir sütunda yok."
+        },
+        {
+          "name": "tur",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "giris_kodu, basvuru_kodu, basvuru_silme_kodu, onay_bekliyor, giris_bildirimi, isletim_uyarisi, isletim_ozeti. Liste ve CHECK (tabloYardimcilari.durumKisiti) infra/eposta/turler.ts'teki EPOSTA_TURLERI sabitinden; tablonun ilk göçü bu yedi türle açılır, sonraki yeni tür CHECK'i genişleten göçle gelir."
+        },
+        {
+          "name": "sonuc",
+          "type": "text",
+          "null": false,
+          "default": "'bekliyor'",
+          "note": "bekliyor, gonderiliyor, gonderildi, basarisiz, sinirda. Geçişler Durumlar bölümünde. sinirda satırı özet başına 24 saatte en çok bir tanedir."
+        },
+        {
+          "name": "deneme_sayisi",
+          "type": "integer",
+          "null": false,
+          "default": "0",
+          "note": "Yapılan SMTP denemesi, 0-3."
+        },
+        {
+          "name": "smtp_yanit_kodu",
+          "type": "integer",
+          "null": true,
+          "default": "",
+          "note": "Son denemenin SMTP yanıt kodu (200-599). Yanıt metni saklanmaz: alıcı adresi geçebilir."
+        },
+        {
+          "name": "hata_turu",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Yalnız basarisiz iken dolu: gecici (SMTP 4xx), kalici (SMTP 5xx), baglanti (STARTTLS ilan etmeyen sunucu dahil), zaman_asimi, kimlik_dogrulama (SMTP 535), kapanis, kapasite, veritabani (gönderimden önce satır güncellemesi hata verdi, ikinci yazım tuttu). kapanis, kapasite ve veritabani teslim denemesi tamamlanmadan süreç tarafında biten gönderimdir ve sınıra sayılmaz. Programlama hatası (adres, şablon verisi, yalıtım) satıra hiç dokunmaz."
+        },
+        {
+          "name": "olusturma_ani",
+          "type": "timestamptz(3)",
+          "null": false,
+          "default": "",
+          "note": "tabloYardimcilari.an(); değer saat arayüzünden (D04 Saat, bileşim kökünden verilir); SQL now() varsayılanı bilerek yok. Sınır pencereleri ve temizlik buna bakar."
+        },
+        {
+          "name": "sonuc_ani",
+          "type": "timestamptz(3)",
+          "null": true,
+          "default": "",
+          "note": "tabloYardimcilari.an(); gonderildi, basarisiz ve sinirda iken dolu (sinirda satırında olusturma_ani ile aynı)."
+        }
+      ],
+      "indexes": [
+        "eposta_gonderimleri_alici_ozeti_olusturma_ani_idx ON (alici_ozeti, olusturma_ani) WHERE sonuc <> 'sinirda': sınır sayımı (adres başına son 24 saat). Kısmi dizin; sayım sorgusu aynı koşulu yazar, böylece okunan satır özet başına günde en çok 10 sayılan satır ve birkaç sayılmayan satırdır.",
+        "eposta_gonderimleri_alici_ozeti_sonuc_ani_idx ON (alici_ozeti, sonuc_ani) WHERE sonuc = 'sinirda': özetin son 24 saatte ret satırı var mı denetimi (sinirda satırında sonuc_ani olusturma_ani ile aynı).",
+        "eposta_gonderimleri_olusturma_ani_idx ON (olusturma_ani): 7 günlük temizlik ve 24 saatlik sağlık özeti."
+      ],
+      "constraints": [
+        "eposta_gonderimleri_id_pk PRIMARY KEY (id)",
+        "eposta_gonderimleri_alici_ozeti_ck CHECK (octet_length(alici_ozeti) = 32)",
+        "eposta_gonderimleri_tur_ck CHECK (tur IN ('giris_kodu','basvuru_kodu','basvuru_silme_kodu','onay_bekliyor','giris_bildirimi','isletim_uyarisi','isletim_ozeti'))",
+        "eposta_gonderimleri_sonuc_ck CHECK (sonuc IN ('bekliyor','gonderiliyor','gonderildi','basarisiz','sinirda'))",
+        "eposta_gonderimleri_deneme_sayisi_ck CHECK (deneme_sayisi BETWEEN 0 AND 3)",
+        "eposta_gonderimleri_smtp_yanit_kodu_ck CHECK (smtp_yanit_kodu IS NULL OR smtp_yanit_kodu BETWEEN 200 AND 599)",
+        "eposta_gonderimleri_hata_turu_ck CHECK (hata_turu IS NULL OR hata_turu IN ('gecici','kalici','baglanti','zaman_asimi','kimlik_dogrulama','kapanis','kapasite','veritabani'))",
+        "eposta_gonderimleri_sonuc_hata_turu_ck CHECK ((sonuc = 'basarisiz') = (hata_turu IS NOT NULL))",
+        "eposta_gonderimleri_sonuc_sonuc_ani_ck CHECK ((sonuc IN ('gonderildi','basarisiz','sinirda')) = (sonuc_ani IS NOT NULL))",
+        "Kısıt ve dizin adları D12.kisitAdi ile üretilir; tur, sonuc ve hata_turu CHECK'leri tabloYardimcilari.durumKisiti ile sözleşme listesinden yazılır (D12 şema testi karşılaştırır); yabancı anahtar yok (satır kişiye bağlanmaz)."
+      ]
+    },
+    {
+      "name": "pgboss_semasi",
+      "purpose": "pg-boss 12'nin kendi şeması pgboss: iş, kuyruk, zamanlama, sürüm ve örnek kaydı tabloları ile job_now() işlevi. Yayın adımında pg-boss migrate (pg-boss'un CLI'sı) kurar ve günceller; Drizzle göçüne ve D12'nin tablo haritası denetimine girmez. Sorumlu modül D14: başka modül okumaz ve yazmaz; uygulama kodu pg-boss API'si ve isSagligi sorgusu dışında dokunmaz. Aşağıdaki sütunlar iş tablosunun D14'ün okuduğu kısmıdır; tablonun adı getQueue().table ile alınır (partition kapalı olduğundan bütün kuyruklar aynı tabloda). Tanım pg-boss'undur, sabitlenen sürümde sözleşme testiyle denetlenir.",
+      "columns": [
+        {
+          "name": "name",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "Kuyruk adı; iş adıyla aynı (contracts.json kuralı)."
+        },
+        {
+          "name": "state",
+          "type": "job_state (pg-boss enum)",
+          "null": false,
+          "default": "'created'",
+          "note": "created, retry, active, completed, cancelled, failed. Enum pg-boss'undur; uygulama tablolarındaki metin ve CHECK kuralı buna uygulanmaz."
+        },
+        {
+          "name": "data",
+          "type": "jsonb",
+          "null": true,
+          "default": "",
+          "note": "İş verisi: yalnız UUID, ISO tarih ve an, açık sınırlı tam sayı (mutlak değer en çok 100.000), mantıksal değer, sabit liste ve ayrılmış _istekKimligi (UUID). Numara, isim, kod, adres yok."
+        },
+        {
+          "name": "output",
+          "type": "jsonb",
+          "null": true,
+          "default": "",
+          "note": "Başarısız işte yalnız güvenli hata özeti (uygulama hata kodu, SQLSTATE, kısıt adı, hata sınıfı); özgün mesaj yazılmaz. Tamamlanan işte yalnız kuyruğun çıktı şemasından (KuyrukTanimi.cikti) (altyapı işinde ALTYAPI_CIKTI_SEMASI'ndan) geçmiş küçük değer, en çok 1 KiB; şema yoksa boş. isSagligi zamanlamalı kuyruğun son tamamlanan işinin çıktısını sonCikti olarak verir."
+        },
+        {
+          "name": "singleton_key",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Tekillik anahtarı: yalnız UUID, ISO tarih ya da küçük harf ve alt çizgi parçaları, ':' ile ayrılır; rakam dizisi kabul edilmez."
+        },
+        {
+          "name": "retry_count",
+          "type": "integer",
+          "null": false,
+          "default": "0",
+          "note": "Yapılan yeniden deneme sayısı; işleyiciye baglam.deneme olarak geçer."
+        },
+        {
+          "name": "created_on",
+          "type": "timestamptz",
+          "null": false,
+          "default": "job_now()",
+          "note": "Testte TestClock'un saati; işleyiciye baglam.tetiklemeAni olarak geçer."
+        },
+        {
+          "name": "start_after",
+          "type": "timestamptz",
+          "null": false,
+          "default": "job_now()",
+          "note": "İşin en erken alınabileceği an (isGonder baslamaAni, yeniden deneme beklemesi). enEskiBekleyenSaniye yalnız bu anı geçmiş işleri sayar."
+        },
+        {
+          "name": "started_on",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "isSagligi son süreyi completed_on ile farkından hesaplar."
+        },
+        {
+          "name": "completed_on",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "isSagligi zamanlamalı işin son başarı anını buradan okur (state = 'completed')."
+        }
+      ],
+      "indexes": [
+        "pg-boss'un kendi dizinleri; D14 dizin eklemez. Şişen dizini işçideki pg-boss reindex ile REINDEX CONCURRENTLY yeniden kurar (işçi rolüne pgboss tablolarında MAINTAIN)."
+      ],
+      "constraints": [
+        "Şema adı pgboss; partition kullanılmaz (bütün kuyruklar ortak iş tablosunda).",
+        "Kurulum sonrası detectSchemaDrift() boş; değilse kur durur (IS_KUYRUGU_SEMA_KAYMASI).",
+        "schemaVersion() değeri BEKLENEN_PGBOSS_SEMA_SURUMU sabitine eşit; değilse API ve işçi açılmaz (IS_KUYRUGU_SEMA_SURUMU).",
+        "Yetki: yoklama_api yalnız iş eklemeye yeten en dar küme; yoklama_isci SELECT, INSERT, UPDATE, DELETE ve MAINTAIN; şemayı kuran rol yoklama_goc. D12 rollere pgboss şemasında yalnız USAGE verir; tablo, dizi ve işlev yetkilerinin tamamını yayın adımındaki kur verir (I060)."
+      ]
+    }
+  ],
+  "endpoints": [],
+  "jobs": [
+    {
+      "name": "pgboss_bakimi",
+      "schedule": "pg-boss'un iç döngüsü, yalnız işçide (supervise: true; API'de kapalı): süre aşımı ve yeniden deneme denetimi 60 saniyede bir (superviseIntervalSeconds), kuyruk sayaçları 60 saniyede bir (monitorIntervalSeconds), eski iş silme ve budama günde bir (maintenanceIntervalSeconds), şişen dizinlerin yeniden kurulması günde bir (reindex). Değerler pg-boss 12 varsayılanıdır ve pgboss.ts'te açıkça yazılır.",
+      "idempotency": "Bakım adımları durum koşullu SQL'dir: süre aşımına düşen iş bir kez yeniden denemeye geçer, silinen satır ikinci geçişte yoktur. Tek işçi kopyası çalışır; ikinci kopya açılsa da aynı satırı iki kez değiştirmez.",
+      "does": "Süresi aşan etkin işleri yeniden denemeye ya da denemeleri bittiyse <ad>_olu ölü kuyruğuna geçirir; 14 gün başlamayan işleri, deleteAfterSeconds süresini aşan biten işleri (7 gün; seyrek zamanlamalı kuyrukta 2 beklenen aralık artı 1 gün) ve 30 günden eski ölü kuyruk işlerini siler; isSagligi'nın okuduğu kuyruk sayaçlarını tazeler; şişen iş dizinlerini yeniden kurar. Uyarıları (slow_query, queue_backlog, clock_skew) pg-boss'un warning olayından loglar."
+    },
+    {
+      "name": "eposta_gonderim_temizligi",
+      "schedule": "Her gün 02:45 Europe/Istanbul (cron '45 2 * * *', tz 'Europe/Istanbul', missed: 'once'); kuyruk politikası exclusive, süre aşımı 300 saniye, 3 deneme.",
+      "idempotency": "Yalnız eşikten (verilen saate göre 7 gün) eski satırları siler; aynı gün ikinci çalışma 0 satır siler, tablo durumu değişmez.",
+      "does": "eposta_gonderimleri tablosunda olusturma_ani 7 günden eski satırları 1.000'lik partilerle, her parti ayrı kısa işlemde (D12.islem) siler; silinen satır sayısını loglar. Adres ve özet loglanmaz."
+    }
+  ],
+  "state_machines": [
+    {
+      "name": "eposta_gonderimleri.sonuc",
+      "states": [
+        "bekliyor",
+        "gonderiliyor",
+        "gonderildi",
+        "basarisiz",
+        "sinirda",
+        "(silindi)"
+      ],
+      "transitions": [
+        {
+          "from": "(yok)",
+          "to": "bekliyor",
+          "by": "epostaSiniriDenetle",
+          "when": "Sınıra giren tür (giris_kodu, basvuru_kodu, basvuru_silme_kodu, onay_bekliyor); çağıranın işlemi READ COMMITTED; D12.danismaKilidi ile 'is-kuyrugu:eposta:<özet>' kilidi (katman 1, işlemin ilk danışma kilidi çağrısı, çağıranın ek anahtarlarıyla birlikte) alındıktan sonra son 60, 3.600 ve 86.400 saniyede sayılan gönderim (sinirda satırı ile kapasite, kapanis ve veritabani hata türlü basarisiz satır sayılmaz) 1, 5 ve 10'un altında. Çağıranın (D01) işleminde yazılır; işlem geri alınırsa satır da yok."
+        },
+        {
+          "from": "(yok)",
+          "to": "sinirda",
+          "by": "epostaSiniriDenetle",
+          "when": "Pencerelerden biri dolu ve bu özetin son 24 saatte sinirda satırı yok. sonuc_ani olusturma_ani ile aynı; e-posta gitmez, satır sınıra sayılmaz. Son 24 saatte sinirda satırı varsa yeni satır yazılmaz, ret yalnız loglanır (olay eposta.sinir, sebep; adres ve özet yok)."
+        },
+        {
+          "from": "(yok)",
+          "to": "gonderiliyor",
+          "by": "epostaGonder",
+          "when": "Sınıra girmeyen tür (giris_bildirimi, isletim_uyarisi, isletim_ozeti), kapasite boş ve gönderici açık; kendi kısa işleminde eklenir. Ekleme hata verirse satır yok, ileti gitmez, sonuç BASARISIZ (veritabani)."
+        },
+        {
+          "from": "bekliyor",
+          "to": "gonderiliyor",
+          "by": "epostaGonder",
+          "when": "Koşullu güncelleme (WHERE id = gonderimId AND sonuc = 'bekliyor' AND alici_ozeti = özet AND tur = şablon) tutunca. Satır yoksa (işlem geri alındı), durum farklıysa (ikinci çağrı), özet ya da tür tutmazsa (ör. onay_bekliyor izniyle giris_kodu şablonu) gönderilmez, sonuç IPTAL."
+        },
+        {
+          "from": "bekliyor",
+          "to": "basarisiz",
+          "by": "epostaGonder",
+          "when": "Koşullu güncellemeden önce kapasite dolu (süreçte yoldaki gönderim 200) ya da gönderici kapanıyor: aynı koşullu güncellemeyle basarisiz (kapasite ya da kapanis) yazılır, ileti gitmez. Koşullu güncelleme veritabanı hatası verirse bir kez basarisiz (veritabani) yazmayı dener; o da tutmazsa satır bekliyor kalır ve 10 dakikadan sonra yarım kalan sayılır. Üç durumda da sonuç BASARISIZ, log yalnız SQLSTATE."
+        },
+        {
+          "from": "(yok)",
+          "to": "basarisiz",
+          "by": "epostaGonder",
+          "when": "Sınıra girmeyen türde kapasite dolu ya da gönderici kapanıyor: satır doğrudan basarisiz (kapasite ya da kapanis) eklenir, ileti gitmez, sonuç BASARISIZ."
+        },
+        {
+          "from": "gonderiliyor",
+          "to": "gonderildi",
+          "by": "epostaGonder",
+          "when": "SMTP 2xx yanıtı. Ardından gelen satır güncellemesi hata verirse sonuç yine GONDERILDI (ileti gitti), satır gonderiliyor kalır ve yarım kalan sayılır; log yalnız SQLSTATE."
+        },
+        {
+          "from": "gonderiliyor",
+          "to": "basarisiz",
+          "by": "epostaGonder",
+          "when": "Kalıcı hata (5xx, kimlik doğrulama), üç geçici hatadan sonra, TLS yükseltmesi yapılamadı (baglanti) ya da deneme beklemesindeyken kapanış başladı (kapanis). Adres ve şablon verisi satıra dokunmadan önce denetlendiği için programlama hatası bu geçişi yapmaz."
+        },
+        {
+          "from": "bekliyor",
+          "to": "(silindi)",
+          "by": "eposta_gonderim_temizligi",
+          "when": "7 günden eski; gönderimi hiç başlamamış satır (süreç cevaptan önce düştü) isSagligi'nda 10 dakikadan sonra yarım kalan sayılır."
+        },
+        {
+          "from": "gonderiliyor, gonderildi, basarisiz, sinirda",
+          "to": "(silindi)",
+          "by": "eposta_gonderim_temizligi",
+          "when": "7 günden eski (bekliyor için de aynı eşik)."
+        }
+      ]
+    },
+    {
+      "name": "pg-boss işi (D14 kuyruk politikasıyla)",
+      "states": [
+        "created",
+        "retry",
+        "active",
+        "completed",
+        "failed",
+        "(ölü kuyrukta created)",
+        "(silindi)"
+      ],
+      "transitions": [
+        {
+          "from": "(yok)",
+          "to": "created",
+          "by": "isGonder",
+          "when": "Çağıranın işleminde (fromDrizzle(tx, sql)); exclusive ya da stately kuyrukta aynı tekillik anahtarlı iş bekliyorsa iş açılmaz, isId null."
+        },
+        {
+          "from": "(yok)",
+          "to": "created",
+          "by": "pg-boss zamanlaması (işçi)",
+          "when": "Cron anı Europe/Istanbul ile geldi; exclusive kuyrukta bekleyen ya da çalışan iş varsa yeni iş açılmaz; işçi kapalıyken kaçan günlük iş açılışta bir kez (missed: once)."
+        },
+        {
+          "from": "(yok)",
+          "to": "created",
+          "by": "kuyruklariKur (yayın adımı)",
+          "when": "acilistaBirKez tanımlı exclusive kuyruğa kur bir iş gönderir; bekleyen ya da çalışan iş varken ikinci kur iş açmaz."
+        },
+        {
+          "from": "created",
+          "to": "active",
+          "by": "işçi (work; tek işli kuyrukta localConcurrency 1 ve batchSize 1, parti kuyruğunda parti.esZamanli ve parti.boyut)",
+          "when": "startAfter geçti; yoklamada (tek işli 2 saniye, parti 0,5 saniye) ya da notifyWorker ile alındı."
+        },
+        {
+          "from": "active",
+          "to": "completed",
+          "by": "işleyici sarmalayıcısı",
+          "when": "Veri şemaya uydu ve işleyici hatasız bitti; döndürdüğü değer kuyruğun çıktı şemasından geçip output'a yazıldı. Parti işleyicisinde başarısız listesinde olmayan her iş kimlik dizisiyle tek tek tamamlanır."
+        },
+        {
+          "from": "active",
+          "to": "retry",
+          "by": "işleyici sarmalayıcısı",
+          "when": "İşleyici hata verdi ya da parti işleyicisi işi başarısız listesine koydu (güvenli özetle), ve deneme kaldı; bekleme 30 saniyeden başlar, üstel artar, en çok 1.800 saniye."
+        },
+        {
+          "from": "active",
+          "to": "retry",
+          "by": "pgboss_bakimi",
+          "when": "sureAsimiSaniye aşıldı (ya da kalp atışı kesildi) ve deneme kaldı."
+        },
+        {
+          "from": "retry",
+          "to": "active",
+          "by": "işçi",
+          "when": "Bekleme bitti."
+        },
+        {
+          "from": "active",
+          "to": "failed",
+          "by": "işleyici sarmalayıcısı ya da pgboss_bakimi",
+          "when": "Denemeler bitti; işin kopyası <ad>_olu kuyruğuna created olarak düşer (işleyicisiz, isSagligi sayar)."
+        },
+        {
+          "from": "completed",
+          "to": "(silindi)",
+          "by": "pgboss_bakimi",
+          "when": "deleteAfterSeconds sonra: 7 gün; seyrek zamanlamalı kuyrukta en az 2 beklenen aralık artı 1 gün (haftalık iş 15 gün), böylece son başarı anı ve son çıktı sonraki çalışmaya kadar okunur; failed da aynı."
+        },
+        {
+          "from": "created",
+          "to": "(silindi)",
+          "by": "pgboss_bakimi",
+          "when": "14 gün başlamazsa (retentionSeconds); ölü kuyrukta 30 gün."
+        }
+      ]
+    },
+    {
+      "name": "İşçi süreci (worker.ts)",
+      "states": [
+        "baslatiliyor",
+        "acilmadi",
+        "calisiyor",
+        "durduruluyor",
+        "durdu"
+      ],
+      "transitions": [
+        {
+          "from": "baslatiliyor",
+          "to": "acilmadi",
+          "by": "worker.ts",
+          "when": "İşçi açılışı tablosundaki bir adım hata verdi: ayar ya da sır eksik, TZ UTC değil (IS_KUYRUGU_SAAT_DILIMI), e-posta ayarı eksik (IS_KUYRUGU_EPOSTA_AYAR_EKSIK), yayın bilgisi bozuk (uygulamaKur içindeki yayinBilgisiYukle) çıkış 78; veritabanı ya da saklama bağlantısı 120 saniyede hazır değil ya da şema geride, pgboss şema sürümü uyuşmuyor (IS_KUYRUGU_SEMA_SURUMU), kayıtlı kuyruk yok (IS_KUYRUGU_KUYRUK_EKSIK), tanım ya da zamanlama kuralı bozuk, uygulamaKur hazır olmadı çıkış 1. Compose yeniden kaldırır."
+        },
+        {
+          "from": "baslatiliyor",
+          "to": "calisiyor",
+          "by": "worker.ts",
+          "when": "Açılış sırası bitti (İşçi açılışı tablosu): ayarlar, log, TZ, iki veritabanı (yoklama_isci havuz 3, yoklama_saklama havuz 1), saat, e-posta, tanımlar (modül işleri; D12 veritabaniIsleri doğrudan isTanimla ile; D15 isletimIsleri altyapiIsleriniUyarla ile), isKuyruguKur (dış yüz bağlı, work yok), uygulamaKur({ surec: 'isci' }) dinleme açmadan (yayın bilgisi, kimlik dinleyicileri ve kayıt desenindeki dinleyiciler işçide de kurulu); en son isKuyrugu.isleriBaslat() work kayıtlarını açtı, isci.hazir logu yazıldı."
+        },
+        {
+          "from": "calisiyor",
+          "to": "durduruluyor",
+          "by": "SIGTERM",
+          "when": "Yayın, yeniden başlatma ya da docker compose stop."
+        },
+        {
+          "from": "durduruluyor",
+          "to": "durdu",
+          "by": "worker.ts",
+          "when": "Sırayla: (1) eposta.kapat(5 sn) ile pg-boss stop({ graceful: true, timeout: 30000 }) aynı anda başlar ve ikisi beklenir; e-posta önce kapandığından deneme beklemesindeki gönderim hemen kapanis ile çözülür ve işleyicisi pg-boss süresinde biter, iş süre aşımına düşüp aynı e-postayı ikinci kez göndermez; (2) app.close(); (3) veritabani ve saklamaVeritabani havuzları kapanır; toplam Compose'un 40 saniyelik bekleme süresinin içinde."
+        },
+        {
+          "from": "calisiyor",
+          "to": "baslatiliyor",
+          "by": "Compose (restart: unless-stopped)",
+          "when": "Bellek sınırı ya da çökme; yarım iş süre aşımıyla yeniden denenir (her işleyici tekrar çalışmaya dayanıklı)."
+        }
+      ]
+    },
+    {
+      "name": "E-posta göndericisi (süreç başına)",
+      "states": [
+        "acik",
+        "kapaniyor",
+        "kapali"
+      ],
+      "transitions": [
+        {
+          "from": "acik",
+          "to": "kapaniyor",
+          "by": "kapat(sureMs)",
+          "when": "server.ts'te app.close'tan sonra kapat(10 sn); worker.ts'te kapanışın ilk adımı olarak pg-boss stop ile aynı anda kapat(5 sn); ikisinde de havuz kapanmadan önce."
+        },
+        {
+          "from": "kapaniyor",
+          "to": "kapali",
+          "by": "gonderici",
+          "when": "Yoldaki gönderimler bitti ya da süre doldu; bekleyen deneme beklemeleri hemen basarisiz (kapanis) yazıldı; bütün satır güncellemeleri tamamlandı."
+        },
+        {
+          "from": "kapaniyor",
+          "to": "kapaniyor",
+          "by": "epostaGonder",
+          "when": "Yeni çağrı gönderilmez; sınıra giren türde bekliyor satırı basarisiz (kapanis) yazılır, sınırsız türde satır doğrudan basarisiz (kapanis) eklenir; BASARISIZ döner."
+        },
+        {
+          "from": "kapali",
+          "to": "kapali",
+          "by": "epostaGonder",
+          "when": "Havuz kapanmış olabileceğinden satıra dokunmadan BASARISIZ (kapanis) döner; bekliyor satırı isSagligi'nda yarım kalan görünür."
+        }
+      ]
+    }
+  ],
+  "invariants": [
+    "İş kuyruğuna giren her iş, onu doğuran iş kuralıyla aynı veritabanı işleminde girer (isGonder(tx, ...)); işlem geri alınırsa iş de yoktur.",
+    "İş verisi ve tekillik anahtarı numara, isim, kod, adres, anahtar ya da jeton taşımaz: yalnız UUID, ISO tarih ve an, açık sınırlı tam sayı (mutlak değer en çok 100.000), mantıksal değer ve sabit liste; yasak yaprak tip tanımda reddedilir.",
+    "Her iş işleyicisi aynı girdiyle iki kez çalışınca aynı sonucu verir; her modül bunu D14'ün iki kez çalıştırma adımıyla senaryoda gösterir.",
+    "Başarısız iş çıktısında ve loglarda yalnız uygulama hata kodu, SQLSTATE, kısıt adı ve hata sınıfı bulunur; özgün hata mesajı ve SMTP yanıt metni saklanmaz. Tamamlanan iş çıktısı yalnız kuyruğun çıktı şemasına (altyapı işinde ALTYAPI_CIKTI_SEMASI) uyan açık sınırlı tam sayı, mantıksal değer, sabit liste değeri, ISO an ve ISO tarihtir, en çok 1 KiB.",
+    "API ve işçi açılırken göç yapmaz; pgboss şema sürümü BEKLENEN_PGBOSS_SEMA_SURUMU'na eşit değilse süreç açılmaz.",
+    "Kuyruk, ölü kuyruk, zamanlama ve pgboss tablo, dizi ve işlev yetkilerini yalnız yayın adımındaki kur komutu şemayı kuran yoklama_goc rolüyle verir ve değiştirir (D12 rollere pgboss şemasında yalnız USAGE verir); API rolü pgboss şemasında yalnız iş ekler.",
+    "Her zamanlama Europe/Istanbul ile kayıtlıdır; günlük ve seyrek işler missed: once ile kayıtlıdır, 03:00-05:00 arasında başlamaz ve aralarında en az 5 dakika vardır.",
+    "Zamanlamalı her kuyruk exclusive ya da stately politikalıdır; aynı zamanlamalı iş üst üste binmez.",
+    "Bir kuralın yürürlüğe girmesi işin çalışmasına bağlanmaz: işler yalnız kalıcı yan etki yazar, iş gecikmesi kararı değiştirmez.",
+    "Kod e-postası iş kuyruğuna girmez ve isteğin cevabını bekletmez: epostaGonder hemen döner, taşıyıcı sonraki olay döngüsünde çağrılır.",
+    "Sınıra giren e-posta (giriş kodu, başvuru kodu, başvuru silme kodu, onay bekliyor) epostaSiniriDenetle'den izin almadan gönderilemez; aynı adrese son 60 saniyede 1, 3.600 saniyede 5, 86.400 saniyede 10'dan fazlası gitmez, READ COMMITTED işlemde yarışan isteklerde de; başka yalıtım düzeyindeki çağrı reddedilir.",
+    "eposta_gonderimleri'nde e-posta adresi, kod ve metin yoktur; alıcı yalnız ayrı anahtarlı HMAC özetiyle durur, satır 7 günden uzun kalmaz.",
+    "Ürün e-postaları düz metindir, bağlantı, alan adı ve adres içermez (kural: Bağlantı denetimi tablosu); son paragrafları plan.html'deki sabit uyarı cümlesidir. Ürün dışı e-postada (işletim uyarısı ve özeti) bağlantı denetimine takılan belirteç [adres] olur.",
+    "Giriş bildirimi gidemezse giriş geri alınmaz; sonuç çağırana (D01) döner ve denetim kaydını D01 yazar.",
+    "Kural taşıyan zaman (sınır pencereleri, temizlik eşiği, sağlık ölçümü) SQL now() ya da Date.now() ile değil, bileşim kökünün verdiği D04 Saat nesnesiyle okunur.",
+    "İş verisi şeması yalnız ekleyerek büyür; yeni alan iki yayında gelir: önce işçinin şeması alanı isteğe bağlı tanır, sonraki yayında gönderen yazar. Kuyrukta bekleyen eski sürüm işi yeni işleyicide de doğrulanır; sarmalayıcı _istekKimligi'ni ayırıp kalanı strict ayrıştırır.",
+    "pg-boss ve nodemailer yalnız infra/is-kuyrugu ve infra/eposta klasörlerinden içe aktarılır.",
+    "Parti işleyicisinde bir işin hatası yalnız o işi başarısız sayar; parti kuyruklarının eşzamanlılık toplamı işçinin Drizzle havuzundan en az 1 eksiktir.",
+    "eposta_gonderimleri'nde bir adres özeti için 24 saatte en çok bir sinirda satırı bulunur; reddedilen istek sayısı tabloyu büyütmez.",
+    "Kapanış, kapasite ya da veritabanı yüzünden teslim edilmeden biten gönderim adresin sınır hakkından düşmez.",
+    "D14 danışma kilidini yalnız D12.danismaKilidi ile alır: adres kilidi 'is-kuyrugu:eposta:<özet>' (katman 1) epostaSiniriDenetle'nin işlemindeki ilk danışma kilidi çağrısıdır, çağıranın ek anahtarları aynı çağrıya katılır; anahtar metninde adres yoktur.",
+    "İşçide work kayıtları uygulamaKur bittikten sonra açılır: ilk iş alındığında modül dinleyicileri, saklama işleyicileri, kimlik dinleyicileri ve yayın bilgisi yüklüdür.",
+    "API isteğinde de doğabilen her D14 hata kodu http 500 ve genel metin taşır; yalnız işçide, kur'da ya da açılışta doğan kod http null'dır ve hiçbir rotanın hatalar listesine girmez."
+  ],
+  "exports": [
+    {
+      "name": "isGonder",
+      "signature": "isGonder<V>(tx: Tx, kuyruk: KuyrukTanimi<V>, veri: V, secenek?: { tekillikAnahtari?: string; baslamaAni?: Date; istekKimligi?: string }): Promise<{ isId: string | null }>",
+      "purpose": "İşi çağıranın veritabanı işleminde kuyruğa koyar (pg-boss send, db: fromDrizzle(tx, sql)). Veriyi kuyruk şemasıyla doğrular (en çok 8 KiB; tanım denetimi en kötü durum boyutunu önceden hesapladığından kuralına uyan tanımda bu hata yalnız tanım dışı veriyle çıkar). İstek kimliği verinin ayrılmış _istekKimligi alanına yazılır. Tekillik anahtarı yalnız stately ya da exclusive kuyrukta ve sayısız parçalarla; baslamaAni en çok 13 gün ileri (bekleyen iş 14 günde silinir). Tekillik yüzünden iş açılmazsa isId null.",
+      "not": "dış yüz (contracts.json)"
+    },
+    {
+      "name": "isTanimla",
+      "signature": "isTanimla<V, C = void>(tanim: { kuyruk: KuyrukTanimi<V, C>; sureAsimiSaniye: number; kalpAtisiSaniye?: number; deneme?: { sayi?: number; beklemeSaniye?: number; ustel?: boolean }; zamanlama?: { cron: string; sonra?: readonly string[] }; acilistaBirKez?: true } & ({ isleyici: (veri: V, baglam: IsBaglami) => Promise<C | void> } | { partiIsleyici: (isler: ReadonlyArray<PartiIsi<V>>, baglam: PartiBaglami) => Promise<{ basarisiz: ReadonlyArray<{ isId: string; hata: unknown }> }>; parti: { boyut: number; esZamanli: number } })): IsTanimi<V>",
+      "purpose": "Saf: tanımı doğrular ve döndürür; modül jobs/<modül>/index.ts dosyasında export const isler dizisine koyar, worker.ts toplar. sureAsimiSaniye zorunlu (10-3.600; parti kuyruğunda bütün partinin süresi), deneme sayısı 0-5 (varsayılan 3), bekleme 1-3.600 saniye (varsayılan 30, üstel), cron 5 alanlı, tz her zaman Europe/Istanbul. Tek işli tanım isleyici alır (localConcurrency 1, batchSize 1, yoklama 2 saniye); çok işli kuyruk partiIsleyici ile parti { boyut: 2-100, esZamanli: 1-4 } alır (batchSize, localConcurrency; yoklama 0,5 saniye), zamanlama ve çıktı şeması taşımaz. Bütün parti tanımlarının esZamanli toplamı işçinin Drizzle havuzundan (3) en az 1 eksik olmalıdır: tek işli kuyruklara bağlantı kalır. acilistaBirKez yalnız exclusive kuyrukta; kur yayın adımında bir iş açar. Ad tekliği, sonra başvuruları, parti ve çizelge kuralları işçi açılışında, kur'da ve sözleşme testinde denetlenir (IS_KUYRUGU_TANIM_GECERSIZ, _YINELENEN_AD, _ZAMANLAMA_KURALI). Altyapı işleri de buradan geçer: D12'nin veritabaniIsleri öğeleri doğrudan (sureAsimiSaniye vermeyen öğeye worker.ts ALTYAPI_IS_VARSAYILANI'ndaki 1.800'ü koyar), D15'in isletimIsleri tanımları altyapiIsleriniUyarla ile.",
+      "not": "dış yüz (contracts.json)"
+    },
+    {
+      "name": "PartiIsi",
+      "signature": "type PartiIsi<V> = { isId: string; veri: V; deneme: number; tetiklemeAni: Date; istekKimligi: string | null }",
+      "purpose": "Parti işleyicisinin girdisi. Sarmalayıcı (infra/is-kuyrugu/parti.ts) her işin verisini ayrı doğrular: şemaya uymayan iş partiye girmeden IS_KUYRUGU_VERI_GECERSIZ ile başarısız sayılır, öbürleri işleyiciye gider. İşleyici dönünce başarısız listesindeki işler kendi güvenli özetleriyle pg-boss fail, öbürleri complete ile (kimlik dizisi) kapanır; pg-boss'un parti sonundaki otomatik tamamlaması yalnız active işe dokunduğundan sonucu değiştirmez (sözleşme testi). İşleyici fırlatırsa partideki tamamlanmamış her iş aynı güvenli özetle başarısız olur. Gruplama (D08: ders başına ayrı işlem) işleyicinindir; her iş aynı girdiyle iki kez çalışmaya dayanıklı kalır.",
+      "not": "tip"
+    },
+    {
+      "name": "PartiBaglami",
+      "signature": "type PartiBaglami = { kuyruk: string; log: Logger; iptal: AbortSignal }",
+      "purpose": "Parti işleyicisinin bağlamı: kuyruk adı, kuyruk adıyla açılmış alt kaydedici ve pg-boss'un süre aşımı ya da kapanış iptal sinyali. Tek işli tanımın IsBaglami'sinden farkı iş başına alanların (isId, deneme, tetiklemeAni, istekKimligi) PartiIsi'nde durmasıdır.",
+      "not": "tip"
+    },
+    {
+      "name": "epostaGonder",
+      "signature": "epostaGonder<T extends EpostaTuru>(sablon: T, alici: { adres: string; gonderimId?: string }, veri: EpostaVerisi[T]): Promise<{ durum: 'GONDERILDI' | 'BASARISIZ' | 'IPTAL'; gonderimId: string | null; hataTuru?: EpostaHataTuru; deneme: number }>",
+      "purpose": "Şablonu düz metin olarak işler ve süreç içi göndericiyle yollar; çağrı hemen döner, taşıyıcı sonraki olay döngüsünde çağrılır (D01 cevap gittikten sonra çağırır). Adres, şablon verisi ve bağlantı denetimi satıra dokunmadan önce yapılır: programlama hatası (IS_KUYRUGU_EPOSTA_ADRES_GECERSIZ, _SINIR_ATLANDI, _SABLON_VERISI_GECERSIZ, _BAGLANTI) sözü reddeder, e-posta gitmez. Sınıra giren türde gonderimId zorunlu; satır bekliyor değilse, özet ya da tür tutmazsa IPTAL. Satır yazımında veritabanı hatası: ileti gitmeden önceyse BASARISIZ (veritabani), gittikten sonraysa GONDERILDI ve satır yarım kalan görünür; log yalnız SQLSTATE. Ürün dışı türde bağlantı belirteci [adres] olur, söz reddedilmez. Geçici hatada 5 ve 30 saniye sonra iki deneme daha. Gönderim sonucu (GONDERILDI, BASARISIZ, IPTAL) her zaman çözülen değerdir; BASARISIZ giriş bildirimini çağıran denetim kaydına yazar.",
+      "not": "dış yüz (contracts.json)"
+    },
+    {
+      "name": "EpostaHataTuru",
+      "signature": "type EpostaHataTuru = 'gecici' | 'kalici' | 'baglanti' | 'zaman_asimi' | 'kimlik_dogrulama' | 'kapanis' | 'kapasite' | 'veritabani'",
+      "purpose": "epostaGonder sonucundaki hataTuru ve eposta_gonderimleri.hata_turu değerleri; CHECK listesi buradan. kapanis, kapasite ve veritabani teslim denemesi tamamlanmadan süreç tarafında biten gönderimdir ve sınıra sayılmaz; D15 art arda başarısız sayısını yalnız SMTP denemesi tamamlanmış türlerden okur (isSagligi).",
+      "not": "tip"
+    },
+    {
+      "name": "epostaSiniriDenetle",
+      "signature": "epostaSiniriDenetle(tx: Tx /* READ COMMITTED */, adres: string, tur: 'giris_kodu' | 'basvuru_kodu' | 'basvuru_silme_kodu' | 'onay_bekliyor', s?: { ekAnahtarlar?: readonly DanismaAnahtari /* D12 */[] }): Promise<{ izinli: true; gonderimId: string } | { izinli: false; sebep: 'DAKIKA' | 'SAAT' | 'GUN' }>",
+      "purpose": "Çağıranın işleminde, işlemin ilk danışma kilidi çağrısı olarak D12.danismaKilidi(tx, ['is-kuyrugu:eposta:<özet>', ...ekAnahtarlar]) ile adres kilidini alır (katman 1, ortak kural 'Danışma kilidi katmanları'; elle pg_advisory_xact_lock yazılmaz). Özet normalleştirilmiş adresin 'eposta_ozeti' anahtarlı HMAC'idir ve D14 içinde hesaplanır; anahtar metninde adres yoktur (anahtar D14'ten çıkmaz). ekAnahtarlar çağıranın aynı işlemde gereken danışma anahtarlarıdır; D12 hepsini aynı çağrıda katman ve metin sırasıyla alır, böylece çağıran sırada geride kalan anahtar için ikinci çağrı yapmaz. Sonra son 60, 3.600 ve 86.400 saniyedeki sayılan gönderimleri sayar (sınıra giren türlerde sinirda olmayan ve kapasite, kapanis ya da veritabani hata türlü olmayan satırlar; kısmi dizinden). İzinliyse bekliyor satırı yazar; değilse özetin son 24 saatte sinirda satırı yoksa bir tane yazar, varsa yalnız loglar. Ön koşul: çağıranın işlemi READ COMMITTED (D12.islem'in varsayılanı); current_setting('transaction_isolation') başka değer dönerse IS_KUYRUGU_EPOSTA_YALITIM (programlama hatası), çünkü daha yüksek yalıtımda görüntü kilitten önce alınmış olabilir ve yarışan iki istek 0 sayar. Kod üretilmeden ve işlemdeki başka danışma kilidinden önce çağrılır; önce başka anahtar tutan işlemde D12'nin sıra denetimi geliştirmede ve testte hata atar.",
+      "not": "dış yüz (contracts.json)"
+    },
+    {
+      "name": "isSagligi",
+      "signature": "isSagligi(tx: Tx): Promise<IsSagligi>",
+      "purpose": "Yalnız işçide (API'de IS_KUYRUGU_YANLIS_SUREC): kuyruk ve zamanlama sağlığı ile e-posta özeti. Eşik ve uyarı D15'in isletim_denetimi işindedir; D14 yalnız ölçer.",
+      "not": "dış yüz (contracts.json)"
+    },
+    {
+      "name": "IsSagligi",
+      "signature": "type IsSagligi = { olcumAni: Date; semaSurumu: { beklenen: number; bulunan: number | null }; canliIsciOrnegi: number; kuyruklar: Array<{ ad: string; tanimli: boolean; bekleyen: number; calisan: number; oluMektup: number; enEskiBekleyenSaniye: number | null; zamanlama: null | { cron: string; sonBasariAni: Date | null; beklenenAralikSaniye: number; sonSureMs: number | null; sonCikti: unknown | null } }>; eposta: { son24SaatGonderilen: number; son24SaatBasarisiz: number; son24SaatSinirdaAlici: number; son24SaatTekilAlici: number; ardisikBasarisiz: number; yarimKalan: number; sonBasariAni: Date | null; gunlukSinir: number | null } }",
+      "purpose": "Kuyruk sayaçları, en eski bekleyen iş, son başarı anı, son süre ve son çıktı iş tablosundan (getQueue().table; partition kapalı, tek tablo) tek sorguyla okunur, pg-boss'un 60 saniyelik monitor geçişini beklemez; canlı örnek getInstances'tan (kalp atışı 90 saniyeden yeni ve zamanlaması açık örnek); beklenen aralık cron-parser ile; e-posta sayıları eposta_gonderimleri'nden (son 24 saat, verilen saate göre). Tanımlar: enEskiBekleyenSaniye = simdi eksi max(start_after, created_on), yalnız state created ya da retry ve start_after <= simdi olan işlerde, yoksa null (ileri tarihli ve bekleme süresindeki iş birikme sayılmaz). sonBasariAni ve sonSureMs son completed işten; sonCikti onun output'u (çıktı şeması ya da altyapı çıktısı yoksa null); D15 iki yerde okur: isletim.devam_tutarlilik_farki kuralı devam_tutarlilik_denetimi'nin farkSayisi'ni, isletim_denetimi kendi önceki çalışmasının retSuSeviyesi'ni (I082). ardisikBasarisiz: sonuc_ani'ye göre en yeni satırdan geriye, yalnız gonderildi ve SMTP denemesi tamamlanmış basarisiz (gecici, kalici, baglanti, zaman_asimi, kimlik_dogrulama) satırlarında ilk gonderildi'ye kadar sayılan basarisiz, en çok 50. yarimKalan: olusturma_ani [simdi - 24 saat, simdi - 10 dakika] aralığında bekliyor ya da gonderiliyor satır (tek çökme uyarıyı en çok 24 saat açık tutar). son24SaatSinirdaAlici: son 24 saatteki sinirda satırı (özet başına en çok bir).",
+      "not": "tip"
+    },
+    {
+      "name": "KuyrukTanimi",
+      "signature": "type KuyrukTanimi<V, C = void> = { readonly ad: string; readonly veri: z.ZodType<V>; readonly politika: 'standard' | 'stately' | 'exclusive'; readonly cikti?: z.ZodType<C> }  // packages/contracts/src/is-kuyrugu.ts",
+      "purpose": "Kuyruk sözleşmesi: kuyruğun sorumlu modülü kendi modules/<ad>/ klasöründe nesne olarak yazar, hem isGonder hem isTanimla aynı nesneyi alır (jobs klasörü modülün index.ts'ini içe aktarır, tersi olmaz; döngü kurulmaz). Ad deseni ^[a-z][a-z0-9_]{2,62}$, _olu soneki yasak. Veri şeması strict nesne, alan adı _ ile başlamaz (_istekKimligi D14'e ayrılmış); yapraklar yalnız z.uuid, z.iso.date, z.iso.datetime, açık min ve max'lı z.int (mutlak değer en çok 100.000; 6 haneli kod ve öğrenci numarası sığmaz), z.boolean, z.enum ve açık max'lı diziler. Denetim Zod 4'ün toJSONSchema çıktısı üzerinde yapılır ve en kötü durum boyutunu hesaplar: her yaprağın en uzun JSON biçimi (UUID 38 bayt, ISO an 26, ISO tarih 12, tam sayı 7, mantıksal 5, sabit liste en uzun değer artı 2) dizi max'ıyla çarpılır, alan adları ve _istekKimligi eklenir; toplam 8 KiB'ı geçen tanım reddedilir (ör. tek UUID dizisi ve istek kimliği taşıyan veride en çok yaklaşık 200 eleman), böylece tanımdan geçen iş çalışma anında IS_KUYRUGU_VERI_BUYUK ile çağıranın işlemini geri aldırmaz. cikti isteğe bağlıdır: yalnız açık sınırlı z.int, z.boolean, z.enum, z.iso.datetime, z.iso.date ve bunlardan strict nesne ya da açık max'lı dizi; en kötü durum 1 KiB'ı geçemez; tek işli tanımın işleyicisi bu tipte değer döndürür, sarmalayıcı doğrulayıp output'a yazar.",
+      "not": "tip; sözleşme dosyası packages/contracts/src/is-kuyrugu.ts"
+    },
+    {
+      "name": "IsBaglami",
+      "signature": "type IsBaglami = { isId: string; kuyruk: string; deneme: number; tetiklemeAni: Date; istekKimligi: string | null; log: Logger; iptal: AbortSignal }",
+      "purpose": "İşleyiciye verilen bağlam: tetiklemeAni pg-boss createdOn (includeMetadata), iptal pg-boss'un süre aşımı ya da kapanış sinyali, log isId, kuyruk ve deneme ile alt kaydedici. İstanbul tarihine çevirme D04'ün saat yardımcısıyla yapılır.",
+      "not": "tip"
+    },
+    {
+      "name": "EPOSTA_TURLERI",
+      "signature": "const EPOSTA_TURLERI: { giris_kodu, basvuru_kodu, basvuru_silme_kodu, onay_bekliyor, giris_bildirimi, isletim_uyarisi, isletim_ozeti }  // apps/server/src/infra/eposta/turler.ts",
+      "purpose": "Türler, sınıra dahil olup olmadığı, ürün e-postası olup olmadığı ve şablon verisinin şeması tek sabitten; CHECK listesi de buradan. Ürün türlerinde alıcı alan adı tam istanbul.edu.tr; Sınıra girenler: giris_kodu, basvuru_kodu, basvuru_silme_kodu (D01-B32, onaylanmamış başvuranın web üzerinden silmesi) ve onay_bekliyor. isletim_uyarisi ve isletim_ozeti (D15 haftalık özeti) ürün değildir, sınıra girmez, sabit cümle taşımaz; bağlantı belirteci [adres] olur.",
+      "not": "sabit"
+    },
+    {
+      "name": "EpostaVerisi",
+      "signature": "type EpostaVerisi = { giris_kodu: { kod: string /* ^\\d{6}$ */; gecerlilikDakika: number }; basvuru_kodu: { kod: string; gecerlilikDakika: number }; basvuru_silme_kodu: { kod: string /* ^\\d{6}$ */; gecerlilikDakika: number }; onay_bekliyor: Record<string, never>; giris_bildirimi: { girisAni: Date; istemciTuru: 'telefon' | 'panel'; cihazEtiketi: string; kapananOturumEtiketi: string | null }; isletim_uyarisi: { konu: string; satirlar: string[] }; isletim_ozeti: { konu: string; satirlar: string[] } }",
+      "purpose": "Her türün şablon verisi; Zod şeması EPOSTA_TURLERI'nin aynı satırından gelir, epostaGonder satıra dokunmadan doğrular (IS_KUYRUGU_EPOSTA_SABLON_VERISI_GECERSIZ). Cihaz etiketi en çok 60 karakter, harf, rakam, boşluk, virgül, nokta, parantez ve tire; bağlantı içerirse metne 'Bilinmeyen cihaz' yazılır. Metinler Şablon metinleri tablosunda.",
+      "not": "tip"
+    },
+    {
+      "name": "isKuyruguKur",
+      "signature": "isKuyruguKur(secenek: { rol: 'api' | 'isci'; veritabani: Veritabani /* D12: { islem, semaDurumu, kapat, db, havuz } */; baglantiAdresi?: string; tanimlar?: readonly IsTanimi<unknown>[]; saat: Saat /* D04 */; log: Logger; testSaati?: TestClock; casus?: boolean; zamanlamaAcik?: boolean; bakimAcik?: boolean }): Promise<IsKuyrugu>",
+      "purpose": "Yalnız server.ts, worker.ts ve test desteği çağırır. API: pg-boss kendi havuzunu açmaz; kurucunun db seçeneğine D12 Veritabani'nın db alanıyla fromDrizzle(veritabani.db, sql) verilir; bağdaştırıcı işlem dışı nesneyle çalışmazsa veritabani.havuz.query'yi çağıran executeSql nesnesi verilir (sözleşme testi hangisinin çalıştığını sabitler); yalnız gönderir. İşçi: doğrudan bağlantı (havuz 2), bakım ve zamanlama; zamanlamaAcik ve bakimAcik yayında hep true, test sürecinin ortak işçisinde false. İkisi de şema sürümünü denetler; işçi ayrıca kayıtlı kuyrukların varlığını ve tanım kurallarını denetler. saat D04'ün Saat nesnesidir; testte D04'ün pgBossSaati(testClock) nesnesi aynı TestClock'u yürütür, bileşim kökü ayrı uyarlayıcı yazmaz. Dış yüz işlevlerini bu örneğe bağlar ve IsKuyrugu döndürür; bileşim kökü onu uygulamaKur'a isKuyrugu olarak verir. İşçide work kayıtları kurulumda açılmaz: worker.ts uygulamaKur'dan sonra isKuyrugu.isleriBaslat() çağırır, böylece ilk iş alındığında modül dinleyicileri, saklama işleyicileri ve yayın bilgisi yüklüdür. İkinci kurulum durdur'dan önce hata verir (test desteğindeki zamanlamaliOrnekAc dış yüzü bağlamadığından bu kurala girmez).",
+      "not": "bileşim kökü"
+    },
+    {
+      "name": "IsKuyrugu",
+      "signature": "type IsKuyrugu = { readonly rol: 'api' | 'isci'; isleriBaslat(): Promise<void>; durdur(): Promise<void> }",
+      "purpose": "isKuyruguKur'un döndürdüğü nesne; server.ts ve worker.ts D13'ün uygulamaKur bağımlılıklarına isKuyrugu olarak verir. isleriBaslat yalnız işçide: work kayıtlarını tek işli ve parti ayarlarıyla açar ve isci.hazir logunu yazar; API'de IS_KUYRUGU_YANLIS_SUREC verir, ikinci çağrı işlem yapmaz. durdur API'de gönderimi kapatır, işçide pg-boss stop({ graceful: true, timeout: 30000 }) çağırır.",
+      "not": "tip; D13 UygulamaBagimliliklari.isKuyrugu"
+    },
+    {
+      "name": "kuyruklariKur",
+      "signature": "kuyruklariKur(secenek: { gocBaglantiAdresi: string; tanimlar: readonly IsTanimi<unknown>[]; log: Logger; testSaati?: TestClock }): Promise<{ acilan: string[]; guncellenen: string[]; kaldirilanZamanlama: string[]; tanimsizKuyruk: string[]; acilisIsi: string[] }>",
+      "purpose": "Yayın adımında worker.ts kur ile (db:migrate'in üçüncü adımı) şemayı kuran yoklama_goc rolüyle: sürüm ve kayma denetimi, pgboss yetkileri, kuyruk ve ölü kuyruk ayarları, zamanlamaların kayıtla eşitlenmesi. Seyrek zamanlamalı kuyrukta deleteAfterSeconds en az 2 beklenen aralık artı 1 gündür. acilistaBirKez tanımlı her kuyruğa bir iş gönderir (kuyruk exclusive: bekleyen ya da çalışan iş varken ikinci gönderim iş açmaz; rapor acilisIsi). Kayıttan kalkan kuyruk silinmez, raporlanır (__pgboss önekli iç kuyruklar sayılmaz). Tekrar çalışınca aynı sonuç, ikincide boş rapor.",
+      "not": "bileşim kökü (yayın adımı, worker.ts kur)"
+    },
+    {
+      "name": "epostaKur",
+      "signature": "epostaKur(secenek: { tasiyici: EpostaTasiyicisi; gonderen: { ad: string; adres: string }; urunAdi: string; ozetAnahtari: Uint8Array; veritabani: Veritabani; saat: Saat /* D04 */; log: Logger; gunlukSinir?: number; bekle?: (ms: number) => Promise<void> }): Eposta",
+      "purpose": "E-posta altyapısını kurar ve epostaGonder ile epostaSiniriDenetle'yi bağlar. Özet anahtarı 32 bayttan kısa, gönderen adresi, görünen ad ya da ürün adı boşsa IS_KUYRUGU_EPOSTA_AYAR_EKSIK. bekle testte anında döner ve istenen süreleri kaydeder.",
+      "not": "bileşim kökü"
+    },
+    {
+      "name": "Eposta",
+      "signature": "type Eposta = { kapat(sureMs: number): Promise<void> }",
+      "purpose": "epostaKur'un döndürdüğü nesne; bileşim kökleri uygulamaKur'a eposta olarak verir ve kapanışta kapat'ı çağırır (API 10, işçi 5 saniye). Gönderim dış yüz işleviyle (epostaGonder) yapılır, nesne gönderim yüzü taşımaz.",
+      "not": "tip; D13 UygulamaBagimliliklari.eposta"
+    },
+    {
+      "name": "smtpTasiyicisi",
+      "signature": "smtpTasiyicisi(ayar: { sunucu: string; port: number; guvenlik: 'tls' | 'starttls' | 'yok'; kullanici?: string; parola?: string }): EpostaTasiyicisi",
+      "purpose": "Nodemailer havuzlu SMTP: en çok 5 bağlantı, bağlantı ve karşılama zaman aşımı 10 saniye, soket 30 saniye, logger ve debug kapalı (SMTP dökümü adres ve metin taşır). Güvenlik eşlemesi: 'tls' secure true (genelde 465); 'starttls' secure false ve requireTLS true: sunucu STARTTLS ilan etmezse bağlantı düz metne düşmez, kimlik doğrulama ve ileti gönderilmez, gönderim baglanti ile başarısız olur; ikisinde tls.minVersion 'TLSv1.2' ve tls.rejectUnauthorized true (SMTP_TLS_AYARLARI sabiti, ayarla kapatılamaz). 'yok' secure false ve ignoreTLS true, yalnız geliştirmede Mailpit için; yayında verilirse bileşim kökü IS_KUYRUGU_EPOSTA_AYAR_EKSIK ile açılmaz. Röle, OAuth2 ya da kendi alan adı yolu bu taşıyıcının ayarıyla değişir.",
+      "not": "bileşim kökü"
+    },
+    {
+      "name": "epostaGonderimleriniTemizle",
+      "signature": "epostaGonderimleriniTemizle(esik: Date): Promise<number>",
+      "purpose": "Yalnız D14'ün eposta_gonderim_temizligi işi çağırır; eşikten eski satırları 1.000'lik partilerle siler, silinen sayıyı döndürür.",
+      "not": "D14 içi"
+    },
+    {
+      "name": "epostaSagligi",
+      "signature": "epostaSagligi(tx: Tx): Promise<IsSagligi['eposta']>",
+      "purpose": "Yalnız isSagligi çağırır (infra/eposta dış yüzünden; başka modül kullanmaz). Son 24 saati epostaKur'a verilen saate göre sayar; adres ve özet döndürmez.",
+      "not": "D14 içi"
+    },
+    {
+      "name": "IS_KUYRUGU_HATA_KODLARI",
+      "signature": "const IS_KUYRUGU_HATA_KODLARI = hataKodlariTanimla('is-kuyrugu', { IS_KUYRUGU_KURULMADI: { http: 500, hoca: IS_KUYRUGU_GENEL_HATA_METNI, ogrenci: IS_KUYRUGU_GENEL_HATA_METNI }, ..., IS_KUYRUGU_KUYRUK_EKSIK: { http: null, hoca: null, ogrenci: null }, ... })  // packages/contracts/src/is-kuyrugu.ts",
+      "purpose": "Modülün 20 kodu (Hata kodları bölümü), D13'ün hataKodlariTanimla biçiminde; http değeri koddan koda (ortak kural 'Birleşim'; I071, I076). API isteğinde de doğabilen 12 kod (API sürecinde çağrılan isGonder, epostaSiniriDenetle, epostaGonder, isSagligi ve isleriBaslat hataları; ör. IS_KUYRUGU_KURULMADI) http 500 ve hoca, öğrenci metni IS_KUYRUGU_GENEL_HATA_METNI taşır; D13'ün kökü 5xx'te yalnız API_SUNUCU_HATASI zarfını ve sabit mesajını döndürdüğünden metin istemciye çıkmaz. Yalnız işçide, kur'da ya da süreç açılışında doğan 8 kod http null ve metinsizdir (işletim kodu), hiçbir rotanın hatalar listesine girmez. hatalar.ts birleştirmesine (TUM_HATALAR) girer.",
+      "not": "sözleşme; packages/contracts/src/is-kuyrugu.ts"
+    },
+    {
+      "name": "baglantiDenetle",
+      "signature": "baglantiDenetle(metin: string): { belirtecSayisi: number; temizMetin: string }  // apps/server/src/infra/eposta/baglanti-denetimi.ts",
+      "purpose": "Kural Bağlantı denetimi tablosunda. Metni boşlukla belirteçlere böler, baştaki ve sondaki noktalama işaretlerini ayıklar; şema, 'www.', '@' ya da IANA alan adı sonuyla biten ana makine biçimindeki her belirteci sayar ve temizMetin'de [adres] yapar. Ürün türünde belirtecSayisi > 0 ise gönderici IS_KUYRUGU_EPOSTA_BAGLANTI ile reddeder; ürün dışı türde temizMetin gönderilir, log yalnız tür ve sayıyı yazar. Cihaz etiketi aynı denetimden geçer, takılırsa 'Bilinmeyen cihaz' yazılır.",
+      "not": "D14 içi"
+    },
+    {
+      "name": "altyapiIsleriniUyarla",
+      "signature": "altyapiIsleriniUyarla(isler: readonly AltyapiIsTanimi[]): IsTanimi<Record<string, never>>[]; type AltyapiIsTanimi = { ad: string; cron: string; saatDilimi: string; kacirilan: 'skip' | 'once'; veri?: z.ZodType<Record<string, never>>; politika?: 'exclusive'; sureAsimiSaniye?: number; deneme?: { sayi: number; beklemeSaniye: number }; isle(b: { isKimligi: string; tetiklemeAni: Date; iptal: AbortSignal; log: Logger }): Promise<Readonly<Record<string, unknown>> | void> }  // apps/server/src/infra/is-kuyrugu/altyapi-uyarlayici.ts",
+      "purpose": "D15'in isletimIsleri(bag) tanımlarını (IsletimIsTanimi, yapısal olarak AltyapiIsTanimi) isTanimla biçimine çevirir: { kuyruk: { ad, veri, politika, cikti: ALTYAPI_CIKTI_SEMASI }, isleyici: (veri, baglam) => isle({ isKimligi: baglam.isId, tetiklemeAni: baglam.tetiklemeAni, iptal: baglam.iptal, log: baglam.log }), sureAsimiSaniye, deneme, zamanlama: { cron } }. isle'nin döndürdüğü küçük nesne iş çıktısıdır (isletim_denetimi { retSuSeviyesi }): Date değerleri ISO ana çevrilir, nesne ALTYAPI_CIKTI_SEMASI'ndan geçer, pg-boss output'una yazılır ve isSagligi onu sonCikti olarak verir; uymayan değer (serbest metin, sınır dışı sayı, milisaniye cinsinden an) IS_KUYRUGU_CIKTI_GECERSIZ ile işi başarısız sayar, bu yüzden an Date ya da ISO metin olarak döner. Eksik alanlar ALTYAPI_IS_VARSAYILANI'ndan: politika exclusive, veri boş strict nesne, sureAsimiSaniye 1.800, deneme { sayi: 3, beklemeSaniye: 30 }. saatDilimi 'Europe/Istanbul' değilse IS_KUYRUGU_TANIM_GECERSIZ; kacirilan D14'ün sıklık kuralıyla (aralığı 1 günden kısa iş skip, günlük ve daha seyrek iş once) uyuşmazsa IS_KUYRUGU_ZAMANLAMA_KURALI; iki durumda işçi açılmaz. D12'nin veritabaniIsleri öğeleri zaten isTanimla girdisi biçimindedir ve uyarlayıcıdan geçmez (İşçi açılışı, adım 8). Böylece jobs/isletim ve jobs/veritabani infra/is-kuyrugu'yu içe aktarmaz.",
+      "not": "D14 içi; yalnız worker.ts çağırır"
+    },
+    {
+      "name": "sahtePostaKutusu",
+      "signature": "sahtePostaKutusu(): EpostaTasiyicisi & { iletiler(adres?: string): ReadonlyArray<{ alici: string; konu: string; metin: string; basliklar: Record<string, string> }>; temizle(): void; hataPlanla(...yanitlar: Array<{ yanitKodu: number } | { baglantiHatasi: 'ETIMEDOUT' | 'ECONNREFUSED' }>): void; geciktir(ms: number): void }  // apps/server/test/support/sahte-posta.ts",
+      "purpose": "Testlerde bellek içi posta kutusu; senaryolar sabit cümleleri içe alıp burada arar. Her senaryodan önce D14'ün kancası temizler.",
+      "not": "test desteği; apps/server/test/support/sahte-posta.ts"
+    },
+    {
+      "name": "isKuyrugunuBosalt",
+      "signature": "isKuyrugunuBosalt(): Promise<void>  // apps/server/test/support/is-kuyrugu.ts",
+      "purpose": "Test sürecinin ortak pg-boss örneğinde pg-boss'un deleteAllJobs işlevini çağırır (kuyruk ve zamanlama kayıtları kalır). D12'nin senaryoOncesiSifirla'sı pgboss şemasına yalnız bunun üzerinden dokunur; D15'in test dünyası kancası her senaryodan önce çağırır.",
+      "not": "test desteği; apps/server/test/support/is-kuyrugu.ts"
+    },
+    {
+      "name": "isiCalistirVeBekle",
+      "signature": "isiCalistirVeBekle<V>(kuyruk: KuyrukTanimi<V, unknown>, veri: V, secenek?: { tekillikAnahtari?: string; zamanAsimiMs?: number }): Promise<'completed' | 'failed'>  // apps/server/test/support/is-kuyrugu.ts",
+      "purpose": "isiCalistirVeBekle işi kendi işleminde isGonder ile koyar, ortak işçiyi notifyWorker ile uyarır ve pg-boss casusuyla (getSpy().waitForJobWithId) sonucu bekler; 'aynı veriyle iki kez çalışırsa' adımı bunu iki kez çağırır.",
+      "not": "test desteği; apps/server/test/support/is-kuyrugu.ts"
+    },
+    {
+      "name": "kuyruktakiIsler",
+      "signature": "kuyruktakiIsler(kuyruk: string): Promise<ReadonlyArray<{ isId: string; durum: 'created' | 'retry' | 'active' | 'completed' | 'cancelled' | 'failed'; veri: unknown; cikti: unknown | null }>>  // apps/server/test/support/is-kuyrugu.ts",
+      "purpose": "kuyruktakiIsler 'kuyrukta N iş bekler' ve 'ölü kuyruğa düşer' adımlarının okumasıdır (<ad>_olu adıyla da çağrılır).",
+      "not": "test desteği; apps/server/test/support/is-kuyrugu.ts"
+    },
+    {
+      "name": "zamanlamaliOrnekAc",
+      "signature": "zamanlamaliOrnekAc(testSaati: TestClock, secenek?: { tanimlar?: readonly IsTanimi<unknown>[] }): Promise<{ kapat(): Promise<void> }>  // apps/server/test/support/is-kuyrugu.ts",
+      "purpose": "Zamanlama ve bakım senaryoları için zamanlaması ve bakımı açık ayrı bir PgBoss örneği açar; dış yüz işlevlerini bağlamaz, ortak örneği durdurmaz, bu yüzden isKuyruguKur'un ikinci kurulum kuralına girmez. kapat() örneği stop ile kapatır; ortak örnekteki isGonder ve isiCalistirVeBekle çalışmayı sürdürür.",
+      "not": "test desteği; apps/server/test/support/is-kuyrugu.ts"
+    }
+  ],
+  "files": [
+    "apps/server/src/worker.ts",
+    "apps/server/src/infra/is-kuyrugu/index.ts",
+    "apps/server/src/infra/is-kuyrugu/pgboss.ts",
+    "apps/server/src/infra/is-kuyrugu/politika.ts",
+    "apps/server/src/infra/is-kuyrugu/tanim.ts",
+    "apps/server/src/infra/is-kuyrugu/veri-semasi.ts",
+    "apps/server/src/infra/is-kuyrugu/gonder.ts",
+    "apps/server/src/infra/is-kuyrugu/sarmalayici.ts",
+    "apps/server/src/infra/is-kuyrugu/parti.ts",
+    "apps/server/src/infra/is-kuyrugu/altyapi-uyarlayici.ts",
+    "apps/server/src/infra/is-kuyrugu/hata-suzgeci.ts",
+    "apps/server/src/infra/is-kuyrugu/zamanlama.ts",
+    "apps/server/src/infra/is-kuyrugu/kur.ts",
+    "apps/server/src/infra/is-kuyrugu/saglik.ts",
+    "apps/server/src/infra/is-kuyrugu/tanim.test.ts",
+    "apps/server/src/infra/is-kuyrugu/zamanlama.test.ts",
+    "apps/server/src/infra/is-kuyrugu/hata-suzgeci.test.ts",
+    "apps/server/src/infra/is-kuyrugu/parti.test.ts",
+    "apps/server/src/infra/is-kuyrugu/altyapi-uyarlayici.test.ts",
+    "apps/server/src/infra/eposta/index.ts",
+    "apps/server/src/infra/eposta/tablolar.ts",
+    "apps/server/src/infra/eposta/turler.ts",
+    "apps/server/src/infra/eposta/sinir.ts",
+    "apps/server/src/infra/eposta/ozet.ts",
+    "apps/server/src/infra/eposta/gonderici.ts",
+    "apps/server/src/infra/eposta/tasiyici.ts",
+    "apps/server/src/infra/eposta/bicim.ts",
+    "apps/server/src/infra/eposta/baglanti-denetimi.ts",
+    "apps/server/src/infra/eposta/sabit-metinler.ts",
+    "apps/server/src/infra/eposta/temizlik.ts",
+    "apps/server/src/infra/eposta/saglik.ts",
+    "apps/server/src/infra/eposta/sablonlar/giris-kodu.ts",
+    "apps/server/src/infra/eposta/sablonlar/basvuru-kodu.ts",
+    "apps/server/src/infra/eposta/sablonlar/basvuru-silme-kodu.ts",
+    "apps/server/src/infra/eposta/sablonlar/onay-bekliyor.ts",
+    "apps/server/src/infra/eposta/sablonlar/giris-bildirimi.ts",
+    "apps/server/src/infra/eposta/sablonlar/isletim-uyarisi.ts",
+    "apps/server/src/infra/eposta/sablonlar/isletim-ozeti.ts",
+    "apps/server/src/infra/eposta/sinir.test.ts",
+    "apps/server/src/infra/eposta/bicim.test.ts",
+    "apps/server/src/infra/eposta/sablonlar.test.ts",
+    "apps/server/src/infra/eposta/baglanti-denetimi.test.ts",
+    "apps/server/src/infra/eposta/tasiyici.test.ts",
+    "apps/server/src/jobs/is-kuyrugu/index.ts",
+    "apps/server/src/jobs/is-kuyrugu/eposta-gonderim-temizligi.ts",
+    "packages/contracts/src/is-kuyrugu.ts",
+    "apps/server/test/features/is-kuyrugu/is-gonderme.feature",
+    "apps/server/test/features/is-kuyrugu/is-calistirma.feature",
+    "apps/server/test/features/is-kuyrugu/zamanlama.feature",
+    "apps/server/test/features/is-kuyrugu/kurulum.feature",
+    "apps/server/test/features/is-kuyrugu/eposta-sinir.feature",
+    "apps/server/test/features/is-kuyrugu/eposta-gonderim.feature",
+    "apps/server/test/features/is-kuyrugu/eposta-sablon.feature",
+    "apps/server/test/features/is-kuyrugu/eposta-temizlik.feature",
+    "apps/server/test/features/is-kuyrugu/saglik.feature",
+    "apps/server/test/features/is-kuyrugu/isci-sureci.feature",
+    "apps/server/test/steps/is-kuyrugu/is-adimlari.ts",
+    "apps/server/test/steps/is-kuyrugu/eposta-adimlari.ts",
+    "apps/server/test/steps/is-kuyrugu/kancalar.ts",
+    "apps/server/test/steps/is-kuyrugu/test-kuyruklari.ts",
+    "apps/server/test/support/sahte-posta.ts",
+    "apps/server/test/support/is-kuyrugu.ts"
+  ],
+  "tests": [
+    {
+      "name": "İşlem geri alınınca kuyrukta iş kalmaz",
+      "kind": "behavior",
+      "asserts": "Aynı işlemde isGonder çağrılıp işlem hatayla geri alınınca kuyrukta o işten 0 iş bulunur; zemin denetimi: aynı adımlar hatasız bitince tam 1 iş bulunur."
+    },
+    {
+      "name": "Tekillik anahtarı ikinci işi açmaz",
+      "kind": "behavior",
+      "asserts": "exclusive test kuyruğunda aynı anahtarla ikinci isGonder isId null döner ve kuyrukta 1 iş kalır; farklı anahtarla 2 iş olur (artı denetim); standard kuyrukta anahtar IS_KUYRUGU_TEKILLIK_ANAHTARI_GECERSIZ verir."
+    },
+    {
+      "name": "İş verisi kuyruk şemasıyla doğrulanır",
+      "kind": "behavior",
+      "asserts": "Şemaya uymayan veri IS_KUYRUGU_VERI_GECERSIZ ile çağıranın işlemini geri aldırır, 8 KiB üstü veri IS_KUYRUGU_VERI_BUYUK verir, 14 gün ileri baslamaAni IS_KUYRUGU_BASLAMA_ANI_GECERSIZ verir; geçerli veri kuyruğa girer."
+    },
+    {
+      "name": "Hata veren iş yeniden denenir, denemeler bitince ölü kuyruğa düşer",
+      "kind": "behavior",
+      "asserts": "Her seferinde hata veren test işi, TestClock ile beklemeler geçilerek 1 + 3 kez çalışır; sonra <ad>_olu kuyruğunda 1 iş belirir ve isSagligi oluMektup 1 gösterir. Bir kez hata verip sonra başaran iş completed olur, ölü kuyruk boş kalır."
+    },
+    {
+      "name": "Süresi aşan iş bakımda yeniden denemeye geçer",
+      "kind": "behavior",
+      "asserts": "Asılı kalan test işi için saat sureAsimiSaniye ötesine alınıp supervise(ad) çalıştırılınca iş retry olur; süre dolmadan çalıştırılan bakım işe dokunmaz (zemin denetimi)."
+    },
+    {
+      "name": "İş hatası çıktıya ve loga değer sızdırmaz",
+      "kind": "behavior",
+      "asserts": "Mesajında örnek öğrenci numarası, isim ve e-posta adresi olan hata fırlatan işin pg-boss çıktısında ve yakalanan loglarda bu üç değer yoktur; uygulama hata kodu, SQLSTATE ve kısıt adı vardır. Artı denetim: fırlatılan hatanın mesajında değerler gerçekten vardır."
+    },
+    {
+      "name": "Günlük iş işçi kapalıyken kaçarsa açılınca bir kez çalışır",
+      "kind": "behavior",
+      "asserts": "Zamanlaması açık işçi durdurulup saat setTime ile 3 gün ileri alınır, işçi açılıp saat 1 dakika ilerletilince eposta_gonderim_temizligi kuyruğunda tam 1 iş oluşur (missed: once, 3 kaçan gün için 3 değil); her dakika çalışan test işinde yalnız açılıştan sonraki dakika için 1 iş oluşur, kaçan dakikalar için oluşmaz (skip)."
+    },
+    {
+      "name": "Zamanlama İstanbul saatiyle tetiklenir",
+      "kind": "behavior",
+      "asserts": "Saat 2026-10-05T23:40Z'den (İstanbul 02:40) 6 dakika ilerletilince eposta_gonderim_temizligi bir kez tetiklenir; 2026-10-06T02:40Z'den (İstanbul 05:40, UTC 02:40) ilerletilince tetiklenmez (zemin denetimi)."
+    },
+    {
+      "name": "D14 işi aynı veriyle iki kez çalışınca aynı sonucu verir",
+      "kind": "behavior",
+      "asserts": "eposta_gonderim_temizligi 'aynı veriyle iki kez çalışırsa' adımıyla iki kez çalışınca tablo ilk çalışmadan sonrakiyle aynıdır; adım öbür modüllerin senaryolarında da kullanılır."
+    },
+    {
+      "name": "Kuyruk kurulumu ayarları aynen yazar ve tekrar çalışınca değişmez",
+      "kind": "behavior",
+      "asserts": "kur iki kez çalışır; getQueue her kayıtlı kuyrukta politika, retryLimit, retryDelay, retryBackoff, retryDelayMax, expireInSeconds, heartbeatSeconds, deadLetter, retentionSeconds ve deleteAfterSeconds değerlerini tanımdakiyle aynı döndürür; her kuyruğun <ad>_olu kuyruğu vardır; haftalık zamanlamalı test kuyruğunda deleteAfterSeconds 1.296.000; kayıttan çıkarılan zamanlama silinir; ikinci çalışmanın raporu boştur."
+    },
+    {
+      "name": "API rolü pgboss şemasında yalnız iş ekler",
+      "kind": "contract",
+      "asserts": "yoklama_api rolüyle isGonder başarılı; aynı rolle iş tablosunda UPDATE ve DELETE, createQueue ve schedule yetki hatası verir. yoklama_isci rolüyle work, complete, supervise ve reindex başarılı. Yetkiler kur'dan gelir: göçlerden sonra kur çalışmadan önce yoklama_isci iş tablosunu okuyamaz (D12 yalnız şema USAGE verir; zemin), kur'dan sonra okur."
+    },
+    {
+      "name": "Şema sürümü uyuşmazsa süreç açılmaz",
+      "kind": "contract",
+      "asserts": "db:migrate sonrası schemaVersion() BEKLENEN_PGBOSS_SEMA_SURUMU sabitine eşittir (sabit unutulursa test kırmızı); beklenen bir eksik verilince isKuyruguKur IS_KUYRUGU_SEMA_SURUMU ile reddeder; kurulmamış şemada da reddeder; detectSchemaDrift boş döner."
+    },
+    {
+      "name": "Gönderilen işin oluşturma anı TestClock saatidir",
+      "kind": "contract",
+      "asserts": "TestClock 2026-01-01T00:00Z'ye kuruluyken API rolündeki isGonder ile eklenen işin created_on değeri bu andır (fromDrizzle bağdaştırıcısı oturum ifadesini taşır); API rolündeki pg-boss açıkken pg_stat_activity'de application_name'i 'pgboss:' ile başlayan bağlantı yoktur (kendi havuzunu açmaz), işçi rolünde en çok 2 tanedir."
+    },
+    {
+      "name": "Kayıtlı iş tanımları ad ve veri kurallarına uyar",
+      "kind": "contract",
+      "asserts": "worker.ts'in topladığı bütün tanımlarda ad deseni, ad tekliği, _olu soneki yasağı ve veri şemasının yalnız izinli yaprak tipleri içermesi denetlenir; z.string() yapraklı örnek şema IS_KUYRUGU_TANIM_GECERSIZ verir (artı denetim). En kötü durum boyutu tanımdan hesaplanır: 300 elemanlı UUID dizili şema reddedilir, 150 elemanlı geçer ve 150 elemanlı veri isGonder'de IS_KUYRUGU_VERI_BUYUK vermez; 1 KiB üstü çıktı şeması reddedilir; parti esZamanli toplamı havuzu doldurursa reddedilir; _istekKimligi taşıyan iş strict şemada geçer, başka _ önekli alan geçmez."
+    },
+    {
+      "name": "Zamanlama kuralları bütün kayıtta tutar",
+      "kind": "property",
+      "asserts": "Kayıttaki her zamanlama için (uyarlanan altyapı işleri dahil) 14 günlük örnek dönemde tetikleme anları cron-parser ile Europe/Istanbul üretilir: günlük ve seyrek işlerin hiçbiri 03:00-05:00 arasında başlamaz, aralarında en az 5 dakika vardır, sonra listesindeki her iş en az 10 dakika önce tetiklenir; günlük işler missed: once, sık işler skip; politika exclusive ya da stately. Kural bozan örnek kayıt IS_KUYRUGU_ZAMANLAMA_KURALI verir."
+    },
+    {
+      "name": "Tekillik anahtarı sayısal parça kabul etmez",
+      "kind": "property",
+      "asserts": "fast-check ile üretilen 2.000 anahtarda yalnız UUID, ISO tarih ve küçük harf ile alt çizgiden oluşan parçalar kabul edilir; rakam dizisi içeren her parça reddedilir."
+    },
+    {
+      "name": "Kayan pencere sınırı hiçbir aralıkta aşılmaz ve gereksiz reddetmez",
+      "kind": "property",
+      "asserts": "Saf sınır kararı için 5.000 rastgele istek zaman dizisinde kabul edilenler hiçbir 60, 3.600 ve 86.400 saniyelik pencerede 1, 5 ve 10'u aşmaz; reddedilen her istek kabul edilseydi bir pencere aşılırdı. Sayılar sinir.ts'teki EPOSTA_SINIRLARI sabitinden içe alınır."
+    },
+    {
+      "name": "Aynı adrese dakikada ikinci kod e-postası gitmez",
+      "kind": "behavior",
+      "asserts": "Aynı adres için 30 saniye arayla iki epostaSiniriDenetle: ilki izinli, ikincisi DAKIKA ile reddedilir ve sinirda satırı yazılır; ilk isteğin dakika penceresi bittikten 1 saniye sonra yeniden izinli; başka adres etkilenmez."
+    },
+    {
+      "name": "Saatte 5 ve günde 10 sınırı kayan penceredir",
+      "kind": "behavior",
+      "asserts": "Senaryo taslağı, sınır sayılarını EPOSTA_SINIRLARI'ndan alan adımlarla: saatlik sınırın bir fazlası 11 dakika arayla istenince son istek SAAT ile, günlük sınırın bir fazlası 3 saat arayla istenince son istek GUN ile reddedilir; ilk isteğin günlük penceresi bittikten sonra yeni istek izinlidir; SMTP denemesi tamamlanmış başarısız gönderim sayılır; sinirda satırı, giriş bildirimi ve kapasite, kapanis ya da veritabani sonuçlu satır sayılmaz."
+    },
+    {
+      "name": "Yarışan istekler sınırı aşamaz",
+      "kind": "behavior",
+      "asserts": "Aynı adres için aynı anda başlayan 10 işlemden tam 1'i izinli olur (D12.danismaKilidi ile alınan 'is-kuyrugu:eposta:<özet>' kilidi); farklı 10 adreste 10'u da izinli olur (zemin denetimi)."
+    },
+    {
+      "name": "Kod e-postası cevaptan sonra gider, konuda kod yoktur",
+      "kind": "behavior",
+      "asserts": "epostaGonder çağrıldığı anda taşıyıcı çağrılmamıştır; söz çözülünce bellek kutusunda tam 1 ileti vardır; konu kodu içermez; metin kodu, 5 dakika geçerlilik satırını ve son paragrafta içe alınan SABIT_UYARI_CUMLESI'ni içerir; Auto-Submitted: auto-generated başlığı vardır; metin bağlantı denetiminden geçer."
+    },
+    {
+      "name": "Sınıra giren tür izinsiz ve iki kez gönderilemez",
+      "kind": "behavior",
+      "asserts": "giris_kodu türünde gonderimId olmadan epostaGonder IS_KUYRUGU_EPOSTA_SINIR_ATLANDI ile reddedilir ve kutu boş kalır; geri alınan işlemin gonderimId'siyle çağrı IPTAL döner; başka adresle çağrı IPTAL döner; onay_bekliyor izniyle alınan gonderimId giris_kodu şablonuyla IPTAL döner (tür eşleşmesi); geçerli gonderimId ile çağrı iletiyi gönderir (artı denetim); aynı gonderimId ile ikinci çağrı IPTAL döner ve ileti tek kalır."
+    },
+    {
+      "name": "Geçici SMTP hatası yeniden denenir, kalıcı hata denenmez",
+      "kind": "behavior",
+      "asserts": "Taşıyıcı önce 451 sonra 250 dönünce GONDERILDI ve deneme 2; 550 dönünce BASARISIZ, hata_turu kalici, deneme 1; 535 dönünce BASARISIZ, kimlik_dogrulama, deneme 1; üç kez 421 dönünce BASARISIZ, gecici, deneme 3. bekle'ye verilen süreler gönderici sabitinden içe alınan iki beklemeyle (5 ve 30 saniye) aynıdır."
+    },
+    {
+      "name": "Giriş bildirimi İstanbul saatini Türkçe yazar",
+      "kind": "behavior",
+      "asserts": "girisAni 2026-10-06T06:58:00Z için metin '6 Ekim 2026 Salı, 09:58'de' içerir; 2026-10-06T21:00:00Z için '7 Ekim 2026 Çarşamba, 00:00'da'; senaryo TZ=UTC ve TZ=Europe/Istanbul ile aynı çıktıyı verir; plan cümlesi 'Sen değilsen Oturumlarım ekranından kapat' ayrı paragraftır."
+    },
+    {
+      "name": "Cihaz etiketindeki bağlantı e-postaya girmez",
+      "kind": "behavior",
+      "asserts": "Etiket 'Edge http://ornek.example' iken metinde 'Bilinmeyen cihaz' yazar ve bağlantı bulunmaz; 'Edge, Windows' etiketi aynen yazılır (artı denetim)."
+    },
+    {
+      "name": "Saat eki bütün dakikalarda doğru",
+      "kind": "property",
+      "asserts": "00:00-23:59 arasındaki 1.440 değerin her biri için saatEki, sayının Türkçe okunuşundaki son kelimeden ünlü uyumu ve sert ünsüz kuralıyla bağımsız türetilen ekle aynıdır; örnekler 09:58'de, 09:40'ta, 09:03'te, 09:30'da, 00:00'da, 13:00'te."
+    },
+    {
+      "name": "Şablonlarda bağlantı olmaz, son paragraf sabit cümledir",
+      "kind": "property",
+      "asserts": "fast-check ile üretilen 2.000 geçerli şablon verisinde ürün e-postası metni bağlantı denetiminden geçer ve son paragrafı SABIT_UYARI_CUMLESI'dir; işletim uyarısında ve özetinde bağlantılı satırdaki belirteç [adres] olur, söz reddedilmez, ileti gider ve log belirtecin kendisini değil sayısını yazar; 'isletim.wal_arsivi' ve 'chrony.json' içeren satır değişmeden gider (zemin)."
+    },
+    {
+      "name": "Kapanışta yoldaki gönderim beklenir, bekleyen deneme kapanışla biter",
+      "kind": "behavior",
+      "asserts": "Taşıyıcı 2 saniye gecikirken kapat(10.000) iletinin gitmesini bekler, satır gonderildi olur; 30 saniyelik deneme beklemesindeki gönderim kapat çağrılınca hemen basarisiz (kapanis) olur; kapattıktan sonraki epostaGonder BASARISIZ (kapanis) döner."
+    },
+    {
+      "name": "Gönderim tablosunda ve loglarda adres ve kod bulunmaz",
+      "kind": "behavior",
+      "asserts": "Kod e-postası ve giriş bildirimi gönderildikten sonra eposta_gonderimleri'nin bütün sütunlarında ve yakalanan loglarda adres (büyük ve küçük harf biçimleri) ve 6 haneli kod geçmez; artı denetim: bellek kutusundaki iletide ikisi de vardır."
+    },
+    {
+      "name": "E-posta gönderim temizliği 7 günden eskiyi siler",
+      "kind": "behavior",
+      "asserts": "Saklama süresi sabitinden (7 gün) bir gün eski ve bir gün yeni satırlar varken iş çalışınca eski satır silinir, yeni satır kalır (zemin denetimi); iş ikinci kez çalışınca hiçbir satır değişmez."
+    },
+    {
+      "name": "Sağlık özeti kuyruk ve e-posta durumunu verir",
+      "kind": "behavior",
+      "asserts": "Temiz durumda sayılar 0, sonBasariAni boş; ölü kuyrukta 1 iş ve art arda 2 başarısız (kalici) gönderim kurulunca oluMektup 1 ve ardisikBasarisiz 2; araya giren kapanis satırı ardisikBasarisiz'i değiştirmez; 11 dakikalık bekliyor satırı yarimKalan 1, 25 saatlik bekliyor satırı 0; günlük zamanlamalı kuyrukta beklenenAralikSaniye 86.400 ve son başarı anı döner; haftalık test kuyruğunda son başarıdan 8 gün sonra sonBasariAni hâlâ dolu (deleteAfterSeconds); API sürecinde çağrı IS_KUYRUGU_YANLIS_SUREC verir."
+    },
+    {
+      "name": "İşçi açılış sırası ve çıkış kodları",
+      "kind": "behavior",
+      "asserts": "Açılış adımlarının çağrı sırası kayıttan okunur ve worker.ts'teki ISCI_ACILIS_ADIMLARI sabitiyle (İşçi açılışı tablosu) aynıdır: isKuyruguKur uygulamaKur'dan önce, isKuyrugu.isleriBaslat uygulamaKur'dan sonra; uygulamaKur bitmeden kuyruğa konan test işi alınmaz, isleriBaslat'tan sonra alınır (zemin). Süreç saat dilimi UTC değilken IS_KUYRUGU_SAAT_DILIMI ve çıkış 78; yayın bilgisi dosyası yokken uygulamaKur hatasıyla çıkış 78; e-posta özet anahtarı 32 bayttan kısayken IS_KUYRUGU_EPOSTA_AYAR_EKSIK ve çıkış 78; kayıtlı kuyruk yokken IS_KUYRUGU_KUYRUK_EKSIK ve çıkış 1. Doğru ortamda açılır, uygulamaKur surec 'isci' ile çağrılır ve dinleme açmaz (sunucu adresi yok); işçide yayinBilgisi() değer döner (artı denetim: yüklenmeden çağrı hata fırlatır) ve yayın bilgisi çağrı kaydında bir kez yüklenir (worker.ts ayrıca yüklemez)."
+    },
+    {
+      "name": "Ders başı giriş yığılması (D15 yük testine eklenecek senaryo)",
+      "kind": "load",
+      "asserts": "İki API kopyasında 10 dakika boyunca dakikada 600 kod isteği ve aynı sayıda giriş bildirimi, sahte SMTP 200 ms gecikmeli: istek süresi e-postasız ölçümden en çok yüzde 10 uzun; her gönderim için tek satır; 10 dakikadan eski yarım satır yok; süreç başına yoldaki gönderim 200'ü, SMTP bağlantısı 5'i aşmaz."
+    },
+    {
+      "name": "Başvuru silme kodu giriş koduyla aynı sayaca girer",
+      "kind": "behavior",
+      "asserts": "Aynı adrese giris_kodu izni alındıktan 30 saniye sonra basvuru_silme_kodu için epostaSiniriDenetle DAKIKA ile reddedilir, 61 saniye sonra izinli olur; gönderilen iletinin konusu '<ürün adı> başvuru silme kodu', metni kodu, geçerlilik satırını ve son paragrafta içe alınan SABIT_UYARI_CUMLESI'ni içerir, konu kodu içermez; başka adreste ilk basvuru_silme_kodu isteği izinli (zemin)."
+    },
+    {
+      "name": "Parti işleyicisinde bir işin hatası yalnız o işi başarısız sayar",
+      "kind": "behavior",
+      "asserts": "boyut 50 test kuyruğunda işleyici 3 işi başarısız listesine koyunca 47 iş completed, 3 iş retry olur ve çıktılarında yalnız güvenli özet bulunur; şemaya uymayan 1 iş işleyiciye hiç verilmez ve IS_KUYRUGU_VERI_GECERSIZ ile başarısız olur; işleyici fırlatınca partideki işlerin hepsi retry olur (zemin); esZamanli 2 iken işleyici içindeki sayaç aynı anda en çok 2 parti görür."
+    },
+    {
+      "name": "Parti kuyruğu ders çıkışı yükünü taşır",
+      "kind": "load",
+      "asserts": "boyut 50, esZamanli 2 ve iş başına 5 ms işleyicili test kuyruğuna 20.000 iş konunca hepsi 3 dakikadan kısa sürede completed olur; aynı yük tek işli ayarla ölçülür ve parti ayarı ondan en az 10 kat hızlıdır (zemin); ölçüm D15 yük testi raporuna eklenir."
+    },
+    {
+      "name": "Tamamlanan işin çıktısı isSagligi'nda görünür",
+      "kind": "behavior",
+      "asserts": "Çıktı şemalı zamanlamalı test işi { farkSayisi: 3 } döndürünce isSagligi o kuyruğun zamanlama.sonCikti'sında { farkSayisi: 3 } görünür, sonraki çalışma { farkSayisi: 0 } döndürünce 0 olur; çıktı şeması olmayan kuyrukta değer döndüren işleyici ve 1 KiB üstü çıktı IS_KUYRUGU_CIKTI_GECERSIZ ile başarısız olur; z.string() yapraklı çıktı şeması tanımda reddedilir (artı denetim)."
+    },
+    {
+      "name": "Reddedilen istekler tabloyu şişirmez",
+      "kind": "behavior",
+      "asserts": "Aynı adrese aynı dakikada 1.000 epostaSiniriDenetle sonrası o özetin tabloda tam 1 bekliyor ve tam 1 sinirda satırı vardır; sayım sorgusunun EXPLAIN (ANALYZE, FORMAT JSON) çıktısında kısmi sayım dizini kullanılır ve okunan satır 10'u geçmez; farklı 1.000 adreste 1.000 bekliyor satırı oluşur (zemin, yazımın gerçekten olduğunu gösterir)."
+    },
+    {
+      "name": "STARTTLS ilan etmeyen sunucuya ileti gitmez",
+      "kind": "behavior",
+      "asserts": "smtpTasiyicisi 'starttls' ile STARTTLS ilan etmeyen sahte SMTP sunucusuna bağlanınca gönderim BASARISIZ (baglanti) olur, sunucu AUTH ve DATA komutu almaz (parola ve kod düz metin gitmez); STARTTLS ilan eden sahte sunucuda ileti gider (zemin); 'tls' ve 'starttls' taşıyıcısının ayarında minVersion TLSv1.2 ve rejectUnauthorized true'dur, ayar nesnesinden değiştirilemez."
+    },
+    {
+      "name": "Bağlantı denetimi örnek tablosunda doğru karar verir",
+      "kind": "behavior",
+      "asserts": "Örnekler Bağlantı denetimi tablosundan içe alınır. Geçenler: 'isletim.wal_arsivi', 'chrony.json', '12.37.0', 'D14-B05', 'saat 02:15', '/durum/saat', 'oturum_pencere_kapat'. Yakalananlar: 'ornek.example', 'www.x.com', 'a@b.co', 'http://x', 'HTTPS://X.COM', 'ftp://y', 'mailto:z', 'istanbul.edu.tr', 'x.com/yol', '(www.x.com).'. Ürün türünde yakalanan belirteç IS_KUYRUGU_EPOSTA_BAGLANTI verir, ürün dışı türde [adres] olur."
+    },
+    {
+      "name": "Test kuyruğu yardımcıları ortak işçiyi bozmaz",
+      "kind": "contract",
+      "asserts": "3 iş konmuşken isKuyrugunuBosalt sonrası kuyruktakiIsler bütün test kuyruklarında boş döner (zemin: önce 3 iş vardır) ve kuyruk ayarları durur; zamanlamaliOrnekAc açılıp kapatılınca ortak örnekte isiCalistirVeBekle çalışmayı sürdürür ve ikinci kurulum hatası oluşmaz; isiCalistirVeBekle hata veren işte 'failed', başaran işte 'completed' döner."
+    },
+    {
+      "name": "En eski bekleyen iş ileri tarihli işi saymaz",
+      "kind": "behavior",
+      "asserts": "baslamaAni 2 saat ileri iş varken enEskiBekleyenSaniye null; başlama anı 20 dakika önce geçmiş ve alınmamış iş varken 1.200 (zemin); retry beklemesindeki iş beklemesi bitene kadar sayılmaz."
+    },
+    {
+      "name": "İşçi kapanışında e-posta önce kapanır, uyarı iki kez gitmez",
+      "kind": "behavior",
+      "asserts": "Taşıyıcı ilk denemede 421 dönerken isletim_uyarisi gönderen test işi 5 saniyelik deneme beklemesindeyken işçi kapanışı başlar: gönderim hemen BASARISIZ (kapanis) döner, iş completed olur, pg-boss stop 30 saniyeden önce biter; işçi yeniden açılınca iş yeniden çalışmaz, taşıyıcı çağrı sayısı 1 kalır (aynı uyarı iki kez denenmez). Kapanış çağrı sırası kayıttan okunur: eposta.kapat ve pg-boss stop birlikte, sonra app.close, sonra iki veritabanı havuzu (veritabani ve saklamaVeritabani)."
+    },
+    {
+      "name": "Açılışta bir kez çalışacak iş kur iki kez çalışınca tek açılır",
+      "kind": "behavior",
+      "asserts": "acilistaBirKez tanımlı exclusive test kuyruğu için kur iki kez çalışınca kuyrukta 1 iş vardır ve ikinci raporun acilisIsi listesi boştur; iş tamamlandıktan sonra kur yeniden çalışınca 1 yeni iş açılır (zemin); exclusive olmayan kuyrukta acilistaBirKez IS_KUYRUGU_TANIM_GECERSIZ verir."
+    },
+    {
+      "name": "Hata kataloğu D13 biçimine uyar",
+      "kind": "contract",
+      "asserts": "IS_KUYRUGU_HATA_KODLARI hataKodlariTanimla'dan geçer ve TUM_HATALAR'a çift kodsuz girer. API sürecinde isGonder, epostaSiniriDenetle, epostaGonder, isSagligi ve isleriBaslat'ı hatalı girdiyle çağıran tablo sürüşlü senaryoda fırlatılan her D14 kodunun katalog değeri http 500 ve hoca, öğrenci metni içe alınan IS_KUYRUGU_GENEL_HATA_METNI'dir (12 kod); katalogdaki kalan 8 kodda http null ve metin null'dır, hiçbir rotanın hatalar listesinde yoktur. Kurulmamış iş kuyruğunda isGonder çağıran test rotası 500 API_SUNUCU_HATASI döner, gövdede D14 kodu geçmez (artı denetim: yakalanan logda IS_KUYRUGU_KURULMADI vardır)."
+    },
+    {
+      "name": "Kapanış ve kapasite sonucu sınıra sayılmaz",
+      "kind": "behavior",
+      "asserts": "Giriş kodu gönderimi kapanışta basarisiz (kapanis) bitince aynı adres 60 saniye beklemeden yeni izin alır; kapasite sonucu için de aynı; zemin: kalici (550) sonuçlu gönderimden sonra 60 saniye içindeki istek DAKIKA ile reddedilir."
+    },
+    {
+      "name": "Sınır denetimi READ COMMITTED dışında reddedilir",
+      "kind": "behavior",
+      "asserts": "REPEATABLE READ ve SERIALIZABLE işlemde epostaSiniriDenetle IS_KUYRUGU_EPOSTA_YALITIM ile reddedilir ve satır yazılmaz; D12.islem'in varsayılan READ COMMITTED işleminde izin verir (zemin)."
+    },
+    {
+      "name": "Adres kilidi danışma kilidi kuralıyla alınır",
+      "kind": "behavior",
+      "asserts": "A işleminde epostaSiniriDenetle(tx, adres, 'giris_kodu', { ekAnahtarlar: [katman 3 test anahtarı] }) çağrılıp işlem açık beklerken B işleminde D12.danismaKilidiDene 'is-kuyrugu:eposta:<özet>' ve ek anahtar için false döner, A bitince true (zemin); başka adresin anahtarı A açıkken de true. Anahtar metni ozet.ts'teki anahtar işlevinden içe alınır. A işleminde önce katman 3 anahtarı alınıp sonra epostaSiniriDenetle çağrılınca D12'nin sıra hatası fırlar ve satır yazılmaz (artı denetim: aynı çağrı işlemin ilk kilidiyken izinli). Hata iletisinde ve loglarda adres geçmez, 'is-kuyrugu:eposta:' öneki geçer."
+    },
+    {
+      "name": "Altyapı iş fabrikaları isTanimla'ya uyarlanır",
+      "kind": "contract",
+      "asserts": "worker.ts'in topladığı kayıtta isletim_denetimi, isletim_kalp_atisi, sertifika_bitis_denetimi ve haftalik_olcum_ozeti (D15, altyapiIsleriniUyarla ile) ile saklama_suresi_isi ve donem_bolumu_denetimi (D12, doğrudan isTanimla ile) kuyrukları exclusive ve Europe/Istanbul ile vardır; sureAsimiSaniye vermeyen örnek D12 öğesi ALTYAPI_IS_VARSAYILANI'ndan içe alınan 1.800'ü alır. D12 işlerine verilen saklamaVeritabani'nda current_user yoklama_saklama ve havuz boyutu 1, veritabani'nda yoklama_isci'dir (zemin). kacirilan 'once' verilen 10 dakikalık örnek iş IS_KUYRUGU_ZAMANLAMA_KURALI, saatDilimi 'UTC' verilen örnek IS_KUYRUGU_TANIM_GECERSIZ ile açılışı durdurur; uyarlanan işleyici isle'ye isKimligi, tetiklemeAni ve iptal'i aynen geçirir. isle { retSuSeviyesi: Date } döndürünce iş çıktısında ve isSagligi sonCikti'de aynı an ISO biçimde görünür; { not: 'metin' } ya da milisaniye cinsinden an döndürünce iş IS_KUYRUGU_CIKTI_GECERSIZ ile başarısız olur (artı denetim)."
+    },
+    {
+      "name": "Satır yazımında veritabanı hatası BASARISIZ döner",
+      "kind": "behavior",
+      "asserts": "bekliyor satırı başka işlemde kilitliyken koşullu güncelleme deyim süresi aşımıyla (57014) hata verince epostaGonder BASARISIZ (veritabani) döner, taşıyıcı çağrılmaz, log yalnız SQLSTATE taşır; ileti gittikten sonraki güncelleme hata verince sonuç GONDERILDI olur ve 10 dakika sonra isSagligi yarimKalan 1 gösterir."
+    },
+    {
+      "name": "Koruyucu testler kasıtlı bozmada kırmızıya döner",
+      "kind": "mutation",
+      "asserts": "Her bozma ayrı denenir, dosyanın md5'i alınır, eski baytlar geri yazılır ve md5 yeniden denetlenir: danışma kilidi kaldırılınca 'Yarışan istekler'; kayan pencere takvim gününe çevrilince 'Saatte 5 ve günde 10'; fromDrizzle(tx) yerine havuz kullanılınca 'İşlem geri alınınca'; hata süzgeci kaldırılınca 'İş hatası çıktıya'; bağlantı süzgeci kaldırılınca 'Cihaz etiketindeki bağlantı'; tz kaldırılınca 'Zamanlama İstanbul saatiyle'; özet yerine düz adres yazılınca 'Gönderim tablosunda'; gonderimId ya da tür eşleşmesi kaldırılınca 'Sınıra giren tür'; parti sarmalayıcısı bütün partiyi başarısız sayınca 'Parti işleyicisinde'; requireTLS kaldırılınca 'STARTTLS ilan etmeyen'; ret satırının tekil yazımı kaldırılınca 'Reddedilen istekler'; yalıtım denetimi kaldırılınca 'Sınır denetimi READ COMMITTED'; enEskiBekleyenSaniye created_on ile ölçülünce 'En eski bekleyen'; işçi kapanışında eposta.kapat pg-boss stop'tan sonraya alınınca 'İşçi kapanışında'; danismaKilidi çağrısı yerine elle pg_advisory_xact_lock yazılınca 'Adres kilidi danışma kilidi kuralıyla alınır'; isleriBaslat uygulamaKur'dan önceye alınınca 'İşçi açılış sırası'; IS_KUYRUGU_KURULMADI http null yapılınca 'Hata kataloğu'; altyapı çıktısı ALTYAPI_CIKTI_SEMASI'ndan geçmeden yazılınca 'Altyapı iş fabrikaları' kırmızı olur."
+    }
+  ],
+  "resolved_gaps": [
+    {
+      "gap": "D14-B01",
+      "decision": "Her kuyruk açık ayarla çalışır. Kuyruk sözleşmesi (KuyrukTanimi: ad, veri şeması, politika) kuyruğun sorumlu modülünde; çalıştırma ayarı isTanimla'da: sureAsimiSaniye zorunlu (10-3.600), deneme varsayılanı 3, 30 saniyeden başlayan üstel bekleme, üst sınır 1.800 saniye; her kuyruğa ayrı ölü kuyruk <ad>_olu (işleyicisiz, 30 gün); biten iş 7 gün, başlamayan iş 14 gün tutulur; partition kapalı. Zamanlamalı kuyruk exclusive (ya da stately), olay kuyruğu standard, tekillik anahtarı kullanan kuyruk stately ya da exclusive. Merkezi kuyruklar.ts yok: tanımlar jobs/<modül>/index.ts'te, worker.ts toplar; ad tekliği ve kurallar işçi açılışında, kur'da ve sözleşme testinde denetlenir. Her işleyici aynı girdiyle iki kez çalışınca aynı sonucu verir; kural bütün işlere genişler.",
+      "why": "pg-boss 12 varsayılanları (2 deneme, beklemesiz, 15 dakikalık süre aşımı, ölü kuyruk yok) başarısız işi sessizce kaybeder ve zamanlamalı işi üst üste bindirebilir (pgboss.io/api/queues, 6 Ekim 2026'da 12.37.0 için okundu). Merkezi liste 15 mühendisin aynı dosyayı düzenlemesi demek; contracts.json kayıt desenini bağlayıcı kıldı."
+    },
+    {
+      "gap": "D14-B02",
+      "decision": "isGonder(tx, ...) pg-boss send çağrısına db: fromDrizzle(tx, sql) verir; iş, iş kuralının işlemiyle aynı bağlantıda ve aynı işlemde eklenir. pg-boss'u yalnız infra/is-kuyrugu içe aktarır (D15'ten Biome noRestrictedImports kuralı istenir). İki senaryo: işlem geri alınınca 0 iş, işlem bitince tam 1 iş.",
+      "why": "pg-boss 12'nin belgelenmiş Drizzle bağdaştırıcısı var (pgboss.io/api/adapters: fromDrizzle(tx, sql), node-postgres ve postgres-js destekli); hazırı varken kendi bağdaştırıcı ya da giden kutusu tablosu yazılmaz. İşlem dışı gönderim, geri alınan işlemin işini çalıştırır ya da biten işlemin işini kaybeder."
+    },
+    {
+      "gap": "D14-B03",
+      "decision": "İki kurucu, ikisi de schema 'pgboss', migrate false, createSchema false. API: supervise false, schedule false, registerInstance false, kendi havuzu yok (kurucunun db seçeneğine D12 Veritabani'nın db alanıyla fromDrizzle(veritabani.db, sql); belge yalnız işlem nesnesini örneklediğinden çalışmazsa veritabani.havuz.query'yi çağıran executeSql nesnesi; I060), yalnız send. API örneğinde açık kalan başka bir pg-boss döngüsü yetki hatası verirse (API rolü yalnız ekler) sözleşme testi yakalar, döngü kurucu seçeneğiyle kapatılır. İşçi: supervise true, schedule true, registerInstance true, doğrudan bağlantılı kendi havuzu (max 2), useListenNotify false. Açılışta isInstalled ve schemaVersion() BEKLENEN_PGBOSS_SEMA_SURUMU ile karşılaştırılır, uyuşmazsa süreç açılmaz. İşçi kapanışı stop({ graceful: true, timeout: 30000 }); Compose'ta işçinin stop_grace_period değeri 40 saniye (D15).",
+      "why": "pg-boss'ta migrate, createSchema, supervise ve schedule varsayılan açık (pgboss.io/api/constructor); yazılmazsa her API kopyası açılışta göç, bakım ve zamanlama yapar ve teknik.html#sunucu-arka-plan kuralı çiğnenir. 30 saniye pg-boss'un belgelenmiş durdurma süresi; 40 saniye teknik.html#altyapi-imaj örneğiyle aynı."
+    },
+    {
+      "gap": "D14-B04",
+      "decision": "Kuyruklar, ölü kuyruklar, zamanlamalar ve pgboss yetkileri yayın adımında kurulur: db:migrate'in üçüncü adımı worker.ts kur (Drizzle göçleri ve pg-boss migrate'ten sonra), şemayı kuran rolle (yoklama_goc), tekrar çalışmaya dayanıklı. kur önce şema sürümünü ve detectSchemaDrift'i denetler; yoklama_isci'ye pgboss tablolarında SELECT, INSERT, UPDATE, DELETE ve MAINTAIN (PostgreSQL 18; pg-boss'un dizin bakımı için), yoklama_api'ye yalnız iş eklemeye yeten en dar yetkiyi verir (liste en az yetki testiyle sabit); pgboss yetkilerinin tamamı bu adımdadır, D12 rollere pgboss şemasında yalnız USAGE verir (I060); createQueue ya da updateQueue ile ayarları yazar; zamanlamaları kayıtla eşitler, fazlasını unschedule eder. Kayıttan kalkan kuyruk silinmez, raporlanır. Politika yerinde değiştirilmez, yeni adla kuyruk açılır (önce genişlet sonra daralt). pg-boss yükseltmesinde pg-boss plans migrate çıktısı değişiklik isteğinde okunur. teknik.html#altyapi-imaj'daki db:migrate tarifine üçüncü adım eklenir: önce Drizzle göçleri, sonra pg-boss migrate, sonra kuyruk kurulumu (aynı betik, göç adımı yine tek yerde).",
+      "why": "pg-boss CLI'sında kuyruk ve zamanlama açan komut yok (pgboss.io/cli: migrate, create, version, doctor, reindex, rollback, plans); çalışma anında açmak uygulama rolüne fazladan yetki ister, hiç açmamak ilk gönderimi hata verdirir. Göç adımının tek betikte kalması teknik.html#altyapi-imaj kuralı."
+    },
+    {
+      "gap": "D14-B05",
+      "decision": "Sunucu işleri pg-boss'ta; makine işleri (pg_dump, pgBackRest, xprem birim yedeği, log arşivi) makinede ve D12 ile D15'indir. pg-boss zamanlama kuralları D14'ündür ve işçi açılışı, kur ve sözleşme testi denetler: tz her zaman Europe/Istanbul; günlük ve seyrek işler 03:00-05:00 arasında başlamaz, aralarında en az 5 dakika olur, missed: once ile kaydedilir; sık işler missed: skip. Önerilen yerleşim İşler bölümündeki çizelgede; işin sorumlu modülü cron'unu isTanimla'da yazar, sıra gereken iş sonra listesiyle bildirir (ör. gece_inceleme_siralamasi 05:50, bekleyen_kararlari_coz 05:25 ve devam_tutarlilik_denetimi 05:35'ten sonra; bekleyen_kayit_kapatma 00:15 ve aksis_gun_sonu_anligi güvenlik ağı 00:25, donem_kilidi 00:05'ten sonra). Saati işin sorumlu modülü belirler: çizelge sorumlu modüllerin cron'unu aynen kopyalar, makine işlerinin saatini D12 ve D15 verir. sonra listesi yalnız zamanlamalı işi gösterir; olayla çalışan iş (ör. pencere_beklemede_kesinlestir) orada durmaz.",
+      "why": "03:00-04:00 geçmişteki yaz saati geçişinin saatidir; pencere ayrıca makinedeki gece işlerine yer bırakır: D12'nin 02:15 dökümü ve ardından gelen xprem birim yedeği büyüyen veritabanında 03:00'ü geçebilir, D15'in log arşivi 03:15'tedir. Kural saat yerine pencereye bağlanınca işin sorumlu modülü saatini değiştirebilir, çakışmayı test yakalar. missed varsayılanı skip'tir (pgboss.io/api/scheduling): işçi kapalıyken gece işi hiç çalışmazdı."
+    },
+    {
+      "gap": "D14-B06",
+      "decision": "oturum_pencere_kapat (D04) her dakika ('* * * * *'), exclusive, missed: skip; sonraki çalışma kaçanların hepsini toplar. Kararlar alanın değil kapanış anının kendisine dayanır (D04'ün kuralı); iş yalnız görünen durumu günceller.",
+      "why": "pg-boss zamanlaması dakikada en çok bir iş gönderir ve 30 saniyede bir denetlenir; alan en geç yaklaşık 1,5 dakika gecikir, karar değişmez. teknik.html'deki 'birkaç dakikada bir' sınırının içinde."
+    },
+    {
+      "gap": "D14-B07",
+      "decision": "Parti (hoca, İstanbul tarihi) tekil anahtarıyla bir kez yazılır, aynı güne ikinci çalışma var olan partiye dokunmaz; tablo ve kural D09'undur. D14'ün payı: gece_inceleme_siralamasi exclusive ve missed: once ile günde bir tetiklenir; işleyiciye tetiklemeAni (pg-boss createdOn) verilir; İstanbul tarihine çevirme D04'ün saat yardımcısıyla yapılır, D14 ikinci bir dönüştürücü vermez.",
+      "why": "Gece yarısından sonra UTC tarihi bir önceki gündür; aynı gün ikinci çalışmanın partiyi değiştirmesi hocaya gün ortasında başka liste gösterir. Tarih kuralının tek yerde durması iki dönüştürücünün ayrışmasını önler."
+    },
+    {
+      "gap": "D14-B08",
+      "decision": "API, işçi ve göç kapları TZ=UTC ile çalışır (Compose, D15); işçi açılışta süreç saat farkı 0 değilse IS_KUYRUGU_SAAT_DILIMI ile açılmaz. PostgreSQL timezone 'UTC' (D12). Her zamanlama tz: 'Europe/Istanbul' ile kaydedilir, tanımda değiştirilemez. Kural taşıyan İstanbul dönüşümü D04'ün infra/saat yardımcısında. E-postadaki giriş saati yalnız görünümdür: infra/eposta/bicim.ts Intl'i açık timeZone 'Europe/Istanbul' ile yalnız sayısal parçalar için kullanır, ay ve gün adları kendi tablosundan; testi TZ=UTC ve TZ=Europe/Istanbul ile koşar.",
+      "why": "pg-boss'ta tz yazılmazsa UTC'dir (pgboss.io/api/scheduling). Sabit +03:00 saat dilimi verisi güncellemesiyle düzelmez; Intl yasağı packages/core içindir (teknik.html#kod), sunucu tam ICU'lu Node ile çalışır. Ay ve gün adını kendi tablomuzdan almak ICU yerel verisindeki biçim farkını kapatır."
+    },
+    {
+      "gap": "D14-B09",
+      "decision": "Kural sonuçları (son gün bitişi, gönderme süresi, kafa sayısı kesinleşmesi) okuma ya da varış anında saat arayüzüyle hesaplanır; işler yalnız kalıcı yan etki yazar. Kilitte onaysız kalan kayıtların denetim kaydı ayrı iş değil, D02'nin donem_kilidi işi (00:05) içindeki D07 adımıdır.",
+      "why": "İş gecikirse ya da işçi kapalıysa kural da gecikmemeli. Dönem kilidi için üç ayrı iş önerisi contracts.json'da tek işe bağlandı."
+    },
+    {
+      "gap": "D14-B10",
+      "decision": "Başlangıçta tek işçi kopyası. Tek işli kuyruk: localConcurrency 1, batchSize 1, pollingIntervalSeconds 2 (pg-boss varsayılanları açıkça yazılır). Çok işli kuyruk (bugün yalnız D08 devam_hesapla) partiIsleyici ile: batchSize parti.boyut (2-100), localConcurrency parti.esZamanli (1-4), pollingIntervalSeconds 0,5 (pg-boss alt sınırı); sarmalayıcı her işi ayrı tamamlar ya da başarısız sayar (PartiIsi). İşçinin bağlantı payı 5: pg-boss havuzu 2 (doğrudan), işleyicilerin Drizzle havuzu 3, havuzda bekleme 30 saniye (işçi etkileşimli değil). Parti kuyruklarının esZamanli toplamı Drizzle havuzunun 1 eksiğini geçmez: bugün devam_hesapla 2, tek işli kuyruklara en az 1 bağlantı kalır; işçi açılışı ve kur denetler. Sayı D12 ve D15 bütçesindeki 5 ile aynı; bütçe satırına 'işçi 5 = pg-boss 2 + Drizzle 3, Drizzle'ın 2'si devam_hesapla partileri' yazılır (I075, I077 ile kabul). D12'nin saklama işleri ayrı yoklama_saklama girişli Veritabani'yla (havuz 1) çalışır; bu bağlantıyı worker.ts kurar ve bütçede ayrı satırdır (saklama bağlantısı 1). Yük testinden sonra gerekirse artar.",
+      "why": "D08 ders çıkışında yaklaşık 20.000 devam_hesapla işini 5 dakikada bitirmeli; tek tek alımda iş başına 50 ms ile bile yaklaşık 17 dakika sürer ve hedef tasarım gereği tutmazdı. pg-boss'un work işleyicisi zaten iş dizisi alır, complete ve fail kimlik dizisi kabul eder (pgboss.io/api/workers, pgboss.io/api/jobs); parti yardımcısı yalnız iş başına sonucu ve güvenli özeti ekler. Envanterler işçi bağlantısını 10 ve 5 önerdi; 100 sınırının yarısında kalan D15 hesabı 5'e dayanıyor. Bir zamanlama birden çok kopyada da tek iş gönderir; kopya artırmak zamanlamayı çoğaltmaz (pgboss.io/api/scheduling)."
+    },
+    {
+      "gap": "D14-B11",
+      "decision": "İzleme ve uyarı D15'indir (contracts.json: isletim_denetimi D15'e geçti). D14 isSagligi ile ölçüyü verir: kuyruk sayaçları, ölü kuyruk, zamanlamalı işlerde son başarı, beklenen aralık ve son süre, canlı işçi örneği (getInstances), şema sürümü, e-postada 24 saatlik sayılar, art arda başarısız ve yarım kalan gönderim, zamanlamalı işin son çıktısı (sonCikti, D14-B23). D14 kendisi uyarı yollamaz; e-postayla uyarı istenirse D15 isletim_uyarisi ve isletim_ozeti türleriyle epostaGonder çağırır. SMTP düşünce uyarının gidememesi D15'in dış kanalıyla kapanır.",
+      "why": "Eşik ve uyarı tablosu D15'in; iş D14'te kalınca D14 ile D15 birbirini çağırıyordu. pg-boss 12'nin örnek kaydı (registerInstance, 30 saniyelik kalp atışı) teknik.html#sunucu-ayarlar'daki 'kayıt tablosundan izlenir' kuralını karşılar."
+    },
+    {
+      "gap": "D14-B12",
+      "decision": "İş verisi şeması yalnız UUID, ISO tarih ve an, açık sınırlı tam sayı (mutlak değer en çok 100.000: 6 haneli kod ve öğrenci numarası sığmaz), mantıksal değer ve sabit listeden oluşur; serbest metin, ek alan, _ önekli alan ve kayan nokta isTanimla, kur ve ilk isGonder'de reddedilir (Zod 4 toJSONSchema çıktısı denetlenir). Tekillik anahtarı parçaları yalnız UUID, ISO tarih ya da küçük harf ve alt çizgi. İstek kimliği verinin ayrılmış _istekKimligi alanında (UUID) taşınır, işleyiciye log bağlamı olarak geçer. Sarmalayıcı işleyiciden önce _istekKimligi'ni ayırır, kalanı strict ayrıştırır; yeni veri alanı iki yayında gelir (önce işçi tanır, sonra gönderen yazar). Dizilerin max'ı zorunludur, en kötü durum boyutu tanımda 8 KiB ile sınanır. Tamamlanan işin çıktısı yalnız kuyruğun çıktı şemasından geçer (D14-B23). Sarmalayıcı hatayı pg-boss'a yalnız güvenli özetle (uygulama hata kodu, SQLSTATE, kısıt adı, hata sınıfı) iletir. Nodemailer'ın logger ve debug seçenekleri kapalı; SMTP hata mesajı loglanmaz, yalnız yanıt kodu ve hata kodu. eposta_gonderimleri adres tutmaz.",
+      "why": "plan.html#kararlar-roller iş kuyruğunda kod, isim ve numarayı yasaklıyor; pg-boss yakalanmayan hatayı output alanına yazar (pgboss.io/api/workers), veritabanı ve SMTP mesajı değer taşıyabilir (SMTP 550 yanıtı alıcı adresini yazar). Yapısal denetim gözden kaçan alanı yakalar; pino gizlemesi ikinci güvence kalır."
+    },
+    {
+      "gap": "D14-B13",
+      "decision": "Senaryolar işi gerçek yoldan çalıştırır: D14'ün adımı işi kuyruğa koyar, test sürecindeki işçiyi notifyWorker ile uyarır ve pg-boss casusuyla (__test__enableSpies, getSpy().waitForJobWithId) completed ya da failed durumunu bekler; veri doğrulaması, sarmalayıcı ve saklama da sınanır. Test sürecinin ortak işçisi zamanlaması ve bakımı kapalı kurulur (zamanlamaAcik ve bakimAcik false): saati ilerleten bir modül senaryosunda gece işleri kendiliğinden tetiklenmez ve süre aşımı kendiliğinden işlemez; bakım senaryosu supervise(ad) çağırır. Zamanlama senaryoları zamanlamaliOrnekAc ile zamanlaması açık ayrı bir örnek açar (dış yüzü bağlamaz, ortak örneği durdurmaz; isKuyruguKur'un ikinci kurulum kuralı yalnız dış yüzü bağlayan kuruluma uygulanır), TestClock.tick ile (tick pg-boss'un yerleşmesini bekler) ve kaçan iş için setTime ile sınar. Ortak adımlar ('Eğer ki X işi çalışırsa', 'aynı veriyle iki kez çalışırsa', 'kuyrukta N iş bekler', 'ölü kuyruğa düşer') bütün modüllerin senaryolarında kullanılır. Zamanlama kurallarını sözleşme testi cron-parser'la denetler. Test desteği apps/server/test/support/is-kuyrugu.ts'te (öbür modüllerin adımları ve D15'in test dünyası buradan içe aktarır; I079): isKuyrugunuBosalt (deleteAllJobs; D12'nin senaryoOncesiSifirla'sı ve D15'in kancası bunu çağırır), isiCalistirVeBekle, kuyruktakiIsler, zamanlamaliOrnekAc; imzalar dış yüz tablosunda.",
+      "why": "Gerçek beklemeye dayanan test yavaş ve kırılgan; TestClock ve casuslar pg-boss 12'de belgelenmiş (pgboss.io/api/testing). İşleyiciyi doğrudan çağırmak sarmalayıcıdaki süzgeci ve veri doğrulamasını atlardı."
+    },
+    {
+      "gap": "D14-B14",
+      "decision": "Her modül kendi geçici verisini kendi işiyle siler (contracts.json). D14: eposta_gonderimleri 7 gün (eposta_gonderim_temizligi, 02:45); pg-boss biten işleri 7 gün (deleteAfterSeconds), başlamayan işleri 14 gün (retentionSeconds), ölü kuyruk işlerini 30 gün sonra bakımda siler. Giriş kodları, oturumlar ve eşleştirme kodları sorumlu modüllerinin işlerinde (kimlik_temizligi, giris_oturumu_temizligi, projeksiyon_eslestirme_temizle). Silmeler partili ve tekrar çalışmaya dayanıklı. Hoca hesabı silinince eposta_gonderimleri'nde adres değil yalnız anahtarlı özet kalır ve en geç 8 günde silinir.",
+      "why": "Tek temizlik işi on tabloya yazınca tek yazar kuralı bozulurdu. 7 gün: sınır penceresi 1 gün; kod gelmediğini söyleyen hocanın gönderimi hafta içinde görülebilir. Özet adres değildir ve anahtarsız adrese çevrilemez; plan.html#kararlar-hesap-silme'deki adres silme kuralı korunur."
+    },
+    {
+      "gap": "D14-B15",
+      "decision": "Kararlı türler şimdi yazılır: giris_kodu, basvuru_kodu, basvuru_silme_kodu (D01-B32: onaylanmamış başvuranın web üzerinden silmesi), onay_bekliyor, giris_bildirimi ve ürün dışı isletim_uyarisi ile isletim_ozeti (D15). basvuru_silme_kodu giriş koduyla aynı biçimde (kod, geçerlilik, sabit cümle) ve aynı sınır sayacında. Kalan türler (başvuru onaylandı, hesap yok, başvuru reddedildi, Aşama 2 projeksiyon uyarısı) karar bekliyor (Açık noktalar, D14-A01). Yeni tür bir şablon, tür listesine bir satır ve CHECK'i genişleten bir göçtür.",
+      "why": "Başvuru silme kodu bekletilemez: onaydan önce giriş olmadığından (plan.html#kararlar-roller) başvuranın tek silme yolu e-posta kodudur, Google Play web üzerinden silmeyi şart koşar (plan.html#kararlar-hesap-silme) ve D01 bu türü sayaca zaten katıyor (D01-B08). Öbür her yeni e-posta türü DMARC p=none ortamında oltalama yüzeyini büyütür; D01 ve D11 envanterleri D14'ün önerisinden farklı öneriyor. Bu bir ürün kararıdır ve henüz verilmedi (Açık noktalar, D14-A01)."
+    },
+    {
+      "gap": "D14-B16",
+      "decision": "Biçim yalnız düz metin (text/plain; charset=utf-8), HTML parçası yok; vurgu satır düzeniyle: 'Sen değilsen' cümlesi ayrı paragraf, sabit cümle en son paragraf. Konu satırında kod yok: '<ürün adı> giriş kodu', '<ürün adı> başvuru kodu', '<ürün adı> başvuru silme kodu', '<ürün adı>: başvurun onay bekliyor', '<ürün adı>: yeni giriş'. Ürün adı ve gönderen görünen adı ayardan gelir, yayında boş olamaz. Auto-Submitted: auto-generated başlığı. Sabit cümleler sabit-metinler.ts'te tek sabit; senaryolar içe alıp arar. Giriş saati '6 Ekim 2026 Salı, 09:58'de' biçiminde, ek ünlü uyumuyla hesaplanır. Metinde alan adı ve adres yok. Hitap ve görünen ad karar bekliyor (Açık noktalar, D14-A02).",
+      "why": "Düz metin bağlantıyı, izleme pikselini ve uzak görseli biçimden dışlar; 'bağlantı yok' kuralı şablon yazarına kalmaz. 'Kayıt kodu' yerine 'başvuru kodu': D01'de kayıt kodu öğrencinin tek kullanımlık kodudur, karışmasın."
+    },
+    {
+      "gap": "D14-B17",
+      "decision": "Süreç içi gönderici: çağrı hemen döner, gönderim sonraki olay döngüsünde başlar (D01 epostaGonder'i cevap gittikten sonra, onResponse kancasında çağırır). Nodemailer havuzlu taşıma, en çok 5 bağlantı; bağlantı ve karşılama zaman aşımı 10 saniye, soket 30 saniye; süreç başına en çok 200 yoldaki gönderim, fazlası hemen BASARISIZ (kapasite). Yalnız geçici hatada (SMTP 4xx, bağlantı hatası, zaman aşımı) 5 ve 30 saniye sonra iki deneme daha; 5xx ve kimlik doğrulama hatası denenmez. Kapanışta kapat(): API'de 10, işçide 5 saniye bekler, bekleyen deneme beklemelerini kapanis sonucuyla bitirir. API sırası app.close, eposta.kapat, iş kuyruğu durdur, havuz kapat; işçi sırası eposta.kapat ile pg-boss stop birlikte, sonra app.close, sonra iki veritabanı havuzu: deneme beklemesindeki işleyici pg-boss süresinde biter, süre aşımıyla yeniden çalışıp aynı uyarıyı ikinci kez göndermez. Satır yazımında veritabanı hatası gönderimden önceyse BASARISIZ (veritabani), sonraysa GONDERILDI. Gönderim sonucu her zaman çözülen değerdir; yalnız programlama hatası (adres, şablon verisi, sınır atlama, bağlantı) sözü reddeder ve satıra dokunmaz. Çağıran sözü bekler ya da sonucunu işler (noFloatingPromises).",
+      "why": "Kod düz metin olarak yalnız üretildiği anda var, kuyruğa konamaz (plan.html#kararlar-roller). Nodemailer'ın varsayılan zaman aşımları dakikalarca; kod 5 dakika geçerli olduğundan 30 saniyelik son deneme hâlâ işe yarar. Süreç çökerse e-posta kaybolur ve hoca yeni kod ister; plan bunu kabul ediyor."
+    },
+    {
+      "gap": "D14-B18",
+      "decision": "Giriş bildirimi iş değildir: kod e-postasıyla aynı süreç içi yoldan, aynı deneme kuralıyla gider. epostaGonder sonucu D01'e döner; BASARISIZ ise D01 denetim kaydına (bildirim_gonderilemedi) D09.denetimeYaz ile yazar, giriş geri alınmaz. D01 envanterinin 1, 5, 30 saniyelik önerisi yerine D14'ün tek deneme kuralı (hemen, +5, +30 saniye) bütün ürün e-postalarında geçerli.",
+      "why": "teknik.html#sunucu-kimlik bildirimi kod e-postasıyla aynı yola bağlıyor ve contracts.json giris_bildirimi_eposta işini bu yüzden düşürdü; envanterdeki iş önerisi bu kararla çelişiyordu. Süreç çökmesinde kalan risk (bildirim ve onun denetim satırı yok) gönderim satırında yarım kalan olarak görünür ve D15 uyarır; giriş yine oturum listesinde ve denetim kaydındadır."
+    },
+    {
+      "gap": "D14-B19",
+      "decision": "Kayan pencereler: son 60, 3.600 ve 86.400 saniye, saat diliminden bağımsız; sayılar sinir.ts'teki EPOSTA_SINIRLARI sabitinde (1, 5, 10). Sayılan türler isteğin tetiklediği e-postalar: giris_kodu, basvuru_kodu, basvuru_silme_kodu, onay_bekliyor (eklenirse hesap yok). Giriş bildirimi ve işletim e-postaları sayılmaz. SMTP denemesi tamamlanmış başarısız gönderim sayılır; sinirda satırı ile kapasite, kapanis ve veritabani sonuçlu satır sayılmaz. Sayma ve ekleme çağıranın READ COMMITTED işleminde; adres kilidi D12.danismaKilidi ile 'is-kuyrugu:eposta:<özet>' anahtarıyla (katman 1, ortak kural 'Danışma kilidi katmanları'), işlemin ilk danışma kilidi çağrısı olarak, çağıranın ek anahtarları aynı çağrıda (s.ekAnahtarlar); elle pg_advisory_xact_lock yazılmaz. Aynı anda gelen iki istek sınırı aşamaz, 64 bitlik karması çakışan iki özet yalnız sırayla bekler; başka yalıtım düzeyi IS_KUYRUGU_EPOSTA_YALITIM. Sınır aşılınca e-posta gitmez, cevap D01'de aynı kalır; ret özet başına 24 saatte bir sinirda satırı yazar, sonrakiler yalnız loglanır. Sayım dizini sinirda'yı dışlayan kısmi dizindir; okunan satır özet başına sınırlı kalır.",
+      "why": "Takvim günü gece yarısının iki yanında 20 kod demek ve sınırı saat dilimine bağlar. onay bekliyor sayılmazsa onay bekleyen birinin kutusu doldurulabilir. Kopyalar arası kesin sayaç PostgreSQL'de olmalı (plan.html#teknoloji-sunucu-yeri). Girişsiz IP sınırı dakikada 3.000; her ret satır yazsaydı tek adrese günde milyonlarca satır yazılır, sayım her istekte bunları tarar ve kilidi o süre tutardı, D01'in sabit cevap süresi aşılırdı. Kapanışta biten kodu sayan kural her yayında hocayı bir dakika girişsiz bırakırdı; plan girişsiz kalmayı daha büyük zarar sayıyor (plan.html#kararlar-tek-etkenli-giris). Yüksek yalıtımda görüntü kilitten önce alınabilir, iki istek 0 sayar."
+    },
+    {
+      "gap": "D14-B20",
+      "decision": "Sayaç ve sonuç D14'ün eposta_gonderimleri tablosunda; alıcı normalleştirilmiş adresin HMAC-SHA256 özetiyle (32 bayt) durur. Anahtar tek iş içindir (amaç 'eposta_ozeti'), Compose secrets ile gelir, bileşim kökü D15.gizliAnahtar ile okuyup epostaKur'a verir; yoksa ya da 32 bayttan kısaysa süreç açılmaz. teknik.html#sunucu-ayarlar'daki gizli anahtar listesine bu anahtar eklenir. Anahtar değişirse yalnız sayaçlar sıfırlanır. Normalleştirmeyi D01 yapar; D14 yeniden yazmaz, yalnız denetler: küçük harfli ASCII, boşluksuz, tek @, ürün türlerinde alan adı tam istanbul.edu.tr; uymayan adres IS_KUYRUGU_EPOSTA_ADRES_GECERSIZ.",
+      "why": "D01'in kod tablosu onay bekliyor e-postasını saymaz; adres açık yazılsaydı hesap silinince adresin silinmesi kuralı (plan.html#kararlar-hesap-silme) bu tabloda delinirdi. Özet anahtarsız olsaydı personel adres listesiyle geri çözülürdü."
+    },
+    {
+      "gap": "D14-B21",
+      "decision": "Tek taşıyıcı arayüzü (tasiyici.ts); ilk yazılan genel SMTP ayarıdır (sunucu, port, tls ya da starttls, kullanıcı, parola), geliştirmede Mailpit ile denenir. Google rölesi aynı ayarla kurulur (smtp-relay.gmail.com, 587, STARTTLS, gönderici hesapla SMTP kimlik doğrulaması); OAuth2 ve DKIM imzası kodu yalnız o yol seçilirse yazılır. Otomatik yedek yol yok. Günlük ileti ve tekil alıcı sayısı eposta_gonderimleri'nden isSagligi'na girer, ayarlı günlük sınırla birlikte; yüzde 80 eşiği D15'in. Geri dönen e-postalar gönderici hesabın kutusunda kalır, ilk sürümde işlenmez. smtp_parolasi ve eposta_ozeti anahtarı API kopyalarına ve işçiye koşulsuz verilir: işçi isletim_uyarisi ve isletim_ozeti gönderir, e-posta ayarı eksikse açılmaz. Güvenlik ayarı: tls secure true; starttls secure false ve requireTLS true (STARTTLS ilan etmeyen sunucuya düz metin kimlik doğrulama ve ileti gitmez); ikisinde en az TLS 1.2 ve sertifika doğrulaması, ayarla kapatılamaz. BİDB'den istenecek kimlik doğrulaması: D14-A04.",
+      "why": "Yol BİDB'nin cevabına bağlı (plan.html#kararlar-e-posta-gonderimi, plan.html#acik); tek arayüz yol değişince yalnız ayarı değiştirir. Yedekli gönderici iki yolun bakımını ister, bu ölçekte gerekmez. Nodemailer'da requireTLS verilmezse sunucu STARTTLS ilan etmediğinde bağlantı düz metinde sürer (nodemailer.com/smtp); ilanı silen ağ saldırganı giriş kodunu (tek etken) ve SMTP parolasını okurdu."
+    },
+    {
+      "gap": "D14-B22",
+      "decision": "D14 tarafında istisna yok: D14, D01'in istediği e-postayı gönderir. Deneme hocasına kod ve bildirim e-postası gidip gitmeyeceği D01'in akışında belirlenir ve karar bekliyor (Açık noktalar, D14-A03).",
+      "why": "Her girişteki bildirim tek etkenli girişin telafi önlemi (plan.html#kararlar-tek-etkenli-giris); istisna bir güvenlik kuralını değiştirir."
+    },
+    {
+      "gap": "D14-B23 (gözden geçirmeden)",
+      "decision": "Zamanlamalı işin küçük ölçüsü pg-boss iş çıktısında durur: KuyrukTanimi.cikti isteğe bağlı Zod şeması (açık sınırlı tam sayı, mantıksal, sabit liste; en çok 1 KiB), tek işli işleyici Promise<C | void> döndürür, sarmalayıcı şemayla doğrulayıp output'a yazar; şemasız kuyrukta dönen değer ya da şemaya uymayan değer IS_KUYRUGU_CIKTI_GECERSIZ. IsSagligi.kuyruklar[].zamanlama.sonCikti son completed işin output'udur. D08 devam_tutarlilik_denetimi { dersSayisi, ogrenciSayisi, farkSayisi, farkTurleri } döndürür; D15'in isletim.devam_tutarlilik_farki kuralı sonCikti.farkSayisi > 0'ı okur. D15'in önerdiği ikinci yol (D08'in uyariAc çağırması) seçilmedi: D08 ve D15 bu yolu zaten tasarladı, D08 D15'i çağırmaz. Altyapı işinde (D15 isletimIsleri) çıktı şeması uyarlayıcının ALTYAPI_CIKTI_SEMASI'dır: isletim_denetimi { retSuSeviyesi } (ISO an) döndürür, D14 onu output'a yazar ve sonCikti'de verir (I082); bu yüzden çıktı yaprakları veri kuralındaki gibi ISO an ve ISO tarihi de kapsar.",
+      "why": "pg-boss işleyicinin dönüş değerini output'a yazar (pgboss.io/api/workers); D14 sarmalayıcısı bu yolu kapatırsa plan.html#hedefler'deki 'hesabın elle hesaplananla uyuşmazlığı 0' hedefinin tek alarm yolu kurulamaz. Şema, çıktıya değer sızmasını veri kuralıyla aynı biçimde engeller."
+    },
+    {
+      "gap": "D14-B24 (gözden geçirmeden)",
+      "decision": "Bağlantı denetimi kuralı yazılı ve örnek tablosuyla sınanır (Bağlantı denetimi tablosu): şema ('://', http:, https:, ftp:, mailto:), 'www.' öneki, '@' ve IANA kök listesinde (tlds paketi, tam sabit) ya da RFC 6761 özel adlarında biten ana makine biçimi. Ürün türünde takılan belirteç şablon hatasıdır (IS_KUYRUGU_EPOSTA_BAGLANTI); ürün dışı türde belirteç [adres] olur ve log yalnız sayıyı yazar.",
+      "why": "Kural yazılmadan test edilemezdi; işletim uyarısında ret uygulansaydı D15 satırlarındaki 'isletim.wal_arsivi', 'chrony.json', '12.37.0' gibi belirteçler alan adı sayılabilir, isletim_denetimi hata alır ve uyarılar hiç gitmezdi. Dosya adı alan adı sonuyla bitebilir (ör. .sh): işletim e-postasında [adres] olur, bu kayıp uyarının gitmemesinden küçüktür."
+    },
+    {
+      "gap": "D14-B25 (gözden geçirmeden)",
+      "decision": "worker.ts açılış sırası ve her adımın çıkış kodu İşçi açılışı tablosunda: ayarlar (D15 ayarlariYukle({ surec: 'isci' })), log (logOlustur), TZ, veritabanı (yoklama_isci, havuz 3, bekleme 30 sn), saklama veritabanı (yoklama_saklama, havuz 1; D12 veritabaniIsleri'ne saklamaVeritabani), sistemSaati (D04), epostaKur, tanımlar (modül isler dizileri; D12 veritabaniIsleri öğeleri doğrudan isTanimla ile; D15 isletimIsleri altyapiIsleriniUyarla ile, isle'nin küçük nesnesi iş çıktısı), isKuyruguKur (dış yüz bağlanır, work yok), uygulamaKur({ surec: 'isci', ... }) (D13; yayın bilgisi ve kimlik dinleyicileri onun içinde, dinleme yok; worker.ts yayinBilgisiYukle'yi ayrıca çağırmaz), en son isKuyrugu.isleriBaslat() (work kayıtları). Yapılandırma hatası çıkış 78 (D15'in ayar çıkış koduyla aynı; yayın bilgisi hatası dahil), öbürleri 1.",
+      "why": "Sıra yazılmazsa işçideki D07 kodu yayinBilgisi() çağrısında hata fırlatır, D15'in dört işi ve D12'nin iki işi kaydolmaz; uygulamaKur isKuyrugu ve eposta bağımlılığını ister, bu yüzden kurulumlar ondan önce gelir, work kayıtları ise modül kayıtlarından sonra açılır. Çıkış kodu Compose ve işletim için yapılandırma hatasını geçici hatadan ayırır."
+    },
+    {
+      "gap": "D14-B26 (gözden geçirmeden)",
+      "decision": "isTanimla'da acilistaBirKez: true yalnız exclusive kuyrukta; kur (yayın adımı) her çalışmada bu kuyruklara bir iş gönderir, bekleyen ya da çalışan iş varken exclusive politika ikinci işi açmaz. D01 inceleme_hesaplari_kurulumu bunu kullanır (yayında bir kez ve 00:45 zamanlaması).",
+      "why": "D01 işin yayın adımında da çalışmasını istiyor; ayrı yol yazılmazsa her modül kendi açılış kodunu yazardı. Tekillik anahtarına yayın kimliği koymak gerekmez: exclusive politika aynı sonucu verir ve iş zaten tekrar çalışmaya dayanıklıdır."
+    },
+    {
+      "gap": "I014, I060 (hizalama)",
+      "decision": "Adres kilidi D12.danismaKilidi(tx, ['is-kuyrugu:eposta:<özet>', ...ekAnahtarlar]) ile, epostaSiniriDenetle'nin işlemindeki ilk danışma kilidi çağrısı olarak alınır (katman 1, ortak kural 'Danışma kilidi katmanları'); elle pg_advisory_xact_lock ve iki anahtarlı biçim kalktı. İmza epostaSiniriDenetle(tx, adres, tur, s?: { ekAnahtarlar?: readonly DanismaAnahtari[] }): çağıranın (D01) aynı işlemde gereken anahtarları aynı çağrıya katılır, D12 katman ve metin sırasıyla alır. Özet D14 içinde hesaplanır, anahtar metninde adres yoktur.",
+      "why": "Tek genel kilit sırası ancak bütün danışma kilitleri tek işlevden geçerse denetlenir; elle alınan kilit D12'nin sıra izlemesine görünmezdi ve çağıranın işleminde ters sıralı bekleme kurabilirdi. Ek anahtar seçeneği çağıranın ikinci bir çağrıda sırada geride kalan anahtar istemesini gereksiz kılar."
+    },
+    {
+      "gap": "I071, I076 (hizalama)",
+      "decision": "IS_KUYRUGU_HATA_KODLARI'nda http koddan koda: API isteğinde de doğabilen 12 kod (isGonder, epostaSiniriDenetle, epostaGonder, isSagligi ve isleriBaslat hataları; ör. IS_KUYRUGU_KURULMADI) http 500 ve IS_KUYRUGU_GENEL_HATA_METNI; yalnız işçide, kur'da ya da açılışta doğan 8 kod http null ve metinsiz. Önceki 'her kod http 500' kuralı kalktı.",
+      "why": "Ortak kural 'Birleşim' http null'ı işletim kodlarına ayırır ve böyle bir kod hiçbir rotanın hatalar listesine giremez; API'de doğabilen kod ise istemciye genel 500 olarak dönmelidir."
+    },
+    {
+      "gap": "I060, I071, I080, I082 (hizalama)",
+      "decision": "worker.ts bileşimi: ayarlariYukle({ surec: 'isci' }) ve logOlustur ile açılır; yoklama_isci (havuz 3) ve yoklama_saklama (havuz 1) girişli iki Veritabani kurar; D12.veritabaniIsleri({ veritabani, saklamaVeritabani, saat }) öğelerini doğrudan isTanimla'dan, D15.isletimIsleri(bag) tanımlarını altyapiIsleriniUyarla ile geçirir ve isle'nin döndürdüğü küçük nesneyi iş çıktısı yazar; isKuyruguKur'dan sonra uygulamaKur({ surec: 'isci', ..., isKuyrugu, eposta }) çağırır (yayın bilgisi ve kimlik dinleyicileri onun içinde); en son isKuyrugu.isleriBaslat() work kayıtlarını açar.",
+      "why": "uygulamaKur isKuyrugu ve eposta bağımlılığını ister, bu yüzden kurulum ondan önce gelir; work kayıtları ondan sonra açılmazsa ilk iş modül dinleyicileri ve saklama işleyicileri kaydolmadan alınabilirdi. Saklama işi yalnız yoklama_saklama girişiyle çalışır (D12); bu bağlantıyı bileşim kökü kurar."
+    },
+    {
+      "gap": "I007, I036, I049, I054, I110 (hizalama)",
+      "decision": "Çizelge: 01:55 takvim_oturumlarini_yenile gece onarımı (D02) eklendi; 05:15 pencere_beklemede_kesinlestir satırı kalktı, iş olayla satırında (yalnız bekleyen_kararlari_coz koyar, stately, tekillikAnahtari oturumId); projeksiyon_bekleyen_yeniden_hesapla (D11) olayla satırında (isGonder ile 5 saniye sonraya, stately, tekillikAnahtari oturumId). donem_kilidi 00:05, bekleyen_kayit_kapatma 00:15 ve aksis_gun_sonu_anligi güvenlik ağı 00:25 (ikisi de sonra: donem_kilidi; anlığın asıl yolu kilit adımının kilit işleminde koyduğu iş), deneme_dersi_oturumlari 00:35, inceleme_hesaplari_kurulumu 00:45; gece_inceleme_siralamasi sonra listesinden pencere_beklemede_kesinlestir çıktı.",
+      "why": "Saati işin sorumlu modülü belirler, çizelge sorumlu modüllerin cron'unu aynen kopyalar. Olayla çalışan iş zamanlama kuralına girmez ve sonra listesinde duramaz. 00:15 ve 00:25, 00:05'ten 10 dakikadan fazla sonradır."
+    },
+    {
+      "gap": "A1, I079, I123 (hizalama)",
+      "decision": "eposta_gonderimleri göçü apps/server/migrations/<14 haneli UTC>_is_kuyrugu_<açıklama>/ klasöründe (glob apps/server/migrations/??????????????_is_kuyrugu_* D14'ün); göç dosyaları spec dosya listesine değil iş paketine yazılır, klasör kuralı ve CI denetimi D12'nindir; pgboss şeması pg-boss migrate ile. Test yardımcıları (isKuyrugunuBosalt, isiCalistirVeBekle, kuyruktakiIsler, zamanlamaliOrnekAc) apps/server/test/support/is-kuyrugu.ts'e taşındı. contracts.json: epostaSiniriDenetle(tx, adres, tur, s?) satırı; reads_from D04 (Saat tipi), D12, D13 (istek kimliği, hataKodlariTanimla) ve worker.ts bileşim kökü için D15.",
+      "why": "Paralel paketler ortak dergi olmadan yalnız kendi önekli klasörlerini açar (A1). Test desteği başka modüllerin adımlarından ve D15'in test dünyasından içe aktarıldığından steps/ altında değil support/ altında durur."
+    }
+  ],
+  "contradictions_resolved": [
+    {
+      "id": "D14-C01",
+      "resolution": "İki cümle iki ayrı süreci anlatıyor. API'de pg-boss kendi havuzunu açmaz (kurucuya fromDrizzle(veritabani.db, sql)) ve her gönderim iş kuralının işlemiyle gider (fromDrizzle(tx, sql)); 'Drizzle'ın havuzunu kullanır' bu demektir. İşçide pg-boss kendi doğrudan bağlantısındadır; testlerdeki 'uygulama ve iş kuyruğu ayrı bağlantıda' işçinin işleri çalıştırmasıdır, işlem geri almanın kullanılmaması bu yüzden doğru. teknik.html#sunucu-arka-plan için önerilen cümle: 'API iş gönderirken iş kuralının işlemini kullanır (pg-boss'un fromDrizzle bağdaştırıcısı); işçi ayrı, doğrudan bağlantıda.'"
+    },
+    {
+      "id": "D14-C02",
+      "resolution": "Bağlayıcı kural 'bağlantı yok': biçim düz metin, şablon çıktısı bağlantı denetiminden geçer, metinde alan adı ve adres yok. 'Yalnız kod var' kod e-postasının içeriğini anlatır; giriş bildirimi ve onay bekliyor e-postası kodsuz bilgi taşır, bağlantı taşımaz. Sabit cümle plan gereği her kod e-postasında ve giriş bildiriminde, tutarlılık için onay bekliyor e-postasında da en son paragraftır; işletim uyarısında yoktur (ürün e-postası değil)."
+    },
+    {
+      "id": "D14-C03",
+      "resolution": "Karar bekleniyor (tasarim.html#acik-hitap, D14-A02). O güne kadar şablonlar plan.html'deki 'sen' cümleleriyle yazılır; iki cümle sabit-metinler.ts'te tek sabit olduğundan karar tek yerde değişir, senaryolar sabiti içe aldığından yeniden yazılmaz."
+    },
+    {
+      "id": "D14-C04",
+      "resolution": "Düz metin seçildi (tasarim.html'deki 'Düz yazı' ve plan.html'deki 'bağlantı yok' kuralı). Kalın ve küçük yazı düz metinde yok; 'Sen değilsen' satırı ayrı paragraf, sabit satır en son paragraf olarak verilir. HTML istenirse bağlantısız bir HTML parçası eklenebilir ama bağlantı denetimi iki parçada da gerekir; öneri düz metin."
+    },
+    {
+      "id": "D14-C05",
+      "resolution": "'isKuyruguKur ikinci kurulumda hata verir' ile 'zamanlama senaryoları ayrı örnek açar' çelişmez: ayrı örnek test desteğindeki zamanlamaliOrnekAc'tır, dış yüz işlevlerini bağlamaz ve ortak örneği durdurmaz; ikinci kurulum kuralı yalnız dış yüzü bağlayan kuruluma uygulanır."
+    }
+  ],
+  "open_points": [
+    {
+      "id": "D14-A01",
+      "question": "Kararlı ürün e-postalarına (giriş kodu, başvuru kodu, başvuru silme kodu, onay bekliyor, giriş bildirimi) hangileri eklensin: başvuru onaylandı, hesap yok (tanınmayan adrese, D01-B06), başvuru reddedildi, Aşama 2'de projeksiyon kodu başka hocanın hesabıyla kullanılınca uyarı (D11)?",
+      "recommendation": "Yalnız 'başvuru onaylandı' eklensin: kodsuz ve bağlantısız; hoca onayı kör denemeyle öğrenmesin. Tanınmayan adrese hiçbir şey gitmesin (cevap D01'de zaten aynı; 'hesap yok' e-postası oltalama yüzeyini büyütür). Ret, oturum kapatma ve özet e-postası yok, panelde görünür. Projeksiyon uyarısı uygulama içinde (D11).",
+      "needs_owner": true
+    },
+    {
+      "id": "D14-A02",
+      "question": "E-postalarda hocaya 'sen' mi 'siz' mi denir; gönderen görünen adı ve konu satırındaki ürün adı ne olur?",
+      "recommendation": "Hitap tasarim.html#acik-hitap kararıyla birlikte verilsin; o güne kadar plan.html'deki 'sen' cümleleri kalır. Görünen ad ve ürün adı plan.html'deki 'Ad ve logo' kararından gelsin (kurum adına izin varsa 'İÜ Yoklama', yoksa işi anlatan nötr ad); ikisi ayar olduğundan kod değişmez, yayında boş bırakılamaz.",
+      "needs_owner": true
+    },
+    {
+      "id": "D14-A03",
+      "question": "Deneme (inceleme) hocası sabit kodla girerken kod isteği e-posta üretsin mi, her girişte bildirim e-postası gitsin mi?",
+      "recommendation": "İkisi de gitmesin: sabit kodlu hesaba üretilen kod kullanılamaz, bildirim mağaza incelemesinde gürültü olur; her giriş ve yanlış deneme zaten loglanıyor (plan.html#kararlar-inceleme-hesaplari). İstisna D01'in akışında durur, D14'te kod gerekmez. Bir güvenlik kuralına istisna olduğundan onay gerekir.",
+      "needs_owner": true
+    },
+    {
+      "id": "D14-A04",
+      "question": "BİDB'ye gidecek resmî yazıda Google SMTP rölesi için yalnız sunucunun IP izni mi, IP izniyle birlikte gönderici hesapla SMTP kimlik doğrulaması mı istenir; sunucunun çıkış IP'si sabit ve yalnız bu makineye mi ait?",
+      "recommendation": "IP izni ve SMTP kimlik doğrulaması birlikte istensin; röle yalnız IP'ye dayanırsa aynı paylaşılan NAT arkasındaki başka makineler de üniversite adına gönderebilir. Yazıda makinenin sabit ve paylaşılmayan çıkış IP'si belirtilsin (D15'in sunucu makinesi sorusuyla birlikte). Röle olmazsa aynı hesapla OAuth2 (plan.html#kararlar-e-posta-gonderimi).",
+      "needs_owner": true
+    }
+  ],
+  "queue_policy": [
+    {
+      "ayar": "politika",
+      "deger": "zamanlamalı: exclusive (ya da stately); olay: standard; tekillik anahtarı kullanan: stately ya da exclusive",
+      "not": "KuyrukTanimi.politika; yerinde değiştirilmez, yeni adla kuyruk açılır."
+    },
+    {
+      "ayar": "retryLimit",
+      "deger": "3 (0-5)",
+      "not": "isTanimla deneme.sayi"
+    },
+    {
+      "ayar": "retryDelay ve retryBackoff",
+      "deger": "30 saniye (1-3.600), üstel açık",
+      "not": "isTanimla deneme.beklemeSaniye ve deneme.ustel"
+    },
+    {
+      "ayar": "retryDelayMax",
+      "deger": "1.800 saniye",
+      "not": "sabit"
+    },
+    {
+      "ayar": "expireInSeconds",
+      "deger": "zorunlu, 10-3.600",
+      "not": "isTanimla sureAsimiSaniye; daha uzun iş partilere bölünür ya da kalp atışı kullanır"
+    },
+    {
+      "ayar": "heartbeatSeconds",
+      "deger": "isteğe bağlı, en az 10, süre aşımının yarısından küçük",
+      "not": "isTanimla kalpAtisiSaniye"
+    },
+    {
+      "ayar": "retentionSeconds",
+      "deger": "1.209.600 (14 gün); ölü kuyrukta 2.592.000 (30 gün)",
+      "not": "başlamayan iş bu süreden sonra silinir; baslamaAni en çok 13 gün ileri"
+    },
+    {
+      "ayar": "deleteAfterSeconds",
+      "deger": "604.800 (7 gün); seyrek zamanlamalı kuyrukta en az 2 x beklenen aralık + 86.400 (haftalık iş 1.296.000)",
+      "not": "biten (completed, failed) iş; son başarı anı ve son çıktı sonraki çalışmaya kadar okunur"
+    },
+    {
+      "ayar": "deadLetter",
+      "deger": "<ad>_olu",
+      "not": "her kuyruğa ayrı, işleyicisiz; isSagligi sayar"
+    },
+    {
+      "ayar": "partition",
+      "deger": "false",
+      "not": "kuyruk açmak tablo açmaz"
+    },
+    {
+      "ayar": "work: localConcurrency, batchSize, pollingIntervalSeconds, includeMetadata",
+      "deger": "tek işli: 1, 1, 2, true; parti: parti.esZamanli (1-4), parti.boyut (2-100), 0,5, true",
+      "not": "işçide; includeMetadata tetiklemeAni için; parti kuyruklarının esZamanli toplamı Drizzle havuzundan (3) en az 1 eksik"
+    },
+    {
+      "ayar": "cikti (KuyrukTanimi)",
+      "deger": "isteğe bağlı Zod şeması (açık sınırlı tam sayı, mantıksal, sabit liste, ISO an, ISO tarih), en çok 1 KiB",
+      "not": "tamamlanan işin output alanı; parti kuyruğunda yok; altyapı işinde (D15 isletimIsleri) uyarlayıcının ALTYAPI_CIKTI_SEMASI'dır"
+    },
+    {
+      "ayar": "acilistaBirKez",
+      "deger": "yalnız exclusive kuyrukta",
+      "not": "kur yayın adımında bir iş gönderir; bekleyen iş varken ikincisi açılmaz"
+    },
+    {
+      "ayar": "schedule: tz, missed",
+      "deger": "'Europe/Istanbul'; günlük ve seyrek 'once', sık 'skip'",
+      "not": "tz tanımda değiştirilemez"
+    }
+  ],
+  "schedule_plan": [
+    {
+      "saat": "her dakika",
+      "is": "oturum_pencere_kapat",
+      "modul": "D04",
+      "yer": "pg-boss",
+      "not": "exclusive, missed skip"
+    },
+    {
+      "saat": "10 dakikada bir (:00)",
+      "is": "isletim_denetimi",
+      "modul": "D15",
+      "yer": "pg-boss",
+      "not": "isSagligi okur"
+    },
+    {
+      "saat": "10 dakikada bir (:05)",
+      "is": "isletim_kalp_atisi",
+      "modul": "D15",
+      "yer": "pg-boss",
+      "not": ""
+    },
+    {
+      "saat": "saat başı :17",
+      "is": "kimlik_temizligi",
+      "modul": "D01",
+      "yer": "pg-boss",
+      "not": ""
+    },
+    {
+      "saat": "00:05",
+      "is": "donem_kilidi",
+      "modul": "D02",
+      "yer": "pg-boss",
+      "not": "D07 karar kapanışı ve D10'un kilit adımı (sira 20; gün sonu anlığı işini kuyruğa koyar) aynı işlemde"
+    },
+    {
+      "saat": "00:15",
+      "is": "bekleyen_kayit_kapatma (gecelik denetim)",
+      "modul": "D01",
+      "yer": "pg-boss",
+      "not": "sonra: donem_kilidi"
+    },
+    {
+      "saat": "00:25",
+      "is": "aksis_gun_sonu_anligi (güvenlik ağı)",
+      "modul": "D10",
+      "yer": "pg-boss",
+      "not": "sonra: donem_kilidi; asıl yol kilit adımının kilit işleminde koyduğu iş"
+    },
+    {
+      "saat": "00:35",
+      "is": "deneme_dersi_oturumlari",
+      "modul": "D02",
+      "yer": "pg-boss",
+      "not": ""
+    },
+    {
+      "saat": "00:45",
+      "is": "inceleme_hesaplari_kurulumu",
+      "modul": "D01",
+      "yer": "pg-boss",
+      "not": "yayın adımında da (acilistaBirKez)"
+    },
+    {
+      "saat": "01:00",
+      "is": "pgbackrest_fark_yedek, pazar pgbackrest_tam_yedek",
+      "modul": "D12",
+      "yer": "makine",
+      "not": ""
+    },
+    {
+      "saat": "01:30 çarşamba",
+      "is": "pgbackrest_dogrulama",
+      "modul": "D12",
+      "yer": "makine",
+      "not": "fark yedeği sürüyorsa kilitte bekler; saat D12'den aynen"
+    },
+    {
+      "saat": "01:55",
+      "is": "takvim_oturumlarini_yenile (gece onarımı)",
+      "modul": "D02",
+      "yer": "pg-boss",
+      "not": "cron '55 1 * * *', missed: once; olay tetiklemesi de var (olayla satırı)"
+    },
+    {
+      "saat": "02:10",
+      "is": "hesap_silme_yurutucu",
+      "modul": "D01",
+      "yer": "pg-boss",
+      "not": ""
+    },
+    {
+      "saat": "02:15",
+      "is": "gecelik_pg_dump ve ardından xprem_birimi_yedegi",
+      "modul": "D12",
+      "yer": "makine",
+      "not": "systemd zamanlayıcısı, pg-boss dışında; saat D12'den aynen"
+    },
+    {
+      "saat": "02:20",
+      "is": "giris_oturumu_temizligi",
+      "modul": "D01",
+      "yer": "pg-boss",
+      "not": ""
+    },
+    {
+      "saat": "02:35",
+      "is": "projeksiyon_eslestirme_temizle",
+      "modul": "D11",
+      "yer": "pg-boss",
+      "not": ""
+    },
+    {
+      "saat": "02:45",
+      "is": "eposta_gonderim_temizligi",
+      "modul": "D14",
+      "yer": "pg-boss",
+      "not": ""
+    },
+    {
+      "saat": "03:00-05:00",
+      "is": "pg-boss günlük işi yok",
+      "modul": "",
+      "yer": "",
+      "not": "03:15 gunluk_log_arsivi (D15), makinede; 02:15 döküm zincirinin uzamasına da yer bırakır"
+    },
+    {
+      "saat": "05:00",
+      "is": "saklama_suresi_isi",
+      "modul": "D12",
+      "yer": "pg-boss",
+      "not": "süreler belli olana kadar kapalı"
+    },
+    {
+      "saat": "05:10",
+      "is": "sira_boslugu_raporu",
+      "modul": "D06",
+      "yer": "pg-boss",
+      "not": ""
+    },
+    {
+      "saat": "05:25",
+      "is": "bekleyen_kararlari_coz",
+      "modul": "D07",
+      "yer": "pg-boss",
+      "not": "pencere_beklemede_kesinlestir işlerini koyar (olayla satırı)"
+    },
+    {
+      "saat": "05:35",
+      "is": "devam_tutarlilik_denetimi",
+      "modul": "D08",
+      "yer": "pg-boss",
+      "not": "çıktı { dersSayisi, ogrenciSayisi, farkSayisi, farkTurleri }; D15 sonCikti.farkSayisi'ni okur"
+    },
+    {
+      "saat": "05:50",
+      "is": "gece_inceleme_siralamasi",
+      "modul": "D09",
+      "yer": "pg-boss",
+      "not": "sonra: bekleyen_kararlari_coz, devam_tutarlilik_denetimi; 02:15 dökümünden 3 saat 35 dakika sonra, ilk dersten önce"
+    },
+    {
+      "saat": "06:05",
+      "is": "android_iptal_listesi_cek",
+      "modul": "D07",
+      "yer": "pg-boss",
+      "not": ""
+    },
+    {
+      "saat": "06:25",
+      "is": "donem_bolumu_denetimi",
+      "modul": "D12",
+      "yer": "pg-boss",
+      "not": "yoklama tablosu bölündükten sonra"
+    },
+    {
+      "saat": "06:35",
+      "is": "sertifika_bitis_denetimi",
+      "modul": "D15",
+      "yer": "pg-boss",
+      "not": ""
+    },
+    {
+      "saat": "pazartesi 07:10",
+      "is": "haftalik_olcum_ozeti",
+      "modul": "D15",
+      "yer": "pg-boss",
+      "not": "ders başı yoğunluğundan önce; ota_yayin_denetimi GitHub Actions'ta (D15), çizelgede yok"
+    },
+    {
+      "saat": "olayla",
+      "is": "takvim_oturumlarini_yenile, esitleme_sonrasi_yeniden_degerlendir, pencere_beklemede_kesinlestir, devam_hesapla, projeksiyon_baglanti_kapat, projeksiyon_bekleyen_yeniden_hesapla",
+      "modul": "D02, D04, D07, D08, D11, D11",
+      "yer": "pg-boss ya da dinleyici",
+      "not": "Tetikleyen işlemde isGonder ile ya da D04'ün kapanış dinleyicisiyle. pencere_beklemede_kesinlestir (D07): yalnız bekleyen_kararlari_coz koyar, stately, tekillikAnahtari oturumId. projeksiyon_bekleyen_yeniden_hesapla (D11): gösterim ve öğrenci kaydı işlemi yeniden_hesap_bekliyor satırı bırakınca isGonder ile 5 saniye sonraya (baslamaAni), stately, tekillikAnahtari oturumId; 02:35 güvenlik ağı kalır. saat_esitleme_denetimi (D04) her API sürecinde süreç içi zamanlayıcıdır, pg-boss işi değil."
+    }
+  ],
+  "templates": [
+    {
+      "tur": "giris_kodu",
+      "konu": "<ürün adı> giriş kodu",
+      "metin": [
+        "Giriş kodun: <kod>",
+        "Kod <gecerlilikDakika> dakika geçerli ve yalnız bir kez kullanılır.",
+        "",
+        "<SABIT_UYARI_CUMLESI>"
+      ]
+    },
+    {
+      "tur": "basvuru_kodu",
+      "konu": "<ürün adı> başvuru kodu",
+      "metin": [
+        "Başvuru kodun: <kod>",
+        "Kod <gecerlilikDakika> dakika geçerli ve yalnız bir kez kullanılır. Kodu girince başvurun yönetici onayına gider.",
+        "",
+        "<SABIT_UYARI_CUMLESI>"
+      ]
+    },
+    {
+      "tur": "basvuru_silme_kodu",
+      "konu": "<ürün adı> başvuru silme kodu",
+      "metin": [
+        "Başvuru silme kodun: <kod>",
+        "Kod <gecerlilikDakika> dakika geçerli ve yalnız bir kez kullanılır. Kodu girince başvurun ve başvuru bilgilerin silinir.",
+        "",
+        "<SABIT_UYARI_CUMLESI>"
+      ]
+    },
+    {
+      "tur": "onay_bekliyor",
+      "konu": "<ürün adı>: başvurun onay bekliyor",
+      "metin": [
+        "Başvurun yönetici onayı bekliyor; onaylanınca giriş kodu isteyebilirsin.",
+        "",
+        "<SABIT_UYARI_CUMLESI>"
+      ]
+    },
+    {
+      "tur": "giris_bildirimi",
+      "konu": "<ürün adı>: yeni giriş",
+      "metin": [
+        "Hesabına <6 Ekim 2026 Salı, 09:58><ek> giriş yapıldı.",
+        "Tarayıcı: <cihazEtiketi>. (telefonda: Telefon: <cihazEtiketi>.)",
+        "Bu girişle en eski oturumun kapandı: <kapananOturumEtiketi>. (yalnız kapanan varsa)",
+        "",
+        "<SEN_DEGILSEN_CUMLESI>",
+        "",
+        "<SABIT_UYARI_CUMLESI>"
+      ]
+    },
+    {
+      "tur": "isletim_uyarisi",
+      "konu": "<ürün adı> işletim uyarısı: <konu>",
+      "metin": [
+        "<satirlar, her biri ayrı satır; bağlantı belirteci [adres] olur>"
+      ]
+    },
+    {
+      "tur": "isletim_ozeti",
+      "konu": "<ürün adı> işletim özeti: <konu>",
+      "metin": [
+        "<satirlar, her biri ayrı satır; bağlantı belirteci [adres] olur>"
+      ]
+    }
+  ],
+  "constants": [
+    {
+      "ad": "SABIT_UYARI_CUMLESI",
+      "deger": "Bu kodu yalnız uygulamaya ya da panele gir; uygulama kodu e-postayla, telefonla ya da başka bir yolla asla istemez.",
+      "kaynak": "plan.html#kararlar-e-posta-gonderimi (aynen)"
+    },
+    {
+      "ad": "SEN_DEGILSEN_CUMLESI",
+      "deger": "Sen değilsen Oturumlarım ekranından kapat.",
+      "kaynak": "plan.html#kararlar-roller, Hoca oturumu (aynen, sonda nokta tasarim.html#durumlar örneğindeki gibi)"
+    },
+    {
+      "ad": "EPOSTA_SINIRLARI",
+      "deger": "[{ pencereSaniye: 60, enCok: 1 }, { pencereSaniye: 3600, enCok: 5 }, { pencereSaniye: 86400, enCok: 10 }]",
+      "kaynak": "plan.html#kararlar-roller, Hoca girişi"
+    },
+    {
+      "ad": "EPOSTA_GONDERICI_AYARLARI",
+      "deger": "{ baglantiMs: 10000, karsilamaMs: 10000, soketMs: 30000, havuz: 5, enCokYolda: 200, denemeBeklemeleriMs: [5000, 30000], kapanisApiMs: 10000, kapanisIsciMs: 5000 }",
+      "kaynak": "D14-B17"
+    },
+    {
+      "ad": "EPOSTA_SAKLAMA_GUN",
+      "deger": "7",
+      "kaynak": "D14-B14"
+    },
+    {
+      "ad": "BEKLENEN_PGBOSS_SEMA_SURUMU",
+      "deger": "Sabitlenen pg-boss sürümünün schemaVersion() değeri; pg-boss yükseltmesiyle aynı değişiklikte güncellenir",
+      "kaynak": "D14-B03"
+    },
+    {
+      "ad": "SMTP_TLS_AYARLARI",
+      "deger": "{ minVersion: 'TLSv1.2', rejectUnauthorized: true }",
+      "kaynak": "D14-B21"
+    },
+    {
+      "ad": "IS_PARTI_SINIRLARI",
+      "deger": "{ boyut: [2, 100], esZamanli: [1, 4], yoklamaSaniye: 0.5 }",
+      "kaynak": "D14-B10"
+    },
+    {
+      "ad": "ISCI_HAVUZU",
+      "deger": "{ pgBoss: 2, drizzle: 3, saklama: 1, beklemeMs: 30000 }",
+      "kaynak": "D14-B10, I060 (saklama: D12 yoklama_saklama girişi, bütçede ayrı satır)"
+    },
+    {
+      "ad": "IS_BOYUT_SINIRLARI",
+      "deger": "{ veriEnCokBayt: 8192, ciktiEnCokBayt: 1024 }",
+      "kaynak": "D14-B12, D14-B23"
+    },
+    {
+      "ad": "ALTYAPI_IS_VARSAYILANI",
+      "deger": "{ politika: 'exclusive', sureAsimiSaniye: 1800, deneme: { sayi: 3, beklemeSaniye: 30 } }",
+      "kaynak": "D14-B25; D15 tanımlarının eksik alanları ve D12 öğesinin eksik sureAsimiSaniye değeri"
+    },
+    {
+      "ad": "ALTYAPI_CIKTI_SEMASI",
+      "deger": "en çok 8 alanlı kayıt; alan adı ^[a-z][A-Za-z0-9]{0,39}$; değer z.int (mutlak değer en çok 100.000), z.boolean, z.iso.datetime ya da z.iso.date; Date değeri önce ISO ana çevrilir; en kötü durum 1 KiB altında",
+      "kaynak": "D14-B23, I082"
+    },
+    {
+      "ad": "ISCI_ACILIS_ADIMLARI",
+      "deger": "İşçi açılışı tablosundaki 11 adımın adı ve çıkış kodu (78 ya da 1)",
+      "kaynak": "D14-B25"
+    },
+    {
+      "ad": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "deger": "Beklenmeyen bir sorun oldu. Biraz sonra yeniden dene.",
+      "kaynak": "D13 hataKodlariTanimla biçimi"
+    }
+  ],
+  "error_codes": [
+    {
+      "kod": "IS_KUYRUGU_KURULMADI",
+      "ne_zaman": "Dış yüz işlevi bileşim kökü kurmadan çağrıldı.",
+      "sonuc": "Programlama hatası; istekte 500, işte başarısız.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_YANLIS_SUREC",
+      "ne_zaman": "İşçiye özgü işlev (isSagligi, isKuyrugu.isleriBaslat) API sürecinde çağrıldı.",
+      "sonuc": "Programlama hatası.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_TANIM_GECERSIZ",
+      "ne_zaman": "Ad deseni, _olu soneki, yasak yaprak tip, eksik ya da sınır dışı süre aşımı, standard politikada zamanlama, 5 alanlı olmayan cron, parti ayarı sınır dışı ya da esZamanli toplamı havuzu dolduruyor, en kötü durum veri boyutu 8 KiB ya da çıktı boyutu 1 KiB üstü, acilistaBirKez exclusive olmayan kuyrukta, altyapı işinde saat dilimi Europe/Istanbul değil.",
+      "sonuc": "İşçi ve kur açılmaz; sözleşme testi kırmızı. API'de ilk isGonder'deki tanım denetiminde de doğar ve çağıranın işlemini geri aldırır.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_YINELENEN_AD",
+      "ne_zaman": "İki tanım aynı kuyruk adını kullanıyor.",
+      "sonuc": "İşçi ve kur açılmaz.",
+      "http": null,
+      "hoca": null,
+      "ogrenci": null
+    },
+    {
+      "kod": "IS_KUYRUGU_ZAMANLAMA_KURALI",
+      "ne_zaman": "Günlük iş 03:00-05:00 arasında, iki günlük iş 5 dakikadan yakın, sonra listesindeki iş 10 dakika önce değil ya da yok, missed kuralı bozuk (altyapı işinin kacirilan değeri sıklıkla uyuşmuyor).",
+      "sonuc": "İşçi ve kur açılmaz; sözleşme testi kırmızı.",
+      "http": null,
+      "hoca": null,
+      "ogrenci": null
+    },
+    {
+      "kod": "IS_KUYRUGU_VERI_GECERSIZ",
+      "ne_zaman": "isGonder verisi şemaya uymuyor; kuyruktaki işin verisi işleyicide şemaya uymuyor.",
+      "sonuc": "Çağıranın işlemi geri alınır; işte deneme, sonra ölü kuyruk.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_VERI_BUYUK",
+      "ne_zaman": "İş verisi 8 KiB üstü.",
+      "sonuc": "Çağıranın işlemi geri alınır.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_CIKTI_GECERSIZ",
+      "ne_zaman": "İşleyicinin döndürdüğü değer kuyruğun çıktı şemasına uymuyor, 1 KiB üstü ya da kuyrukta çıktı şeması yokken değer döndü.",
+      "sonuc": "İş başarısız sayılır (deneme, sonra ölü kuyruk); log error. Programlama hatası.",
+      "http": null,
+      "hoca": null,
+      "ogrenci": null
+    },
+    {
+      "kod": "IS_KUYRUGU_TEKILLIK_ANAHTARI_GECERSIZ",
+      "ne_zaman": "Anahtar desen dışı (rakam dizisi, 200 karakter üstü) ya da standard politikalı kuyrukta.",
+      "sonuc": "Çağıranın işlemi geri alınır.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_BASLAMA_ANI_GECERSIZ",
+      "ne_zaman": "baslamaAni verilen saatten önce ya da 13 günden ileri.",
+      "sonuc": "Çağıranın işlemi geri alınır.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_SEMA_SURUMU",
+      "ne_zaman": "pgboss kurulu değil ya da schemaVersion() beklenenden farklı.",
+      "sonuc": "API, işçi ve kur açılmaz (işçide çıkış 1).",
+      "http": null,
+      "hoca": null,
+      "ogrenci": null
+    },
+    {
+      "kod": "IS_KUYRUGU_SEMA_KAYMASI",
+      "ne_zaman": "detectSchemaDrift boş değil.",
+      "sonuc": "kur durur, yayın durur.",
+      "http": null,
+      "hoca": null,
+      "ogrenci": null
+    },
+    {
+      "kod": "IS_KUYRUGU_KUYRUK_EKSIK",
+      "ne_zaman": "Kayıtlı kuyruk ya da ölü kuyruğu veritabanında yok (kur çalışmamış).",
+      "sonuc": "İşçi açılmaz (çıkış 1).",
+      "http": null,
+      "hoca": null,
+      "ogrenci": null
+    },
+    {
+      "kod": "IS_KUYRUGU_SAAT_DILIMI",
+      "ne_zaman": "İşçi sürecinin saat farkı 0 değil (TZ=UTC değil).",
+      "sonuc": "İşçi açılmaz (çıkış 78).",
+      "http": null,
+      "hoca": null,
+      "ogrenci": null
+    },
+    {
+      "kod": "IS_KUYRUGU_EPOSTA_ADRES_GECERSIZ",
+      "ne_zaman": "Adres normalleştirilmemiş (büyük harf, boşluk, ASCII dışı) ya da ürün türünde alan adı istanbul.edu.tr değil (epostaSiniriDenetle ve epostaGonder).",
+      "sonuc": "Çağırana hata (söz reddedilir); satır yazılmaz, e-posta gitmez.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_EPOSTA_SINIR_ATLANDI",
+      "ne_zaman": "Sınıra giren tür gonderimId olmadan epostaGonder ile çağrıldı.",
+      "sonuc": "Söz reddedilir; e-posta gitmez.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_EPOSTA_YALITIM",
+      "ne_zaman": "epostaSiniriDenetle READ COMMITTED olmayan işlemde çağrıldı.",
+      "sonuc": "Söz reddedilir, satır yazılmaz, çağıranın işlemi geri alınır. Programlama hatası.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_EPOSTA_SABLON_VERISI_GECERSIZ",
+      "ne_zaman": "Şablon verisi türün şemasına uymuyor (ör. kod 6 rakam değil).",
+      "sonuc": "Söz reddedilir, satıra dokunulmaz, e-posta gitmez; log error.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_EPOSTA_BAGLANTI",
+      "ne_zaman": "Ürün e-postasının işlenen metninde bağlantı denetimine takılan belirteç var (yalnız şablon hatasıyla olur).",
+      "sonuc": "Söz reddedilir, e-posta gitmez. Ürün dışı türde (isletim_uyarisi, isletim_ozeti) belirteç [adres] olur, hata verilmez.",
+      "http": 500,
+      "hoca": "IS_KUYRUGU_GENEL_HATA_METNI",
+      "ogrenci": "IS_KUYRUGU_GENEL_HATA_METNI"
+    },
+    {
+      "kod": "IS_KUYRUGU_EPOSTA_AYAR_EKSIK",
+      "ne_zaman": "SMTP ayarı, gönderen adresi, görünen ad, ürün adı ya da 32 baytlık özet anahtarı yok; yayında güvenlik 'yok'.",
+      "sonuc": "API ve işçi açılmaz (işçide çıkış 78).",
+      "http": null,
+      "hoca": null,
+      "ogrenci": null
+    }
+  ],
+  "requests": [
+    {
+      "modul": "D01",
+      "istek": "Kod (giris), başvuru kodu, başvuru silme kodu (basvuru_silme_kodu) ve onay bekliyor e-postasından önce, kod üretmeden ve adresle ilgili başka kilitten önce, kendi READ COMMITTED işleminde epostaSiniriDenetle(tx, normalAdres, tur); izin yoksa kod üretmez, cevap aynı. İşlem bitip cevap gittikten sonra (onResponse) epostaGonder; giris_bildirimi BASARISIZ dönerse D09.denetimeYaz ile bildirim_gonderilemedi. Adres D01'in tek normalleştirme fonksiyonundan geçmiş olur. Cihaz etiketi tarayıcı ya da telefon ailesi ve işletim sisteminden oluşan sabit listeden üretilir. inceleme_hesaplari_kurulumu tanımına acilistaBirKez: true (yayında bir kez).",
+      "durum": "sonuclandi",
+      "karar": "I073",
+      "sonuc": "Kabul. D01 epostaSiniriDenetle'yi kod üretmeden ve işleminin ilk kilidi olarak çağırır (D14 'is-kuyrugu:eposta:<özet>' anahtarını katman 1'de alır), e-postayı cevaptan sonra gönderir, BASARISIZ giriş bildiriminde bildirim_gonderilemedi yazar; inceleme_hesaplari_kurulumu acilistaBirKez: true taşır."
+    },
+    {
+      "modul": "İş tanımlayan modüller",
+      "istek": "Her pg-boss işi jobs/<modül>/index.ts'teki export const isler dizisinde isTanimla ile; kuyruk sözleşmesi modules/<ad>/ içinde KuyrukTanimi nesnesi; zamanlama çizelge kurallarına uyar; her işin 'aynı veriyle iki kez çalışırsa' senaryosu D14'ün adımıyla yazılır. Çok işli kuyruk partiIsleyici ve parti ayarıyla; zamanlamalı iş ölçüsünü çıktı şemasıyla döndürebilir.",
+      "durum": "sonuclandi",
+      "karar": "I074",
+      "sonuc": "Kabul. İşler jobs/<modül>/index.ts isler dizisinde isTanimla ile, KuyrukTanimi modules/<ad>/ içinde, çizelge kurallarına uygun ve her iş için 'aynı veriyle iki kez çalışırsa' senaryosuyla; altyapı işleri (D12 veritabaniIsleri, D15 isletimIsleri) worker.ts uyarlamasıyla istisnadır."
+    },
+    {
+      "modul": "D12",
+      "istek": "PostgreSQL timezone 'UTC'; yoklama_goc, yoklama_api, yoklama_isci rolleri; db:migrate sırası Drizzle göçleri, pg-boss migrate, worker.ts kur; test sıfırlaması pgboss şemasına yalnız D14'ün isKuyrugunuBosalt'ı (deleteAllJobs) üzerinden dokunur; eposta_gonderimleri göçü tabloYardimcilari ile ve tablo haritası denetiminden geçer; veritabaniIsleri tanımına isteğe bağlı sureAsimiSaniye (yoksa D14 1.800 saniye kullanır); bağlantı bütçesinde işçi satırı 'pg-boss 2 + Drizzle 3, Drizzle'ın 2'si devam_hesapla partileri'.",
+      "durum": "sonuclandi",
+      "karar": "I075",
+      "sonuc": "Kabul: timezone UTC, uygulama rolleri (ve yoklama_saklama), db:migrate sırası, test sıfırlaması isKuyrugunuBosalt ile, tablo haritası denetimi, isteğe bağlı sureAsimiSaniye ve bütçe satırı. D12'nin D14'ten istedikleri (I060) bu tasarımda: fromDrizzle(veritabani.db, sql), saklamaVeritabani, pgboss yetkileri kur'da, adres kilidi danismaKilidi ile, makine işi saatleri aynen."
+    },
+    {
+      "modul": "D13",
+      "istek": "app.ts kurucusu dinleme açmadan ve süreç türüyle (api ya da isci) çağrılabilsin; yalnız API'de çalışacak zamanlayıcılar bunu okusun. IS_KUYRUGU_HATA_KODLARI hataKodlariTanimla biçiminde (http 500, genel metin) hatalar.ts birleştirmesine girsin.",
+      "durum": "sonuclandi",
+      "karar": "I076",
+      "sonuc": "Kabul, http kuralı değişti: uygulamaKur dinleme açmadan ve süreç türüyle çağrılır, zamanlayıcılar yalnız api'de kurulur; IS_KUYRUGU_HATA_KODLARI hataKodlariTanimla ile birleşir ama http koddan koda verilir (I071): API isteğinde de doğabilen kod 500 ve genel metin, yalnız işçide doğan kod null."
+    },
+    {
+      "modul": "D15",
+      "istek": "compose.yaml: API, işçi ve göç kaplarında TZ=UTC; işçide stop_grace_period 40 saniye; smtp_parolasi ve eposta_ozeti anahtarı API kopyalarına ve işçiye koşulsuz (işçi isletim_uyarisi ve isletim_ozeti gönderir; e-posta ayarı eksikse işçi açılmaz). apps/server/package.json: pg-boss 12 tam sabit (en az 12.36.0), nodemailer tam sabit, cron-parser tam sabit (pg-boss'un kullandığı sürüm), tlds tam sabit (bağlantı denetiminin IANA listesi); db:migrate'e kur adımı. Biome noRestrictedImports: pg-boss ve nodemailer yalnız infra/is-kuyrugu ve infra/eposta içinde. Ayar şeması: EPOSTA_SMTP_SUNUCU, EPOSTA_SMTP_PORT, EPOSTA_SMTP_GUVENLIK, EPOSTA_SMTP_KULLANICI, EPOSTA_GONDEREN_ADRES, EPOSTA_GONDEREN_AD, EPOSTA_URUN_ADI, EPOSTA_GUNLUK_SINIR, işçi ve göç bağlantı adresleri. server.ts açılışta isKuyruguKur({ rol: 'api', saat }) ve epostaKur({ saat, ... })'u app.ts'ten önce çağırır; saat D04'ün Saat nesnesidir, uyarlayıcı gerekmez; kapanış sırası app.close, eposta.kapat(10 sn), iş kuyruğu durdur, havuz kapat. Bağlantı bütçesi satırı: işçi 5 = pg-boss 2 + Drizzle 3, Drizzle'ın 2'si devam_hesapla partileri. isletim.devam_tutarlilik_farki kuralı IsSagligi'nda devam_tutarlilik_denetimi kuyruğunun zamanlama.sonCikti.farkSayisi > 0 koşulunu okur; haftalık özet isletim_ozeti türüyle gider. Test dünyası kancası her senaryodan önce isKuyrugunuBosalt'ı çağırır.",
+      "durum": "sonuclandi",
+      "karar": "I077",
+      "sonuc": "Kabul: compose, paket, Biome, ayar, server.ts açılış ve kapanış sırası, bağlantı bütçesi, devam tutarlılık uyarısı, haftalık özet ve test dünyası kancası aynen uygulanır. D15'in D14'ten istedikleri (I082) bu tasarımda."
+    },
+    {
+      "modul": "D08",
+      "istek": "devam_hesapla tanımı partiIsleyici ve parti { boyut: 50, esZamanli: 2 } ile, sureAsimiSaniye bütün parti için; devam_tutarlilik_denetimi kuyruğuna çıktı şeması { dersSayisi, ogrenciSayisi, farkSayisi: açık sınırlı z.int; farkTurleri: z.enum dizisi } ve işleyici bu nesneyi döndürür; çizelge kuralı gereği 04:10 yerine 03:00-05:00 dışında bir saat (D14 önerisi 05:35, D09'un sıralamasından önce).",
+      "durum": "sonuclandi",
+      "karar": "I078",
+      "sonuc": "Kabul: devam_hesapla partiIsleyici ve parti { boyut: 50, esZamanli: 2 } ile, devam_tutarlilik_denetimi çıktı şemasıyla ve 05:35'te."
+    },
+    {
+      "modul": "Mimari (contracts.json)",
+      "istek": "D14 dış yüz satırı 'epostaSiniriDenetle(tx, adres, tur)' olsun (adresOzeti değil; özet D14 içinde hesaplanır); D14 reads_from listesine D04 (Saat tipi) ve D13 (istek kimliği, hataKodlariTanimla) eklensin; worker.ts bileşim kökü olarak D15'i (ayarlariYukle, logOlustur, gizliAnahtar, isletimIsleri), D13'ü (app.ts kurucusu, yayinBilgisiYukle) ve D12'yi (veritabaniKur, veritabaniIsleri) bağlar. Dosya haritasına apps/server/test/support/is-kuyrugu* D14'e eklenirse destek.ts oraya taşınır.",
+      "durum": "sonuclandi",
+      "karar": "I079, I123",
+      "sonuc": "Kabul: contracts.json'da epostaSiniriDenetle(tx, adres, tur, s?) satırı, reads_from D04, D12, D13 ve worker.ts bileşim kökü için D15, apps/server/test/support/is-kuyrugu* globu D14'ün; test yardımcıları oraya taşındı. İstekteki worker.ts listesinden bir fark (I071, contracts.json notu): worker.ts D13'ten yalnız uygulamaKur'u bağlar, yayinBilgisiYukle onun içindedir."
+    }
+  ],
+  "worker_acilisi": [
+    {
+      "adim": "1",
+      "ne": "ayarlar = ayarlariYukle({ surec: 'isci' }) (D15)",
+      "hata": "AyarHatasi (ISLETIM_AYAR_GECERSIZ, ISLETIM_SAAT_DILIMI): stderr'e yalnız ad listesi",
+      "cikis": "78"
+    },
+    {
+      "adim": "2",
+      "ne": "log = logOlustur({ ayarlar }) (D15); bundan sonra her hata koduyla ve sınıfıyla loglanır",
+      "hata": "kaydedici kurulamadı",
+      "cikis": "1"
+    },
+    {
+      "adim": "3",
+      "ne": "TZ denetimi: süreç saat farkı 0 (ayarlariYukle denetimine ikinci güvence)",
+      "hata": "IS_KUYRUGU_SAAT_DILIMI",
+      "cikis": "78"
+    },
+    {
+      "adim": "4",
+      "ne": "veritabani = veritabaniKur({ rol: 'yoklama_isci', havuzBoyutu: 3, havuzBeklemeMs: 30000, uygulamaAdi: 'iu-yoklama-isci', adres ve parola ayarlardan }) (D12); semaDurumu hazır olana kadar en çok 120 saniye, geride ise hemen",
+      "hata": "ulaşılamıyor ya da şema geride",
+      "cikis": "1"
+    },
+    {
+      "adim": "5",
+      "ne": "saklamaVeritabani = veritabaniKur({ rol: 'yoklama_saklama', havuzBoyutu: 1, uygulamaAdi: 'iu-yoklama-saklama', adres ve parola ayarlardan }) (D12); yalnız D12'nin saklama işleri kullanır",
+      "hata": "ulaşılamıyor",
+      "cikis": "1"
+    },
+    {
+      "adim": "6",
+      "ne": "saat = sistemSaati() (D04)",
+      "hata": "yok",
+      "cikis": "1"
+    },
+    {
+      "adim": "7",
+      "ne": "eposta = epostaKur({ tasiyici: smtpTasiyicisi(ayar), gonderen, urunAdi, ozetAnahtari: gizliAnahtar('eposta_ozeti').deger, veritabani, saat, log, gunlukSinir })",
+      "hata": "IS_KUYRUGU_EPOSTA_AYAR_EKSIK",
+      "cikis": "78"
+    },
+    {
+      "adim": "8",
+      "ne": "tanimlar = 15 modülün jobs/<modül>/index.ts isler dizileri + veritabaniIsleri({ veritabani, saklamaVeritabani, saat }) öğeleri isTanimla'dan (D12; sureAsimiSaniye yoksa 1.800) + altyapiIsleriniUyarla(isletimIsleri(bag)) (D15); bag = { veritabani, isSagligi, epostaGonder, saat, ayarlar, log }",
+      "hata": "IS_KUYRUGU_TANIM_GECERSIZ, IS_KUYRUGU_YINELENEN_AD, IS_KUYRUGU_ZAMANLAMA_KURALI",
+      "cikis": "1"
+    },
+    {
+      "adim": "9",
+      "ne": "isKuyrugu = isKuyruguKur({ rol: 'isci', veritabani, baglantiAdresi, tanimlar, saat, log, zamanlamaAcik: true, bakimAcik: true }): şema sürümü, kayıtlı kuyruklar ve kurallar denetlenir, pg-boss başlar, dış yüz bağlanır; work kaydı henüz yok",
+      "hata": "IS_KUYRUGU_SEMA_SURUMU, IS_KUYRUGU_KUYRUK_EKSIK",
+      "cikis": "1"
+    },
+    {
+      "adim": "10",
+      "ne": "app = uygulamaKur({ surec: 'isci', ayarlar, log, veritabani, islem: veritabani.islem, saat, isKuyrugu, eposta }) (D13); app.ready(), dinleme yok. Yayın bilgisini (yayinBilgisiYukle) ve kimlik dinleyicilerini (D01.kimlikDinleyicileriniKur) uygulamaKur kurar, worker.ts ayrıca çağırmaz; modül kayıtları (dinleyiciler, D12 saklama işleyicileri) işçide de kurulur",
+      "hata": "yayın bilgisi dosyası yok ya da bozuk 78; öbür kayıt ya da eklenti hatası 1",
+      "cikis": "78 ya da 1"
+    },
+    {
+      "adim": "11",
+      "ne": "isKuyrugu.isleriBaslat(): work kayıtları (tek işli ve parti ayarlarıyla) açılır; isci.hazir logu (tanım sayısı, yayın sırası)",
+      "hata": "pg-boss hatası",
+      "cikis": "1"
+    },
+    {
+      "adim": "Kapanış",
+      "ne": "SIGTERM ya da SIGINT: eposta.kapat(5000) ile isKuyrugu.durdur() (pg-boss stop, graceful, 30 sn) birlikte; sonra app.close(); sonra veritabani.kapat() ve saklamaVeritabani.kapat(); log flush",
+      "hata": "ikinci sinyal ya da 38 saniye aşımı",
+      "cikis": "0 (aşımda 1)"
+    },
+    {
+      "adim": "Çökme",
+      "ne": "unhandledRejection ve uncaughtException: hata sınıfı ve yığın fatal düzeyde (değer yok), flush",
+      "hata": "her biri",
+      "cikis": "1"
+    }
+  ],
+  "baglanti_kurali": [
+    {
+      "kural": "Belirteç: boşlukla ayrılan parça; baştaki ve sondaki ( ) [ ] , ; : . ! ? \" ' ayıklanır, büyük küçük harf duyarsız",
+      "yakalar": "(www.x.com).",
+      "gecer": ""
+    },
+    {
+      "kural": "Şema: belirteçte '://' ya da http:, https:, ftp:, mailto: başlangıcı",
+      "yakalar": "http://x, HTTPS://X.COM, ftp://y, mailto:z",
+      "gecer": "saat 02:15 (iki nokta şema değil)"
+    },
+    {
+      "kural": "'www.' ile başlayan belirteç",
+      "yakalar": "www.x.com",
+      "gecer": ""
+    },
+    {
+      "kural": "'@' içeren belirteç",
+      "yakalar": "a@b.co",
+      "gecer": ""
+    },
+    {
+      "kural": "Ana makine biçimi: noktayla ayrılmış en az iki etiket (ASCII harf, rakam, tire; alt çizgi yok), isteğe bağlı /yol; son etiket IANA kök listesinde (tlds paketi, tam sabit) ya da RFC 6761 özel adlarından (example, invalid, localhost, test) ya da local, onion, internal",
+      "yakalar": "ornek.example, istanbul.edu.tr, x.com/yol",
+      "gecer": "isletim.wal_arsivi (alt çizgi), chrony.json (json alan adı sonu değil), 12.37.0 (son etiket sayı), D14-B05, /durum/saat, oturum_pencere_kapat"
+    },
+    {
+      "kural": "Sonuç: ürün türünde IS_KUYRUGU_EPOSTA_BAGLANTI (şablon hatası); ürün dışı türde belirteç [adres] olur, log yalnız tür ve sayıyı yazar; cihaz etiketinde 'Bilinmeyen cihaz'",
+      "yakalar": "",
+      "gecer": ""
+    }
+  ]
+}

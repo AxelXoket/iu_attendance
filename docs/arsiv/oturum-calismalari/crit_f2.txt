@@ -1,0 +1,81 @@
+## ZAMANLAMA_KURALI | spec/D02.json.tests[74].asserts
+jobs/dersler/index.ts'teki isler dizisi D14'ün çizelge doğrulayıcısından (isTanimla, kur ve D14 schedule_plan ile birlikte) IS_KUYRUGU_ZAMANLAMA_KURALI almadan geçer: cron'lar 5 0, 35 0 ve 55 1 * * *, tz Europe/Istanbul, missed once; hiçbiri 03:00 ile 05:00 arasında başlamaz, öbür günlük işlerle aralar en az 5 dakika, sonra listesinde donem_kilidi taşıyan işler (00:15, 00:25) ondan en az 10 dakika sonra; deneme_dersi_oturumlari exclusive ve acilis
+
+## ZAMANLAMA_KURALI | spec/D04.json.tests[49].asserts
+ kuyruk nesnelerini modules/saat/kuyruklar.ts'ten alır; D14'ün zamanlama sözleşme testi (cron-parser) oturum_pencere_kapat'ı sık iş, missed skip olarak kabul eder; saat_esitleme_denetimi dizide yoktur. Kontrol: kuyruk adını iş adından farklı yazan ya da günlük bir işi 03:30'a koyan tanım IS_KUYRUGU_ZAMANLAMA_KURALI ile kırmızı.
+
+## yüzde 90 | spec/D04.json.tests[64].asserts
+Stryker haftalık işi packages/core/src/saat için en az yüzde 90 öldürme eşiğiyle koşar (iş D15'in, eşik bu modülün); kayma payını sıfırlayan, sınırı < yerine <= yapan, sıralamayı ters çeviren ve tekdüze basma kuralını kaldıran mutantlar öldürülür.
+
+## yeniden denemez | spec/D10.json.resolved_gaps[12].decision
+ karşılaştırması gecikmeli kopyayla 409 döngüsüne girmesin). Sorgu şubeden ve tarih aralığından oturuma başlar; sayfalama yok, sert sınır 2000 öğrenci satırı ya da 2000 oturum, aşılınca 422 API_SONUC_COK_BUYUK (D13-B13). Deyim süresi aşımı (57014) kökte 503 API_SORGU_ZAMAN_ASIMI olur; panel bu kodu yeniden denemez (D13-B23). Bütçe: en büyük sınıfın tam dönem raporu p95 2 sn (yük testi).
+
+## yeniden denemez | spec/D10.json.resolved_gaps[30].why
+Özet ile hücre ve özet ile anlık ancak aynı anlık görüntüden okununca tutar; işleyici bütçesi (D13 kalanSureMs) aşılırsa 503 API_SORGU_ZAMAN_ASIMI döner ve panel bunu yeniden denemez.
+
+## yeniden denemez | spec/D13.json.exports[64].purpose
+. Uzun işler buna bakarak durur: gönderim (D06) yeni parçaya başlamadan kalan süre yetmiyorsa kalan öğelere TEKRAR_DENE ESITLEME_ZAMAN_BUTCESI döner ve işlemi bitirir; agir rotalar işlemi zamanAsimiMs: min(15000, kalanSureMs) ile açar. Bütçeyi aşan işleyici 503 API_SORGU_ZAMAN_ASIMI fırlatır (panel yeniden denemez). Süre bütçesi tablosu uçtan uca değerleri verir. D12.islem'in zamanAsimiMs'i agir rotada en çok 15000'dir ve kalanSureMs ile küçülür (I068).
+
+## yeniden denemez | spec/D13.json.exports[66].purpose
+rtak fetch yardımcısı: girdiyi istek şemasıyla göndermeden denetler, zaman aşımını AbortController ile kurar (varsayılan 30 saniye), beklenmeyen biçimi geçici sayar, sonucu teknik.html#telefon-gonderme-protokolu tablosuna göre sınıflar. X-Saat-Belgesi, X-Istek-Kimligi ve Retry-After'ı sonuca koyar. Yeniden denemez.
+
+## yeniden denemez | spec/D13.json.resolved_gaps[25].decision
+ içinde gider. agir rotalarda deyim en çok 15 saniye (D12 islem zamanAsimiMs: min(15000, kalanSureMs)), havuz beklemesi 2 saniye dahil işlem en çok 20 saniye. Bütçeyi aşan işleyici 503 API_SORGU_ZAMAN_ASIMI, deyim süresi aşımı D12'nin 503 VERITABANI_ZAMAN_ASIMI kodu; panel ikisinde de kendiliğinden yeniden denemez. keepAliveTimeout Fastify varsayılanı 72 saniye kalır, Caddy'nin üst akış boşta bağlantı süresi bundan kısa tutulur (D15). Değerler yük testiyle doğrulanır. İnventerdeki 25 saniyelik istek süresi önerisi D15-B17'deki 20 saniyeyle birleştirildi; D12'deki 'Fastify'ın 25 saniyelik istek süresi' cümles
+
+## yeniden denemez | spec/D13.json.veritabani_hata_eslemesi[3].bekleme
+aralik [15, 45]; panel yeniden denemez
+
+## ZAMANLAMA_KURALI | spec/D14.json.exports[1].purpose
+an (3) en az 1 eksik olmalıdır: tek işli kuyruklara bağlantı kalır. acilistaBirKez yalnız exclusive kuyrukta; kur yayın adımında bir iş açar. Ad tekliği, sonra başvuruları, parti ve çizelge kuralları işçi açılışında, kur'da ve sözleşme testinde denetlenir (IS_KUYRUGU_TANIM_GECERSIZ, _YINELENEN_AD, _ZAMANLAMA_KURALI). Altyapı işleri de buradan geçer: D12'nin veritabaniIsleri öğeleri doğrudan (sureAsimiSaniye vermeyen öğeye worker.ts ALTYAPI_IS_VARSAYILANI'ndaki 1.800'ü koyar), D15'in isletimIsleri tanımları altyapiIsleriniUyarla ile.
+
+## ZAMANLAMA_KURALI | spec/D14.json.exports[23].purpose
+YILANI'ndan: politika exclusive, veri boş strict nesne, sureAsimiSaniye 1.800, deneme { sayi: 3, beklemeSaniye: 30 }. saatDilimi 'Europe/Istanbul' değilse IS_KUYRUGU_TANIM_GECERSIZ; kacirilan D14'ün sıklık kuralıyla (aralığı 1 günden kısa iş skip, günlük ve daha seyrek iş once) uyuşmazsa IS_KUYRUGU_ZAMANLAMA_KURALI; iki durumda işçi açılmaz. D12'nin veritabaniIsleri öğeleri zaten isTanimla girdisi biçimindedir ve uyarlayıcıdan geçmez (İşçi açılışı, adım 8). Böylece jobs/isletim ve jobs/veritabani infra/is-kuyrugu'yu içe aktarmaz.
+
+## ZAMANLAMA_KURALI | spec/D14.json.tests[14].asserts
+ ile Europe/Istanbul üretilir: günlük ve seyrek işlerin hiçbiri 03:00-05:00 arasında başlamaz, aralarında en az 5 dakika vardır, sonra listesindeki her iş en az 10 dakika önce tetiklenir; günlük işler missed: once, sık işler skip; politika exclusive ya da stately. Kural bozan örnek kayıt IS_KUYRUGU_ZAMANLAMA_KURALI verir.
+
+## ZAMANLAMA_KURALI | spec/D14.json.tests[48].asserts
+bul ile vardır; sureAsimiSaniye vermeyen örnek D12 öğesi ALTYAPI_IS_VARSAYILANI'ndan içe alınan 1.800'ü alır. D12 işlerine verilen saklamaVeritabani'nda current_user yoklama_saklama ve havuz boyutu 1, veritabani'nda yoklama_isci'dir (zemin). kacirilan 'once' verilen 10 dakikalık örnek iş IS_KUYRUGU_ZAMANLAMA_KURALI, saatDilimi 'UTC' verilen örnek IS_KUYRUGU_TANIM_GECERSIZ ile açılışı durdurur; uyarlanan işleyici isle'ye isKimligi, tetiklemeAni ve iptal'i aynen geçirir. isle { retSuSeviyesi: Date } döndürünce iş çıktısında ve isSagligi sonCikti'de aynı an ISO biçimde görünür; { not: 'metin' } ya da milisaniye 
+
+## ZAMANLAMA_KURALI | spec/D14.json.error_codes[4].kod
+IS_KUYRUGU_ZAMANLAMA_KURALI
+
+## ZAMANLAMA_KURALI | spec/D14.json.worker_acilisi[7].hata
+IS_KUYRUGU_TANIM_GECERSIZ, IS_KUYRUGU_YINELENEN_AD, IS_KUYRUGU_ZAMANLAMA_KURALI
+
+## yüzde 90 | spec/D15.json.jobs[9].does
+ırayla: Biome ci (biçim, kurallar, modül sınırları, D12'nin infra/veritabani/kurallar/*.grit eklentileri); tsc tip denetimi; D12'nin göç denetimleri (yeniden üretme farkı, tablo haritası, Squawk) ve docker/postgres/surum-denetimi.sh; packages/core'da Vitest ve fast-check, satır ve dal kapsamı en az yüzde 90 (@vitest/coverage-v8), TZ=UTC ve TZ=Europe/Istanbul ile iki koşu; apps/server Vitest testleri (D13'ün sınır testi dahil: dependency-cruiser API'siyle no-circular ve yaprak kuralı, ayrı yapılandırma dosyası yok; I069); docker compose --profile test up --wait postgres-test ve Cucumber senaryoları (pa
+
+## stryker-esikler | spec/D15.json.jobs[11].does
+(1) Stryker packages/core üzerinde komut çalıştırıcısıyla (testRunner command, komut paketin vitest run'ı; teknik.html#testler-kalite); stryker-esik-denetimi.ts JSON raporundaki mutasyon puanını klasör başına stryker-esikler.json ile karşılaştırır (varsayılan kırma eşiği 80, saat 90; eşik yalnız yükselir) ve yaşayan mutantları özete yazar. (2) Sunucu imajının sunucu ve caddy hedefleri derlenir; postgres, göç ve bir API kopyasıyla açılır, iç ağdan /health/ready 204 beklenir. (3) tohum.ts --kucuk ile tek ders, öğrenci ve
+
+## stryker-esikler | spec/D15.json.files[101]
+packages/core/stryker-esikler.json
+
+## stryker-esikler | spec/D15.json.tests[79].asserts
+Stryker komut çalıştırıcısıyla; klasör başına puan stryker-esikler.json eşiğinin altına düşerse iş kırmızı; eşik denetim betiğinin kendisi bir kez bilerek düşük puanlı sahte raporla kırmızı, yüksekle yeşil denenir.
+
+## stryker-esikler | spec/D15.json.resolved_gaps[28].decision
+Kapsam @vitest/coverage-v8 ile satır ve dal için ayrı ayrı yüzde 90, eşik packages/core'un test betiğinde. Stryker kırma eşiği klasör başına stryker-esikler.json'da: varsayılan 80, saat 90 (D04), eşik ölçülen değerin altına inmez, yalnız yükselir. Yaşayan mutantlar haftalık iş özetinde listelenir; eşdeğer mutant kaynakta gerekçeli yorumla işaretlenir. Kırmızı haftalık iş bir sonraki sunucu yayınını durdurur.
+
+## yüzde 90 | spec/D15.json.resolved_gaps[28].decision
+Kapsam @vitest/coverage-v8 ile satır ve dal için ayrı ayrı yüzde 90, eşik packages/core'un test betiğinde. Stryker kırma eşiği klasör başına stryker-esikler.json'da: varsayılan 80, saat 90 (D04), eşik ölçülen değerin altına inmez, yalnız yükselir. Yaşayan mutantlar haftalık iş özetinde listelenir; eşdeğer mutant kaynakta gerekçeli yorumla işaretlenir. Kırmızı hafta
+
+## yüzde 90 | spec/D15.json.uyari_kurallari[0].seviye
+UYARI >= yüzde 80; KRITIK >= yüzde 90
+
+## yüzde 90 | packages/D02.json.packages[2].notes
+mdan dönemin bütün oluşumlarını çıkaran ve yalnız başlamamış oturumların farkını (eklenecek, güncellenecek, iptal, geri alınacak) veren deterministik plan işlevi takvim kurallarının üstüne yazılır, iptal nedeni ve oturum türü tipleri sözleşmeden gelir; numRuns 1000 özellikleri, satır ve dal kapsamı yüzde 90 ve packages/core/src/dersler üzerinde Stryker kırma eşiğiyle denetlenir.
+
+## yüzde 90 | packages/D04.json.packages[4].notes
+packages/core/src/saat/index.ts çekirdeği tek girişten yeniden dışa verir ve packages/core/src/saat için en az yüzde 90 Stryker öldürme eşiği kurulur (haftalık iş D15 tarafındadır, eşik bu modülündür); kayma payını sıfırlayan, sınırı değiştiren ve sıralamayı ters çeviren mutantlar ölmelidir. Dışa verimler tanımlandıkları paketlerdedir ve packages/core için dış yüz kuralı yoktur: komşular ve sunucu dosyaları işlevi t
+
+## yüzde 90 | packages/D07.json.packages[21].notes
+fon ve panel bu dizinden içe aktarır, sunucu dosyaları ise kullandıkları core dosyasını doğrudan içe aktarır, bu yüzden hiçbir sunucu paketi bu paketi beklemez (eskiden dizin, D03 ve D04 dış yüzünü bekleyen bağlam dosyasıyla aynı paketteydi). Haftalık Stryker koşusu packages/core/src/dogrulama için yüzde 90 kırma eşiğini ve kararVer, izinliGecis, ortakSinirKarari, pencereEslemesi, qrEslemesi, kafaSayisiKarsilastir, sayacDenetle, meydanOkumaMetni ile baglamaMetni'nde hayatta kalan mutant olmadığını denetler.
+
+## ZAMANLAMA_KURALI | packages/D14.json.packages[0].notes
+paketten hemen sonra başlar. tanim.test.ts fast-check ile 2.000 tekillik anahtarını, örnek şemalarla 'Kayıtlı iş tanımları' testinin örnek yarısını (z.string() yaprağı, 300 ve 150 elemanlı UUID dizisi, 1 KiB üstü çıktı, parti esZamanli toplamı, _istekKimligi) ve kural bozan örnek kayıtta IS_KUYRUGU_ZAMANLAMA_KURALI'nı denetler; gerçek kayıt yarısı worker.ts ile P16'dadır. isTanimla modüllere dış yüzden (index.ts) verildiği için dışa açık adı P07 taşır.
+
+## stryker-esikler | packages/D15.json.packages[12].files[5]
+packages/core/stryker-esikler.json
+

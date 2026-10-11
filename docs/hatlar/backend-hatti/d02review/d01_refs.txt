@@ -1,0 +1,58 @@
+* D01.tables.0.columns.5.note :: birimler(id), D02. Başvuruda seçilen birim; yönetici kapsamı bununla karşılaştırılır.
+
+* D01.tables.0.columns.6.note :: bolumler(id), D02. Başvuruda seçilen bölüm.
+
+* D01.tables.9.columns.5.note :: dersler(id), D02; yetkiyi veren ders (denetim için).
+
+* D01.endpoints.6.request.bolumId :: uuid; birimin bölümü olmalı (D02.birimGetir)
+
+* D01.endpoints.12.auth :: Hoca; öğrencinin etkin liste satırı olan bir dersin hocası (D03.ogrencininEtkinSatirlari ve D02.dersYetkisi).
+
+* D01.jobs.2.idempotency :: Sıradaki istekler FOR UPDATE SKIP LOCKED ile alınır, her biri kendi işleminde yürür; yapılmış istek durum yapildi olduğundan yeniden seçilmez, silinmiş hesapta hesabiSil değişiklik yapmaz.
+
+* D01.jobs.2.does :: Durumu sirada olan ve son_yurutme_ani geçmiş hesap silme isteklerini hesabiSil ile yürütür (alan listesi: Durumlar ve kurallar). Bekleyen iş telefon kaybolduğu için hiç gelmese de mağaza şartı gereği silme yapılır.
+
+* D01.jobs.3.name :: inceleme_hesaplari_kurulumu
+
+* D01.jobs.4.schedule :: Her gece 00:40 Europe/Istanbul (D02 donem_kilidi 00:05 sonrası), missed: once.
+
+* D01.jobs.4.does :: Teyit bekleyen, eşleşmesi listede_yok olan, en az 30 günlük ve oluşturulmasından sonra en az bir birim ve dönem kilidi geçmiş (D02.kilitliBirimDonemleri) öğrenci hesabını D03.numaraIleEslestir ile son kez dener; yine listede yoksa hesabı kapandi, cihazını kapandi (bekleme_bitti) yapar, oturumunu kapatır ve D07.yenidenDegerlendir çağırır.
+
+* D01.state_machines.0.transitions.7.by :: yonetici-ekle, POST /v1/kimlik/yonetim/yoneticiler, inceleme_hesaplari_kurulumu
+
+* D01.exports.0.purpose :: Kökteki oturum kancası; D13 kaydeder, bileşim kökü veritabanı ve saati verir. Çerezi (__Host-oturum) ya da Bearer anahtarını SHA-256 özetiyle bulur, süreyi ve hesap durumunu denetler, son kullanımı ve öğrencide cihazın son görülmesini en çok dakikada bir yazar. Kimlik = { kisiId, tur, roller, girisOturumuId, istemci, kaynak: cerez | bearer, cihazId, oturumKapsami, incelemeHesabi }. Girişsiz rotada geçersiz anahtar isteği düşürmez; kararı rota yetkisiyle D13 verir.
+
+* D01.exports.2.purpose :: Kişinin özeti; e-posta dönmez. D02 ders yükündeki hoca adı, D10 raporları ve denetim ekranları için.
+
+* D01.exports.11.purpose :: Ek dış yüz (D01-A14). Alt modüller D01'i içe aktarmadan olaya bağlanır: D11 QR anahtar yuvasını iptal eder ya da yenilenen oturuma devreder, D15 telefon sayaçlarını, D06 kurulum izini siler, D02 silinen hocanın dersleri için kendi kararını uygular. Dinleyiciler olayı doğuran işlemin içinde çağrılır.
+
+* D01.exports.13.purpose :: Ek dış yüz (D01-A14): D02 deneme dersinin sahibini, D03 deneme listesinin numarasını buradan okur.
+
+* D01.exports.15.name :: hesabiSil
+
+* D01.exports.15.signature :: hesabiSil(tx: Tx, istek: { kisiId: KisiId; kaynak: 'geri_yukleme_yeniden' }): Promise<'yapildi' | 'zaten_silinmis'>
+
+* D01.resolved_gaps.32.decision :: Gizli ayarlarda deneme hocası adresi ve adı, deneme öğrenci numarası ve adı, gizli sabit kod (D15). inceleme_hesaplari_kurulumu işi hocayı idempotent kurar, silinmişse aynı gün yeniden kurar. Deneme hocasının kod isteği e-posta göndermez, aynı cevabı döner; giriş sabit kodla. Deneme numarasıyla gelen kayıt teyitli ve inceleme cihazı işaretiyle bağlanır, önceki cihazlar kapanmaz. Her giriş ve yanlış deneme denetime ve loga.
+
+* D01.resolved_gaps.38.decision :: contracts.json'a göre kimlik 11 tabloyu, 28 ucu ve 5 işi sahiplenir; kayıt soruları D07'nin cihaz_dogrulama_degerleri tablosu, teyit uçları D09'da (teyit alanlarını D01 yazar), birim listesi D02'nin GET /v1/dersler/birimler ucu.
+
+* D01.resolved_gaps.39.decision :: Tablo giris_oturumlari (D01), ders oturumu oturumlar (D02); sözleşmedeki /v1/kimlik/oturumlar yolu korunur ama yol parametresi ve JSON alanı girisOturumuId. Ekranda "Oturumlarım" kalır.
+
+* D01.resolved_gaps.42.decision :: Başvuruda birim ve bölüm D02'nin listesinden seçilir (GET /v1/dersler/birimler, girişsiz); sunucu D02.birimGetir ile bölümün birime ait olduğunu denetler, ikisini de saklar.
+
+* D01.open_points.0.question :: Yönetici bütün üniversitede mi yetkili, yalnız kendi biriminde mi (hoca onayı, hesaplar, yönetici ekleme; D02 takvim ve kilit, D08 oranlar)? (D01-B02, D02-B22)
+
+* D01.open_points.7.question :: Dönem içinde hesabını silen hocanın dersleri hemen mi arşivlenir? (D01-B31, D02-B23)
+
+* D01.open_points.7.recommendation :: Giriş bilgileri ve oturumlar hemen silinir (mağaza şartı); D02 hesap_silindi olayında dersleri dönem kilidine kadar açık bırakır, yöneticiye sahipsiz ders olarak gösterir, devir yetkisi yöneticide, kilitte arşivlenir.
+
+* D01.open_points.11.recommendation :: Rol listesi metin ve CHECK olduğundan yeni değer göçle eklenir; "bu dersin hocası mı" denetimi D02.dersYetkisi'nde tek yerde. Asistan gelirse ders başına atanır, pencere ve kafa sayısını yapar, teyit ve değişim onayı vermez; karar fakültenin cevabına bağlı.
+
+* D01.open_points.13.question :: contracts.json'a eklenmesi gerekenler: D01 dış yüzüne kimlikOlayiDinleyicisiKaydet, oturumlariKapat, incelemeHesaplari, girisOturumuGetir, hesabiSil ve epostaNormallestir; D01 okuduklarına D04 (yalnız saat arayüzü simdi, bileşim kökünden parametreyle); D14'e basvuru_silme_kodu şablonu ve epostaSiniriDenetle'nin normalleştirilmiş adresi alıp özeti kendisi üretmesi; D15 ayarlarına panelAdresi, inceleme hocası adresi ve adı, inceleme öğrenci numarası ve adı, gizli inceleme_sabit_kodu. D01'in dayandığı davranışlar: D03.numaraIleEslestir paylaşımlı liste kilidini kendisi alır (D03-B19); D03.ogrencininEtkinSatirlari satırları ders ve şube kimliği ve liste ismiyle döner; D07.cihazKanitiniDogrula cihazId ile çağrılır, bağlama imzasını da doğrular, sonucu dogrulandi, dogrulanamadi ya da reddedildi olarak döner; D07.yenidenDegerlendir teyit, teyit reddi, değişim onayı ve reddi, hesap silme ve kapanma nedenlerini kabul eder.
+
+* D01.open_points.13.recommendation :: Hepsi yalnız ekleme; kayıt deseni ve paylaşılan kurallarla uyumlu. Dinleyiciler: D11 (oturum kapandı ve yenilendi), D15 ve D06 (hesap silindi), D02 (hesap silindi, D01-A08). Davranış beklentileri ilgili modülün tasarımında aynen yazılmazsa D01 akışları değişmeden kalır, yalnız çağrı yeri uyarlanır.
+
+* D01.open_points.16.question :: Deneme dersinin sahibi ve listesi kimde? İnceleme öğrencisi deneme dersinin listesinde olmalı; D01 liste satırı yazamaz.
+
+* D01.open_points.16.recommendation :: D02 deneme_dersi_oturumlari işi dersi D01.incelemeHesaplari'ndaki hocaya bağlar; D03 deneme listesine ayarlardaki numarayla tek satır kurar (D03-B26). D01 yalnız hesapları kurar.
+

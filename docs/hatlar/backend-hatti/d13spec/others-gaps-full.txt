@@ -1,0 +1,170 @@
+{
+ "id": "D02-B35",
+ "question": "En düşük sürümün yükseltilebileceği \"dönem arası\" birim takvimlerinden nasıl hesaplanır?",
+ "why": "Kural \"birimlerin devamsızlık işleme son günü geçip yeni dönem başlamadan\" (plan.html#dagitim-guncelleme-ilkesi); birimlerin takvimi farklı.",
+ "options": [
+  "Bütün etkin birimlerin son günü geçmiş ve hiçbir birimde yeni dönemin ders başlangıcı gelmemişse dönem arası (inceleme dönemi hariç); tek fonksiyon, D06 ve D13 kullanır",
+  "Birim bazında en düşük sürüm"
+ ],
+ "recommendation": "Birincisi: en düşük sürüm uygulama genelinde tek değerdir.",
+ "needs_owner": false
+}
+
+{
+ "id": "D02-B48",
+ "question": "Program ve takvim yazımında eşzamanlı düzenleme nasıl korunur?",
+ "why": "PUT programı gelecekteki oturumları yeniden üretir; iki sekmeden ya da iki yöneticiden gelen eşzamanlı yazım birinin değişikliğini sessizce ezer.",
+ "options": [
+  "Satırın değişiklik sürümü istekte beklenen sürüm olarak gelir; uyuşmazsa 409 ve güncel hal döner",
+  "Son yazan kazanır"
+ ],
+ "recommendation": "Birincisi: değişiklik sürümü zaten her satırda var (teknik.html#kod-veri-modeli); başlık adı ve hata zarfı D13'ün.",
+ "needs_owner": false
+}
+
+{
+ "id": "D06-B03",
+ "question": "Hangi hatalar paketin tamamını 400 ya da 413 ile düşürür, hangileri yalnız o öğeye 'ret' verir; gövde sınırı kaç bayt?",
+ "why": "Teknik, rotaların sözleşme şemalarıyla doğrulandığını söyler; şema öğe içini de tiplerse tek bozuk öğe bütün paketi 400 ile düşürür ve telefon ikiye bölmeye girer (200 öğede yaklaşık 16 istek). Bu, plandaki 'bozuk kayıt paketi düşürmez' kuralıyla çatışır. Gövde sınırı da açıkça yazılmalı (teknik.html#sunucu).",
+ "options": [
+  "Rota şeması yalnız zarfı denetler: öğe sayısı 1 ile 200, her öğe {tur, sira, oge_kimligi, govde: üst sınırlı metin}; öğe içi ayrıştırma ve doğrulama işleyicide, öğe başına sonuçla; 400 yalnız ayrıştırılamayan JSON ya da eksik zarf, 413 gövde sınırı ya da 200'ü aşan öğe sayısı",
+  "Tam şema doğrulaması; bozuk öğe paketi 400 ile düşürür, telefon böler"
+ ],
+ "recommendation": "Birinci seçenek. Gövde sınırı en büyük paketten hesaplanır: makbuz zarfı tahmini 600 ile 900 bayt (teknik.html#telefon-kamera-qr), base64 ve alan payıyla öğe başına yaklaşık 1,5 KB, 200 öğe yaklaşık 300 KB; sınır 512 KB yazılır ve 200 öğelik en büyük paket testte gönderilir. 200'ü aşan paket 413 alır, çünkü telefonun 413 tepkisi bölmektir (teknik.html#telefon-gonderme-protokolu). Hata gövdesi biçimi D13'ündür.",
+ "needs_owner": false
+}
+
+{
+ "id": "D06-B14",
+ "question": "İndirme ucunun biçimi, imlecin teldeki biçimi ve sayfalama nasıl olur; imleç hesap ve rol başına mı tutulur?",
+ "why": "Plan ve teknik imlecin değişiklik sürümü ile nesli (system_identifier, timeline_id) taşıdığını söyler ama teldeki biçimi, sayfalamayı, 'baştan indir' cevabının biçimini ve aynı telefonda öğrenci ile hoca kipinin imleçlerini tanımlamaz. system_identifier 64 bitlik tamsayıdır, JSON sayısı olarak taşınırsa JavaScript'te hassasiyet kaybolur.",
+ "options": [
+  "GET /v1/esitleme/degisiklikler?imlec=<opak metin>&sinir=N; cevap {imlec, devami_var, bastan_indir, tablolar: {ad: [satır ve surum, silindi]}, kayitlarim?, son_sira, saat_belgesi}; imleç opak base64url metin ('v1.<system_identifier>.<timeline_id>.<sürüm>'); telefon her sayfayı tek yerel işlemle yazar ve imleci aynı işlemde saklar; imleç hesap ve kip başına",
+  "Tablo başına ayrı uç ve ayrı imleç"
+ ],
+ "recommendation": "Birinci seçenek: ders çıkışındaki 'gerekirse değişenler' tek istektir (plan.html#teknoloji-sunucu-yeri). Sayfa sınırı sürüm sınırında kesilir: bir işlem tek sürüm aldığından aynı sürümün satırları bölünmez (büyük liste yüklemesi tek sayfada gelebilir). İmleç metin olduğu için 64 bit sorun olmaz ve istemci içini yorumlamaz. Sayfalama ve sorgu parametresi kuralları D13'le uyumlu yazılır.",
+ "needs_owner": false
+}
+
+{
+ "id": "D06-B21",
+ "question": "Saat belgesi telde nasıl taşınır: hangi istekler nonce taşır, hangi cevaplar yeni belge taşır?",
+ "why": "Plan 'sunucunun diğer cevapları da yeni belge taşır' der; ama belge telefonun tek kullanımlık değerini taşımazsa telefon onu kullanmaz ve istek ile cevap anındaki iç sayaç değerleri yazılmalıdır. Gönderim öncesi belge ise ayrı istektir (plan.html#teknoloji-sunucu-yeri).",
+ "options": [
+  "Telefonun her isteği tek kullanımlık nonce başlığı taşır; gönderim, indirme ve sürüm cevaplarının 2xx ve 4xx olanları o nonce'a bağlı yeni belgeyi taşır; 503 ve 429 taşımaz (iş yapılmadı)",
+  "Yalnız gönderim cevapları belge taşır"
+ ],
+ "recommendation": "Birinci seçenek: belgeyi her internet temasında tazeler, ilk çapayı güçlendirir. Belgenin biçimi, imzası ve ayrı belge ucu D04'ün; başlık adları D13'ün.",
+ "needs_owner": false
+}
+
+{
+ "id": "D06-B24",
+ "question": "CI'nın yazdığı yayın bilgisi dosyası nerede durur, biçimi nedir, sunucu onu ne zaman yeniden okur?",
+ "why": "Mağaza yayınları sunucu imajı değişmeden olur; dosya imajın içindeyse her mağaza yayını API'nin yeniden kurulmasını ister. Bozuk dosya en düşük sürümü yanlışlıkla yükseltip öğrencileri güncelleme ekranına kilitleyebilir.",
+ "options": [
+  "CI dosyayı (surum.json) SSH ile sunucudaki salt okunur Compose birimine yazar; API birkaç dakikada bir değişikliğe bakar, Zod'la doğrular, geçersizse son geçerli dosyayla devam eder ve uyarı loglar",
+  "Dosya imaja gömülür",
+  "Bilgi veritabanı tablosunda tutulur"
+ ],
+ "recommendation": "Birinci seçenek, plandaki 'sunucu yalnız onu okur' kuralına uygun. Dosya her platform ve kanal için en yeni sürümü ve bağlantıyı, en düşük sürümü, APK yüzdesini ve geçiş bağlantısını taşır. En düşük sürümün dönem içinde yükseltilmemesi kuralının denetimi D13'ün (birimlerin takvimi farklıysa ortak dönem arası olmayabilir).",
+ "needs_owner": false
+}
+
+{
+ "id": "D06-B29",
+ "question": "Sunucu hangi durumda hangi Retry-After değerini verir; gönderim ve indirme uçlarında cihaz başına hız sınırı kaçtır?",
+ "why": "Telefon Retry-After'a uyar ve üstüne rastgele pay ekler. Teknik aşırı yükte 503 ve Retry-After verir ama havuz dolunca dönen 503'te Retry-After'dan söz etmez; 429'un değeri de yazılmamış. 400 ya da 413 sonrası ikiye bölme bir pakette yaklaşık 16 istek üretebilir; dar bir cihaz sınırı bölmeyi 429 fırtınasına çevirir.",
+ "options": [
+  "Her 503 (aşırı yük ve havuz) Retry-After taşır (sunucu yüküne göre ör. 5 ile 30 saniye); 429 sınır penceresinin bitişini taşır; gönderim ucunda cihaz başına sınır bir paket bölme dizisini kaldıracak genişlikte (ör. dakikada 30 istek)",
+  "Havuz 503'ünde Retry-After yok, telefon kendi aralığını kullanır"
+ ],
+ "recommendation": "Birinci seçenek; kesin değerler ders çıkışı yük testinden yazılır (teknik.html#testler-kalite). Hız sınırı ve hata kodları kuralı D13'ün, eşikler D15'in.",
+ "needs_owner": false
+}
+
+{
+ "id": "D04-B13",
+ "question": "Saat belgesi ucu nasıl çalışır: kimlik doğrulama, tek kullanımlık değerin taşınması, sunucuda saklama, hız sınırı, zaman aşımı, ve \"diğer cevapların da yeni belge taşıması\" hangi mekanizmayla olur?",
+ "why": "Ders çıkışında en kötü durum 20.000 telefonun 1 dakikada gelmesi ve her biri gönderimden önce belge ister (D04-K46, D04-K48); diğer cevapların da belge taşıması (D04-K32) her isteğin bir tek kullanımlık değer taşımasını gerektirir. Bunlar yazılmadan uç ve D13 ortak başlıkları tasarlanamaz.",
+ "options": [
+  "Ayrı uç POST /v1/saat/belge; gövdede 16 baytlık tek kullanımlık değer; Bearer oturum anahtarıyla; belge durumsuz üretilir, veritabanına yazılmaz; ayrıca her istek isteğe bağlı bir \"saat değeri\" başlığı taşırsa cevap \"saat belgesi\" başlığını taşır",
+  "Yalnız ayrı uç, cevaplara iliştirme yok",
+  "Yalnız iliştirme, ayrı uç yok"
+ ],
+ "recommendation": "İlk seçenek. Belge HMAC'le kendini doğruladığından sunucu tek kullanımlık değeri saklamaz (değerin tazeliğini telefon denetler, D04-K21); böylece uç veritabanına dokunmaz, yük testindeki en kötü durumda ucuz kalır. Hız sınırı IP'ye değil doğrulanmış cihaza ya da oturuma bağlı (teknik, Güvenlik). Telefon bu istekte 10 saniyelik zaman aşımı kullanır (D04-K22); genel 30 saniyelik zaman aşımı burada geçerli değildir. Başlık adı ve biçimi D13 sözleşmesine yazılır; eşitleme bozukken başlık hiç dönmez, ayrı uç ise belirli bir hata koduyla \"belge verilemiyor\" der.",
+ "needs_owner": false
+}
+
+{
+ "id": "D01-B16",
+ "question": "Oturum doğrulama kancası öğrenci, hoca ve yönetici için isteğe ne ekler ve her ucun gerektirdiği yetki nerede bildirilir?",
+ "why": "teknik.html kancanın \"hocanın kimliğini\" eklediğini söylüyor; oysa öğrencinin oturum anahtarı da aynı yoldan geliyor ve yönetici uçları ayrı yetki ister. Yetki denetimi her modülde elle yazılırsa unutulan uç açık kalır.",
+ "options": [
+  "Rota tablosunda her uca zorunlu yetki alanı, ortak ön işleyici denetler",
+  "Her modül kendi denetimini yazar"
+ ],
+ "recommendation": "Kanca isteğe { kisiId, tur: ogrenci|personel, roller, oturumId, istemci, cihazId } ekler. packages/contracts rota tablosunda her uç zorunlu yetki alanı taşır (girissiz, ogrenci, personel, hoca, yonetici); ortak ön işleyici denetler, yetki alanı olmayan rota kaydedilmez (testle). Kaynak düzeyindeki denetim (bu dersin hocası mı) modül servisinde kalır. Ayrıntı D13 ile ortak.",
+ "needs_owner": false
+}
+
+{
+ "id": "D01-B49",
+ "question": "Geçersiz oturum, kapanmış cihaz, silinmiş hesap, pasif hesap ve yetkisiz rol için hangi HTTP durumları ve hata kodları döner?",
+ "why": "Telefon 401 ve 403'te gönderimi durdurup cihaz durumunu gösteriyor; durumlar ayrılmazsa ekran nedenini söyleyemez, ayrılırken de başkasının hesabı hakkında bilgi sızmamalı.",
+ "options": [
+  "401 oturum ve cihaz sorunları, 403 rol ve kaynak; ayrıntı yalnız kendi hesabına",
+  "Tek 401"
+ ],
+ "recommendation": "401 ve kod: oturum_yok, oturum_bitti, cihaz_kapandi (neden: degisim, cikis, silme), hesap_silindi; 403 ve kod: hesap_pasif, yetki_yok, kaynak_disi. Ayrıntı yalnız kimliği doğrulanmış kendi hesabına döner. Zarf biçimi D13'te.",
+ "needs_owner": false
+}
+
+{
+ "id": "D01-B53",
+ "question": "Origin ve içerik türü denetimi girişsiz POST uçlarında (kod iste, kodla gir, başvuru) da uygulanır mı; Origin taşımayan telefon istekleri nasıl ayrılır?",
+ "why": "teknik.html Origin denetimini \"veri değiştiren her istekte\" yazıyor; giriş ucu çerez kurduğu için başka siteden saldırganın kendi hesabına giriş yaptırması (giriş CSRF) mümkün. Telefonun yerel fetch istekleri Origin taşımaz, kural yanlış yazılırsa telefon girişi kırılır.",
+ "options": [
+  "Origin varsa panel adresi olmalı, yoksa yalnız Bearer ya da telefon istemcisi kabul; içerik türü yalnız application/json",
+  "Girişsiz uçlarda denetim yok"
+ ],
+ "recommendation": "Bütün POST, PUT, PATCH ve DELETE isteklerinde içerik türü yalnız application/json; Origin başlığı varsa panelin adresine eşit olmalı, yoksa istek ancak çerezsiz gelirse (telefon) kabul edilir ve çerez kurulmaz. Kural kancada tek yerde, senaryoyla denenir. Ayrıntı D13 ile ortak.",
+ "needs_owner": false
+}
+
+{
+ "id": "D15-B18",
+ "question": "Her istek ve iş logunda hangi alanlar bulunur, hangi düzeyler kullanılır, loglar ne kadar ve nerede tutulur, kullanıcının gördüğü istek kimliğiyle log nasıl bulunur?",
+ "why": "teknik.html#sunucu-ayarlar neyin yazılmayacağını ve istek kimliği ile sürenin yazılacağını söylüyor; alan listesi, saklama süresi ve arama yolu yok. local log sürücüsü kap başına sınırlı boyut tutar; yoğun bir günde sorun anının logu sahip bakmadan silinebilir. Kullanıcı hata ekranında istek kimliğini görüyor (tasarim.html#tipografi, kod-01); destek için bu kimlikle arama gerekir. Caddy'nin erişim logu açılırsa adresin tamamını yazar.",
+ "options": [
+  "Sabit alan listesi, pino redact yolları, local sürücüde boyut ayarı ve günlük sıkıştırılmış dışa aktarım",
+  "Ayrı log toplama hizmeti"
+ ],
+ "recommendation": "Birincisi. İstek logu: reqId, rota kalıbı, yöntem, durum kodu, süre, istemci türü, uygulama sürümü, runtimeVersion ve updateId (plan.html#dagitim-guncelleme), iç kullanıcı ya da cihaz UUID'si, hata kodu; IP yalnız hız sınırı olayında. Düzey üretimde info, geliştirmede debug. pino redact yolları: authorization, cookie, set-cookie ve gövdedeki kod, jeton, isim alanları. local sürücüde kap başına max-size 50m, max-file 10; her gece günün logları sıkıştırılıp 30 gün sunucuda tutulur. Caddy erişim logu kapalı, yalnız hata logu. İstek kimliği hata ekranında gösterilen değerle aynıdır (biçimi D13'ün); cli/log-bul bir istek kimliğinin API ve işçideki bütün satırlarını getirir.",
+ "needs_owner": false
+}
+
+{
+ "id": "D15-B32",
+ "question": "\"Kayıt gönderme ucu hiçbir sürüme kapanmaz\" kuralı oasdiff dışında nasıl sınanır?",
+ "why": "oasdiff belge düzeyinde kırılmayı yakalar (teknik.html#sunucu-mimari, Sözleşme), ama eski bir istemcinin gerçekten gönderdiği baytların hâlâ kabul edildiğini sınamaz. Kayıt metni sunucuda yeniden biçimlendirilmeden doğrulanıyor (teknik.html#sunucu-imza-dogrulama); bir sürümün ürettiği zarf biçimi sonradan reddedilirse o sürümün bekleyen kayıtları kaybolur (plan.html#dagitim-guncelleme-ilkesi: bekleyen kayıtlar hiçbir zaman engellenmez).",
+ "options": [
+  "Her yayımlanan uygulama sürümünden örnek istekler depoda saklanır ve her değişiklikte yeniden oynatılır",
+  "Yalnız oasdiff"
+ ],
+ "recommendation": "Birincisi: test/fixtures/surumler/<sürüm>/ altında her istek türünden sahte veriyle imzalanmış örnekler; bir davranış senaryosu bunları sahte saatle geçerli pencerede oynatır ve kabul bekler. Desteklenen sürüm listesi oasdiff'in kullandığı listeyle aynıdır (D13).",
+ "needs_owner": false
+}
+
+{
+ "id": "D15-B42",
+ "question": "Caddy birden çok API kopyası arasında istekleri hangi kurala göre dağıtır; bellekteki istek sınırları kopya sayısıyla nasıl tutarlı kalır?",
+ "why": "Kaba sınırlar her kopyanın belleğinde (plan.html#teknoloji-sunucu-yeri, Valkey satırı) ve cihaza ya da oturuma bağlı (teknik.html#sunucu-guvenlik). Caddy istekleri sırayla dağıtırsa bir cihazın istekleri bütün kopyalara yayılır, etkin sınır kopya sayısı katına çıkar. IP'ye göre dağıtmak kampüs ağının tek adresinden çıkan yüzlerce telefonu tek kopyaya yığar (teknik.html#sunucu-guvenlik).",
+ "options": [
+  "Girişli isteklerde Authorization, gönderme ucunda telefonun cihaz kimliği başlığının özetine göre dağıtım; girişsizlerde rastgele",
+  "Sırayla dağıtım ve sınırları kopya sayısına bölmek"
+ ],
+ "recommendation": "Birincisi: Caddy'nin başlık özeti politikası (lb_policy header); başlık yoksa rastgele. Kopya düşünce o kopyanın istekleri başka kopyaya geçer ve sayaçlar sıfırdan başlar; bu \"kaba sınır\" kararıyla uyumlu. Cihaz kimliği başlığının adı D06 ve D13'ün, sınır değerleri D13'ün.",
+ "needs_owner": false
+}
+

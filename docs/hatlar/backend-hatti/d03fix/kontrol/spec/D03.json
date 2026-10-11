@@ -1,0 +1,1248 @@
+{
+  "id": "D03",
+  "module": "listeler",
+  "summary": "listeler modülü bir şubenin öğrenci listesini tutar: satır öğrenciyi numara ve dosyadaki adla tutar, hiç silinmez, listeden çıkan pasif olur. Dosyayı panel okur, sunucuya yalnız eşlenmiş satırlar JSON olarak gider; sunucu farkı hesaplar, önizleme hiçbir şey yazmaz, uygulama beklenen liste sürümüyle tek işlemde yürür ve aynı dosyanın ikinci kez gelmesi zararsızdır. Uygulama aynı işlemde kayıtlı dinleyicileri eşleştirme, karar ve devam hesabı sırasıyla çağırır; bekleyen öğrenci kayıtlarıyla yarışı tek danışma kilidi önler, telefona inen sürüm işlemin son adımında alınır. Üyelik, numara ile eşleştirme ve satır okuma öbür modüllere dış yüzden verilir; muaf işaretini yalnız D08'in ucu muafIsaretle ile yazar. Dönem kilidinden sonra liste salt okunurdur; numara ve isim adres satırına, loga ve iş verisine girmez.",
+  "tables": [
+    {
+      "name": "liste_satirlari",
+      "purpose": "Bir şubenin ders listesindeki öğrenci satırı. Öğrenciyi hesapla değil numara ve dosyadaki adla tutar; hiç silinmez, listeden çıkan pasif olur, yalnız saklama süresi dolunca numara ve ad silinir. Telefona inen tablodur (hocaya şubenin bütün satırları, öğrenciye yalnız kendi satırı); D10 yalnız okur, bu yüzden sütun adları önce genişlet sonra daralt ile değişir.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "null": false,
+          "default": "uuidv7()",
+          "note": "Satır kimliği; adres satırında satır bununla anılır, dışa açık jeton değildir."
+        },
+        {
+          "name": "sube_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Şube (subeler, D02). Yükleme tek şubeye yapılır."
+        },
+        {
+          "name": "ders_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Şubenin dersi; yazılırken D02.subeGetir'den kopyalanır. Derste tek etkin satır dizini için gerekir (kısmi dizin yalnız kendi tablosunu görür)."
+        },
+        {
+          "name": "donem_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Dersin dönemi; kopya. Saklama işleyicisi ve dönem sorguları için."
+        },
+        {
+          "name": "ogrenci_no",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "9 ya da 10 ASCII rakam, metin (baştaki 0 korunur). Yalnız saklama süresi dolunca boşalır."
+        },
+        {
+          "name": "ad_soyad",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Görünen ad: NFC, boşluklar sadeleşmiş, harfler dosyadaki gibi; 1 ile 200 karakter. Yalnız saklama süresi dolunca boşalır."
+        },
+        {
+          "name": "sira",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Etkin satırlarda son yüklemenin dosya sırası (1, 2, 3); elle eklenen en büyük artı 1; pasif satır son sırasını korur. Tekil değildir, sıralama (sira, id)."
+        },
+        {
+          "name": "kaynak",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "Üyeliği son kuran yol: DOSYA, ELLE ya da SISTEM (CHECK)."
+        },
+        {
+          "name": "eklenme_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Şubeye ilk eklendiği an (saat arayüzünden). Canlanınca korunur."
+        },
+        {
+          "name": "pasif_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Listeden çıktığı an; boşsa etkin. Canlanınca boşalır."
+        },
+        {
+          "name": "gec_kayit_secimi",
+          "type": "text",
+          "null": false,
+          "default": "'ONCEKI_SAYILMAZ'",
+          "note": "Ekle-bırak (ONCEKI_SAYILMAZ) ya da Md.9/4 geç kayıt (ONCEKI_YOK); anlamı ve hesabı D08'in. Telefona inmez."
+        },
+        {
+          "name": "muaf",
+          "type": "boolean",
+          "null": false,
+          "default": "false",
+          "note": "Devamdan muaf. Yalnız muafIsaretle (D08'in ucu) yazar; yükleme değiştirmez. Telefona inmez, D08'in devam durumuyla iner."
+        },
+        {
+          "name": "ilk_yukleme_id",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "Satırı açan yükleme (liste_yuklemeleri); elle ve sistemde boş."
+        },
+        {
+          "name": "son_yukleme_id",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "Satıra en son dokunan yükleme."
+        },
+        {
+          "name": "degistiren_kisi_id",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "Son değiştiren kişi (kisiler, D01); sistem yazımında boş."
+        },
+        {
+          "name": "degisiklik_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Son değişiklik anı (saat arayüzünden)."
+        },
+        {
+          "name": "degisiklik_surumu",
+          "type": "bigint",
+          "null": false,
+          "default": "0",
+          "note": "Telefona inen sürüm. Yalnız inen bir sütun (numara, ad, sıra, eklenme, pasif, silinme) değişince işlemin son adımında D06.surumAl ile yazılır; işlem içinde geçici 0. JSON'da metin."
+        },
+        {
+          "name": "silinme_ani",
+          "type": "timestamptz",
+          "null": true,
+          "default": "",
+          "note": "Saklama süresiyle anonimleştirildiği an; telefona inen silindi işareti bundan türer."
+        }
+      ],
+      "indexes": [
+        "liste_satirlari_sube_id_ogrenci_no_uq: UNIQUE (sube_id, ogrenci_no); etkin ve pasif satırları kapsar, canlanma aynı satırı kullanır",
+        "liste_satirlari_ders_id_ogrenci_no_uq: UNIQUE (ders_id, ogrenci_no) WHERE pasif_ani IS NULL; derste öğrenci başına tek etkin satır",
+        "liste_satirlari_ogrenci_no_idx: (ogrenci_no); numaraIleEslestir, ogrencininEtkinSatirlari ve öğrencinin indirmesi",
+        "liste_satirlari_sube_id_degisiklik_surumu_idx: (sube_id, degisiklik_surumu); hocanın artımlı indirmesi",
+        "liste_satirlari_donem_id_idx: (donem_id) WHERE silinme_ani IS NULL; saklama işleyicisi"
+      ],
+      "constraints": [
+        "liste_satirlari_id_pk: PRIMARY KEY (id)",
+        "liste_satirlari_sube_id_fk: FOREIGN KEY (sube_id) REFERENCES subeler (id)",
+        "liste_satirlari_ders_id_fk: FOREIGN KEY (ders_id) REFERENCES dersler (id)",
+        "liste_satirlari_donem_id_fk: FOREIGN KEY (donem_id) REFERENCES donemler (id)",
+        "liste_satirlari_ilk_yukleme_id_fk: FOREIGN KEY (ilk_yukleme_id) REFERENCES liste_yuklemeleri (id)",
+        "liste_satirlari_son_yukleme_id_fk: FOREIGN KEY (son_yukleme_id) REFERENCES liste_yuklemeleri (id)",
+        "liste_satirlari_degistiren_kisi_id_fk: FOREIGN KEY (degistiren_kisi_id) REFERENCES kisiler (id)",
+        "liste_satirlari_ogrenci_no_ck: CHECK (ogrenci_no ~ '^[0-9]{9,10}$')",
+        "liste_satirlari_ad_soyad_ck: CHECK (char_length(ad_soyad) BETWEEN 1 AND 200)",
+        "liste_satirlari_sira_ck: CHECK (sira > 0)",
+        "liste_satirlari_kaynak_ck: CHECK (kaynak IN ('DOSYA','ELLE','SISTEM'))",
+        "liste_satirlari_gec_kayit_secimi_ck: CHECK (gec_kayit_secimi IN ('ONCEKI_SAYILMAZ','ONCEKI_YOK'))",
+        "liste_satirlari_pasif_ani_ck: CHECK (pasif_ani IS NULL OR pasif_ani >= eklenme_ani)",
+        "liste_satirlari_silinme_ani_ck: CHECK ((silinme_ani IS NULL AND ogrenci_no IS NOT NULL AND ad_soyad IS NOT NULL) OR (silinme_ani IS NOT NULL AND ogrenci_no IS NULL AND ad_soyad IS NULL))",
+        "liste_satirlari_degisiklik_surumu_ck: CHECK (degisiklik_surumu >= 0)"
+      ]
+    },
+    {
+      "name": "sube_listeleri",
+      "purpose": "Şube başına liste durumu: önizleme ile uygulama arasındaki yarışı yakalayan liste sürümü, son yükleme ve son yazan. İlk yazmada açılır; D03 uçlarının her yazması bu satırı FOR UPDATE ile kilitler.",
+      "columns": [
+        {
+          "name": "sube_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Şube (subeler, D02); birincil anahtar."
+        },
+        {
+          "name": "ders_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Şubenin dersi; kopya."
+        },
+        {
+          "name": "donem_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Dersin dönemi; kopya."
+        },
+        {
+          "name": "liste_surumu",
+          "type": "integer",
+          "null": false,
+          "default": "0",
+          "note": "D03 uçlarından gelen her yazmada tam 1 artar; muafIsaretle artırmaz. Panel bunu beklenenListeSurumu olarak geri yollar."
+        },
+        {
+          "name": "son_yukleme_id",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "Son uygulanan yükleme (liste_yuklemeleri)."
+        },
+        {
+          "name": "guncelleyen_kisi_id",
+          "type": "uuid",
+          "null": true,
+          "default": "",
+          "note": "Son yazan kişi (kisiler, D01)."
+        },
+        {
+          "name": "guncelleme_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "Son yazma anı."
+        },
+        {
+          "name": "olusturma_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "İlk yazma anı."
+        }
+      ],
+      "indexes": [
+        "Birincil anahtar dışında dizin yok; erişim hep sube_id ile."
+      ],
+      "constraints": [
+        "sube_listeleri_sube_id_pk: PRIMARY KEY (sube_id)",
+        "sube_listeleri_sube_id_fk: FOREIGN KEY (sube_id) REFERENCES subeler (id)",
+        "sube_listeleri_ders_id_fk: FOREIGN KEY (ders_id) REFERENCES dersler (id)",
+        "sube_listeleri_donem_id_fk: FOREIGN KEY (donem_id) REFERENCES donemler (id)",
+        "sube_listeleri_son_yukleme_id_fk: FOREIGN KEY (son_yukleme_id) REFERENCES liste_yuklemeleri (id)",
+        "sube_listeleri_guncelleyen_kisi_id_fk: FOREIGN KEY (guncelleyen_kisi_id) REFERENCES kisiler (id)",
+        "sube_listeleri_liste_surumu_ck: CHECK (liste_surumu >= 0)"
+      ]
+    },
+    {
+      "name": "liste_yuklemeleri",
+      "purpose": "Uygulanan her dosya yüklemesinin özeti: kim, ne zaman, dosya türü, kodlama, ayırıcı, değişiklik sayıları ve onay. Dosyanın kendisi, numaralar ve adlar saklanmaz. Dosyayla eklenen satırın kim ve ne zaman bilgisi buradan okunur (satırdaki ilk_yukleme_id).",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "null": false,
+          "default": "uuidv7()",
+          "note": "Yükleme kimliği."
+        },
+        {
+          "name": "sube_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Yüklemenin şubesi (subeler, D02)."
+        },
+        {
+          "name": "donem_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Dersin dönemi; kopya, saklama için."
+        },
+        {
+          "name": "yukleyen_kisi_id",
+          "type": "uuid",
+          "null": false,
+          "default": "",
+          "note": "Uygulayan hoca (kisiler, D01)."
+        },
+        {
+          "name": "uygulama_ani",
+          "type": "timestamptz",
+          "null": false,
+          "default": "",
+          "note": "İşlem anı (saat arayüzünden)."
+        },
+        {
+          "name": "dosya_turu",
+          "type": "text",
+          "null": false,
+          "default": "",
+          "note": "XLSX, XLS, HTML_XML ya da CSV (CHECK)."
+        },
+        {
+          "name": "kodlama",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Yalnız CSV'de: UTF_8, UTF_16LE, UTF_16BE ya da WINDOWS_1254."
+        },
+        {
+          "name": "ayirici",
+          "type": "text",
+          "null": true,
+          "default": "",
+          "note": "Yalnız CSV'de: VIRGUL, NOKTALI_VIRGUL ya da SEKME."
+        },
+        {
+          "name": "satir_sayisi",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Dosyadaki geçerli satır sayısı (1 ile 2.000)."
+        },
+        {
+          "name": "eklenen",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Yeni açılan satır sayısı."
+        },
+        {
+          "name": "pasif_olan",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Pasif olan satır sayısı (başka şubeye geçenlerin eski satırları dahil)."
+        },
+        {
+          "name": "canlanan",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Yeniden etkin olan satır sayısı."
+        },
+        {
+          "name": "isim_degisen",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Eşleştirme işlevine göre adı değişen satır sayısı."
+        },
+        {
+          "name": "sube_degisen",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Aynı dersin başka şubesinden gelen öğrenci sayısı."
+        },
+        {
+          "name": "sira_degisen",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Yalnız sırası değişen etkin satır sayısı."
+        },
+        {
+          "name": "uyari_sayisi",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Hocanın onayladığı UYARI bulgusu sayısı."
+        },
+        {
+          "name": "buyuk_degisiklik_onayi",
+          "type": "boolean",
+          "null": false,
+          "default": "false",
+          "note": "Etkinlerin yarısından fazlası pasif olurken hoca ikinci onayı verdi mi."
+        },
+        {
+          "name": "onceki_liste_surumu",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Uygulamadan önceki liste sürümü."
+        },
+        {
+          "name": "yeni_liste_surumu",
+          "type": "integer",
+          "null": false,
+          "default": "",
+          "note": "Uygulamadan sonraki liste sürümü (önceki artı 1)."
+        }
+      ],
+      "indexes": [
+        "liste_yuklemeleri_sube_id_uygulama_ani_idx: (sube_id, uygulama_ani DESC, id DESC); yükleme geçmişinin imleçli sayfası"
+      ],
+      "constraints": [
+        "liste_yuklemeleri_id_pk: PRIMARY KEY (id)",
+        "liste_yuklemeleri_sube_id_fk: FOREIGN KEY (sube_id) REFERENCES subeler (id)",
+        "liste_yuklemeleri_donem_id_fk: FOREIGN KEY (donem_id) REFERENCES donemler (id)",
+        "liste_yuklemeleri_yukleyen_kisi_id_fk: FOREIGN KEY (yukleyen_kisi_id) REFERENCES kisiler (id)",
+        "liste_yuklemeleri_dosya_turu_ck: CHECK (dosya_turu IN ('XLSX','XLS','HTML_XML','CSV'))",
+        "liste_yuklemeleri_kodlama_ayirici_ck: CHECK ((dosya_turu = 'CSV' AND kodlama IN ('UTF_8','UTF_16LE','UTF_16BE','WINDOWS_1254') AND ayirici IN ('VIRGUL','NOKTALI_VIRGUL','SEKME')) OR (dosya_turu <> 'CSV' AND kodlama IS NULL AND ayirici IS NULL))",
+        "liste_yuklemeleri_satir_sayisi_ck: CHECK (satir_sayisi BETWEEN 1 AND 2000)",
+        "liste_yuklemeleri_degisiklik_sayilari_ck: CHECK (eklenen >= 0 AND pasif_olan >= 0 AND canlanan >= 0 AND isim_degisen >= 0 AND sube_degisen >= 0 AND sira_degisen >= 0 AND uyari_sayisi >= 0)",
+        "liste_yuklemeleri_yeni_liste_surumu_ck: CHECK (yeni_liste_surumu = onceki_liste_surumu + 1)"
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/listeler/subeler/{subeId}",
+      "client": "panel",
+      "auth": "Oturumlu hoca (panel çerezi, kökteki D01 kancası). Yalnız dersin hocası (D02.dersYetkisi); değilse 404, varlık sızdırılmaz.",
+      "request": {
+        "subeId (yol)": "uuid; şube D02'de yoksa ya da isteyen dersin hocası değilse 404 LISTELER_SUBE_BULUNAMADI"
+      },
+      "response": {
+        "subeId": "uuid",
+        "dersId": "uuid",
+        "listeSurumu": "tam sayı >= 0 (liste hiç yazılmadıysa 0)",
+        "kilit": "null | DONEM_KILIDI | DERS_ARSIVDE | SUBE_PASIF | DENEME_DERSI (x-extensible-enum)",
+        "ilkYapilanDersAni": "UTC metin | null",
+        "ekleBirakBitisi": "YYYY-MM-DD | null (yalnız ipucu)",
+        "etkinSatirlar": "Satir[]: sira artan, sonra satirId; en çok 2.000",
+        "pasifSatirlar": "Satir[]: pasifAni azalan; etkinle birlikte en çok 6.000, liste kesilmez",
+        "Satir": "{satirId, ogrenciNo, adSoyad, sira, kaynak: DOSYA|ELLE|SISTEM, eklenmeAni, pasifAni|null, gecKayitSecimi: ONCEKI_SAYILMAZ|ONCEKI_YOK, gecEklendi: boolean, muaf: boolean, degisiklikAni}"
+      },
+      "errors": [
+        "LISTELER_SUBE_BULUNAMADI (404)",
+        "401 (D13: girişsiz)",
+        "403 (D13: rol hoca değil)",
+        "429 (D13: hız sınırı)"
+      ],
+      "idempotency": "Okuma; yan etkisiz, kilit almaz.",
+      "rate_limit": "Oturum başına dakikada 120 (D13 girişli uç sınıfı).",
+      "purpose": "Şubenin listesi: etkin satırlar sırasıyla, pasifler ayrı bölümde; liste sürümü, kilit nedeni, ilk yapılan dersin anı ve ekle-bırak bitişi (ipucu)."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/listeler/subeler/{subeId}/onizleme",
+      "client": "panel",
+      "auth": "Oturumlu hoca; yalnız dersin hocası, değilse 404.",
+      "request": {
+        "subeId (yol)": "uuid",
+        "dosya": "{tur: XLSX|XLS|HTML_XML|CSV, kodlama: UTF_8|UTF_16LE|UTF_16BE|WINDOWS_1254|null, ayirici: VIRGUL|NOKTALI_VIRGUL|SEKME|null}; kodlama ve ayırıcı yalnız CSV'de dolu, öbür türlerde null",
+        "satirlar": "1 ile 2.000 öğe; her öğe {dosyaSatirNo: tam sayı >= 1 ve istekte tekil, ogrenciNo: metin en çok 32 (ham; kural sunucuda), adSoyad: metin en çok 300 (ham), subeEtiketi: metin en çok 40 | null, sayiHucresi: boolean}",
+        "kural": "Şema katı: bilinmeyen alan 400; gövde en çok 2 MiB"
+      },
+      "response": {
+        "listeSurumu": "tam sayı; uygula isteğine beklenenListeSurumu olarak geri gelir",
+        "uygulanabilir": "boolean: HATA bulgusu yok ve kilit yok",
+        "kilit": "GET'teki gibi",
+        "buyukDegisiklik": "boolean: pasif olacaklar etkin satırların yarısından fazla",
+        "ozet": "{eklenecek, pasifOlacak, canlanacak, isimDegisecek, yazimDuzeltilecek, subeDegisecek, siraDegisecek, degismeyen}: tam sayılar",
+        "eklenecekler": "[{dosyaSatirNo, ogrenciNo, adSoyad, gecEklenen: boolean}]",
+        "canlanacaklar": "[{satirId, dosyaSatirNo, ogrenciNo, adSoyad, eklenmeAni, pasifAni}]",
+        "pasifOlacaklar": "[{satirId, ogrenciNo, adSoyad, kaynak}] (kaynak ELLE ise panel 'elle eklenmişti' notu düşer)",
+        "isimDegisecekler": "[{satirId, dosyaSatirNo, eskiAd, yeniAd}]",
+        "subeDegisecekler": "[{dosyaSatirNo, ogrenciNo, adSoyad, eskiSatirId, eskiSubeId, eskiSubeEtiketi}]",
+        "bulgular": "[{dosyaSatirNo, duzey: HATA|UYARI|BILGI, kod}] (kod x-extensible-enum; liste Hata kodları bölümünde)",
+        "ilkYapilanDersAni": "UTC metin | null",
+        "ekleBirakBitisi": "YYYY-MM-DD | null"
+      },
+      "errors": [
+        "LISTELER_SUBE_BULUNAMADI (404)",
+        "400 (D13 doğrulama; yalnız alan yolu)",
+        "413 GOVDE_COK_BUYUK (D13)",
+        "401 (D13: girişsiz)",
+        "403 (D13: rol hoca değil)",
+        "429 (D13: hız sınırı)"
+      ],
+      "idempotency": "Yan etkisiz: hiçbir tabloya yazmaz, kilit almaz; aynı liste durumunda aynı cevap.",
+      "rate_limit": "Oturum başına dakikada 120; gövde en çok 2 MiB (D13-B11).",
+      "purpose": "Panelin okuduğu eşlenmiş satırlarla farkı hesaplar: eklenecek, pasif olacak, canlanacak, ad değişecek, şube değişecek, sıra değişecek; bulgular ve geç eklenenler. Hiçbir tabloya yazmaz."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/listeler/subeler/{subeId}/uygula",
+      "client": "panel",
+      "auth": "Oturumlu hoca; yalnız dersin hocası, değilse 404.",
+      "request": {
+        "subeId (yol)": "uuid",
+        "dosya": "önizlemedeki gibi",
+        "satirlar": "önizlemedeki satırlar, aynı kurallar",
+        "beklenenListeSurumu": "tam sayı >= 0; önizlemenin döndürdüğü",
+        "uyarilarOnaylandi": "boolean; UYARI bulgusu varsa true olmalı",
+        "buyukDegisiklikOnaylandi": "boolean; buyukDegisiklik true ise true olmalı",
+        "gecKayitSecimleri": "[{ogrenciNo, secim: ONCEKI_SAYILMAZ|ONCEKI_YOK}] en çok 2.000; yalnız geç eklenen yeni satırlara uygulanır, öbürleri yok sayılır; verilmeyen ONCEKI_SAYILMAZ"
+      },
+      "response": {
+        "sonuc": "UYGULANDI | ZATEN_UYGULANMIS",
+        "yuklemeId": "uuid | null (ZATEN_UYGULANMIS'ta null)",
+        "listeSurumu": "tam sayı: yeni sürüm ya da değişmeyen sürüm",
+        "ozet": "önizlemedeki sayılar, uygulanan değerlerle"
+      },
+      "errors": [
+        "LISTELER_SUBE_BULUNAMADI (404)",
+        "LISTELER_KILITLI (409)",
+        "LISTELER_SURUM_DEGISTI (409)",
+        "LISTELER_ONAY_GEREKLI (409)",
+        "LISTELER_SATIR_SINIRI (409)",
+        "LISTELER_HATALI_SATIR (400)",
+        "400 (D13 doğrulama)",
+        "413 GOVDE_COK_BUYUK (D13)",
+        "401 (D13: girişsiz)",
+        "403 (D13: rol hoca değil)",
+        "429 (D13: hız sınırı)"
+      ],
+      "idempotency": "İçerikle: kilitler alındıktan sonra fark yeniden hesaplanır; fark boşsa 200 ZATEN_UYGULANMIS ve hiçbir yazma yok (çift tıklama, yeniden deneme); fark varsa ve sürüm tutmuyorsa 409 LISTELER_SURUM_DEGISTI.",
+      "rate_limit": "Oturum başına dakikada 120; gövde en çok 2 MiB (D13-B11).",
+      "purpose": "Aynı satırları, beklenen liste sürümünü, onayları ve geç kayıt seçimlerini alır; farkı kilitler altında yeniden hesaplayıp tek işlemde uygular: pasif yapma, canlandırma, ekleme, ad ve sıra, yükleme özeti, denetim olayları, dinleyiciler, en son telefon sürümü."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/listeler/subeler/{subeId}/satirlar",
+      "client": "panel",
+      "auth": "Oturumlu hoca; yalnız dersin hocası, değilse 404.",
+      "request": {
+        "subeId (yol)": "uuid",
+        "ogrenciNo": "9 ya da 10 ASCII rakam (packages/contracts ogrenciNoSemasi)",
+        "adSoyad": "1 ile 200 karakter, denetim karakteri yok (core isimDenetle)",
+        "beklenenListeSurumu": "tam sayı >= 0",
+        "gecKayitSecimi": "ONCEKI_SAYILMAZ | ONCEKI_YOK | null; yalnız geç eklenen yeni satırda kullanılır",
+        "subeDegisikligiOnaylandi": "boolean, varsayılan false; öğrenci aynı dersin başka şubesinde etkinse true olmalı"
+      },
+      "response": {
+        "sonuc": "EKLENDI | CANLANDI | ZATEN_LISTEDE",
+        "satir": "Satir (GET'teki biçim)",
+        "listeSurumu": "tam sayı"
+      },
+      "errors": [
+        "LISTELER_SUBE_BULUNAMADI (404)",
+        "LISTELER_KILITLI (409)",
+        "LISTELER_SURUM_DEGISTI (409)",
+        "LISTELER_SATIR_ZATEN_VAR (409)",
+        "LISTELER_BASKA_SUBEDE (409)",
+        "LISTELER_SATIR_SINIRI (409)",
+        "400 (D13 doğrulama)",
+        "401 (D13: girişsiz)",
+        "403 (D13: rol hoca değil)",
+        "429 (D13: hız sınırı)"
+      ],
+      "idempotency": "Doğal anahtar (şube, numara): numara bu şubede aynı adla etkinse 200 ZATEN_LISTEDE ve yazma yok; bu durumda sürüm farkı hata sayılmaz.",
+      "rate_limit": "Oturum başına dakikada 120; gövde en çok 64 KiB.",
+      "purpose": "Tek öğrenciyi listeye elle ekler ya da aynı numaralı pasif satırı canlandırır; sıra en sona."
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/listeler/satirlar/{satirId}",
+      "client": "panel",
+      "auth": "Oturumlu hoca; satırın dersinin hocası, değilse 404.",
+      "request": {
+        "satirId (yol)": "uuid",
+        "beklenenListeSurumu": "tam sayı >= 0",
+        "pasif": "boolean, isteğe bağlı: true listeden çıkarır, false canlandırır",
+        "gecKayitSecimi": "ONCEKI_SAYILMAZ | ONCEKI_YOK, isteğe bağlı",
+        "subeDegisikligiOnaylandi": "boolean, isteğe bağlı; yalnız pasif: false ile anlamlı",
+        "kural": "pasif ya da gecKayitSecimi'nden en az biri; muaf ya da başka alan 400 (şema katı)"
+      },
+      "response": {
+        "satir": "Satir",
+        "listeSurumu": "tam sayı",
+        "degisti": "boolean; istenen durum zaten varsa false"
+      },
+      "errors": [
+        "LISTELER_SATIR_BULUNAMADI (404)",
+        "LISTELER_KILITLI (409)",
+        "LISTELER_SURUM_DEGISTI (409)",
+        "LISTELER_BASKA_SUBEDE (409)",
+        "LISTELER_SATIR_SINIRI (409)",
+        "400 (D13 doğrulama)",
+        "401 (D13: girişsiz)",
+        "403 (D13: rol hoca değil)",
+        "429 (D13: hız sınırı)"
+      ],
+      "idempotency": "İstenen son durum: zaten varsa 200, degisti false, yazma yok ve sürüm farkına bakılmaz.",
+      "rate_limit": "Oturum başına dakikada 120; gövde en çok 64 KiB.",
+      "purpose": "Satırı pasif yapar ya da canlandırır, geç kayıt seçimini değiştirir. Gövdede muaf alanı yoktur: muafı yalnız D08'in ucu değiştirir."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/listeler/subeler/{subeId}/yuklemeler",
+      "client": "panel",
+      "auth": "Oturumlu hoca; yalnız dersin hocası, değilse 404.",
+      "request": {
+        "subeId (yol)": "uuid",
+        "imlec (sorgu)": "opak base64url (uygulama_ani, id); yoksa en yeniden başlar; içinde numara ve ad yok",
+        "adet (sorgu)": "1 ile 500, varsayılan 100"
+      },
+      "response": {
+        "ogeler": "[{yuklemeId, yukleyenKisiId, benMi, uygulamaAni, dosyaTuru, kodlama, ayirici, satirSayisi, eklenen, pasifOlan, canlanan, isimDegisen, subeDegisen, siraDegisen, uyariSayisi, buyukDegisiklikOnayi, yeniListeSurumu}], uygulamaAni azalan",
+        "sonrakiImlec": "metin | null"
+      },
+      "errors": [
+        "LISTELER_SUBE_BULUNAMADI (404)",
+        "400 (D13 doğrulama: imleç, adet)",
+        "401 (D13: girişsiz)",
+        "403 (D13: rol hoca değil)",
+        "429 (D13: hız sınırı)"
+      ],
+      "idempotency": "Okuma; yan etkisiz.",
+      "rate_limit": "Oturum başına dakikada 120 (D13 girişli uç sınıfı).",
+      "purpose": "Şubenin yükleme geçmişi, yeniden eskiye: kim, ne zaman, dosya türü ve değişiklik sayıları; numara ve ad yok."
+    }
+  ],
+  "jobs": [],
+  "state_machines": [
+    {
+      "name": "liste_satiri",
+      "states": [
+        "YOK",
+        "ETKIN",
+        "PASIF",
+        "ANONIM"
+      ],
+      "transitions": [
+        {
+          "from": "YOK",
+          "to": "ETKIN",
+          "by": "POST /v1/listeler/subeler/{subeId}/uygula",
+          "when": "Numara dosyada var, bu şubede satırı yok: eklenme_ani işlem anı, kaynak DOSYA, sıra dosya sırası; geç eklenense seçim istekten."
+        },
+        {
+          "from": "YOK",
+          "to": "ETKIN",
+          "by": "POST /v1/listeler/subeler/{subeId}/satirlar",
+          "when": "Hoca numarayı elle ekler: kaynak ELLE, sıra en büyük artı 1."
+        },
+        {
+          "from": "ETKIN",
+          "to": "PASIF",
+          "by": "POST /v1/listeler/subeler/{subeId}/uygula",
+          "when": "Numara yeni dosyada yok: pasif_ani işlem anı; satır, muaf ve seçim kalır."
+        },
+        {
+          "from": "ETKIN",
+          "to": "PASIF",
+          "by": "PATCH /v1/listeler/satirlar/{satirId}",
+          "when": "pasif: true."
+        },
+        {
+          "from": "ETKIN",
+          "to": "PASIF",
+          "by": "uygula ya da satirlar (aynı dersin başka şubesi)",
+          "when": "Öğrenci aynı dersin başka şubesine eklenir (şube değişimi): eski satır aynı işlemde pasif, yeni satır muaf ve seçimi devralır."
+        },
+        {
+          "from": "PASIF",
+          "to": "ETKIN",
+          "by": "uygula, satirlar ya da PATCH (pasif: false)",
+          "when": "Numara yeniden listede: aynı satır canlanır, eklenme_ani korunur, pasif_ani boşalır; KARAR dinleyicisi o dersteki kayıtları yeniden değerlendirir (D03-A04)."
+        },
+        {
+          "from": "ETKIN",
+          "to": "ETKIN",
+          "by": "uygula, PATCH ya da D08 muafIsaretle",
+          "when": "Ad, sıra, kaynak, geç kayıt seçimi ya da muaf değişir; üyelik aralığı aynı kalır."
+        },
+        {
+          "from": "ETKIN",
+          "to": "ANONIM",
+          "by": "D12 saklama_suresi_isi (D03 saklama işleyicisi)",
+          "when": "Dönemin saklama süresi doldu: numara ve ad silinir, silinme_ani yazılır, telefona silindi iner."
+        },
+        {
+          "from": "PASIF",
+          "to": "ANONIM",
+          "by": "D12 saklama_suresi_isi (D03 saklama işleyicisi)",
+          "when": "Aynı kural."
+        }
+      ]
+    },
+    {
+      "name": "sube_listesi",
+      "states": [
+        "YOK",
+        "ACIK",
+        "KILITLI"
+      ],
+      "transitions": [
+        {
+          "from": "YOK",
+          "to": "ACIK",
+          "by": "ilk yazma (uygula ya da satirlar)",
+          "when": "sube_listeleri satırı açılır, liste_surumu 1 olur."
+        },
+        {
+          "from": "ACIK",
+          "to": "ACIK",
+          "by": "uygula, satirlar ya da PATCH",
+          "when": "Her yazma liste_surumu'nu tam 1 artırır (şube değişiminde iki şube); muafIsaretle artırmaz."
+        },
+        {
+          "from": "ACIK",
+          "to": "KILITLI",
+          "by": "D02 (dönem kilidi, arşiv, şube pasif) ya da deneme dersi",
+          "when": "Durum saklanmaz; her istekte işlem anına göre D02'den türetilir. Kilitliyken yalnız okuma ve saklama işleyicisi."
+        },
+        {
+          "from": "YOK",
+          "to": "KILITLI",
+          "by": "D02 (dönem kilidi, arşiv, şube pasif) ya da deneme dersi",
+          "when": "Aynı kural; hiç yazılmamış liste kilitten sonra da açılmaz."
+        }
+      ]
+    }
+  ],
+  "invariants": [
+    "Bir şubede bir numaranın en çok bir satırı vardır, etkin ya da pasif (liste_satirlari_sube_id_ogrenci_no_uq).",
+    "Bir derste bir numaranın en çok bir etkin satırı vardır (liste_satirlari_ders_id_ogrenci_no_uq, pasif_ani IS NULL).",
+    "Liste satırı fiziksel silinmez; çıkan pasif olur, numara ve adı yalnız saklama işleyicisi siler (silinme_ani).",
+    "pasif_ani boş ya da eklenme_ani'den küçük değildir; pasif yazılırken GREATEST(işlem anı, eklenme_ani) kullanılır.",
+    "Satır [eklenme_ani, pasif_ani) yarı açık aralığında üyedir; canlanma pasif aralığını üyelikten siler (D03-A04).",
+    "D03 uçlarından gelen her yazma şubenin liste_surumu değerini tam 1 artırır; önizleme ve iki GET hiçbir tabloya yazmaz; muafIsaretle liste_surumu'nu artırmaz.",
+    "Telefona inen bir sütunu (numara, ad, sıra, eklenme, pasif, silinme) değişen her satır işlemin tek sürümünü D06.surumAl ile işlemin son adımında alır; değişmeyen satırın sürümü değişmez; yalnız muaf ya da geç kayıt seçimi değişen işlem sayaç kilidi almaz.",
+    "Uygula ya tamamen uygulanır ya hiç: satırlar, yükleme özeti, denetim olayları, dinleyiciler ve sürüm tek işlemde; dinleyici hatası bütün işlemi geri alır.",
+    "HATA bulgulu dosya uygulanamaz; UYARI ve büyük değişiklik açık onaysız uygulanamaz.",
+    "Kilitli şubede (dönem kilidi, arşiv, pasif şube, deneme dersi) hiçbir D03 ucu ve muafIsaretle yazmaz; kilit, kilitler alındıktan sonra saat arayüzünden bir kez okunan işlem anına göre denetlenir.",
+    "D03 uçlarının her yazması önce pg_advisory_xact_lock(3, 1) dışlayıcı kilidini alır, numaraIleEslestir aynı anahtarın paylaşımlı kilidini alır: liste uygulaması ile bekleyen kayıt eşleşmesi arasında yarış kaybı olmaz.",
+    "Kilit ve adım sırası: danışma kilidi, sube_listeleri satırları (kimlik sırasıyla), liste_satirlari satırları, denetim, dinleyiciler (iş kuyruğu dahil), en son sayaç sürümü.",
+    "Şube başına en çok 2.000 etkin ve 6.000 toplam satır; GET listeyi hiç kesmez.",
+    "Etkin satırlarda sira 1'den başlar ve son yüklemenin dosya sırasını izler; elle eklenen en büyük artı 1; sıralama (sira, id) ile kararlıdır.",
+    "Yükleme muaf ve gec_kayit_secimi değerlerini değiştirmez; muafı yalnız muafIsaretle, seçimi PATCH, satirlar ve geç eklenen yeni satırda uygula yazar.",
+    "Ad karşılaştırması yalnız packages/core/src/listeler/isim.ts ile yapılır; SQL lower() ve Intl kullanılmaz.",
+    "kaynak, gec_kayit_secimi, dosya_turu, kodlama ve ayirici CHECK listeleri packages/contracts/src/listeler.ts'teki sabitlerle aynıdır; şema testi sabitleri içe aktarır, yeniden yazmaz.",
+    "Numara ve ad adres satırına, loga, iş verisine ve denetim ayrıntısına girmez; yükleme özeti numara ve ad taşımaz.",
+    "liste_satirlari.ders_id ve donem_id satırın şubesinin dersine ve dönemine eşittir (yazılırken D02'den kopyalanır).",
+    "Bir yüklemenin sayıları o yüklemenin yazdığı satır değişikliklerine birebir eşittir."
+  ],
+  "exports": [
+    {
+      "name": "listeSatirlari",
+      "signature": "listeSatirlari(tx: Tx, subeId: Uuid): Promise<readonly ListeSatiri[]>",
+      "purpose": "Şubenin anonimleştirilmemiş bütün satırları: etkinler sira ve satirId sırasıyla, sonra pasifler. ListeSatiri = { satirId: Uuid; subeId: Uuid; dersId: Uuid; donemId: Uuid; ogrenciNo: OgrenciNo; adSoyad: string; sira: number; kaynak: 'DOSYA' | 'ELLE' | 'SISTEM'; eklenmeAni: Date; pasifAni: Date | null; gecKayitSecimi: 'ONCEKI_SAYILMAZ' | 'ONCEKI_YOK'; muaf: boolean; degisiklikSurumu: bigint }. D08 (T, muaf, seçim) ve D09 (teyit kapsamı) kullanır; kilit almaz."
+    },
+    {
+      "name": "satirGetir",
+      "signature": "satirGetir(tx: Tx, satirId: Uuid): Promise<ListeSatiri | null>",
+      "purpose": "Tek satır; yoksa ya da anonimleştirilmişse null. D08 muaf ucunda satırı ve dersini doğrular."
+    },
+    {
+      "name": "uyelikDenetle",
+      "signature": "uyelikDenetle(tx: Tx, ogrenciNo: OgrenciNo, subeId: Uuid | readonly Uuid[], an: Date): Promise<{ uye: true; satirId: Uuid; subeId: Uuid } | { uye: false; neden: 'SATIR_YOK' | 'HENUZ_EKLENMEMISTI' | 'PASIFTI' }>",
+      "purpose": "Öğrenci verilen şubelerden birinde an anında listede miydi: eklenme_ani <= an < pasif_ani (pasif boşsa sınırsız). Birlikte işlenen şubeler için oturumun şube dizisi verilir, biri yeter. Anı kararın sahibi D07 seçer (öneri: kaydın hesaplanan saati; ulaşma anı hiç). Yalnız okur, kilit almaz."
+    },
+    {
+      "name": "numaraIleEslestir",
+      "signature": "numaraIleEslestir(tx: Tx, numara: OgrenciNo, isim: string): Promise<{ durum: 'ESLESTI' | 'ISIM_UYUSMUYOR' | 'LISTEDE_YOK'; isimlerTutarsiz: boolean; satirlar: readonly { satirId: Uuid; subeId: Uuid; dersId: Uuid }[] }>",
+      "purpose": "Kayıttaki numara ve ad, numaranın şu an etkin satırlarıyla core isimlerEslesir işleviyle karşılaştırılır: etkin satır yoksa LISTEDE_YOK; her etkin satırın adı eşleşiyorsa ESLESTI; değilse ISIM_UYUSMUYOR (satırların adları kendi aralarında farklıysa isimlerTutarsiz true). Önce pg_advisory_xact_lock_shared(3, 1) alır ve çağıranın işlemi bitene kadar tutar; D01 bunu kayıt işleminin ilk veritabanı adımı yapar (satır kilitlerinden önce)."
+    },
+    {
+      "name": "ogrencininEtkinSatirlari",
+      "signature": "ogrencininEtkinSatirlari(tx: Tx, ogrenciNo: OgrenciNo, an: Date): Promise<readonly ListeSatiri[]>",
+      "purpose": "Numaranın an anında etkin bütün satırları (çift anadal ve yandal listeleri dahil), dersId sırasıyla. D01 teyit ve cihaz değişimi yetkisi, D04 ve D07 çakışma denetimi kullanır; kilit almaz."
+    },
+    {
+      "name": "muafIsaretle",
+      "signature": "muafIsaretle(tx: Tx, satirId: Uuid, muaf: boolean, yapan?: { kisiId: Uuid }): Promise<ListeSatiri>",
+      "purpose": "Muaf işaretini yazan tek yol; yalnız D08'in PUT /v1/devam/dersler/{dersId}/ogrenciler/{ogrenciId}/muaf ucu çağırır. Satırı kilitler; kilitli şubede LISTELER_KILITLI, satır yoksa LISTELER_SATIR_BULUNAMADI atar; değer aynıysa yazmaz. Liste sürümünü artırmaz, dinleyici çağırmaz, sayaç sürümü almaz (muaf telefona D08'in devam durumuyla iner); denetim olayını D08 yazar. Çağıran işlemde iş kuyruğu adımından önce çağrılır."
+    },
+    {
+      "name": "listeDegisikligiDinleyicisiKaydet",
+      "signature": "listeDegisikligiDinleyicisiKaydet(dinleyici: { ad: string; basamak: 'ESLESTIRME' | 'KARAR' | 'HESAP'; isle(tx: Tx, degisiklik: ListeDegisikligi): Promise<void> }): void",
+      "purpose": "Eklentiler yüklenirken kaydolunur: D01 ESLESTIRME (bekleyenKayitlariEslestir), D07 KARAR (yenidenDegerlendir), D08 HESAP (devamHesaplaIsiKoy). D03 bir yazma işleminde satırlar ve denetim yazıldıktan sonra, sürümden önce basamak sırasıyla, basamak içinde kayıt sırasıyla çağırır; aynı ad iki kez kaydolursa açılış hata verir. ListeDegisikligi = { dersId, donemId, an: Date, neden: 'YUKLEME' | 'ELLE_EKLEME' | 'SATIR_DUZENLEME', yuklemeId: Uuid | null, yapanKisiId: Uuid | null, satirlar: { satirId, subeId, ogrenciNo, tur: 'EKLENDI' | 'PASIF_OLDU' | 'CANLANDI' | 'ISIM_DEGISTI' | 'GEC_KAYIT_SECIMI_DEGISTI', eklenmeAni, oncekiPasifAni, pasifAni }[] }. Olay işlem içi olduğu için numara taşır; dinleyici numarayı iş verisine ve loga koymaz, genel sayaç sürümü almaz; hata atarsa bütün işlem geri alınır."
+    }
+  ],
+  "files": [
+    "apps/server/src/modules/listeler/index.ts",
+    "apps/server/src/modules/listeler/eklenti.ts",
+    "apps/server/src/modules/listeler/tablolar.ts",
+    "apps/server/src/modules/listeler/sorgular.ts",
+    "apps/server/src/modules/listeler/servis.ts",
+    "apps/server/src/modules/listeler/rotalar.ts",
+    "apps/server/src/modules/listeler/dinleyiciler.ts",
+    "apps/server/src/modules/listeler/kilitler.ts",
+    "apps/server/src/modules/listeler/indirme-kaynagi.ts",
+    "apps/server/src/modules/listeler/saklama.ts",
+    "apps/server/src/modules/listeler/denetim-olaylari.ts",
+    "apps/server/src/jobs/listeler/index.ts",
+    "packages/contracts/src/listeler.ts",
+    "packages/core/src/listeler/index.ts",
+    "packages/core/src/listeler/isim.ts",
+    "packages/core/src/listeler/numara.ts",
+    "packages/core/src/listeler/baslik.ts",
+    "packages/core/src/listeler/dosya-turu.ts",
+    "packages/core/src/listeler/kodlama.ts",
+    "packages/core/src/listeler/csv.ts",
+    "packages/core/src/listeler/okuma.ts",
+    "packages/core/src/listeler/satir-denetimi.ts",
+    "packages/core/src/listeler/fark.ts",
+    "packages/core/src/listeler/isim.test.ts",
+    "packages/core/src/listeler/numara.test.ts",
+    "packages/core/src/listeler/baslik.test.ts",
+    "packages/core/src/listeler/dosya-turu.test.ts",
+    "packages/core/src/listeler/kodlama.test.ts",
+    "packages/core/src/listeler/csv.test.ts",
+    "packages/core/src/listeler/okuma.test.ts",
+    "packages/core/src/listeler/satir-denetimi.test.ts",
+    "packages/core/src/listeler/fark.test.ts",
+    "packages/core/src/listeler/ornekler/uret.ts",
+    "packages/core/src/listeler/ornekler/utf8-bom-noktali-virgul.csv",
+    "packages/core/src/listeler/ornekler/utf8-virgul-tirnakli.csv",
+    "packages/core/src/listeler/ornekler/windows-1254-noktali-virgul.csv",
+    "packages/core/src/listeler/ornekler/utf16le-sekme.txt",
+    "packages/core/src/listeler/ornekler/esittir-tirnak-numara.csv",
+    "packages/core/src/listeler/ornekler/sayi-hucreli.xlsx",
+    "packages/core/src/listeler/ornekler/sifir-bicimli.xlsx",
+    "packages/core/src/listeler/ornekler/baslik-ustu-satirli.xlsx",
+    "packages/core/src/listeler/ornekler/ad-soyad-ayri.xlsx",
+    "packages/core/src/listeler/ornekler/ikinci-sayfada.xlsx",
+    "packages/core/src/listeler/ornekler/eski-ikili.xls",
+    "packages/core/src/listeler/ornekler/html-tablo.xls",
+    "packages/core/src/listeler/ornekler/parolali.xlsx",
+    "packages/core/src/listeler/ornekler/aksis-maskeli.xlsx",
+    "apps/server/test/features/listeler/liste-yukleme.feature",
+    "apps/server/test/features/listeler/liste-satirlari.feature",
+    "apps/server/test/features/listeler/liste-yetki-ve-kilit.feature",
+    "apps/server/test/features/listeler/liste-esleme.feature",
+    "apps/server/test/features/listeler/liste-indirme.feature",
+    "apps/server/test/features/listeler/liste-saklama.feature",
+    "apps/server/test/features/listeler/liste-yuk.k6.js",
+    "apps/server/test/steps/listeler/liste-adimlari.ts",
+    "apps/server/test/steps/listeler/esleme-adimlari.ts",
+    "apps/server/test/support/kurucular/listeler.ts"
+  ],
+  "tests": [
+    {
+      "name": "İlk yükleme önizlenir ve uygulanır",
+      "kind": "behavior",
+      "asserts": "Önizlemeden sonra GET boş ve liste sürümü 0 (yazma yok). Uygula sonrası etkin satırlar dosya sırasıyla 1..n, kaynak DOSYA, eklenme_ani sahte saatin anı, liste sürümü 1, tek liste_yuklemeleri satırı ve sayıları dosyayla birebir."
+    },
+    {
+      "name": "Aynı dosya ikinci kez uygulanırsa yazma olmaz",
+      "kind": "behavior",
+      "asserts": "İkinci istek eski sürümle 200 ZATEN_UYGULANMIS; liste sürümü, satırların degisiklik_surumu ve yükleme sayısı değişmez. Kontrol: tek satırı farklı dosya aynı eski sürümle 409 alır, yeni sürümle uygulanır."
+    },
+    {
+      "name": "Önizlemeden sonra liste değişirse uygula reddedilir",
+      "kind": "behavior",
+      "asserts": "Önizleme ile uygula arasına elle ekleme girince uygula 409 LISTELER_SURUM_DEGISTI ve hiçbir satır, yükleme ya da denetim olayı yazılmaz."
+    },
+    {
+      "name": "Dosyada olmayan öğrenci pasif olur, silinmez",
+      "kind": "behavior",
+      "asserts": "Satır pasif_ani ile kalır, GET'in pasif bölümünde görünür, tablo satır sayısı azalmaz; listeler.satir_pasif olayı satır kimliğiyle, numara ve adsız."
+    },
+    {
+      "name": "Yanlış dosya onaysız uygulanmaz, doğru dosya kaybı geri getirir",
+      "kind": "behavior",
+      "asserts": "Etkinlerin yarısından fazlası pasif olacakken buyukDegisiklikOnaylandi olmadan 409 LISTELER_ONAY_GEREKLI; onayla uygulanır. Doğru dosyada aynı satırlar canlanır (satır kimliği ve eklenme_ani aynı, pasif_ani boş) ve KARAR basamağındaki dinleyici CANLANDI satırlarıyla çağrılır."
+    },
+    {
+      "name": "Hatalı satırlı dosya uygulanamaz",
+      "kind": "behavior",
+      "asserts": "Önizleme HATA bulgusunu dosya satır numarasıyla döner ve uygulanabilir false; uygula 400 LISTELER_HATALI_SATIR, alanlar yalnız yol taşır; tabloda değişiklik yok."
+    },
+    {
+      "name": "Sayı olarak saklanmış numara işaretlenir",
+      "kind": "behavior",
+      "asserts": "Senaryo taslağı: 9 haneli sayı hücresi UYARI, 10 haneli BILGI, 8 haneli HATA; uyarılı dosya uyarilarOnaylandi olmadan 409 LISTELER_ONAY_GEREKLI, onayla geçer; '0000000000' biçimli hücrenin baştaki 0'ı korunur."
+    },
+    {
+      "name": "Aynı numara iki kez",
+      "kind": "behavior",
+      "asserts": "Adlar eşleştirme işlevine göre aynıysa NUMARA_TEKRAR_AYNI_ISIM uyarısı ve tek satır; farklıysa NUMARA_TEKRAR_FARKLI_ISIM hatası."
+    },
+    {
+      "name": "Şube sütunu seçilen şubeyle uyuşmazsa hata",
+      "kind": "behavior",
+      "asserts": "Şube sütunu başka etiket taşıyan satır SUBE_UYUSMUYOR; aynı etiket (Türkçe büyük küçük harf farkıyla) geçer."
+    },
+    {
+      "name": "Öğrenci aynı dersin başka şubesine geçer",
+      "kind": "behavior",
+      "asserts": "A şubesindeki satır aynı işlemde pasif, B'de yeni satır; muaf ve geç kayıt seçimi taşınır; iki şubenin liste sürümü 1 artar; derste tek etkin satır kalır; önizleme subeDegisecekler'de eski şube etiketini gösterir."
+    },
+    {
+      "name": "Yeni yükleme muafı ve geç kayıt seçimini korur",
+      "kind": "behavior",
+      "asserts": "Muaf ve ONCEKI_YOK seçili satır yeni dosyayla uygulanınca iki değer aynı kalır; pasif olup canlanan satırda da eski değerler döner."
+    },
+    {
+      "name": "Ad farkı eşleştirme kuralına göre ayrılır",
+      "kind": "behavior",
+      "asserts": "Yalnız harf büyüklüğü ve boşluk farkı isimDegisecek sayılmaz, yazimDuzeltilecek sayılır ve görünen ad yenilenir; gerçek fark isimDegisecek ve listeler.isim_degisti olayı (değer yok) üretir, ESLESTIRME dinleyicisine ISIM_DEGISTI gider."
+    },
+    {
+      "name": "Elle ekleme sona ekler",
+      "kind": "behavior",
+      "asserts": "Sıra etkinlerin en büyüğü artı 1, kaynak ELLE; aynı numara aynı adla ikinci kez 200 ZATEN_LISTEDE ve yazma yok; farklı adla 409 LISTELER_SATIR_ZATEN_VAR; pasif satırın numarası CANLANDI ve eklenme_ani korunur."
+    },
+    {
+      "name": "Geç eklenen öğrencide seçim",
+      "kind": "behavior",
+      "asserts": "İlk yapılan dersten sonra eklenen satırda gecEklendi true ve varsayılan ONCEKI_SAYILMAZ; önce eklenende false. İptal edilmiş ve 'yapılmadı' denmiş oturum ilk yapılan ders sayılmaz, onaysız geçmiş oturum sayılır. PATCH ile seçim değişince listeler.gec_kayit_secimi_degisti olayı ve HESAP dinleyicisi; satırın degisiklik_surumu değişmez."
+    },
+    {
+      "name": "Kilitten sonra liste salt okunur",
+      "kind": "behavior",
+      "asserts": "Senaryo taslağı (dönem kilidi, arşivlenmiş ders, pasif şube, deneme dersi): uygula, satirlar, PATCH ve muafIsaretle 409 LISTELER_KILITLI; GET 200 ve kilit nedeni. Sahte saatle kilit anından 1 ms önceki işlem yazar, kilit anındaki işlem yazamaz."
+    },
+    {
+      "name": "Başka hocanın listesi görünmez",
+      "kind": "behavior",
+      "asserts": "Başka hocanın şubesine altı uçtan her biri 404 (LISTELER_SUBE_BULUNAMADI ya da LISTELER_SATIR_BULUNAMADI) ve cevapta numara yok; öğrenci oturumu 403; girişsiz 401. Kontrol: dersin hocası aynı isteklerde 200 alır."
+    },
+    {
+      "name": "PATCH gövdesi muaf alanını kabul etmez",
+      "kind": "behavior",
+      "asserts": "Gövdede muaf olan PATCH 400 ve satır değişmez. D08'in muaf ucu muafIsaretle ile yazar: liste sürümü ve satırın degisiklik_surumu değişmez, GET muafı gösterir."
+    },
+    {
+      "name": "Bekleyen kayıt liste uygulanınca eşleşir",
+      "kind": "behavior",
+      "asserts": "İki bağlantıyla öğrenci kaydı ve liste uygulaması iki sırada da (önce kayıt, önce liste) yarışır; her iki sırada öğrenci sonunda eşleşmiş durumdadır."
+    },
+    {
+      "name": "Kayıt ile liste aynı anda kilitlenme kurmaz",
+      "kind": "behavior",
+      "asserts": "50 eşzamanlı kayıt (numaraIleEslestir ilk adım) ve 5 yükleme; hiçbir işlem 40P01 ile düşmez, kayıp eşleşme 0. D08'in muaf işlemi (muafIsaretle önce, iş kuyruğu sonra) eşzamanlı yüklemeyle de kilitlenme kurmaz."
+    },
+    {
+      "name": "Dinleyiciler basamak sırasıyla ve aynı işlemde çağrılır",
+      "kind": "behavior",
+      "asserts": "Kayıt sırası tersine verilse de ESLESTIRME, KARAR, HESAP sırası; dinleyici aynı işlemin yazdığı satırları görür; bir dinleyici hata atarsa satır, liste sürümü, yükleme satırı ve denetim olayı kalmaz."
+    },
+    {
+      "name": "Hocaya şubenin bütün satırları, öğrenciye yalnız kendi satırı iner",
+      "kind": "behavior",
+      "asserts": "İndirme kaynağı hocada sira dahil alanları verir, değiştiren, kaynak, muaf ve seçim inmez; öğrenci cevabında başka numara yok (pozitif kontrol: kendi satırı var); pasif satır pasifAni ile ve silindi false, anonim satır silindi true iner."
+    },
+    {
+      "name": "Değişen her satır işlemin tek sürümünü alır",
+      "kind": "behavior",
+      "asserts": "Bir uygulamanın inen sütunu değişen bütün satırları aynı degisiklik_surumu'nu taşır, değişmeyen satırınki eskidir; sürüm alma çağrısı dinleyicilerden ve denetimden sonra gelir (çağrı sırası kaydıyla)."
+    },
+    {
+      "name": "Numara ve ad loga, adres satırına ve denetime düşmez",
+      "kind": "behavior",
+      "asserts": "Senaryolar boyunca yakalanan pino satırlarında ve denetim ayrıntısında numara ve ad yok (pozitif kontrol: satır kimliği ve rota kalıbı var); doğrulama hatası değeri yankılamaz."
+    },
+    {
+      "name": "Üyelik yarı açık aralıkla cevaplanır",
+      "kind": "behavior",
+      "asserts": "Senaryo taslağı: an = eklenme_ani üye; an = pasif_ani PASIFTI; an < eklenme_ani HENUZ_EKLENMEMISTI; satır yoksa SATIR_YOK; birlikte işlenen şubelerden birinde satır yeter."
+    },
+    {
+      "name": "Numara ile eşleştirme",
+      "kind": "behavior",
+      "asserts": "Senaryo taslağı: IŞIK ile ışık ESLESTI; Sahin ile Şahin ISIM_UYUSMUYOR; yalnız pasif satır LISTEDE_YOK; iki etkin satırda farklı ad ISIM_UYUSMUYOR ve isimlerTutarsiz; U+00A0 ve çift boşluk eşleşir."
+    },
+    {
+      "name": "Yükleme geçmişi sayfalı ve kişisel veri taşımaz",
+      "kind": "behavior",
+      "asserts": "Yeniden eskiye; adet sınırı ve sonrakiImlec ile bütün sayfalar gezilince her yükleme bir kez; cevapta numara ve ad yok; bozuk imleç 400."
+    },
+    {
+      "name": "Saklama işleyicisi dönemin satırlarını anonimleştirir",
+      "kind": "behavior",
+      "asserts": "Numara ve ad boşalır, silinme_ani dolar, işlenen satır sayısı döner; ikinci çalıştırma 0 döner; dış yüzler bu satırları döndürmez; hocanın indirmesinde silindi true."
+    },
+    {
+      "name": "Satır sınırları",
+      "kind": "behavior",
+      "asserts": "2.001 satırlı istek 400; etkin satır 2.000'i ya da toplam 6.000'i aşacak uygulama 409 LISTELER_SATIR_SINIRI; 2 MiB üstü gövde 413 GOVDE_COK_BUYUK; 2.000 satırlık en büyük istek kabul edilir."
+    },
+    {
+      "name": "Başka şubede etkin öğrenciyi elle eklemek onay ister",
+      "kind": "behavior",
+      "asserts": "subeDegisikligiOnaylandi olmadan 409 LISTELER_BASKA_SUBEDE ve yazma yok; onayla şube değişimi olur. PATCH pasif: false için aynı kural."
+    },
+    {
+      "name": "Ad anahtarı iki kez uygulanınca değişmez",
+      "kind": "property",
+      "asserts": "fast-check 1.000 deneme: isimAnahtari(isimAnahtari(x)) = isimAnahtari(x); Türkçe harf, U+00A0, sıfır genişlikli karakter ve birleşik nokta içeren üreteçlerle."
+    },
+    {
+      "name": "Ad eşleşmesi yansımalı ve simetrik",
+      "kind": "property",
+      "asserts": "fast-check 1.000 deneme: isimlerEslesir(a, a) ve isimlerEslesir(a, b) = isimlerEslesir(b, a)."
+    },
+    {
+      "name": "Türkçe büyük harf kendi küçüğüyle eşleşir, harf sadeleştirmesi yoktur",
+      "kind": "property",
+      "asserts": "Açık eşlemeyle büyütülen her ad kendi küçüğüyle eşleşir; Ş ile S, Ç ile C, Ğ ile G, Ö ile O, Ü ile U, I ile i eşleşmez (tablo testi ve üreteç)."
+    },
+    {
+      "name": "Fark uygulanınca etkin küme dosyanın numara kümesine eşit olur",
+      "kind": "property",
+      "asserts": "fast-check 500 deneme: rastgele mevcut liste ve dosyayla fark uygulanınca etkin numaralar dosyadaki geçerli numaralara eşit; aynı dosyayla ikinci fark boş (eş güçlü)."
+    },
+    {
+      "name": "Fark hiçbir satırı silmez",
+      "kind": "property",
+      "asserts": "fast-check 500 deneme: farktan sonra satır sayısı azalmaz; pasif olan ve etkin kalanların toplamı önceki etkinlere eşit; sıra 1..n kesintisiz."
+    },
+    {
+      "name": "CSV yazılıp okununca aynı hücreler",
+      "kind": "property",
+      "asserts": "fast-check 1.000 deneme: tırnak, ayırıcı ve satır sonu içeren hücrelerle RFC 4180 metni noktalı virgül, virgül ve sekmeyle yazılıp okununca aynı hücreler ve aynı ayırıcı."
+    },
+    {
+      "name": "Kodlama gidiş dönüşü",
+      "kind": "property",
+      "asserts": "Rastgele Türkçe metin UTF-8, UTF-8 BOM, UTF-16LE ve UTF-16BE BOM'lu ve windows-1254 baytlarına çevrilip geri çözülünce aynı metin ve doğru kodlama adı."
+    },
+    {
+      "name": "Başlık anahtarı yazım farkında aynı kalır",
+      "kind": "property",
+      "asserts": "'ÖĞRENCİ NO', 'Öğrenci No:', 'OGRENCI  NO' ve 'öğr. no' gibi biçimler sözlükteki anahtara iner; 'Sıra No' 'no' ile eşleşmez."
+    },
+    {
+      "name": "Numara denetimi",
+      "kind": "property",
+      "asserts": "9 ya da 10 ASCII rakam dışındaki her metin NUMARA_BICIMI; =\"0123456789\" sarmalı soyulur; Arapça ve tam genişlikli rakamlar reddedilir."
+    },
+    {
+      "name": "Örnek dosyalar okunur",
+      "kind": "behavior",
+      "asserts": "Vitest: ornekler klasöründeki her dosya (BOM'lu ve 1254 CSV, UTF-16 sekmeli metin, sayı hücreli ve sıfır biçimli xlsx, başlık üstü satırlı, ayrı ad soyadlı, ikinci sayfada, eski xls, HTML tablolu xls) beklenen satırlara; parolalı dosya DOSYA_PAROLALI; maskeli AKSİS örneği geldiğinde aynı testle (D03-A01). SheetJS packages/core'da yalnız test bağımlılığıdır, panelle aynı sabit paket dosyası (istek D15'e); okuma.ts onu içe aktarmaz."
+    },
+    {
+      "name": "Rota listesi altı uçtan oluşur",
+      "kind": "contract",
+      "asserts": "packages/contracts/src/listeler.ts rota listesi bu altı yöntem ve yolla birebir; D13'ün rota tablosu testi her uç için kimliksiz 401, yanlış rol 403 dener."
+    },
+    {
+      "name": "İstek şemaları katıdır",
+      "kind": "contract",
+      "asserts": "Bilinmeyen alan 400; PATCH'te muaf 400; satirlar 1 ile 2.000; dosya türü ile kodlama ve ayırıcı tutarlılığı; dosyaSatirNo istekte tekil."
+    },
+    {
+      "name": "Cevaplarda kod değerleri genişleyebilir",
+      "kind": "contract",
+      "asserts": "kilit, kaynak, bulgu kodları, sonuc ve hata kodları cevap şemasında x-extensible-enum; istek şemalarında kapalı enum."
+    },
+    {
+      "name": "Göç adları ve türleri kurala uyar",
+      "kind": "contract",
+      "asserts": "Kısıt ve dizin adları <tablo>_<sütunlar>_<tür>, 63 bayt altı; uuidv7() varsayılanı; anlar timestamptz; CHECK listeleri sözleşmedeki sabitlerle aynı (sabitler içe aktarılır); göç yalnız D03 tablolarına dokunur."
+    },
+    {
+      "name": "Her LISTELER_ kodu en az bir senaryoda döner",
+      "kind": "contract",
+      "asserts": "D13'ün kapsama testi: katalogdaki dokuz kodun her biri bir senaryoda gerçekten döner."
+    },
+    {
+      "name": "Modül sınırı",
+      "kind": "contract",
+      "asserts": "Biome noPrivateImports: başka modül yalnız modules/listeler/index.ts'i içe aktarır; listeler D01, D07 ve D08'i içe aktarmaz; dependency-cruiser döngü bulmaz."
+    },
+    {
+      "name": "Liste uçlarının süre bütçesi",
+      "kind": "load",
+      "asserts": "Yayın öncesi yük testinde: 2.000 satırlık önizleme p95 500 ms, uygula p95 2 s, 6.000 satırlık GET p95 300 ms altında; uygulamada sayaç kilidinin tutulma süresi p95 50 ms altında."
+    },
+    {
+      "name": "Dönem başı yoğunluğu",
+      "kind": "load",
+      "asserts": "Saniyede 200 öğrenci kaydıyla birlikte dakikada 10 liste uygulaması: kilitlenme 0, kayıp eşleşme 0, kayıt işleminin danışma kilidi beklemesi p95 1 s altında."
+    },
+    {
+      "name": "Ortak kurallar mutasyon eşiği",
+      "kind": "mutation",
+      "asserts": "D15'in haftalık Stryker işinde packages/core/src/listeler kırma eşiğinin altına düşmez; isim.ts, numara.ts ve fark.ts'te yaşayan mutant kalmaz (bilinçli eşdeğerler yorumla gerekçelenir)."
+    },
+    {
+      "name": "Danışma kilidi mutasyonu",
+      "kind": "mutation",
+      "asserts": "kilitler.ts'teki dışlayıcı kilit kaldırılınca 'Bekleyen kayıt liste uygulanınca eşleşir' senaryosu kırmızı olur; dosya md5 ile geri yazılınca yeşil."
+    },
+    {
+      "name": "Sürüm son adım mutasyonu",
+      "kind": "mutation",
+      "asserts": "surumAl çağrısı dinleyicilerden önceye alınınca 'Değişen her satır işlemin tek sürümünü alır' senaryosu kırmızı olur; geri yazılınca yeşil."
+    }
+  ],
+  "resolved_gaps": [
+    {
+      "gap": "D03-B02",
+      "decision": "Dosyayı panel okur (SheetJS ile; okuma kuralları packages/core/src/listeler'de). Sunucuya yalnız eşlenmiş satırlar JSON olarak gider: dosyaSatirNo, ogrenciNo (ham metin), adSoyad, subeEtiketi, sayiHucresi ve dosya bilgisi (tür, kodlama, ayırıcı). Satır kurallarını panel ve sunucu aynı core işlevleriyle uygular; istek şeması katıdır. Dosya ve fazladan sütunlar (e-posta, TC) sunucuya hiç ulaşmaz; tür, kodlama ve ayırıcı yalnız liste_yuklemeleri satırına yazılır.",
+      "why": "API yalnız JSON alır (D13) ve SheetJS yalnız panel sayfalarında yüklenir (teknik.html#panel-excel); sunucuda ayrıştırıcı ve zip bombası yüzeyi açılmaz, tutulmayan veri (plan.html#kararlar-e-posta-gonderimi: e-posta ve TC yok) hiç gelmez."
+    },
+    {
+      "gap": "D03-B03",
+      "decision": "Fark sunucuda hesaplanır; önizleme ve uygula durumsuz iki uçtur, saklanan önizleme yok. Uygula aynı satırları ve önizlemenin döndürdüğü beklenenListeSurumu'nu taşır; işlem kilitleri aldıktan sonra farkı yeniden hesaplar: fark boşsa 200 ZATEN_UYGULANMIS (yazma yok), sürüm tutmuyorsa 409 LISTELER_SURUM_DEGISTI, yoksa bütün değişiklikler, dinleyiciler ve sürüm tek işlemde.",
+      "why": "Hoca görmediği bir farkı onaylayamaz; çift tıklama ve yeniden deneme zararsız kalır; tek işlem yarım listeyi önler (teknik.html#sunucu-mimari)."
+    },
+    {
+      "gap": "D03-B04",
+      "decision": "Hepsi ya da hiçbiri; satır başına seçim yalnız geç eklenenlerin geç kayıt seçimi. Önizleme türleri: eklenecek, pasif olacak, canlanacak, ad değişecek, yazım düzeltilecek, şube değişecek, sıra değişecek (yalnız sayı), değişmeyen; bulgular HATA, UYARI, BILGI. Etkin satırların yarısından fazlası pasif olacaksa buyukDegisiklik true ve uygula buyukDegisiklikOnaylandi ister ('Bu dosya bu şubenin listesine benzemiyor'). Önizleme hiçbir tabloya yazmaz.",
+      "why": "Yanlış dosya en çok pasif olacaklarda zarar verir; plan değişikliklerin uygulanmadan önce gösterilmesini istiyor (plan.html#hoca-liste-yukleme)."
+    },
+    {
+      "gap": "D03-B05",
+      "decision": "HATA bulgusu varken uygula 400 LISTELER_HATALI_SATIR; UYARI varken uyarilarOnaylandi olmadan 409 LISTELER_ONAY_GEREKLI. Sayı hücresinde biçimli metin yalnız rakamsa kullanılır, değilse tam sayı ham değer; 10 rakam BILGI, 9 rakam UYARI, 9'dan kısa HATA. Tür bilgisi olmayan dosyada (CSV ve HTML tablo) 9 ve 10 haneli numaralar karışıksa azınlıktaki uzunluk (eşitlikte 9 haneliler) UYARI. Aynı numara iki kez: adlar eşleşiyorsa UYARI ve ilk satır sayılır, değilse HATA. Tamamen boş satır ve numarası da adı da boş dipnot satırı panelde atlanır, bilgi olarak gösterilir; adı dolu numarası boş satır HATA (NUMARA_BICIMI). Ad 1 ile 200 karakter, denetim karakteri yok.",
+      "why": "Atlanan hatalı satır öğrenciyi 'dosyada yok' sayıp pasif yapar; baştaki 0'ı düşmüş numara kendi sahibiyle eşleşemez ve kaydı bekletir (plan.html#kararlar-e-posta-gonderimi)."
+    },
+    {
+      "gap": "D03-B06",
+      "decision": "Sabit sözlük packages/core/src/listeler/baslik.ts'te, öncelik sırasıyla: numara 'öğrenci no', 'öğrenci numarası', 'öğr no', sonra 'numara', en son 'no'; ad 'ad soyad', 'adı soyadı', 'ad soyadı' ya da ayrı 'ad'/'adı' ile 'soyad'/'soyadı' (birleştirme: ad, bir boşluk, soyad); şube 'şube'. Başlık anahtarı: NFC, Türkçe kuralla küçültme, Türkçe harf sadeleştirme, baş ve son boşluk silme, çoklu boşluğu teke indirme, nokta ve iki noktayı atma; eşleşme anahtarın tamamıyla. İlk 20 satırda numara ve ad başlığını birlikte taşıyan ilk satır başlıktır; ilk sayfada yoksa sonraki sayfalar. Bulunamazsa panel elle eşleme açar ve aynı işlev açık eşlemeyle çağrılır.",
+      "why": "Plan yalnız dönüşümü yazıyor (plan.html#hoca-liste-yukleme); 'Sıra No' gibi sütunun 'no' ile karışmaması için öncelik ve tam eşleşme gerekir. Kesin sözlük maskeli AKSİS örneğiyle güncellenir (D03-A01)."
+    },
+    {
+      "gap": "D03-B07",
+      "decision": "Kodlama teknik.html#panel-excel sırasıyla: BOM (UTF-8, UTF-16LE, UTF-16BE), yoksa katı UTF-8, olmazsa windows-1254 (core'da sabit tabloyla, ICU verisine bağlı değil). Ayırıcı adayları noktalı virgül, virgül ve sekme: her biriyle ilk 20 satırda başlık aranır, başlığı bulan tek aday seçilir; birden çoğu bulursa AYIRICI_BELIRSIZ, hiçbiri bulamazsa elle eşleme. RFC 4180 tırnak kuralları; numara hücresinde =\"...\" sarmalı soyulur.",
+      "why": "Türkçe Excel CSV'yi noktalı virgülle, 'Unicode metin' çıktısını UTF-16 ve sekmeyle kaydeder; seçim kuralı yazılmazsa aynı dosya iki yerde farklı okunur."
+    },
+    {
+      "gap": "D03-B08",
+      "decision": "Satır öğrenciyi numara (metin) ve dosyadaki adla tutar; kişi tablosuna yabancı anahtar yok. (şube, numara) tekil; hesapla bağ numara üzerinden sorgu anında kurulur (numaraIleEslestir, ogrencininEtkinSatirlari).",
+      "why": "Liste kayıttan önce yüklenir (plan.html#gun), telefonsuz öğrenci hiç kaydolmayabilir, silinen hesap yeniden kaydolunca yeni hesap açılır (plan.html#kararlar-hesap-silme); sözleşmedeki dış yüz de numarayla çalışıyor. Modüller arası öğrenci kimliği D03-A08'de."
+    },
+    {
+      "gap": "D03-B10",
+      "decision": "uyelikDenetle tek bir anda cevaplar: satır [eklenme_ani, pasif_ani) yarı açık aralığında ve verilen şubelerden birinde ise üye. Envanterdeki pencere kesişimi önerisi yerine tek an seçildi: sözleşme imzası tek an alıyor ve kararın sahibi D07 'oturum anı' diyor (D07-B21); öneri kaydın hesaplanan saati, ulaşma anı hiç. Birlikte işlenen şubeler için şube dizisi kabul edilir.",
+      "why": "Yarı açık aralık pasif olmadan önceki oturumun geç gelen kaydını reddetmez, ders sırasında eklenip yoklama veren öğrenciyi de reddetmez; hangi anın kullanılacağı karar kuralıdır, D07'nin."
+    },
+    {
+      "gap": "D03-B12",
+      "decision": "gec_kayit_secimi metin ve CHECK (ONCEKI_SAYILMAZ varsayılan, ONCEKI_YOK). Seçim yalnız derse eklenme anı (numaranın o dersteki satırlarının en eski eklenme_ani) ilk yapılan dersten sonra olan satırda gösterilir (gecEklendi). İlk yapılan ders: dersin iptal edilmemiş, 'yapılmadı' denmemiş ve başlangıcı işlem anından önce olan ilk oturumu (onaysız ders sayılır), D02.oturumlariGetir ile. Seçim önizlemede satır başına verilir (panel toplu seçtirebilir), sonra PATCH ile değişir; her değişiklik denetime yazılır ve HESAP dinleyicisi (D08) çağrılır. Ekle-bırak bitişi GET ve önizlemede yalnız ipucudur (D02-B31); varsayılan değişmez.",
+      "why": "Plan varsayılanı ilki diyor ve seçimi yalnız ilk yapılan dersten sonra eklenende gösteriyor (plan.html#devam); listesini geç yükleyen hocanın bütün öğrencileri yanlışlıkla Yok almasın."
+    },
+    {
+      "gap": "D03-B13",
+      "decision": "Pasif satır telefona silindi işaretiyle değil pasifAni dolu güncelleme olarak iner; silindi yalnız satır anonimleştirilince true olur. Envanterdeki evet/hayır silindi sütunu yerine D12-B16'daki yaşam döngüsü biçimi: silinme_ani (boş olabilen an) ve telefona inen silindi bundan türer. D08-B12'deki 'pasif silindi işaretiyle iner' sözü yerine bu kural geçerlidir; dersin öğrenci kapsamından çıkıp çıkmayacağı D06'nın kapsam kuralıdır (D06-B15). Telefon pasifAni'den sonra başlayan oturumda pencere açmaz, gönderilmemiş kayıtları yine gider, kararı sunucu verir. Hoca telefonunda pasif öğrenci elle ekleme seçiminde çıkmaz ama satır kalır (makbuzdaki ad çözülür).",
+      "why": "Satır hiç silinmez (plan.html#hoca-liste-yukleme); silindi işareti pasiflik için kullanılırsa canlanmada telefon veriyi kaybeder."
+    },
+    {
+      "gap": "D03-B15",
+      "decision": "Yükleme hocanın seçtiği tek şubeye yapılır; dosyada şube sütunu varsa seçilen şubenin etiketiyle uyuşmayan satır HATA (SUBE_UYUSMUYOR); karşılaştırma ad anahtarıyla, büyük küçük harf ve boşluk farkı yok sayılır. (ders_id, ogrenci_no) üzerinde etkin satırlar için kısmi tekil dizin; ders_id satıra şubeden kopyalanır. Başka şubede etkin öğrenci önizlemede şube değişecek görünür; uygula aynı işlemde eski satırı pasif yapar, yeni satıra muaf ve geç kayıt seçimini taşır, iki şubenin liste sürümünü artırır.",
+      "why": "Liste şubeye bağlı (teknik.html#kod-veri-modeli); iki şubede etkin satır iki pencere ve çift sayım demek. AKSİS dışa aktarımı ders bazlı çıkarsa (D03-A01) yeniden bakılır."
+    },
+    {
+      "gap": "D03-B17",
+      "decision": "Dönem kilidi (D02.kilitDurumu'nun verdiği kilit anı işlem anıyla karşılaştırılır), arşivlenmiş ders, pasif şube ve deneme dersi listeyi salt okunur yapar: bütün yazma uçları ve muafIsaretle 409 LISTELER_KILITLI; GET kilit nedenini döner. Kilitten sonra yalnız saklama işleyicisi yazar.",
+      "why": "AKSİS özeti ve T liste satırlarına dayanır; kilitten sonra değişen liste kesinleşmiş sonucu sessizce değiştirir (plan.html#devam-donem-sonu)."
+    },
+    {
+      "gap": "D03-B18",
+      "decision": "Eşleştirme packages/core/src/listeler/isim.ts'te tek saf işlevdir, sunucuda numaraIleEslestir içinden çağrılır; Intl ve SQL lower() kullanılmaz. Adımlar: NFC; Unicode boşlukları (U+00A0 dahil) boşluk; U+200B, U+200C, U+200D ve U+FEFF silinir; baş ve son boşluk silinir, çoklu boşluk teke iner; I ı'ya, İ i'ye açık eşlemeyle, sonra yerel ayarsız küçültme; i'den sonra gelen U+0307 silinir. Harf sadeleştirme ve noktalama silme yok. Yalnız etkin satırlarla eşleşir; numaranın etkin satırları kendi aralarında farklı addaysa ISIM_UYUSMUYOR ve isimlerTutarsiz.",
+      "why": "Veritabanı C.UTF-8 (teknik.html#veritabani-donem-alani); Excel'den gelen bölünmez boşluk ya da birleşik nokta doğru öğrenciyi hoca onayına düşürmesin; IŞIK ile ışık eşleşir, Sahin ile Şahin eşleşmez (plan.html#kararlar-e-posta-gonderimi)."
+    },
+    {
+      "gap": "D03-B19",
+      "decision": "Bekleyen kayıtların eşleşmesi aynı işlemde: D03 uçlarının her yazması önce pg_advisory_xact_lock(3, 1) dışlayıcı kilidini alır (3 modül numarası, 1 eşleşme kilidi); numaraIleEslestir aynı anahtarın paylaşımlı kilidini (pg_advisory_xact_lock_shared) alır ve D01'in kayıt işleminin ilk veritabanı adımıdır. Uygula ESLESTIRME basamağında D01'in dinleyicisini çağırır. İş kuyruğu kullanılmaz.",
+      "why": "Kayıtlar birbirini beklemez; liste yazımı saniye mertebesinde ve seyrek. Numara başına kilit 2.000 satırlık yüklemede 2.000 kilit alırdı; zamanlanmış uzlaştırma işi öğrenciyi gereksiz bekletirdi."
+    },
+    {
+      "gap": "D03-B20",
+      "decision": "Her uygulama bir liste_yuklemeleri satırı (kim, ne zaman, dosya türü, kodlama, ayırıcı, sayılar, onay; dosya, numara ve ad yok) ve listeler.yukleme_uygulandi olayı yazar. Satır olayları: listeler.satir_eklendi (elle), listeler.satir_pasif (şube değişimi nedeniyle), listeler.satir_canlandi, listeler.isim_degisti (değer yok), listeler.gec_kayit_secimi_degisti. Dosyayla eklenen satırın olayı yükleme olayıdır (satırdaki ilk_yukleme_id ile bağlı); sıra değişikliği olay yazmaz; muaf olayını D08 yazar. Olaylar D09.denetimeYaz ile, satır kimliği ve yükleme kimliğiyle.",
+      "why": "Pasiflik ve seçim devam sonucunu değiştirdiği için itirazda kanıt gerekir, satırda yalnız son durum durur. Dosyayla eklemenin kimi ve anı yükleme satırında olduğundan 2.000 olayı tek olaya indirmek bilgi kaybettirmez."
+    },
+    {
+      "gap": "D03-B21",
+      "decision": "Şube başına en çok 2.000 etkin ve 6.000 toplam satır; istek en çok 2.000 satır; önizleme ve uygula gövdesi en çok 2 MiB, öbür uçlar 64 KiB; panel 10 MiB üstü dosyayı okumaz. Envanterdeki 1 MB yerine D13-B11'in 2 MiB değeri alındı. D13-B13'ün sınıf boyu listeler için 2.000 satırlık sert sınırı etkin satırlara uygulanır; pasif satırlar silinmediği için GET etkinle birlikte 6.000 satıra kadar tek cevapta, kesilmeden döner (yaklaşık 1,5 MB). Önizleme ve uygula eşzamanlı ve tek işlemde; sunucu ilerleme bildirmez, ilerleme çubuğu panelin dosya okumasını gösterir (tasarim.html#anat-progress).",
+      "why": "Gövde sınırı açıkça yazılır (teknik.html#sunucu); D13 sınıf boyu listeleri 2.000 satırla sınırlıyor; 2.000 satırın en kötü JSON'u yaklaşık 1,8 MB."
+    },
+    {
+      "gap": "D03-B22",
+      "decision": "Uçlar /v1/listeler altında, şube ve satır UUIDv7 kimliğiyle; numara yolda ve sorguda yok. Kodlar paylaşılan kuraldaki modül önekiyle (LISTELER_, envanterdeki LISTE_ değil). Başka hocanın kaynağı 403 değil 404 (D13-B02, envanterdeki LISTE_YETKI_YOK kalktı); 403 yalnız rol için. Doğrulama hatasında yalnız alan yolu; gizleme yolları sözleşmedeki LISTELER_GIZLI_ALANLAR sabitiyle D15'in pino ayarına verilir.",
+      "why": "Öğrenci numarası adres satırına konmaz (teknik.html#sunucu-ayarlar); yetkisiz kaynağın varlığını sızdırmamak için 404 (plan.html#baslangic: başka hocanın dersini görme ret senaryosu)."
+    },
+    {
+      "gap": "D03-B24",
+      "decision": "Elle ekleme dosya satırıyla aynı kurallardan geçer: numara 9 ya da 10 ASCII rakam, ad 1 ile 200 karakter; sıra etkin satırların en büyüğü artı 1, kaynak ELLE; geç eklenense seçim aynı istekte. Numara bu şubede etkin ve ad eşleşiyorsa ZATEN_LISTEDE (yazma yok), eşleşmiyorsa 409 LISTELER_SATIR_ZATEN_VAR; pasif satır varsa yeni satır açılmaz, satır canlanır ve ad yenilenir; başka şubede etkinse subeDegisikligiOnaylandi ister. Sonraki dosyada olmayan elle eklenmiş öğrenci önizlemede 'elle eklenmişti' notuyla pasif olacaklar arasında görünür.",
+      "why": "plan.html#devam-donem-sonu: elle eklenen sona eklenir; ayrı gevşek form AKSİS ile tutarsız satır üretirdi."
+    },
+    {
+      "gap": "D03-B25",
+      "decision": "Yükleme yalnız üyeliği, sırayı, görünen adı ve kaynağı değiştirir; muaf ve geç kayıt seçimi korunur, canlanan satırda eski değerler döner. Adlar eşleştirme işlevine göre aynıysa (büyük küçük harf, boşluk) değişiklik sayılmaz ama görünen ad dosyadakiyle yenilenir (yazimDuzeltilecek); gerçek farkta isimDegisecek ve olay. Teyitli hesap etkilenmez, eşleştirme yalnız kayıtta.",
+      "why": "Muafı hoca işaretler, dosya taşımaz (plan.html#devam); yükleme işareti sıfırlasaydı muaf öğrenciye hak uyarısı giderdi."
+    },
+    {
+      "gap": "D03-B26",
+      "decision": "Deneme dersinin listesi tek satırdır, kaynak SISTEM; deneme dersi bütün liste yazma uçlarına kilitlidir (LISTELER_KILITLI, kilit DENEME_DERSI). Satırı D01'in inceleme_hesaplari_kurulumu işi kurar; bunun için gereken dış yüz D03-A07'de.",
+      "why": "İnceleme hesapları yalnız deneme dersini görür, silinirse sunucu yeniden kurar (plan.html#kararlar-inceleme-hesaplari); hoca uçları deneme listesini bozmamalı."
+    },
+    {
+      "gap": "D03-B27",
+      "decision": "Telefona inen alanlar: öğrencinin kendi satırında satirId, subeId, dersId, ogrenciNo, adSoyad, eklenmeAni, pasifAni, degisiklikSurumu (metin) ve silindi; hocanın satırlarında bunlar ve sira. Envanter önerisinden farklı olarak muaf ve geç kayıt seçimi inmez (kaynak ve değiştiren de inmez): hak seviyesini ve muafı D08 öğrencinin kendi devam durumuyla indirir (D08-B06, D08-B24). Sürüm yalnız inen bir sütun değişince alınır.",
+      "why": "Veri amaçla sınırlı (plan.html#kararlar-indirme); yerel hak hesabı gerekçesi D08'in sunucuda hesapladığı seviyeyle karşılanıyor. Muaf değişikliği sayaç kilidi alsaydı D08'in muaf işlemi ile liste yüklemesi iş kuyruğu üzerinden kilitlenme döngüsü kurabilirdi."
+    },
+    {
+      "gap": "D03-B28",
+      "decision": "Saklanan sira her yüklemede geçerli satırların dosya sırasıyla 1, 2, 3 diye yeniden yazılır; elle eklenen en büyük artı 1; pasif satır son sırasını korur ama sıralı listelerde gösterilmez; şube değiştiren öğrenci yeni şubede o yüklemenin sırasını alır. Dosya satır numarası (bulguların yeri) yalnız önizleme ve uygula cevabında döner, saklanmaz. sira tekil değildir, sıralama (sira, id) ile kararlıdır.",
+      "why": "AKSİS özeti listenin sırasını kullanır (plan.html#devam-donem-sonu); kısmi tekil sıra dizini toplu yeniden numaralamada ara ihlal verirdi."
+    }
+  ],
+  "contradictions_resolved": [
+    {
+      "id": "D03-C01",
+      "resolution": "SheetJS kaldıkça çelişki yok: .xlsx, .xls ve HTML ya da XML tabanlı .xls okunur (teknik.html#panel-excel). Yedeğe geçilirse read-excel-file .xls okumaz; o durumda panel .xls için 'dosyayı Excel'de .xlsx olarak kaydedip yükle' iletisini verir ve plandaki .xls kuralı bu iletiyle karşılanır. teknik.html#temel-yedek-paketler satırına bu not eklenmeli."
+    },
+    {
+      "id": "D03-C02",
+      "resolution": "Kabul edilen türler Excel (.xlsx, .xls) ve CSV. Panelin okuma sonuç kodları core'dadır (DOSYA_BOS, DOSYA_COK_BUYUK, DOSYA_OKUNAMADI, DOSYA_PAROLALI, BASLIK_BULUNAMADI, AYIRICI_BELIRSIZ, COK_FAZLA_SATIR) ve her biri ayrı metin alır; genel 'okunamadı' metni türleri plan gibi sayar: 'Bu dosya okunamadı. AKSİS'ten indirdiğin Excel (.xlsx, .xls) ya da CSV dosyasını seç.' tasarim.html#anat-toast örnek metni buna göre düzeltilmeli."
+    },
+    {
+      "id": "D03-C03",
+      "resolution": "İki ayrı ad: liste satırının kaynağı ELLE (ekranda 'listeye elle eklendi') ve yoklamadaki son durum 'Elle eklendi' (D09). AKSİS özetinin sırası liste satırının sira alanından gelir, yoklama son durumundan değil; kodda kaynak alanı ile son durum kodu ayrı sözlüklerdedir."
+    }
+  ],
+  "open_points": [
+    {
+      "id": "D03-A01",
+      "question": "(D03-B01) AKSİS'in ders listesi dışa aktarımı gerçekte hangi biçimde (gerçek .xlsx, eski .xls, HTML ya da XML tabanlı .xls, CSV), hangi sütunlarla (numara; ad ve soyad birleşik mi ayrı mı; şube; e-posta; TC; tekrar ya da muaf) ve başlıktan önce kaç satırla geliyor?",
+      "recommendation": "Spec genel sözlükle ve dört dallı ilk bayt kuralıyla yazıldı: 50 4B 03 04 xlsx; D0 CF 11 E0 A1 B1 1A E1 xls ya da parolalı xlsx; BOM ve boşluktan sonra '<' HTML ya da XML tablo; kalanı metin. Sahipten maskeli bir gerçek örnek ve farklı dışa aktarım kullanan birim olup olmadığı bilgisi istenir (plan.html#acik); örnek gelince sözlük ve okuma testleri güncellenir, dışa aktarım ders bazlıysa D03-B15 yeniden açılır.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-A02",
+      "question": "(D03-B09) Çift anadal ya da yandal öğrencisi AKSİS'te ikinci programda ayrı numara alıyor mu?",
+      "recommendation": "Öğrenci işlerinden ve AKSİS örneğinden teyit (plan.html#acik çift anadalı zaten soruyor). Ayrı numara çıkarsa hesap ile numara arasında çok satırlı bağ (D01) kurulur; liste tarafı numarayla çalıştığından değişmez. Teyide kadar tek numara varsayılır.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-A03",
+      "question": "(D03-B11) 'Derse eklendiği tarihten sonra yapılan saatler' gün mü, an mı?",
+      "recommendation": "An: eklenme ve pasif timestamptz (saat arayüzünden). Başlangıcı eklenme anından sonra olan oturum T'ye girer; eklenmeden önce başlamış oturuma geçerli kaydı varsa o oturum da girer. Hesap D08'in (D08-B12 aynı yönde); iki kural da öğrenci lehine. Spec bu öneriyle yazıldı; gün seçilirse yalnız D08'in hesabı değişir, D03 tablosu değişmez.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-A04",
+      "question": "(D03-B14) Pasif satır canlanınca aynı satır mı döner, aradaki 'listede değil' kayıtlar yeniden karara bağlanır mı?",
+      "recommendation": "Aynı satır canlanır, eklenme anı korunur, pasif aralığı üyelikten silinir; canlanan satırlar KARAR dinleyicisiyle (D07.yenidenDegerlendir) aynı işlemde yeniden değerlendirilir, Var'a dönen kayıt 'sonradan değişenler' listesine düşer (D09). Gerçek bırakıp yeniden alma ile yanlış dosya ayırt edilemediğinden ikisi aynı işlenir; yanlış dosyayla eklenip sonradan gerçekten derse alınan öğrencide eski eklenme anı korunacağından önizleme canlanacak satırın önceki eklenme ve pasif anını gösterir. Plan liste değişikliğini kararların yeniden verildiği olaylar arasında saymıyor (plan.html#kararlar-supheli-kayit), bu yüzden sahip onayı istenir. Spec bu öneriyle yazıldı.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-A05",
+      "question": "(D03-B16) Şube listesini kim okur ve yazar; yönetici de görür mü?",
+      "recommendation": "Yalnız dersin hocası (D02.dersYetkisi; kendi dersi olan yönetici o derste hocadır). Yönetici okuması gerekirse D02-B24 kararıyla birlikte, salt okunur ve denetim kayıtlı açılır; şimdiden açılmaz. Spec bu öneriyle yazıldı.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-A06",
+      "question": "(D03-B23) Liste ekranında öğrencinin uygulamaya kaydolup kaydolmadığı (kaydolmadı, teyit bekliyor, teyitli, hesap silindi) görünsün mü?",
+      "recommendation": "Görünsün ama D03'ün GET'inde değil: D03 D01'i okumaz (iki yönlü çağrı kurulmaz). D01'in kendi önekinde şube kimliği alan bir okuma ucu, D03.listeSatirlari ile birleştirip satirId başına durum döner; panel listeyle birleştirir. Ürün kararı ve D01'e yeni uç olduğundan sahip onayı ister. Spec GET'i bu durum olmadan yazdı.",
+      "needs_owner": true
+    },
+    {
+      "id": "D03-A07",
+      "question": "(D03-B26) Deneme dersinin liste satırını hangi dış yüz kurar? D03'ün sözleşmedeki dış yüzünde satır yazan işlev yok.",
+      "recommendation": "contracts.json'da D03 dış yüzüne yalnız ekleyen bir işlev: denemeListesiniKur(tx: Tx, subeId: Uuid, ogrenciNo: OgrenciNo, adSoyad: string): Promise<ListeSatiri>; kaynak SISTEM, eş güçlü, deneme dersi dışındaki şubeye yazmayı reddeder, dinleyicileri çağırır. D01'in inceleme_hesaplari_kurulumu işi çağırır. Bütünleştirici ekleyene kadar deneme öğrencisinin listesi kurulamaz.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-A08",
+      "question": "Öğrenci modüller arasında hangi kimlikle anılır? D03 satırı numarayla tutar (bkz. D03-B08); D05, D07, D08 ve D09 kişi kimliği (ogrenci_id) kullanıyor; hesabı olmayan (telefonsuz) öğrencinin elle eklemesi, muafı ve devam hesabı kişi kimliği olmadan yürümez; D08'in muaf yolu {ogrenciId} taşıyor.",
+      "recommendation": "Ders içindeki öğrenci için iç kimlik liste satırı kimliği (satirId), hesaplar arası birleştirme numarayla: D08 ve D10 devamı ve özeti (ders, numara) üzerinden toplar, iş verisine ve yola satirId konur (D08'in muaf yolundaki kimlik satirId olur ya da D08 kendi eşlemesini kurar); kayıtlar ogrenci_id taşır ve numaraya D01'in dış yüzüyle bağlanır. D03 dinleyici olayında satirId ile ogrenciNo'yu birlikte verir. Bütünleştirici D05, D08, D09 ve D10 ile birlikte kesinleştirir.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-A09",
+      "question": "D06'nın indirme kaynağı arayüzü D03'e hangi bağlamı verir?",
+      "recommendation": "Kaynak çağrısı (tx, bağlam, surumden, surumeKadar) almalı; bağlam hocada kapsamdaki ders kimlikleri, öğrencide numara olmalı (D06 D01'i okur, D03 okumaz). D03 rol başına sütun listesiyle satır döner: pasif satır pasifAni ile, anonim satır silindi ile; kapsam olayını D06 kurar. D06'nın spec'i başka imza seçerse uyum D03'ün indirme-kaynagi.ts dosyasında kalır.",
+      "needs_owner": false
+    },
+    {
+      "id": "D03-A10",
+      "question": "Liste işlemleriyle kesişen işlemlerde kilit ve adım sırası nasıl ortak kurala bağlanır?",
+      "recommendation": "Ortak kurallara eklenmesi önerilen sıra: her işlemde satır yazımları, sonra iş kuyruğu (D14.isGonder), en son sayaç sürümü (D06.surumAl). D01'in kayıt işleminde numaraIleEslestir ilk veritabanı adımıdır; D08'in muaf işleminde muafIsaretle iş kuyruğundan önce çağrılır; liste dinleyicileri genel sayaç sürümü almaz; D12'nin saklama işi her saklama işleyicisini ayrı işlemde çağırır. Bu sıra bozulursa pg-boss tekil anahtarlı iş ekleme beklemesi ile satır ya da sayaç kilidi arasında döngü kurulur; D12'nin bir kez yeniden deneme kuralı (D12-B08) yalnız son güvencedir. Senaryo: 'Kayıt ile liste aynı anda kilitlenme kurmaz'.",
+      "needs_owner": false
+    }
+  ]
+}

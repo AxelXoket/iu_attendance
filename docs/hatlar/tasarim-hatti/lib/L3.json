@@ -1,0 +1,655 @@
+{
+ "id": "L3",
+ "area": "Web paneli: stil ve bileşen temelleri",
+ "summary": "Panelin stil katmanı için Tailwind CSS 4.3 seçildi: renk, köşe, süre ve eğri ölçüleri @theme içinde OKLCH değerli CSS değişkenleri olarak tek yerde durur, Vite 8 eklentisi PostCSS istemez. Davranış katmanı React Aria Components: görünüşü olmayan, tamamen bizim çizdiğimiz bileşenler verir, Türkçe metinleri (tr-TR) hazır gelir, üzerine gelme durumunu dokunmatik ekranda uygulamaz, açılan katmanları kapanış animasyonu bitene kadar sayfada tutar ve bunu panelin hedef tarayıcılarında (Chrome 111, Firefox 114, Safari 16.4) JavaScript ile yaptığı için @starting-style ve Popover API olmadan da çalışır. Bu seçim teknik.html'deki 'hazır arayüz kütüphanesi yerine tarayıcının kendi öğeleri' kararına dokunur: öneri, düğme, tablo ve formun yerel öğe kalması, yalnız tarayıcının hedef sürümlerde yapamadığı menü, açılır seçim, tarih seçici ve bildirimin React Aria'dan gelmesi; karar sahibe bırakıldı. Bileşen kodu shadcn CLI'nin Temmuz 2026'da gelen React Aria tabanı ve köşesiz Lyra stiliyle bir kez üretilir, sonra bizim kodumuz olur; iskeletin getirdiği ve son 12 ayda sürüm çıkarmamış yardımcılar (class-variance-authority, tw-animate-css) alınmaz. Yoklama ızgaraları için 4 Ağustos 2026'da kararlı çıkan TanStack Table 9 ile TanStack Virtual 3, formlar için TanStack Form 1 ile sözleşme paketindeki Zod 4 şemaları (Türkçe hata dili hazır) kullanılır. Tarih seçici React Aria DatePicker: tarayıcının tarih kutusu biçimi sayfanın değil tarayıcının dilinden aldığı için Türkçe biçimi garanti etmez. Bildirim için React Aria Toast seçildi ama API'si hâlâ UNSTABLE etiketli, yani beta; sürüm sabitlenir, ikinci seçenek Sonner. İkonlar lucide-react 1.x (telefonda aynı sürümlü lucide-react-native), yazı tipi Fontsource değişken paketiyle kendi sunucumuzdan, CSS küçültme Vite 8'in varsayılanı Lightning CSS. Komut paleti ve grafik kütüphanesi şimdilik gerekmez: plan grafik ekranı içermiyor, oranlar meter öğesi ve düz SVG ile çizilir, gerekirse Recharts 3. Planın 'son 12 ayda sürüm yoksa bakımsız' kuralı cmdk, @phosphor-icons/react, @observablehq/plot, class-variance-authority ve tw-animate-css'i eler.",
+ "needs": [
+  "Köşe yarıçapı 0 ile 2 px arasında; kırık beyaz ve gri zemini, gece mavisi alt tonu tek kaynaktan yöneten tasarım değişkenleri (OKLCH, color.js ile hesaplanmış).",
+  "Etkileşimli her öğede yumuşak geçiş: işaretçili cihazda üzerine gelme, dokunmada basma geri bildirimi, panel, menü, alt sayfa ve diyalogların açılışı ve kapanışı; hareketi azalt ayarında kısalan ya da kalkan animasyon.",
+  "Panelin hedef tarayıcılarıyla uyum (Chrome ve Edge 111, Firefox 114, Safari 16.4): @starting-style, Popover API ve CSS anchor bu sürümlerde yok, çıkış animasyonu ve açılır katman konumu JavaScript tarafında çözülmeli.",
+  "WCAG 2.2 AA: yalnız klavyeyle kullanım, görünür odak, en az 24 px tıklama hedefi, yazıda en az 4,5:1 kontrast, durum mesajlarının ekran okuyucuya duyurulması.",
+  "Türkçe metinler, Türkçe tarih biçimi ve Europe/Istanbul saat dilimi; tarayıcının ve bilgisayarın dilinden ve saat diliminden bağımsız.",
+  "Öğrenci ve oturum yoklama ızgarası: sıralama, süzme, büyük derslerde yüzlerce satırda akıcı kaydırma, yerel table öğesi, yazdırma görünümü.",
+  "Formlar: sözleşme paketindeki Zod 4 şemalarını yeniden kullanmak, Türkçe hata mesajları, e-posta kodu alanında yapıştırma ve otomatik doldurmanın açık kalması.",
+  "Telefonla aynı ikon ailesi ve yazı tipi; yazı tipi dosyaları kendi sunucumuzdan.",
+  "Az bağımlılık kuralı: her pakete gerekçe, son 12 ayda sürüm çıkarmamış paket alınmaz."
+ ],
+ "candidates": [
+  {
+   "id": "L3-C01", "category": "Stil sistemi", "package": "tailwindcss", "repo": "tailwindlabs/tailwindcss", "verdict": "seçildi",
+   "version": "4.3.3", "released": "2026-07-16", "stars": "97751 (ecosyste.ms, 2026-10-06)",
+   "role": "Tasarım değişkenlerini (renk, köşe, gölge, süre, eğri) @theme içinde CSS değişkeni olarak tanımlar, bileşenlerde yardımcı sınıflarla kullanılır; çalışma anında kod eklemez.",
+   "why": "En yaygın ve iyi bakılan seçenek: haftada 163 milyon indirme, son 12 ayda 14 kararlı sürüm, geçen yıl açılan 157 konunun 129'u kapandı (ortalama 12 gün). v4'te ayar dosyası yerine CSS içinde @theme var: köşeleri --radius-* değerleriyle 0 ile 2 px'e çekmek, renkleri color.js'in ürettiği OKLCH değerleriyle yazmak tek dosyada olur. hover: varyantı v4'ten beri yalnız üzerine gelebilen cihazda çalışır; motion-safe: ve motion-reduce: varyantları hareketi azalt ayarını karşılar.",
+   "compat": "@tailwindcss/vite 4.3.3'ün eş bağımlılığı vite ^5.2.0 || ^6 || ^7 || ^8, Vite 8 resmî destekli; PostCSS gerekmez. Tailwind v4 Safari 16.4, Chrome 111 ve Firefox 128 için tasarlandı, panelin hedefi Firefox 114. v4.1'den beri @property'ye dayanan gölge, dönüşüm ve gradyanlar ile oklab renkler için yedek değerler var; sayfa eski tarayıcıda da çalışır, yalnız bazı gölge renkleri farklı görünebilir.",
+   "modern": "v4 motoru Rust tabanlı, renkler OKLCH, cascade layers ve @property kullanır; 4.2 Şubat 2026'da, 4.3 Mayıs 2026'da çıktı.",
+   "risks": "Firefox 114 ile 127 arasında küçük görsel farklar (gölge, gradyan); en eski hedef tarayıcıda denenmeli. Sınıf dizileri uzarsa okunurluk düşer; varyantlar tailwind-variants ile bileşen başına toplanır.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/tailwindcss", "title": "tailwindcss npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://tailwindcss.com/blog/tailwindcss-v4-1", "title": "Tailwind CSS v4.1: Text shadows, masks, and tons more", "publisher": "Tailwind Labs", "date": "2025-04-03" },
+    { "url": "https://github.com/tailwindlabs/tailwindcss", "title": "tailwindlabs/tailwindcss", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C02", "category": "Stil sistemi", "package": "vite", "repo": "vitejs/vite", "verdict": "ikinci",
+   "version": "8.3.2", "released": "2026-10-01", "stars": "83153 (ecosyste.ms, 2026-10-06)",
+   "role": "Vite'ın yerleşik CSS Modules desteği: bileşen başına .module.css dosyası, tasarım değişkenleri :root'ta CSS özel özellikleri, sınıf adları derlemede özetlenir.",
+   "why": "Hiç yeni paket getirmez, düz CSS yazılır, az bağımlılık kuralına en uygun yol. Tailwind kabul edilmezse ya da bir bileşen çok özel CSS isterse yedek; ikisi aynı projede birlikte de çalışır. Birinci olmadı çünkü değişkenleri sınıflara bağlayan ortak bir dil yok, her bileşende aynı geçiş, odak ve boyut kuralları elle tekrar yazılır.",
+   "compat": "Vite 8 CSS Modules'ü kutudan destekler; lightningcss Vite 8'in doğrudan bağımlılığı (^1.33.0), css.transformer 'lightningcss' seçilirse CSS Modules'ü de o derler.",
+   "modern": "Kalıcı bir standart; iç içe CSS, oklch() ve @layer hedef tarayıcıların hepsinde var (oklch Firefox 113'ten beri).",
+   "risks": "Ortak ölçüleri tutarlı tutmak ekibin disiplinine kalır; tasarım denetimi zorlaşır.",
+   "sources": [
+    { "url": "https://vite.dev/config/build-options", "title": "Build Options", "publisher": "Vite", "date": "2026-10-06" },
+    { "url": "https://registry.npmjs.org/vite", "title": "vite npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C03", "category": "Stil sistemi", "package": "@vanilla-extract/css", "repo": "vanilla-extract-css/vanilla-extract", "verdict": "reddedildi",
+   "version": "1.21.2", "released": "2026-07-27", "stars": "10434 (ecosyste.ms, 2026-10-06)",
+   "role": "Stilleri TypeScript dosyalarında yazıp derlemede düz CSS'e çeviren, tip güvenli tema sözleşmesi veren araç.",
+   "why": "Bakımlı (son 12 ayda 9 kararlı sürüm) ama stil yazmak için ayrı bir dil ve her değişiklikte TypeScript derlemesi demek; haftalık indirme (3,2 milyon) Tailwind'in ellide biri. React Aria'nın data-* durumlarını yazmak Tailwind varyantlarından uzun. Tip güvenli tema bize gerekmiyor: değişkenler zaten tek CSS dosyasında.",
+   "compat": "@vanilla-extract/vite-plugin 5.2.6 eş bağımlılığı vite ^5 || ^6 || ^7 || ^8.",
+   "modern": "Sıfır çalışma anı yaklaşımı güncel ama model 2021'den beri aynı.",
+   "risks": "Vite 8 uyumu Mart 2026'da ayrı 'vite-8' etiketli deneme sürümleriyle sonradan geldi; yeni Vite sürümlerinde aynı gecikme olabilir.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@vanilla-extract/css", "title": "@vanilla-extract/css npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://github.com/vanilla-extract-css/vanilla-extract", "title": "vanilla-extract-css/vanilla-extract", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C04", "category": "Stil sistemi", "package": "@pandacss/dev", "repo": "chakra-ui/panda", "verdict": "reddedildi",
+   "version": "2.1.1", "released": "2026-10-02", "stars": "6209 (ecosyste.ms, 2026-10-06)",
+   "role": "Derlemede stil sistemi kodu üreten, tasarım değişkeni ve tarif (recipe) dili olan CSS-in-JS aracı.",
+   "why": "Hızlı bakılıyor (geçen yıl 84 konunun 81'i kapandı, ortalama 11 gün) ama PostCSS'e eş bağımlı (postcss >=8), projeye üretilmiş bir styled-system klasörü ve kod üretme adımı ekliyor. 2.x ana sürümü çok yeni (2.0 betası 29 Eylül 2026, 2.1.1 2 Ekim 2026). Tailwind'in @theme'i aynı işi daha az parçayla yapıyor.",
+   "compat": "Vite ile PostCSS üzerinden çalışır; Tailwind v4'ün Vite eklentisi PostCSS istemezken Panda onu geri getirir.",
+   "modern": "Tip güvenli tarifler ve sıfır çalışma anı güncel ama 2.x henüz oturmadı.",
+   "risks": "Yeni ana sürümün ilk haftaları; kod üretme adımı derlemeyi ve CI'ı uzatır.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@pandacss/dev", "title": "@pandacss/dev npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://github.com/chakra-ui/panda", "title": "chakra-ui/panda", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C05", "category": "Stil sistemi", "package": "@stylexjs/stylex", "repo": "facebook/stylex", "verdict": "reddedildi",
+   "version": "0.19.1", "released": "2026-09-15", "stars": "10367 (ecosyste.ms, 2026-10-06)",
+   "role": "Meta'nın derlemede atomik CSS üreten stil kütüphanesi.",
+   "why": "Hâlâ 1.0 öncesi (0.19.1); geçen yıl açılan 45 konunun yalnız 11'i kapandı (ortalama 92 gün). Çok büyük kod tabanlarında stil çakışmasını önlemek için tasarlandı; tek panelli projemize getirdiği derleme eklentisi ve kurallar fayda sağlamıyor.",
+   "compat": "Vite'ta @stylexjs/unplugin 0.19.1 ile çalışır (eş bağımlılık unplugin ^2.3.11); Vite 8 için ayrı bir uyum belgesi görmedim.",
+   "modern": "Atomik CSS ve derleme zamanı stil güncel ama API 0.x'te değişiyor.",
+   "risks": "1.0 öncesi API değişiklikleri, yavaş konu yanıtı.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@stylexjs/stylex", "title": "@stylexjs/stylex npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://github.com/facebook/stylex", "title": "facebook/stylex", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C06", "category": "Erişilebilir başsız bileşenler", "package": "react-aria-components", "repo": "adobe/react-spectrum", "verdict": "seçildi",
+   "version": "1.21.1", "released": "2026-09-04", "stars": "15914 (adobe/react-spectrum deposu, ecosyste.ms, 2026-10-06)",
+   "role": "Menü, açılır seçim, birleşik kutu, diyalog, alt sayfa, sekmeler, araç ipucu, tarih seçici ve bildirimin davranışını ve erişilebilirliğini verir; görünüş tamamen bizim CSS'imiz.",
+   "why": "Erişilebilirlikte en titiz seçenek ve Türkçesi hazır gelen tek aday: 30'dan fazla dilin çevirisi var, Türkçe (tr-TR) dahil. data-hovered yalnız işaretçili cihazda gelir, dokunmada yapışan hover olmaz; data-pressed fare, dokunma ve klavyede aynı çalışır. Bu, 'işaretçide hover, dokunmada basma geri bildirimi' isteğinin birebir karşılığı. Açılan katmanlarda data-entering ve data-exiting durumları var, kapanış animasyonu bitene kadar öğe sayfada kalır. Adobe ekibi aylık sürüm çıkarıyor (son 12 ayda 10 kararlı sürüm), geçen yıl açılan 489 konunun 310'u kapandı (ortalama 24 gün).",
+   "compat": "Eş bağımlılık react ^19 dahil; bağımlılıkları kendi alt paketleri ve @internationalized/date. Konumlandırma ve çıkış animasyonu JavaScript ile yapıldığı için Popover API, CSS anchor ve @starting-style olmayan hedef tarayıcılarda da çalışır. Resmî tailwindcss-react-aria-components 2.2.0 eklentisi (eş bağımlılık tailwindcss ^4.0.0) pressed:, entering:, exiting: gibi varyantlar ekler. Temmuz 2026'dan beri shadcn/ui'ın resmî tabanlarından biri.",
+   "modern": "2026'da yeni belge sitesi; 1.21'de NavigationTree ve Menu'de async yükleme; Autocomplete ile aranabilir menü ve komut paleti kurulabiliyor.",
+   "risks": "API Base UI'dan daha ayrıntılı (render props, çok alt bileşen). Paket büyük (açılmış hâli 6,4 MB), yalnız kullanılan bileşenler demete girer ama demet boyutu ölçülmeli. Toast hâlâ UNSTABLE etiketli. teknik.html'deki 'hazır arayüz kütüphanesi yok' kararı için sahibin onayı gerekir.",
+   "sources": [
+    { "url": "https://react-aria.adobe.com/quality#internationalization", "title": "Quality: Internationalization", "publisher": "Adobe React Aria", "date": "2026-10-06" },
+    { "url": "https://react-aria.adobe.com/releases/v1-21-0", "title": "v1.21.0 release notes", "publisher": "Adobe React Aria", "date": "2026-10-06" },
+    { "url": "https://registry.npmjs.org/react-aria-components", "title": "react-aria-components npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://registry.npmjs.org/tailwindcss-react-aria-components", "title": "tailwindcss-react-aria-components npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C07", "category": "Erişilebilir başsız bileşenler", "package": "@base-ui/react", "repo": "mui/base-ui", "verdict": "ikinci",
+   "version": "1.8.0", "released": "2026-09-04", "stars": "11065 (ecosyste.ms, 2026-10-06)",
+   "role": "Radix, Floating UI ve Material UI ekibinin başsız bileşenleri; React Aria kabul edilmezse aynı rolü üstlenir.",
+   "why": "Çok güçlü ikinci: 1.0 11 Aralık 2025'te çıktı, son 12 ayda 10 kararlı sürüm, haftada 19,3 milyon indirme, Temmuz 2026'dan beri shadcn/ui'ın varsayılan tabanı. data-starting-style ve data-ending-style ile CSS geçişleri kolay. Birinci olmadı çünkü bileşen listesinde Calendar ve DatePicker yok (tarih seçici için ayrı kütüphane gerekir) ve hazır Türkçe metin ile tarih ve saat dilimi desteği React Aria kadar kapsamlı değil.",
+   "compat": "Eş bağımlılık react ^17 || ^18 || ^19; date-fns ve @date-fns/tz isteğe bağlı eş bağımlılık. Konumlandırma Floating UI ile, hedef tarayıcılarda çalışır. Toast, Autocomplete, Combobox, Menu, Dialog, Drawer kararlı.",
+   "modern": "2025 sonunda kararlı olan en yeni nesil başsız kütüphane; 1.5'te kapalı açılır katmanların bağlanmasında %50 hızlanma, 1.8'de Combobox için createItems.",
+   "risks": "Genç ana sürüm; tarih seçici için ikinci bir paket (@daypicker/react) gerekir.",
+   "sources": [
+    { "url": "https://base-ui.com/react/overview/releases", "title": "Base UI releases", "publisher": "MUI", "date": "2026-10-06" },
+    { "url": "https://registry.npmjs.org/@base-ui/react", "title": "@base-ui/react npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C08", "category": "Erişilebilir başsız bileşenler", "package": "radix-ui", "repo": "radix-ui/primitives", "verdict": "reddedildi",
+   "version": "1.6.7", "released": "2026-07-24", "stars": "19355 (ecosyste.ms, 2026-10-06)",
+   "role": "shadcn/ui'ın eski varsayılan tabanı olan başsız bileşenler.",
+   "why": "Bakım yavaşladı: WorkOS satın almasından sonra ilk bakımcıların çoğu ayrıldı, geçen yıl açılan 84 konunun 39'u kapandı (ortalama 76 gün), shadcn/ui 3 Temmuz 2026'da varsayılanı Base UI'a çevirdi. Kullanımdan kalkmadı, sürüm çıkıyor (1.7.0 aday sürümü 5 Ekim 2026) ama yeni projeye başlamak için en zayıf gerekçeli aday.",
+   "compat": "React 19 destekli; tek radix-ui paketi 55 alt pakete bağlı.",
+   "modern": "Bu türü tanımlayan kütüphane ama karmaşık bileşenlerde (Combobox, çoklu seçim) ilerleme yavaş; yeni nesil (Base UI, React Aria) öne geçti.",
+   "risks": "Bakımın daha da yavaşlaması.",
+   "sources": [
+    { "url": "https://blog.openreplay.com/shadcn-ui-radix-base-ui-switch/", "title": "shadcn/ui switch from Radix to Base UI", "publisher": "OpenReplay Blog", "date": "2026-07" },
+    { "url": "https://registry.npmjs.org/radix-ui", "title": "radix-ui npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://designrevision.com/alternatives/radix-ui", "title": "Radix UI Alternatives: 8 Headless React Libraries (2026)", "publisher": "DesignRevision", "date": "2026" }
+   ]
+  },
+  {
+   "id": "L3-C09", "category": "Erişilebilir başsız bileşenler", "package": "@ark-ui/react", "repo": "chakra-ui/ark", "verdict": "reddedildi",
+   "version": "5.39.2", "released": "2026-09-13", "stars": "5397 (ecosyste.ms, 2026-10-06)",
+   "role": "Chakra ekibinin Zag.js durum makinelerine dayanan başsız bileşenleri (DatePicker ve Toast dahil).",
+   "why": "Konu yanıtı en hızlısı (geçen yıl 43 konunun 39'u kapandı, ortalama 2 gün) ve DatePicker'ı var; ama React kullanımı React Aria'nın beşte biri (haftada 1,2 milyon), son sürüm 69 bağımlılık getiriyor ve Türkçe metinleri biz çevirip vermeliyiz. Asıl gücü React, Vue, Solid ve Svelte'de aynı API; bize tek çatı yetiyor.",
+   "compat": "Eş bağımlılık react >=18; hedef tarayıcılarda çalışır.",
+   "modern": "Durum makinesi tabanlı tasarım güncel; son 12 ayda 27 kararlı sürüm.",
+   "risks": "Çok sayıda küçük zag paketi; demet boyutu ve güncelleme yükü.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@ark-ui/react", "title": "@ark-ui/react npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://github.com/chakra-ui/ark", "title": "chakra-ui/ark", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C10", "category": "Erişilebilir başsız bileşenler", "package": "@headlessui/react", "repo": "tailwindlabs/headlessui", "verdict": "reddedildi",
+   "version": "2.2.10", "released": "2026-04-07", "stars": "28768 (ecosyste.ms, 2026-10-06)",
+   "role": "Tailwind Labs'in küçük başsız bileşen seti.",
+   "why": "Bileşen sayısı az (tarih seçici, bildirim, tablo yok); son 12 ayda tek kararlı sürüm, son commit 13 Nisan 2026, yarım yıldır hareket yok. 12 ay kuralını şimdilik geçiyor ama ihtiyacın yarısını karşılamıyor.",
+   "compat": "React 18 ve 19 destekli.",
+   "modern": "v2 Floating UI ile konumlandırma getirdi; o günden beri büyük yenilik yok.",
+   "risks": "Bakımın durma ihtimali.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@headlessui/react", "title": "@headlessui/react npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://github.com/tailwindlabs/headlessui/commits.atom", "title": "tailwindlabs/headlessui commits", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C11", "category": "Bileşen kodu iskeleti", "package": "shadcn", "repo": "shadcn-ui/ui", "verdict": "seçildi",
+   "version": "4.21.2", "released": "2026-10-05", "stars": "125142 (ecosyste.ms, 2026-10-06)",
+   "role": "Bileşenlerin kaynak kodunu bir kez projemize kopyalayan CLI: React Aria tabanı ve köşesiz Lyra stiliyle düğme, menü, diyalog, tablo, tarih seçici gibi parçaların ilk hâlini üretir, sonra kod bizim olur.",
+   "why": "Temmuz 2026'dan beri React Aria, Base UI ve Radix yanında birinci sınıf taban: pnpm dlx shadcn@latest init --base aria. Lyra stili sıfır köşe yarıçaplı, keskin ve kutu gibi; köşeli istek için en yakın hazır başlangıç. Çalışma anında paket olarak kalmaz, yalnız iskelet üretir; renk ve ölçüler CSS değişkeni olduğu için gece mavisi alt tonlu paletimize çevirmek değişken değiştirmek demek.",
+   "compat": "Tailwind v4 ve React 19 ile çalışır; React Aria tabanı seçtiğimiz başsız kütüphaneyle aynı. Sekiz stilin hepsi (Vega, Nova, Maia, Lyra, Mira, Luma, Rhea, Sera) React Aria tabanında var.",
+   "modern": "Kod dağıtım modelinin 2026 hâli: kayıt (registry) desteği, GitHub kayıtları, sekiz stil, üç taban.",
+   "risks": "İskeletin getirdiği yardımcı paketler 12 ay kuralıyla tek tek denetlenmeli: class-variance-authority (son sürüm 26 Kasım 2024) ve tw-animate-css (son sürüm 24 Eylül 2025) kurala takılır, yerlerine tailwind-variants ve kendi geçiş tanımlarımız konur. Üretilen kod kendiliğinden güncellenmez, bakım bizde. Hazır görünüşe kayma riski: Lyra yalnız başlangıç, kimlik değişkenlerden, yazı tipinden ve hareketten gelir.",
+   "sources": [
+    { "url": "https://ui.shadcn.com/docs/changelog/2026-07-react-aria", "title": "July 2026: React Aria", "publisher": "shadcn/ui", "date": "2026-07" },
+    { "url": "https://ui.shadcn.com/docs/changelog/2025-12-shadcn-create", "title": "December 2025: shadcn create", "publisher": "shadcn/ui", "date": "2025-12" },
+    { "url": "https://www.shadcnblocks.com/blog/shadcn-component-styles-vega-nova-maia-lyra-mira", "title": "shadcn component styles: Vega, Nova, Maia, Lyra, Mira", "publisher": "shadcnblocks", "date": "2026-02-05" },
+    { "url": "https://registry.npmjs.org/shadcn", "title": "shadcn npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C12", "category": "Bileşen kodu iskeleti", "package": "tw-animate-css", "repo": "Wombosvideo/tw-animate-css", "verdict": "reddedildi",
+   "version": "1.4.0", "released": "2025-09-24", "stars": "807 (ecosyste.ms, 2026-10-06)",
+   "role": "shadcn iskeletinin açılış ve kapanış animasyonları için kullandığı Tailwind v4 animasyon sınıfları.",
+   "why": "Son kararlı sürüm 24 Eylül 2025; son 12 ayda kararlı sürüm yok (Şubat 2026'da yalnız canary), planın kuralına göre bakımsız. Birkaç @keyframes ve geçişi kendi süre ve eğri değişkenlerimizle yazmak hem kurala uyar hem hareket dilini bizde tutar.",
+   "compat": "Tailwind v4 ile çalışır; sorun uyum değil bakım.",
+   "modern": "tailwindcss-animate'in v4 karşılığı olarak 2025'te çıktı.",
+   "risks": "Kaldırılınca iskeletteki animasyon sınıfları bir kez elle değiştirilir.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/tw-animate-css", "title": "tw-animate-css npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C13", "category": "Sınıf varyant yardımcısı", "package": "tailwind-variants", "repo": "heroui-inc/tailwind-variants", "verdict": "seçildi",
+   "version": "3.3.1", "released": "2026-08-03", "stars": "3312 (ecosyste.ms, 2026-10-06)",
+   "role": "Bileşenin boyut, ton ve durum varyantlarını (birincil, ikincil, tehlike) ve alt parçalarını (slot) tek tanımda toplar; çakışan Tailwind sınıflarını tailwind-merge ile ayıklar.",
+   "why": "Bakımlı (son 12 ayda 5 sürüm, haftada 5,1 milyon indirme); slot desteği React Aria'nın çok parçalı bileşenlerine uyar. Alternatifi class-variance-authority 12 ay kuralına takılıyor.",
+   "compat": "Eş bağımlılık tailwindcss * ve tailwind-merge >=3.0.0; tailwind-merge 3.7.0 (12 Eylül 2026, son 12 ayda 104 sürüm, haftada 107 milyon indirme).",
+   "modern": "3.x, Tailwind v4 ve tailwind-merge 3 ile çalışan güncel ana sürüm.",
+   "risks": "İki ek paket (tailwind-variants, tailwind-merge); tailwind-merge her Tailwind sürümüne göre güncellenmeli.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/tailwind-variants", "title": "tailwind-variants npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://registry.npmjs.org/tailwind-merge", "title": "tailwind-merge npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C14", "category": "Sınıf varyant yardımcısı", "package": "class-variance-authority", "repo": "joe-bell/cva", "verdict": "reddedildi",
+   "version": "0.7.1", "released": "2024-11-26", "stars": "6904 (ecosyste.ms, 2026-10-06)",
+   "role": "shadcn iskeletinin klasik varyant yardımcısı.",
+   "why": "Son sürüm 26 Kasım 2024; son 12 ayda sürüm yok, plan kuralına göre bakımsız. Depoda iş sürüyor (son commit 3 Ekim 2026) ama yayımlanmış yeni sürüm yok; yeni sürüm çıkarsa yeniden bakılır. Slot desteği de yok.",
+   "compat": "Tailwind'den bağımsız, React 19 ile sorun yok.",
+   "modern": "Yayımlanan son sürüm 0.7.1.",
+   "risks": "Bakımsız sayılan paketin iskeletle içeri girmesi.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/class-variance-authority", "title": "class-variance-authority npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C15", "category": "Veri tablosu", "package": "@tanstack/react-table", "repo": "TanStack/table", "verdict": "seçildi",
+   "version": "9.2.6", "released": "2026-10-04", "stars": "28472 (ecosyste.ms, 2026-10-06)",
+   "role": "Yoklama ızgarası, liste önizlemesi, onay listeleri ve raporlar için sıralama, süzme, sütun görünürlüğü, sabit sütun ve sayfalama mantığı; çizimi yerel table öğesiyle biz yaparız.",
+   "why": "Başsız olduğu için teknik.html'deki 'tablo tarayıcının kendi öğesi' kararıyla birebir uyuşur. v9 4 Ağustos 2026'da kararlı çıktı: özellikler ağaç sarsılabilir eklenti oldu (yalnız sıralama kullanan tablo süzme kodunu taşımaz), büyük tablolarda %90'a varan bellek tasarrufu, istemci satır modellerinde %40 ile %70 hız. Haftada 26,6 milyon indirme. v8'in son sürümü 14 Nisan 2025, 12 ay kuralına takıldığı için doğrudan v9 ile başlanır.",
+   "compat": "Eş bağımlılık react >=18; bağımlılıkları @tanstack/table-core ve @tanstack/react-store. TanStack Query ve Router ile aynı aile.",
+   "modern": "Ağustos 2026'da çıkan yeni ana sürüm; durum yönetimi TanStack Store üzerinde.",
+   "risks": "Ana sürüm iki aylık, düzeltme sürümleri sürüyor (9.2.6). Geçen yıl 61 konunun 52'si kapandı ama ortalama 94 gün; sürüm sabitlenir, değişiklik notları okunarak yükseltilir.",
+   "sources": [
+    { "url": "https://tanstack.com/blog/announcing-tanstack-table-v9", "title": "Announcing TanStack Table V9", "publisher": "TanStack", "date": "2026-08-04" },
+    { "url": "https://registry.npmjs.org/@tanstack/react-table", "title": "@tanstack/react-table npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C16", "category": "Veri tablosu", "package": "react-aria-components", "repo": "adobe/react-spectrum", "verdict": "ikinci",
+   "version": "1.21.1", "released": "2026-09-04", "stars": "15914 (adobe/react-spectrum deposu)",
+   "role": "React Aria Table: ok tuşlarıyla hücreler arası gezinme, satır seçimi ve sütun boyutlama veren erişilebilir ızgara.",
+   "why": "Ek paket getirmez, klavyeyle hücre hücre gezinmeyi hazır verir; ızgarada hücre düzeltmeyi klavyeyle yapmak gerekirse güçlü aday. Birinci olmadı çünkü sıralama, süzme, gruplama ve sayfalama mantığını vermez, onları TanStack Table veriyor; ikisi birlikte de kullanılabilir (mantık TanStack, çizim React Aria).",
+   "compat": "Seçilen başsız kütüphanenin parçası.",
+   "modern": "Virtualizer ile büyük ızgaralar için güncel.",
+   "risks": "Izgara gezinmesi ekran okuyucu kullanıcıları için düz tablodan farklı davranır; kullanıcıyla denenmeli.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/react-aria-components", "title": "react-aria-components npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C17", "category": "Veri tablosu", "package": "ag-grid-react", "repo": "ag-grid/ag-grid", "verdict": "reddedildi",
+   "version": "36.2.0", "released": "2026-09-16", "stars": "15623 (ecosyste.ms, 2026-10-06)",
+   "role": "Kendi görünüşü ve temasıyla gelen tam özellikli veri ızgarası.",
+   "why": "DOM'u ve stilleri kendisi çizer, keskin ve sade tasarımımıza uydurmak zor; yerel table öğesi kullanmaz; bazı özellikler ücretli Enterprise sürümde. Yoklama ızgarası bu ağırlığı istemiyor.",
+   "compat": "React 19 destekli.",
+   "modern": "Çok aktif, son 12 ayda 14 kararlı sürüm.",
+   "risks": "Demet boyutu ve lisans ayrımı.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/ag-grid-react", "title": "ag-grid-react npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C18", "category": "Uzun liste sanallaştırma", "package": "@tanstack/react-virtual", "repo": "TanStack/virtual", "verdict": "seçildi",
+   "version": "3.14.13", "released": "2026-09-14", "stars": "7128 (ecosyste.ms, 2026-10-06)",
+   "role": "Büyük derslerin yoklama ızgarasında ve liste önizlemesinde yalnız ekranda görünen satırları çizer.",
+   "why": "Başsız, yerel table satırlarıyla kullanılabilir, TanStack Table ile birlikte kullanım örnekleri var; son 12 ayda 28 kararlı sürüm, konu kapanma ortalaması 16 gün, haftada 31,7 milyon indirme. Hedef tarayıcılarda content-visibility yerel çözümü yok (Firefox 125 ve Safari 18'den beri).",
+   "compat": "Eş bağımlılık react ^16.8 || ^17 || ^18 || ^19; tek bağımlılık @tanstack/virtual-core.",
+   "modern": "Değişken satır yüksekliği ve ölçme desteğiyle güncel.",
+   "risks": "Sanallaştırma tarayıcının sayfada bul (Ctrl+F) ve yazdırma davranışını bozar; yalnız belli bir satır sayısının üstünde açılır, yazdırma görünümünde kapalıdır.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@tanstack/react-virtual", "title": "@tanstack/react-virtual npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://github.com/TanStack/virtual", "title": "TanStack/virtual", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C19", "category": "Uzun liste sanallaştırma", "package": "react-window", "repo": "bvaughn/react-window", "verdict": "ikinci",
+   "version": "2.3.3", "released": "2026-09-22", "stars": "17207 (ecosyste.ms, 2026-10-06)",
+   "role": "Liste ve ızgara sanallaştırması için hazır bileşenler.",
+   "why": "2.x ana sürümüyle API yenilendi, bakımlı (son 12 ayda 11 kararlı sürüm). Birinci olmadı çünkü hazır List ve Grid bileşenleri kendi DOM yapısını kurar; yerel table ile kullanmak TanStack Virtual'dan zor.",
+   "compat": "Eş bağımlılık react ^18 || ^19.",
+   "modern": "2.x güncel.",
+   "risks": "Tablo semantiği için ek iş.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/react-window", "title": "react-window npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C20", "category": "Form durumu", "package": "@tanstack/react-form", "repo": "TanStack/form", "verdict": "seçildi",
+   "version": "1.33.5", "released": "2026-08-11", "stars": "6701 (ecosyste.ms, 2026-10-06)",
+   "role": "Ders, ders saati, düzeltme, liste yükleme ve yönetim formlarının değer, hata, değişmiş alan ve gönderim durumunu tutar.",
+   "why": "Standard Schema'yı doğrudan kabul ettiği için sözleşme paketindeki Zod 4 şemaları ara paket olmadan alan ve form doğrulayıcısı olur. React Aria bileşenleri denetimli (value, onChange) çalışır, TanStack Form'un alan API'si buna doğal uyar. TanStack Query ve Router ile aynı aile. 1.0 2 Mart 2025'te çıktı, son 12 ayda 35 kararlı sürüm, haftada 4,2 milyon indirme.",
+   "compat": "Eş bağımlılık react ^17 || ^18 || ^19. Sunucudan dönen alan hataları React Aria Form'un validationErrors özelliğiyle alanlara dağıtılabilir.",
+   "modern": "Güçlü tip çıkarımı, ince taneli yeniden çizim; v2 alfası (Ağustos 2026) doğrulayıcıları sıralı bir boru hattına çeviriyor.",
+   "risks": "v2 alfada: v1'den v2'ye geçişte field.state.value yerine field.value ve doğrulayıcı tanımı değişecek. Geçen yıl 108 konunun yalnız 30'u kapandı. API React Hook Form'dan uzun yazılır.",
+   "sources": [
+    { "url": "https://tanstack.com/blog/announcing-tanstack-form-v2-alpha", "title": "Announcing TanStack Form v2 Alpha", "publisher": "TanStack", "date": "2026-08" },
+    { "url": "https://registry.npmjs.org/@tanstack/react-form", "title": "@tanstack/react-form npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C21", "category": "Form durumu", "package": "react-hook-form", "repo": "react-hook-form/react-hook-form", "verdict": "ikinci",
+   "version": "7.89.0", "released": "2026-09-26", "stars": "44870 (ecosyste.ms, 2026-10-06)",
+   "role": "Aynı rol; denetimsiz yerel input'larla çok az yeniden çizim.",
+   "why": "En yaygın ve olgun (haftada 70,3 milyon indirme, geçen yıl 98 konunun 92'si kapandı). Birinci olmadı çünkü gücü register ile denetimsiz yerel input'larda; React Aria'nın denetimli bileşenleri için her alanda Controller sarmalayıcı gerekir, Zod için @hookform/resolvers ek paketi gelir.",
+   "compat": "React 19 destekli; v8 beta.4 26 Eylül 2026'da çıktı, React Compiler uyumu üzerinde çalışılıyor.",
+   "modern": "v7 olgun; v8 betada.",
+   "risks": "v8'e geçiş.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/react-hook-form", "title": "react-hook-form npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://github.com/orgs/react-hook-form/discussions/7433", "title": "RFC: V8", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C22", "category": "Form durumu", "package": "formik", "repo": "jaredpalmer/formik", "verdict": "reddedildi",
+   "version": "2.4.9", "released": "2025-11-10", "stars": "34320 (ecosyste.ms, 2026-10-06)",
+   "role": "Eski nesil form kütüphanesi.",
+   "why": "Son sürüm ve son commit 10 Kasım 2025; 12 ay kuralını şu an geçiyor ama Kasım 2026'da takılacak. Yeni özellik gelmiyor; denetimli yapısı büyük formlarda her tuşta yeniden çizim yapar.",
+   "compat": "React 19 ile çalışır.",
+   "modern": "Bakım modunda.",
+   "risks": "Bakımsız kalması.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/formik", "title": "formik npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C23", "category": "Şema doğrulama", "package": "zod", "repo": "colinhacks/zod", "verdict": "seçildi",
+   "version": "4.6.5", "released": "2026-09-13", "stars": "44056 (ecosyste.ms, 2026-10-06)",
+   "role": "Formlarda alan ve form doğrulaması; aynı şemalar sunucuda da kullanılıyor (packages/contracts).",
+   "why": "Plan sözleşme şemalarını zaten Zod 4 ile yazıyor; panelde başka şema dili açmak aynı kuralı iki kez yazmak olur. Zod 4'te yerleşik Türkçe hata dili var: z.config(z.locales.tr()). Haftada 387 milyon indirme, son 12 ayda 26 kararlı sürüm.",
+   "compat": "Standard Schema uyumlu, TanStack Form'a doğrudan verilir; bağımlılık yok.",
+   "modern": "4.x (Temmuz 2025) hızlı tip çıkarımı; zod/mini ile küçük demet seçeneği.",
+   "risks": "Panel demetinde boyut: yalnız gereken şemalar içe aktarılmalı. Türkçe çeviri topluluk katkısı, metinler bir kez gözden geçirilmeli.",
+   "sources": [
+    { "url": "https://zod.dev/error-customization", "title": "Customizing errors: Internationalization", "publisher": "Zod", "date": "2026-10-06" },
+    { "url": "https://registry.npmjs.org/zod", "title": "zod npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C24", "category": "Şema doğrulama", "package": "valibot", "repo": "open-circle/valibot", "verdict": "reddedildi",
+   "version": "1.5.0", "released": "2026-09-09", "stars": "9028 (ecosyste.ms, 2026-10-06)",
+   "role": "Modüler, çok küçük demetli şema kütüphanesi.",
+   "why": "Demet boyutunda Zod'dan iyi ama sözleşmeler Zod 4'te; ikinci bir şema dili kuralları ikiye böler. Geçen yıl 38 konunun 8'i kapandı.",
+   "compat": "Standard Schema uyumlu.",
+   "modern": "1.x güncel ve bakımlı.",
+   "risks": "Kuralların iki yerde yaşaması.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/valibot", "title": "valibot npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C25", "category": "Tarih seçici", "package": "react-aria-components", "repo": "adobe/react-spectrum", "verdict": "seçildi",
+   "version": "1.21.1", "released": "2026-09-04", "stars": "15914 (adobe/react-spectrum deposu)",
+   "role": "React Aria DatePicker, DateRangePicker ve Calendar: rapor aralığı, tatil ve dönem tarihleri için yazılabilir tarih kutusu ve açılır takvim.",
+   "why": "Biçim tarayıcının dilinden değil I18nProvider ile verilen tr-TR yerelinden gelir; gün.ay.yıl sırası ve Türkçe ay ve gün adları garanti. @internationalized/date ile 'bugün' today('Europe/Istanbul') ile hesaplanır, bilgisayarın saat dilimine bırakılmaz; plan bunu istiyor. Klavyeyle tam kullanım ve Türkçe ekran okuyucu metinleri hazır; başsız kütüphanenin parçası olduğu için ek paket yok.",
+   "compat": "react-aria-components 1.21.1 ve @internationalized/date 3.12.4 (1 Eylül 2026); hedef tarayıcılarda çalışır.",
+   "modern": "Takvim sistemleri ve saat dilimi doğru tarih nesneleriyle (CalendarDate, ZonedDateTime) çalışır.",
+   "risks": "Bölümlü giriş (gün, ay, yıl ayrı bölüm) alışılmış tek kutudan farklı; yaşça büyük hocalarla kullanılabilirlik denenmeli. teknik.html tarayıcının tarih kutusunu seçmiş, değişiklik sahibin onayına bağlı.",
+   "sources": [
+    { "url": "https://react-aria.adobe.com/quality#internationalization", "title": "Quality: Internationalization", "publisher": "Adobe React Aria", "date": "2026-10-06" },
+    { "url": "https://registry.npmjs.org/@internationalized/date", "title": "@internationalized/date npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C26", "category": "Tarih seçici", "package": "@daypicker/react", "repo": "gpbl/react-day-picker", "verdict": "ikinci",
+   "version": "10.0.2", "released": "2026-09-30", "stars": "6859 (ecosyste.ms, 2026-10-06)",
+   "role": "Takvim ızgarası bileşeni (react-day-picker v10'un yeni paket adı); Base UI seçilirse tarih seçici olarak.",
+   "why": "Olgun ve çok kullanılan (react-day-picker haftada 55,8 milyon, @daypicker/react 750 bin indirme), Türkçe yerel date-fns'ten gelir, saat dilimi desteği v9'dan beri var, geçen yıl 7 konunun 6'sı kapandı (ortalama 14 gün). Birinci olmadı çünkü yalnız takvim verir, yazılabilir tarih kutusunu ve açılır katmanı ayrıca kurmak gerekir; React Aria seçilince iki fazla paket (date-fns, @date-fns/tz) getirir.",
+   "compat": "Eş bağımlılık react >=16.8; @daypicker/react, react-day-picker 10.0.2'yi sarar, o da date-fns ^4.1.0 ve @date-fns/tz ^1.4.1'e bağlı.",
+   "modern": "v10 (8 Mayıs 2026) kullanımdan kalkan v9 API'lerini kaldırdı, Gregoryen olmayan takvimleri ayrı paketlere çıkardı, yeni paket adını getirdi.",
+   "risks": "Paket adı geçişi (react-day-picker uyumluluk için duruyor).",
+   "sources": [
+    { "url": "https://daypicker.dev/changelog", "title": "DayPicker changelog", "publisher": "DayPicker", "date": "2026-10-06" },
+    { "url": "https://daypicker.dev/upgrading-v8-to-v10", "title": "Upgrading from v8 to v10", "publisher": "DayPicker", "date": "2026-10-06" },
+    { "url": "https://registry.npmjs.org/@daypicker/react", "title": "@daypicker/react npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C27", "category": "Tarih seçici", "package": "(tarayıcı) input type=date", "repo": "", "verdict": "reddedildi",
+   "version": "-", "released": "-", "stars": "-",
+   "role": "teknik.html'de seçilmiş olan tarayıcının kendi tarih kutusu.",
+   "why": "Gösterilen biçim sayfanın lang değerinden değil tarayıcının diline göre çıkar; İngilizce tarayıcılı hoca ay/gün/yıl görür, plan ise her yerde Türkçe biçim istiyor. Açılan takvim çizilemez, animasyon ve keskin köşe uygulanamaz. Tek tarihli basit bir süzgeçte yedek olarak kalabilir.",
+   "compat": "Hedef tarayıcıların hepsinde var.",
+   "modern": "Platform öğesi, sıfır paket.",
+   "risks": "Karar değişikliği sahibin onayına bağlı.",
+   "sources": [
+    { "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/date", "title": "input type=date", "publisher": "MDN", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C28", "category": "Bildirim (toast)", "package": "react-aria-components", "repo": "adobe/react-spectrum", "verdict": "seçildi",
+   "version": "1.21.1", "released": "2026-09-04", "stars": "15914 (adobe/react-spectrum deposu)",
+   "role": "React Aria Toast: 'Liste yüklendi', 'Düzeltme kaydedildi' gibi kısa durum bildirimleri.",
+   "why": "Bildirim alanı bir yer işareti bölgesi: klavyeyle F6 ve Shift+F6 ile ulaşılır, bildirim kapanınca odak sıradakine ya da önceki yerine döner; WCAG 2.2 AA ve yalnız klavye şartına en uygun aday. Türkçe metinler hazır, ek paket yok.",
+   "compat": "react-aria-components/Toast alt yolundan gelir. Belgedeki açılış ve kapanış animasyonu View Transitions ile; Chrome ve Edge 111'de çalışır, Safari 18 öncesinde ve eski Firefox'ta bildirim animasyonsuz görünür.",
+   "modern": "Mart 2025'te geldi, yer işareti bölgesi ve odak yönetimiyle güncel bir model.",
+   "risks": "BETA: API hâlâ UNSTABLE_Toast, UNSTABLE_ToastRegion, UNSTABLE_ToastQueue adlarıyla, küçük sürümde değişebilir. Sürüm tam sabitlenir, tek bir toast() yardımcısının arkasına saklanır; gerekirse Sonner'a geçiş tek dosyada kalır. Otomatik kapanma en az 5 saniye.",
+   "sources": [
+    { "url": "https://react-aria.adobe.com/Toast", "title": "Toast", "publisher": "Adobe React Aria", "date": "2026-10-06" },
+    { "url": "https://react-spectrum.adobe.com/releases/2025-03-05.html", "title": "March 5, 2025 Release", "publisher": "Adobe React Spectrum", "date": "2025-03-05" }
+   ]
+  },
+  {
+   "id": "L3-C29", "category": "Bildirim (toast)", "package": "sonner", "repo": "emilkowalski/sonner", "verdict": "ikinci",
+   "version": "2.0.8", "released": "2026-08-09", "stars": "13024 (ecosyste.ms, 2026-10-06)",
+   "role": "Yığılan, kayan bildirimler veren hazır toast bileşeni.",
+   "why": "En yaygını (haftada 63,5 milyon indirme), bağımlılığı yok, animasyonu CSS geçişiyle olduğu için bütün hedef tarayıcılarda akıcı; stilsiz kipiyle keskin köşeli çizilebilir. Birinci olmadı çünkü bakım yavaş: son 12 ayda tek sürüm (2.0.7 Ağustos 2025, 2.0.8 Ağustos 2026), geçen yıl 25 konunun 10'u kapandı (ortalama 136 gün); Türkçe metinleri biz vermeliyiz.",
+   "compat": "Eş bağımlılık react ^18 || ^19.",
+   "modern": "2.x; yığın animasyonu çok taklit edilen bir örnek.",
+   "risks": "Yeni sürüm gelmezse Ağustos 2027'de 12 ay kuralına takılır.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/sonner", "title": "sonner npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://github.com/emilkowalski/sonner", "title": "emilkowalski/sonner", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C30", "category": "Bildirim (toast)", "package": "react-hot-toast", "repo": "timolins/react-hot-toast", "verdict": "reddedildi",
+   "version": "2.6.1", "released": "2026-09-16", "stars": "10977 (ecosyste.ms, 2026-10-06)",
+   "role": "Hafif toast kütüphanesi.",
+   "why": "Sonner'la aynı rolde, daha az kullanılıyor (haftada 4,5 milyon) ve konu yanıtı daha yavaş (ortalama 177 gün); son 12 ayda tek sürüm. Sonner'ın önüne geçecek bir üstünlüğü yok.",
+   "compat": "Eş bağımlılık react >=16.",
+   "modern": "2.x, model yıllardır aynı.",
+   "risks": "Yavaş bakım.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/react-hot-toast", "title": "react-hot-toast npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C31", "category": "Komut paleti", "package": "react-aria-components", "repo": "adobe/react-spectrum", "verdict": "gerekmez",
+   "version": "1.21.1", "released": "2026-09-04", "stars": "15914 (adobe/react-spectrum deposu)",
+   "role": "Gerekirse 'ders ara, öğrenciye git' gibi hızlı arama penceresi.",
+   "why": "Panelin ekran sayısı az ve hocalar basit kullanım istiyor; ilk sürümde komut paleti gerekmez, ayrı paket alınmaz. İstenirse React Aria'nın Autocomplete ve Menu bileşenleriyle ek paket olmadan kurulur.",
+   "compat": "Seçilen başsız kütüphanenin parçası.",
+   "modern": "Mart 2025'te Autocomplete aranabilir menü, aranabilir seçim ve komut paleti kurmak için genişletildi.",
+   "risks": "Kısayol (Ctrl+K) tarayıcı kısayollarıyla çakışmamalı.",
+   "sources": [
+    { "url": "https://react-spectrum.adobe.com/releases/2025-03-05.html", "title": "March 5, 2025 Release", "publisher": "Adobe React Spectrum", "date": "2025-03-05" }
+   ]
+  },
+  {
+   "id": "L3-C32", "category": "Komut paleti", "package": "cmdk", "repo": "pacocoursey/cmdk", "verdict": "reddedildi",
+   "version": "1.1.1", "released": "2025-03-14", "stars": "13005 (github.com sayfası, 2026-10-06)",
+   "role": "Hazır komut paleti bileşeni.",
+   "why": "Son sürüm 14 Mart 2025; son 12 ayda sürüm yok, plan kuralına göre bakımsız (son commit 29 Ekim 2025). Haftada 54,8 milyon indirmeyle çok kullanılıyor ama bakım durmuş.",
+   "compat": "Eş bağımlılık react ^18 || ^19; 4 bağımlılık.",
+   "modern": "1.x'ten sonra yenilik yok.",
+   "risks": "Bakımsız paket.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/cmdk", "title": "cmdk npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://github.com/pacocoursey/cmdk/commits.atom", "title": "pacocoursey/cmdk commits", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C33", "category": "Komut paleti", "package": "kbar", "repo": "timc1/kbar", "verdict": "reddedildi",
+   "version": "1.0.0", "released": "2026-08-10", "stars": "5255 (ecosyste.ms, 2026-10-06)",
+   "role": "Hazır komut paleti bileşeni.",
+   "why": "Ağustos 2026'da 1.0 çıktı ama son 12 ayda tek sürüm, konu kapanma ortalaması 251 gün; kendi görünüş ve odak yönetimini getirir, React Aria'nın yanında ikinci bir erişilebilirlik katmanı olur.",
+   "compat": "Eş bağımlılık react ^17 || ^18 || ^19.",
+   "modern": "1.0 yeni ama tasarım eski.",
+   "risks": "Yavaş bakım.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/kbar", "title": "kbar npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C34", "category": "İkon seti", "package": "lucide-react", "repo": "lucide-icons/lucide", "verdict": "seçildi",
+   "version": "1.52.0", "released": "2026-10-04", "stars": "24797 (ecosyste.ms, 2026-10-06)",
+   "role": "Paneldeki bütün ikonlar; telefonda aynı aile lucide-react-native ile.",
+   "why": "Telefon ve web için aynı depodan, aynı sürüm numarasıyla çıkan resmî paketler (lucide-react ve lucide-react-native 1.52.0) iki yüzün aynı çizimi taşımasını garanti eder. 1.0 (23 Mart 2026) React için ortak varsayılanları veren bağlam sağlayıcı getirdi, aria-hidden artık varsayılan. Son 12 ayda 87 kararlı sürüm, konu kapanma ortalaması 28 gün, haftada 134,6 milyon indirme, bağımlılık yok.",
+   "compat": "Eş bağımlılık react ^16.5.1 ile ^19 arası; yalnız içe aktarılan ikon demete girer. Telefonda lucide-react-native, react-native-svg ^12 ile ^15'e eş bağımlı.",
+   "modern": "1.x ile eski UMD çıkışı kaldırıldı (yalnız ESM ve CJS), marka ikonları çıkarıldı.",
+   "risks": "Lucide çizgileri yuvarlak uçlu ve yuvarlak birleşimli; köşeli tasarımla çelişebilir. CSS ile stroke-linecap: square ve stroke-linejoin: miter verilerek keskinleştirme gözle denenecek; beğenilmezse Material Symbols Sharp'a geçilir. Telefon tarafının ikon kararıyla aynı aile olmalı.",
+   "sources": [
+    { "url": "https://lucide.dev/guide/version-1", "title": "Lucide Version 1", "publisher": "Lucide", "date": "2026-03-23" },
+    { "url": "https://infoq.com/news/2026/06/lucide-v1-icons", "title": "Lucide 1.0 removes brand icons", "publisher": "InfoQ", "date": "2026-06" },
+    { "url": "https://registry.npmjs.org/lucide-react-native", "title": "lucide-react-native npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C35", "category": "İkon seti", "package": "@material-symbols/svg-400", "repo": "marella/material-symbols", "verdict": "ikinci",
+   "version": "0.47.6", "released": "2026-10-02", "stars": "292 (ecosyste.ms, 2026-10-06)",
+   "role": "Google Material Symbols ikonlarının SVG dosyaları; sharp klasörü köşeli çizimli.",
+   "why": "Köşeli tasarıma geometrisi en uygun aile: Sharp stilinde köşeler gerçekten keskin; ağırlık paketleri (svg-100 ile svg-700) yazı ağırlığıyla eşleşir. Google'ın deposuyla düzenli eşitleniyor (son 12 ayda 45 sürüm). Birinci olmadı çünkü React bileşeni değil ham SVG olarak geliyor, Vite'ta vite-plugin-svgr (5.2.0, 2 Nisan 2026) gibi bir eklenti gerekiyor, telefonda da ayrı bir SVG dönüştürücü gerekiyor; paket tek kişilik bir topluluk projesi.",
+   "compat": "SVG dosyaları her çatıyla çalışır; vite-plugin-svgr'ın eş bağımlılığı vite >=3, Vite 8 ile denenmeli.",
+   "modern": "Material Symbols, Google'ın güncel değişken ikon ailesi.",
+   "risks": "Tek bakımcı; arayüzü Android görünümüne yaklaştırabilir.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@material-symbols/svg-400", "title": "@material-symbols/svg-400 npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://registry.npmjs.org/vite-plugin-svgr", "title": "vite-plugin-svgr npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C36", "category": "İkon seti", "package": "@phosphor-icons/react", "repo": "phosphor-icons/react", "verdict": "reddedildi",
+   "version": "2.1.10", "released": "2025-05-22", "stars": "1763 (ecosyste.ms, 2026-10-06)",
+   "role": "Altı ağırlıklı ikon ailesi.",
+   "why": "React paketinin son sürümü 22 Mayıs 2025; son 12 ayda sürüm yok, plan kuralına göre bakımsız. Telefon paketi phosphor-react-native resmî değil, topluluk paketi (273 yıldız).",
+   "compat": "React 19 ile çalışıyor.",
+   "modern": "Görsel olarak güncel, paket bakımı durmuş.",
+   "risks": "Bakımsız paket.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@phosphor-icons/react", "title": "@phosphor-icons/react npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://registry.npmjs.org/phosphor-react-native", "title": "phosphor-react-native npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C37", "category": "İkon seti", "package": "@tabler/icons-react", "repo": "tabler/tabler-icons", "verdict": "reddedildi",
+   "version": "3.49.0", "released": "2026-10-05", "stars": "21875 (ecosyste.ms, 2026-10-06)",
+   "role": "Geniş çizgi ikon ailesi.",
+   "why": "Bakımlı ve geniş ama Lucide gibi yuvarlak uçlu çizgi stili; Lucide'e göre bir üstünlüğü yok, konu kapanma ortalaması 108 gün.",
+   "compat": "Eş bağımlılık react >=16.",
+   "modern": "Son 12 ayda 17 kararlı sürüm.",
+   "risks": "-",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@tabler/icons-react", "title": "@tabler/icons-react npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C38", "category": "Grafik", "package": "(yok) meter öğesi ve düz SVG", "repo": "", "verdict": "gerekmez",
+   "version": "-", "released": "-", "stars": "-",
+   "role": "Devamsızlık hakkı ve katılım oranı gibi tek değerli göstergeler.",
+   "why": "plan.html ve teknik.html'de grafik ekranı yok, raporlar Excel olarak iniyor. Oranlar yerel meter öğesiyle (ya da React Aria Meter) ve birkaç satır düz SVG ile çizilir; telefonda makbuz QR'ını düz görünümlerle çizme kararıyla aynı yaklaşım. Grafik kütüphanesi gerekmez.",
+   "compat": "meter bütün hedef tarayıcılarda var; React Aria Meter role=meter ve Türkçe değer metni verir.",
+   "modern": "Yerel öğe.",
+   "risks": "Haftalık katılım eğrisi gibi gerçek bir grafik ekranı istenirse Recharts 3 eklenir.",
+   "sources": [
+    { "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meter", "title": "meter element", "publisher": "MDN", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C39", "category": "Grafik", "package": "recharts", "repo": "recharts/recharts", "verdict": "ikinci",
+   "version": "3.10.1", "released": "2026-07-25", "stars": "27611 (ecosyste.ms, 2026-10-06)",
+   "role": "Gerekirse ders bazında haftalık katılım çizgisi ve çubuk grafikler.",
+   "why": "React için en yaygın grafik kütüphanesi (haftada 71,3 milyon indirme), SVG çizdiği için CSS değişkenleriyle renklenir, 3.x'te klavye erişim katmanı var; geçen yıl 83 konunun 47'si kapandı (ortalama 31 gün). Şimdilik gerekmez; grafik ekranı gelirse ilk aday.",
+   "compat": "React 19 eş bağımlılığı; 11 bağımlılık (Redux Toolkit, immer dahil), yalnız grafik sayfasında tembel yüklenmeli.",
+   "modern": "3.0 (23 Haziran 2025) durum yönetimini yeniden yazdı; 3.11 canary sürüyor.",
+   "risks": "Demet ağırlığı.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/recharts", "title": "recharts npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C40", "category": "Grafik", "package": "echarts", "repo": "apache/echarts", "verdict": "reddedildi",
+   "version": "6.1.0", "released": "2026-05-19", "stars": "67404 (ecosyste.ms, 2026-10-06)",
+   "role": "Canvas tabanlı kapsamlı grafik motoru.",
+   "why": "Çok güçlü ama ağır (paketin açılmış hâli 58,9 MB) ve canvas tabanlı; canvas'taki değerler ekran okuyucuya ayrıca anlatılmalı. Basit oranlar için fazla.",
+   "compat": "React sarmalayıcısı echarts-for-react 3.0.6 (21 Ocak 2026).",
+   "modern": "6.x (Temmuz 2025) güncel.",
+   "risks": "Demet ağırlığı, erişilebilirlik için ek iş.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/echarts", "title": "echarts npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C41", "category": "Grafik", "package": "@visx/xychart", "repo": "airbnb/visx", "verdict": "reddedildi",
+   "version": "4.0.0", "released": "2026-06-11", "stars": "21075 (ecosyste.ms, 2026-10-06)",
+   "role": "Düşük seviyeli grafik yapı taşları.",
+   "why": "Her grafiği parçalardan kurmak gerekir; @react-spring/web eş bağımlılığı ikinci bir animasyon motoru getirir. 4.0 yeni (11 Haziran 2026).",
+   "compat": "Eş bağımlılık react ^18 || ^19.",
+   "modern": "4.x güncel.",
+   "risks": "Fazla iş, ek animasyon motoru.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@visx/xychart", "title": "@visx/xychart npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C42", "category": "Grafik", "package": "chart.js", "repo": "chartjs/Chart.js", "verdict": "reddedildi",
+   "version": "4.5.1", "released": "2025-10-13", "stars": "67720 (ecosyste.ms, 2026-10-06)",
+   "role": "Canvas tabanlı genel grafik kütüphanesi.",
+   "why": "Son 12 ayda tek sürüm (13 Ekim 2025), 12 ay kuralının sınırında; React sarmalayıcısı react-chartjs-2'nin son sürümü 27 Ekim 2025. Canvas olduğu için erişilebilirlik ek iş.",
+   "compat": "react-chartjs-2 5.3.1 ile React 19.",
+   "modern": "4.x olgun, yavaşlamış.",
+   "risks": "Ekim 2026'da 12 ay kuralına takılır.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/chart.js", "title": "chart.js npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C43", "category": "Grafik", "package": "@observablehq/plot", "repo": "observablehq/plot", "verdict": "reddedildi",
+   "version": "0.6.17", "released": "2025-02-14", "stars": "5398 (ecosyste.ms, 2026-10-06)",
+   "role": "Kısa tanımlarla keşif grafikleri çizen kütüphane.",
+   "why": "Son sürüm 14 Şubat 2025; son 12 ayda sürüm yok, plan kuralına göre bakımsız. React bileşeni değil, DOM'a kendisi yazar.",
+   "compat": "React içinde ref ile elle bağlanır.",
+   "modern": "0.x'te kaldı.",
+   "risks": "Bakımsız paket.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@observablehq/plot", "title": "@observablehq/plot npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C44", "category": "Yazı tipi barındırma", "package": "@fontsource-variable/inter", "repo": "fontsource/font-files", "verdict": "seçildi",
+   "version": "5.3.0", "released": "2026-07-19", "stars": "fontsource/fontsource 6155, fontsource/font-files 499 (2026-10-06)",
+   "role": "Yazı tipini npm paketi olarak kurup Vite ile özetli dosya adıyla kendi sunucumuzdan (Caddy) sunar.",
+   "why": "Değişken yazı tipi tek dosyada bütün ağırlıkları verir; paket alt kümelere bölünmüş (latin-ext Türkçe harfleri ğ, ı, İ, ş kapsar), unicode-range sayesinde yalnız gereken dosya iner. Dış istek yok, panelin önbellek kuralına (özetli dosya uzun süre önbellekte) uyar. Inter tablolar için eş genişlikli rakam (tnum) verir; telefonda da aynı aile kullanılabilir. Haftada 6,3 milyon indirme.",
+   "compat": "Vite'ta CSS içe aktarmayla çalışır (import '@fontsource-variable/inter'); woff2 dosyaları.",
+   "modern": "Fontsource 5.x, değişken yazı tipleri ayrı fontsource-variable kapsamında.",
+   "risks": "Aile seçimi tipografi kararına bağlı; Inter çok yaygın olduğu için sıradan görünme riski var, IBM Plex Sans ikinci aday. Türkçe büyük harf dönüşümü (i ile İ) için html lang='tr' şart.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@fontsource-variable/inter", "title": "@fontsource-variable/inter npm kaydı", "publisher": "npm", "date": "2026-10-06" },
+    { "url": "https://github.com/fontsource/fontsource", "title": "fontsource/fontsource", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C45", "category": "Yazı tipi barındırma", "package": "@fontsource-variable/ibm-plex-sans", "repo": "fontsource/font-files", "verdict": "ikinci",
+   "version": "5.3.0", "released": "2026-07-19", "stars": "fontsource/font-files 499 (2026-10-06)",
+   "role": "Aynı mekanizmayla IBM Plex Sans değişken sürümü.",
+   "why": "Köşeli, mühendislik havası taşıyan harf biçimleri keskin tasarıma Inter'den çok karakter katar; değişken sürümü Fontsource'ta var, Türkçe harfleri kapsar. Daha az kullanılıyor (haftada 381 bin indirme).",
+   "compat": "Inter ile aynı kurulum.",
+   "modern": "IBM Plex'in değişken sürümü.",
+   "risks": "Tipografi kararı.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@fontsource-variable/ibm-plex-sans", "title": "@fontsource-variable/ibm-plex-sans npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C46", "category": "Yazı tipi barındırma", "package": "(Google Fonts CDN bağlantısı)", "repo": "", "verdict": "reddedildi",
+   "version": "-", "released": "-", "stars": "-",
+   "role": "Yazı tipini fonts.googleapis.com bağlantısıyla yüklemek.",
+   "why": "Her açılışta üçüncü taraf alan adına istek, ek DNS ve TLS bağlantısı, CSP'de dış font-src izni; dosya sürümü bizim kontrolümüzde değil. Fontsource aynı dosyaları sürümü sabit ve özetli olarak kendi sunucumuzdan verir.",
+   "compat": "Çalışır ama dış bağımlılık.",
+   "modern": "Eski alışkanlık; kendi sunucudan sunmak bugünün varsayılanı.",
+   "risks": "Dış servis kesintisi.",
+   "sources": [
+    { "url": "https://github.com/fontsource/fontsource", "title": "fontsource/fontsource", "publisher": "GitHub", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C47", "category": "CSS derleme ve küçültme", "package": "lightningcss", "repo": "parcel-bundler/lightningcss", "verdict": "seçildi",
+   "version": "1.33.0", "released": "2026-07-20", "stars": "7696 (ecosyste.ms, 2026-10-06)",
+   "role": "CSS'i hedef tarayıcılara göre önekler, iç içe yazımı düşürür ve küçültür.",
+   "why": "Vite 8'in doğrudan bağımlılığı (lightningcss ^1.33.0) ve build.cssMinify varsayılanı; ek kurulum yok. build.cssTarget varsayılan olarak build.target'ı izler (Chrome ve Edge 111, Firefox 114, Safari 16.4, iOS 16.4); CSS de JavaScript ile aynı tarayıcılara göre derlenir. Tailwind v4 de aynı motoru kullanır (@tailwindcss/node 4.3.3, lightningcss'e bağlı); iki araç tek CSS işleyicide buluşur.",
+   "compat": "Vite 8 ile gelir; css.transformer: 'lightningcss' ile CSS Modules ve iç içe yazım da onunla derlenebilir, Tailwind eklentisiyle birlikte denenmeli.",
+   "modern": "Rust ile yazılmış, tek geçişte önekleme, düşürme ve küçültme yapar.",
+   "risks": "Son 12 ayda 4 sürüm, geçen yıl 104 konunun 22'si kapandı (ortalama 55 gün); konu yanıtı yavaş ama sürümünü Vite yönetir.",
+   "sources": [
+    { "url": "https://vite.dev/config/build-options", "title": "Build Options: build.cssMinify", "publisher": "Vite", "date": "2026-10-06" },
+    { "url": "https://lightningcss.dev/docs.html", "title": "Lightning CSS: Getting Started", "publisher": "Lightning CSS", "date": "2026-10-06" }
+   ]
+  },
+  {
+   "id": "L3-C48", "category": "CSS derleme ve küçültme", "package": "postcss", "repo": "postcss/postcss", "verdict": "reddedildi",
+   "version": "8.5.29", "released": "2026-10-05", "stars": "28976 (ecosyste.ms, 2026-10-06)",
+   "role": "Klasik CSS dönüştürücü (autoprefixer ile önekleme).",
+   "why": "Tailwind v4'ün Vite eklentisi PostCSS istemiyor, öneklemeyi Lightning CSS yapıyor; ayrı PostCSS ve autoprefixer zinciri gereksiz paket. Bakımı iyi, sorun yalnız gereksizlik.",
+   "compat": "Vite bir PostCSS ayar dosyası bulursa çalıştırır; ayar dosyası konmaz.",
+   "modern": "Olgun ve bakımlı.",
+   "risks": "-",
+   "sources": [
+    { "url": "https://registry.npmjs.org/postcss", "title": "postcss npm kaydı", "publisher": "npm", "date": "2026-10-06" }
+   ]
+  }
+ ],
+ "stack": [
+  { "category": "Stil sistemi", "pick": "tailwindcss", "second": "vite", "note": "@tailwindcss/vite eklentisiyle; değişkenler @theme'de OKLCH, köşe değişkenleri 0 ile 2 px. İkinci yol Vite'ın yerleşik CSS Modules'ü." },
+  { "category": "Erişilebilir başsız bileşenler", "pick": "react-aria-components", "second": "@base-ui/react", "note": "Yalnız yerel öğenin yetmediği yerde (menü, açılır seçim, tarih, bildirim, açılır katman); tailwindcss-react-aria-components varyantlarıyla. teknik.html kararı için sahip onayı gerekir." },
+  { "category": "Bileşen kodu iskeleti", "pick": "shadcn", "second": "", "note": "Bir kez: pnpm dlx shadcn@latest init --base aria, Lyra stili; sonra kod bizim. cva ve tw-animate-css alınmaz." },
+  { "category": "Sınıf varyant yardımcısı", "pick": "tailwind-variants", "second": "", "note": "tailwind-merge 3 ile birlikte." },
+  { "category": "Veri tablosu", "pick": "@tanstack/react-table", "second": "react-aria-components", "note": "v9, yerel table öğesine çizilir; klavyeyle hücre düzeltme gerekirse React Aria Table." },
+  { "category": "Uzun liste sanallaştırma", "pick": "@tanstack/react-virtual", "second": "react-window", "note": "Yalnız uzun listelerde açılır, yazdırma görünümünde kapalı." },
+  { "category": "Form durumu", "pick": "@tanstack/react-form", "second": "react-hook-form", "note": "v1; v2 alfada, kararlı çıkınca geçiş planlanır." },
+  { "category": "Şema doğrulama", "pick": "zod", "second": "", "note": "Sözleşme paketindeki Zod 4 şemaları; z.config(z.locales.tr())." },
+  { "category": "Tarih seçici", "pick": "react-aria-components", "second": "@daypicker/react", "note": "DatePicker ve DateRangePicker, tr-TR yereli, bugün Europe/Istanbul'a göre." },
+  { "category": "Bildirim (toast)", "pick": "react-aria-components", "second": "sonner", "note": "BETA (UNSTABLE_Toast): sürüm sabit, tek toast() yardımcısının arkasında." },
+  { "category": "Komut paleti", "pick": "gerekmez", "second": "", "note": "Gerekmez; istenirse React Aria Autocomplete ve Menu ile." },
+  { "category": "İkon seti", "pick": "lucide-react", "second": "@material-symbols/svg-400", "note": "Telefonda lucide-react-native; köşe keskinleştirme gözle denenecek." },
+  { "category": "Grafik", "pick": "gerekmez", "second": "recharts", "note": "Gerekmez; meter öğesi ve düz SVG. Grafik ekranı istenirse Recharts 3, tembel yüklenerek." },
+  { "category": "Yazı tipi barındırma", "pick": "@fontsource-variable/inter", "second": "@fontsource-variable/ibm-plex-sans", "note": "Aile tipografi kararına bağlı, mekanizma Fontsource değişken paketi." },
+  { "category": "CSS derleme ve küçültme", "pick": "lightningcss", "second": "", "note": "Vite 8 ile gelir ve varsayılan küçültücü; ayrı kurulum yok, PostCSS yok." }
+ ],
+ "open_questions": [
+  "teknik.html 'hazır arayüz kütüphanesi yerine tarayıcının kendi öğeleri (düğme, tablo, form, dialog, tarih kutusu)' diyor. Öneri: düğme, tablo, form ve sayfa yapısı yerel öğe kalsın; menü, açılır seçim, tarih seçici, bildirim ve açılır katmanlar React Aria Components'ten gelsin, ilk kod shadcn iskeletiyle üretilsin. Bu görünüşsüz katman kararın dışında mı sayılır, yoksa teknik.html güncellenir mi?",
+  "Tarih kutusu: tarayıcının tarih kutusu biçimi tarayıcının dilinden alır, Türkçe biçim garanti değil. React Aria DatePicker'a geçilsin mi?",
+  "Bildirim için beta (UNSTABLE) React Aria Toast kabul edilir mi, yoksa kararlı ama yavaş bakılan Sonner mı?",
+  "İkon ailesi telefonla ortak olmalı: telefon araştırması lucide-react-native dışında bir aile seçerse (ör. Material Symbols) web de ona çevrilir. Lucide'in yuvarlak uçlarının CSS ile keskinleştirilmesi gözle onaylanmalı.",
+  "Yazı ailesi: yaygın Inter mi, daha karakterli IBM Plex Sans mı? Tipografi kararıyla birlikte verilmeli; paket mekanizması değişmez.",
+  "Panelin en eski hedefi Firefox 114 ve Safari 16.4 gerçekten kullanılıyor mu? Tailwind v4 Firefox 128'i hedefliyor; eski Firefox'ta küçük görsel farklar kabul mü, yoksa hedef yükseltilir mi?",
+  "Haftalık katılım eğrisi gibi bir grafik ekranı istenecek mi? İstenmezse grafik kütüphanesi hiç eklenmez."
+ ]
+}

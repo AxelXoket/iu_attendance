@@ -1,0 +1,123 @@
+{
+ "id": "D07",
+ "instructions": [
+  {
+   "refs": [
+    "I002"
+   ],
+   "do": "D07-B13 kalır (plan.html#gun-kenar-durumlar): açık cihaz değişimi talebi süresince eski cihazın kayıtları Beklemede. Talep reddedilince ya da düşünce D01 aynı işlemde yenidenDegerlendir(tx, { ogrenciId }, 'CIHAZ_DEGISIMI_REDDEDILDI' | 'DEGISIM_IPTAL') çağırır; bekleyen kayıtlar o işlemde normal kurallarla karara bağlanır."
+  },
+  {
+   "refs": [
+    "I021",
+    "I029",
+    "A2",
+    "I025",
+    "I064"
+   ],
+   "do": "D07-A04'ü kapat. D05 ile sözleşme iki tarafta aynıdır: KararBaglami ve KararSonucu { karar, gerekceKodu, ekGerekceler, etiketler, gecGeldi, kararSurumu } packages/contracts/src/dogrulama.ts'te, KayitTaslagi D05'ten; kararHesapla yalnız okur ve kilitler, geçmiş kayıt eklendikten sonra kararGecmisineYaz ile (sira 1 = karar_surumu 1), sonraki her değişiklikte kararSutunlariniYaz'a yeni sira; appAttestSayaciniDenetle sonucu KayitTaslagi.appAttest.sayac; iOS 27 alanları D13.yayinBilgisi() ile karşılaştırılır, beklenmeyen D09.denetimeYaz ile yazılır; HESAP_SILINMIS ogrenciSilinmeAni ile; çift anahtarı D05'in yoklamaCiftAnahtari(oturumId, ogrenciId) işleviyle, yeniden yazılmaz. D07 D05'i yalnız modules/yoklama/yaprak.ts'ten ya da eklenti seçeneğiyle, D01'i yalnız modules/kimlik/yaprak.ts'ten ya da eklenti seçeneğiyle, D09'u yalnız modules/duzeltmeler/yaprak.ts'ten içe aktarır; D01 ve D05 D07'nin index.ts'ini kullanır. Saklama: yalnız D12 kataloğundaki 'dogrulama.donem_verisi' sınıfı için tek işleyici kaydet (saklamaIsleyicisiKaydet); öneksiz ya da ince sınıf adı (ör. 'yoklama_kayitlari', 'hesap_silme', 'aksis_ozet_anliklari', '<modül>.<tablo>') ve kayıtta oncekiSiniflar listesi yoktur, sıra kataloğun oncesinde listesinden gelir. İşleyici yoklama_saklama girişiyle açılan işlemde yalnız kendi tablolarında SELECT, UPDATE ve DELETE yapar; testi D12.saklamaIsleyicisiniCalistir ile yazılır. 'dogrulama.karar_gecmisi', 'dogrulama.kayit_karar_gecmisi', 'dogrulama.oturum_verisi' ve 'dogrulama.app_attest_sayaclari' istekleri kalkar: katalog dogrulama.donem_verisi'yi yoklamadan önce işler."
+  },
+  {
+   "refs": [
+    "I030",
+    "I018"
+   ],
+   "do": "D07-A05'i kapat; öneri değişti. Pencere hesabının tek sahibi D04'tür: D04.pencereSonucu'nun sonuc değerlerini ve alanlarını aynen kullan ve şöyle eşle: ICINDE pencere kuralını geçer; DEGISIM_DILIMI ayar kesinleşmemişse (kafa sayısı gelmedi ve gönderme süresi bitmedi) Beklemede AYAR_KESINLESMEDI, kesinleşmişse Ret PENCERE_DISINDA; ESKI_PROGRAM İncelemede ESKI_PROGRAM; DISINDA Ret PENCERE_DISINDA. D07-B15'teki küçük harfli değerler ve D07'nin kendi eski program penceresi hesabı kalkar (eskiProgram D04'ten gelir). D07-B20: Kendi beyanı etiketi kayitAnindaSureSecildi false ise konur. pencereDegistiDinleyicisiKaydet'e { ad: 'dogrulama.pencere_degisti', calistir } ile kaydol, kararı aynı işlemde ver; oturumKapandi dinleyicisi güvenlik ağıdır, iş koymaz. kesintiKapandi dinleyicisi D04'ün partili imzasını uygular (imlec ve adet D07'nin iç sorgusunda); yenidenDegerlendir dış imzası değişmez. Kesinti hükmünü kesintiAraliklari().ulasmaAnlariGuvenilir'den oku (alan null iken bugünkü yedek kural)."
+  },
+  {
+   "refs": [
+    "I031",
+    "I071"
+   ],
+   "do": "D07-A06'yı kapat. yayin-bilgisi.json yalnız D13.yayinBilgisi() ile okunur: modules/dogrulama/yayin-bilgisi.ts okuyucusunu ve yayinBilgisiYolu ayarını sil. Alan adları D13'ündür (hataliSurumler: platform, surum, guncellemeKimligi, baslangic, neden; iosPaketSurumleri; iosDagitimTurleri D13 ekliyor). Ayarlar D15.ayarlar'dan: androidPaketAdi, androidImzaOzetleri, appAttestUygulamaKimligi, iptalListesiAdresi. Uyarı türleri dogrulama.* önekiyle (dogrulama.app_attest_yenileme_sik anahtar esik-2-24s, dogrulama.hatali_surum_gec_yuklendi). packages/contracts/src/dogrulama.ts kod listelerini packages/core/src/dogrulama/kodlar.ts'ten alır (contracts core'u içe aktarabilir; core contracts'ı çalışma zamanında içe aktarmaz, yalnız import type; bağımlılık satırı D13'ün packages/contracts/package.json dosyasında). kafa_sayisi gövde şeması D13.ogeTuruTanimla ile."
+  },
+  {
+   "refs": [
+    "I032",
+    "I014"
+   ],
+   "do": "D07-A07'yi kapat. Danışma kilidi katmanları (contracts.json ortak kural): 1 dogrulama:liste, devam:hesap, is-kuyrugu:eposta, isletim:*; 2 listeler:kova, dogrulama:teyit; 3 yoklama:cift, projeksiyon:*, esitleme:kurulum_siniri, duzeltmeler:zincir; 4 dogrulama:sayac; 5 dogrulama:isaret. Tek genel sıra vardır, önce katman sonra anahtar metni: D12.danismaKilidi(tx, anahtarlar) bir çağrıdaki anahtarları bu sırayla alır; bir işlem birden çok kez çağırabilir ama yeni her anahtar işlemin tuttuğu bütün anahtarlardan sonra gelir; işlemin zaten tuttuğu anahtarı yeniden istemek işlemsizdir; sırada geride kalan yeni anahtar yalnız D12.danismaKilidiDene(tx, anahtar) ile alınır (beklemez, false dönerse çağıran TEKRAR_DENE döner ya da işi yeniden dener). Çok öğeli işlem öğelerin anahtarlarını saf anahtar işlevleriyle (D05 yoklamaCiftAnahtari, D07 kararAnahtarlari, dogrulamaTeyitAnahtari, dogrulamaListeAnahtari, D03 listeKovaAnahtari, D11 qrKilitAnahtarlari) baştan toplar ve tek çağrıda alır. Anahtar biçimi string ya da { anahtar, kip: 'paylasimli' }. Elle pg_advisory_xact_lock yazılmaz. Sıra: danışma anahtarları, satırlar, iş kuyruğu (D14.isGonder) ve öğrenci sürümü (D06.ogrenciDurumuDegisti), en son genel sayaç (D06.surumAl, bir kez). D07 için: dış yüze dogrulamaTeyitAnahtari(ogrenciId: string): string ('dogrulama:teyit:<ogrenciId>'), dogrulamaListeAnahtari(subeId: string): string ('dogrulama:liste:<subeId>') ve kararAnahtarlari(girdiler: readonly { oturumId: string; ogrenciId: string; anahtarId: string | null }[]): readonly DanismaAnahtari[] ekle (üçü saf, packages/contracts/src/dogrulama.ts; kararAnahtarlari her karar yolunun bu kayıtlar için alacağı anahtarları döner: D05.yoklamaCiftAnahtari ile çift anahtarı ve anahtarId verilen girdide 'dogrulama:sayac:<anahtarId>'). kararHesapla, kararDegistir ve yenidenDegerlendir kendi kayıt kümelerinin bu anahtarlarını işlerinin başında tek çağrıda ister (çağıran zaten aldıysa işlemsiz); yenidenDegerlendir önce etkilenen kayıtları kilitsiz okur, sonra anahtarlarını tek çağrıda alır. 'dogrulama:isaret:<oturumId>' (katman 5, en yüksek) önceden toplanmaz, oturum başına dışlayıcı olduğundan yalnız işaret yazılacağı an istenir: öğrenci kayıtlarını aynı oturumda sıraya sokmaz; aynı işlemde metinde ondan büyük bir işaret anahtarı zaten tutuluyorsa danismaKilidiDene ile denenir. kafaSayisiOgesi OgeIsleyici.kilitAnahtarlari kancasıyla kendi oturumunun işaret anahtarını D06'ya verir. kararHesapla çift kilitlerinden sonra bağlam anahtarlarını D12.danismaKilidiDene(tx, { anahtar, kip: 'paylasimli' }) ile, önce liste sonra teyit, beklemeden dener; biri alınamazsa { tekrarDene: 'DOGRULAMA_BAGLAM_DEGISIYOR' } döner. yenidenDegerlendir aynı denemeyi yapar; işlem anahtarı zaten tutuyorsa (bağlamı değiştiren teyit ya da liste işlemi) deneme işlemsizdir; alınamazsa o öğrencinin kayıtları korunur (korunan sayılır), çünkü bağlamı değiştiren işlem kendi yeniden değerlendirmesini commit'ten önce yapar. Bir karar işleminin sırası: çift ve sayaç anahtarları (katman 3 ve 4, tek çağrı; kayitlariKilitle'nin çift isteği o zaman işlemsiz), kayıt satırları FOR UPDATE, ortak_sinir_sayaclari satırları, gerekiyorsa işaret anahtarı (katman 5) ve işaret satırı, en son öğrenci başına bir kez D06.ogrenciDurumuDegisti. D07-B32 metnindeki 'tek sıra' anlatımını bu katmanlarla yaz. YenidenNeden: TEYIT_VERILDI, TEYIT_REDDEDILDI, CIHAZ_DEGISIMI_ONAYLANDI, CIHAZ_DEGISIMI_REDDEDILDI, DEGISIM_IPTAL, HESAP_SILINDI, HESAP_KAPANDI, CIHAZ_KAPANDI, LISTE_DEGISTI, QR_GOSTERIM_KAYDI, ANAHTAR_ELE_GECIRILDI. cihazKanitAyrintilariniSil sahibe sorulan D12-A01 cevaplanınca eklenir."
+  },
+  {
+   "refs": [
+    "I024"
+   ],
+   "do": "kararDegistir ve yenidenDegerlendir hedef kayıtların çift kilitlerini işlemin başında tek çağrıda alır (D05.kayitlariKilitle ya da kararAnahtarlari ile, sayaç anahtarlarıyla birlikte); ortak sınır satırları ve işaret kilidi ondan sonra (I014 katmanları)."
+  },
+  {
+   "refs": [
+    "I033",
+    "I051",
+    "I056"
+   ],
+   "do": "D07-A08'i kapat. D11.gosterimKaydiDinleyicisiKaydet({ ad: 'dogrulama.gosterim_kaydi', anahtarlar, calistir }) ile kaydol: anahtarlar(tx, oturumIdler) kilitsiz okuyup o oturumlarda kararı gösterim bekleyen kayıtları ve onların kararAnahtarlari sonucunu (çift ve sayaç anahtarları) { anahtarlar, kayitlar } olarak döner; D11 bunları kendi gösterim anahtarlarıyla tek çağrıda (katman 3) alır; calistir(tx, olay) yeni danışma anahtarı almaz, satırları FOR UPDATE okur ve yenidenDegerlendir'i QR_GOSTERIM_KAYDI nedeniyle yapar. Doğrulanmış etiketi gelişte konur (QR kodu geçerli, yedek kod değil); gecikme yalnız kararı etkiler. karar.ts sınıf ve gerekçe eşlemesinin tek sahibidir: ANAHTAR_ELE_GECIRILDI İncelemede yeni gerekçe QR_ANAHTAR_ELE_GECIRILDI, INDIRME_KAYDI_YOK İncelemede QR_ANAHTAR_IPTAL (sahibe sorulan D07-A02 ve D11-A16 değiştirebilir); test D11'in DOGRULAMA ve GECIKME listelerini içe alıp her değerin eşlendiğini sınar."
+  },
+  {
+   "refs": [
+    "I034"
+   ],
+   "do": "D07-A09'u kapat. Kilit adımı { ad: 'dogrulama.karar_kapanisi', sira: 10, calistir } ile kaydolur (calistir imzasına uyan sarmalayıcı); D02 kayıtlı adımları kendi arşiv ve devam adımlarından önce çalıştırır. D02'nin saklama sınıfı yoktur (oturumlar silinmez), dogrulama.oturum_verisi isteği düşer. Gece işi D02.oturumSayfasi ile baslangicAni gün aralıklarıyla sayfa sayfa okur."
+  },
+  {
+   "refs": [
+    "I035",
+    "I015",
+    "I098"
+   ],
+   "do": "D07-A10'u kapat. uyelikDenetle anı sözleşmedir (D03 metni güncelliyor). D03 liste yazmadan önce değişen şubelerin dogrulamaListeAnahtari anahtarlarını dışlayıcı alır. D03'e { ad: 'dogrulama', basamak: 'KARAR', isle } ile kaydol; isle iş kuyruğa koymaz, kararı liste işleminin içinde yenidenDegerlendir(tx, { dersId, subeIdleri, ogrenciNolari }, 'LISTE_DEGISTI') ile verir (plan.html#kararlar-supheli-kayit); YenidenSuzgec bu üç alanı kabul eder, LISTE_DEGISTI YenidenNeden'e eklenir; etkilenen bütün kayıtların çift kilitleri tek kayitlariKilitle çağrısıyla alınır. Ortak davranış testi D07'nin features klasöründe: 09:00 oturumu, 09:10 ekleme, 09:12 kayıt Var ve D08 oturumu T'ye katar."
+  },
+  {
+   "refs": [
+    "I036",
+    "I105",
+    "I045",
+    "I106"
+   ],
+   "do": "D07-A11'i kapat. D09 ile birleşik biçim (packages/contracts/src/dogrulama.ts): YeniKarar = { karar: 'VAR' | 'RET'; beklenenKarar: Karar }; KararKaynagi = { tur: 'HOCA'; kisiId: KisiId; olay: KararOlayi; islemId: string } (otomatik kaynaklar D07 içinde); KARAR_OLAYLARI: KENDI_BEYANI_ONAY, KENDI_BEYANI_RET, INCELEME_ONAY, INCELEME_RET, ISARETLI_OTURUM_RET, KARAR_DEGISTIR (hoca kendi kararını kilide kadar değiştirir, D09-B34), SINIFTA_DEGIL, SINIFTA_DEGIL_GERI_ALINDI; dönüş KararDegisimi = { degisti: boolean; onceki: { karar, gerekceKodu, sira }; sonraki: { karar, gerekceKodu, sira }; kayit: YoklamaKaydi (sayilan bayrağıyla) }; gerekçeyi D07 türetir, INCELEME_RET'in kodu HOCA_REDDETTI; hatalar KARAR_DEGISTI, DONEM_KILITLI, YETKISIZ_HOCA, GECIS_GECERSIZ (D09 kendi kodlarına eşler). duzeltmeleriGetir D09'un yaprak.ts'inden doğrudan içe aktarılır; D07-B36'daki eklenti seçeneği yolu kalkar. D12'nin denemeli kipi danismaKilidiDene'dir. D14 çizelgesinden 05:15 satırı düştü; pencere_beklemede_kesinlestir yalnız bekleyen_kararlari_coz'un koyduğu olay işidir (stately, tekillikAnahtari oturumId). contracts.json dış yüz satırları dogrulamaDegeriniTuket(tx, deger, beklenenAmac) ve kafaSayisiOgesi(tx, oge, baglam) oldu."
+  },
+  {
+   "refs": [
+    "I080",
+    "I086"
+   ],
+   "do": "KID_BILINMIYOR için 'anahtar emekli' gerekçesi eklenmez (D07-B19 kalır: belge çapa kurmaz, kayıt Saat doğrulanamadı yolundan gider). YenidenSuzgec'e belgeKid?: { amac: 'saat_belgesi' | 'qr_anahtar_kaynagi'; kid: string } ve YenidenNeden'e ANAHTAR_ELE_GECIRILDI ekle: D15'in anahtar-uret ele-gecirildi komutunun son adımı, şüphe anından işaret anına kadar ulaşan ve o kid'li belgeyle çapa kuran kayıtları yeniden değerlendirir. İptal listesi ve App Attest yenileme uyarılarında uyariAc türleri dogrulama.* önekiyle. D15 görünümleri oturum_isaretleri.gecerli ve kesinlesti_ani sütunlarını okur: adlar değişmez."
+  },
+  {
+   "refs": [
+    "I100",
+    "I101"
+   ],
+   "do": "Bilgi ve onay: sözleşme ve komşu istekleri bu dosyadaki talimatlarla işlendi. Üç sapma kabul edildi, resolved_gaps'e mimar onayıyla yaz: bağlam anahtarlarının beklemeden denenmesi (katman kuralının istisna yolu), App Attest yenileme uyarısının yenileme işleminde sayılması, iOS 27 denetim kaydının cihaz satırındaki değer değişikliği başına bir kez yazılması."
+  },
+  {
+   "refs": [
+    "I009"
+   ],
+   "do": "D02.dersYetkisi(tx, kimlik: Kimlik, dersId): Promise<'sahip' | 'yonetici' | null> (yoneticiKapsami parametresi yok; yönetici kapsamı kimlik.roller'dan okunur). Çağırdığın her yerde üç parametreyle çağır, YoneticiKapsami ya da personelRolleri'nden kurulan nesne kalkar; durum, tür ve neden değerlerini D02'nin sözleşme sabitlerinden (OTURUM_TURLERI, OTURUM_DURUMLARI, IPTAL_NEDENLERI) içe aktar, yeniden yazma. donemKilidiKararKapanisi için kilitAdimiKaydet'in calistir imzasına uyan sarmalayıcıyı kaydet; kafaSayisiOgesi'nin son adımı D02.kafaSayisiniYaz; bitiş aralığı ve kafaSayisiVar süzgeci hazır, büyük taramada D02.oturumSayfasi."
+  },
+  {
+   "refs": [
+    "I074"
+   ],
+   "do": "İşler (I074): her pg-boss işi jobs/<modül>/index.ts'teki export const isler dizisinde D14.isTanimla ile tanımlıdır; KuyrukTanimi modules/<ad>/ içindedir; zamanlama D14 çizelge kurallarına uyar (03:00 ile 05:00 arası günlük iş yok, en az 5 dakika aralık); her iş için D14'ün adımıyla 'aynı veriyle iki kez çalışırsa' senaryosu vardır. Uymayan satırı düzelt."
+  },
+  {
+   "refs": [
+    "I045"
+   ],
+   "do": "Denetim (I045): dersId taşıyan her denetim olayı birimId de taşır; olay türleri sözleşme dosyasında DOGRULAMA_DENETIM_OLAYLARI listesindedir ve D09.denetimOlaylariniKaydet ile kaydolur."
+  },
+  {
+   "refs": [
+    "I070"
+   ],
+   "do": "Birleşim (I070): index.ts dogrulamaEklentisi adlı Fastify eklentisini ve EklentiTemelSecenekleri'ni ({ surec }) genişleten seçenek tipini dışa verir (spec.exports'a 'dogrulamaEklentisi' adıyla); eklenti altyapıyı seçenekten alır, kayıt sırasında veritabanına dokunmaz, zamanlayıcıyı yalnız surec 'api' iken kurar, dinleyici kayıtlarını her süreçte yapar; rotalar yalnız D13.rotalariKaydet ile; setErrorHandler ve setNotFoundHandler yok; hata kodu öneki modül adının büyük harfi; kaynak düzeyi ret 404 <MODÜL>_BULUNAMADI, rota düzeyi rol reddi API_ROL_YETKISIZ."
+  },
+  {
+   "refs": [
+    "A1"
+   ],
+   "do": "Göç klasörü (A1): spec'te ve bölümde göç yerini contracts.json migration_dir ile aynı yaz: apps/server/migrations/<14 haneli UTC>_dogrulama_<açıklama>/ (migration.sql ve snapshot.json; dosya haritasında apps/server/migrations/??????????????_dogrulama_* globu bu modülündür). Göç yalnız bu modülün tablolarına dokunur; göç dosyaları spec.files'a değil iş paketine yazılır; klasör kuralı ve CI göç denetimi D12'nindir. Paralel paketler birleşmeden önce ana dala yeniden dayanır, araya göç girdiyse kendi klasörünü silip drizzle-kit generate ile yeniden üretir."
+  }
+ ]
+}

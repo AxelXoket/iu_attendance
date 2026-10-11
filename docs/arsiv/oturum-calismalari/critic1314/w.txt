@@ -1,0 +1,72 @@
+D01-P20 (asama 18) İş ve inceleme yolu uçtan uca senaryoları
+  files=[]
+  notes=İşçi süreci bileşimiyle beş iş, D14'ün 'aynı veriyle iki kez çalışırsa' adımı, işçide anahtarsız personel silmesi, bekleyen kayıt kapatma ve temizlik eşikleri; boş veritabanında işçi açılışından inceleme girişine ve deneme öğrencisinin kaydına kadar inceleme yolu ve ayar değişince eski inceleme hesabının ayrıcalığını kaybetmesi denetlenir. Öbür uçtan uca kimlik paketlerini beklemez.
+
+D08-P09 (asama 8) Canlı hesap: girdiler ve hesap
+  files=[]
+  notes=girdiler.ts dersin bütün girdilerini öğrenci sayısından bağımsız toplu okumalarla yükler; hesap.ts çekirdekle repeatable read denetimli canlı dersSonuclari, oturumSonDurumlari ve sonucuDegistirebilirMi işlevlerini kurar. Bu işlevler başka modüllere index.ts dış yüzüyle D08-P10'da açılır (ortak kural: modülün tek girişi index.ts'tir). Hesap iş kuyruğunu, yaprağı ve saklanan tabloları beklemez; yalnız sözleşmeyi ve çekirdeği bekler. hesap.steps.ts modülün ortak kurgu ve okuma adımlarını verir, işlemi D12.islem ile repeatable read açar; donem-sonu.feature bağlantı nedenini, cevapsız oturumu ve kilitte donan kararları denetler.
+
+D08-P10 (asama 9) Uçlar, eklenti ve dış yüz
+  files=[]
+  notes=Üç uç kaynak yetkisi, D03 ve D02 sonuç birliklerinin DEVAM_ kodlarına çevrilmesi, denetim olayı ve aynı işlemde kuyruğa giren hesap işiyle yazılır; devamEklentisi yaprak saatini, dinleyicileri, kilit adımını, indirme kaynağını, saklama işleyicisini ve rotaları veritabanına dokunmadan kaydeder; index.ts dersSonuclari, oturumSonDurumlari, sonucuDegistirebilirMi, ogrenciDevamDurumu ve devamEklentisi'ni dışa açar. Başka modüller bu adları index.ts'ten içe aktardığı için (D09 ve D10 dahil) hepsi bu paketle açılır; uçlar dosyası da burada olduğundan paket canlı hesabın bir aşama arkasındadır, iş paketlerini ve senaryoları beklemez. eklenti.feature sorgu sayacının 0 kalmasını, zamanlayıcı kurulmamasını, kayıtları, üç rotayı, setErrorHandler kullanılmamasını ve bilinmeyen satır ile öğrenci rolü zarflarını denetler; uç senaryoları D08-P12 ve D08-P15'tedir.
+
+D11-P14 (asama 11) Bağlantı uçları ve oturum kapanış dinleyicisi
+  files=[]
+  notes=Bağlantı listesi (salt okunur işlem, kapanmış sayılan bağlantı etkin durumuyla) ve kesme ucu (HOCA_KESTI, ortak kapatma işleviyle) ile eklentinin D04'e kaydedeceği oturum kapanış dinleyicisi yazılır; dinleyici projeksiyon_baglanti_kapat işini D04.pencereGetir ders bitişine D14.isGonder ile koyar. Eklenen baglanti.test.ts geçici veritabanında doğrudan kurulan bağlantı satırlarıyla sınanır; uçtan senaryolar D11-P23'tedir.
+
+D11-P15 (asama 11) Kürsü uçları: eşleştirme kodu, dönen kodlar ve tarayıcı kapatma
+  files=[]
+  notes=Üç kürsü ucu ve kimlik kancası yazılır; kapanmış sayılan ya da kapatılan tarayıcının bağlantısı ortak kapatma işleviyle (D11-P10) kapanır, GET kodlar kursuDurumu, kod penceresi, D04 penceresi ve eşitleme sağlığıyla salt okunur işlemde çalışır. Kürsü adımları rota tanımlarından istek kurar ve öbür senaryo paketlerince de kullanılır; kod alma, aynı çerezle yenileme, adres başına yeni tarayıcı sınırı ve kullanılmış koda düşen çakışma senaryolarıyla denetlenir (onay sonrası GET kodlar davranışı D11-P21'dedir).
+
+D11-P16 (asama 11) Hoca onayı ucu
+  files=[]
+  notes=Onay ucu kod özetini setteki her kid ile arar, yanlış deneme sayacını, ikinci kullanımı, zaman aşımı tekrarını ve dersteki tek projeksiyonu danışma kilitleri altında işler; önceki bağlantıyı ortak kapatma işleviyle kapatır, kapatma işini D14.isGonder ile koyar, referans konumla gelen onayda oturumun konum BEKLENIYOR satırlarını çekirdeğin konum karşılaştırmasıyla günceller (yeniden-hesap.ts içe aktarılmaz). Eklenen onay.test.ts geçici veritabanında anahtar türetmeyle kurulan kod satırıyla sınanır; uçtan güvenlik senaryoları D11-P22'dedir.
+
+D11-P17 (asama 11) QR anahtarları ucu ve hoca telefonu adımları
+  files=[]
+  notes=QR anahtarları ucu yuva seçip bugün dahil 5 günün anahtarını türetir ve indirme satırını yazar (inceleme hesabı D01.kisiGetir ile). Hoca telefonu adımları onay, bağlantılar ve QR anahtarı isteklerini yalnız rota tanımlarından kurar, modül kodunu içe aktarmaz, bu yüzden öbür senaryo paketleri bu pakete bağlanır (gösterim kaydı adımları D11-P18'deki gosterim.steps.ts'tedir). Aynı gün aynı bayt, dokuz rakam sınırı ve inceleme hesabı senaryolarıyla denetlenir.
+
+D12-P12 (asama 12) Geri yükleme kayıtları ve yönetici ucu eklentisi
+  files=[]
+  notes=geriYuklemePencereleri, imleçli ve salt okunur geri yükleme listesi ve rotayı rotalariKaydet ile kaydeden veritabaniEklentisi yazılır, dışa açma satırları index.ts'e eklenir; spec dosya listesine eklenen servis.test.ts test veritabanında boş ve iki kayıtlı durumu denetler, uç senaryoları P20'dedir.
+
+D12-P16 (asama 18) Saklama senaryoları ve koruma kodu mutasyonu
+  files=[]
+  notes=Süre yokken dokunmama, takvim ayıyla tek sınır ve kanıttan sürme, işleyicisiz sınıf ve yoklama_saklama yolunun aynılığı senaryoları örnek işleyici ve sahte saatle yazılır. Koruma kodu mutasyonu burada koşar, çünkü kaldırılan korumaların senaryoları (P14 işlem ve kilit, P15 göç, bu paketin saklaması, birim testleri) bu noktada hazırdır: her koruma tek tek kaldırılır, ilgili senaryonun kırmızıya döndüğü görülür ve özgün baytlar md5 ile geri yazılır.
+
+D12-P20 (asama 14) Geri yükleme komutu, iptaller ve yönetici ucu senaryoları
+  files=['apps/server/src/cli/geri-yukleme.ts', 'apps/server/src/cli/geri-yukleme-iptaller.ts']
+  notes=Bileşim kökü cli/geri-yukleme (doğrula, kaydet, dört kimlik abonesiyle iptaller) ve yönetici ucu senaryoları yazılır; uç senaryoları D13.apiKur ile kurulan ve deneme oturumu taşıyan API'de, kayıt ve iptal senaryoları Cucumber ile denetlenir. D01, D02, D06, D11 ve D15 beklemeleri bileşim kökünün gerçek çağrılarıdır. Koruma kodu mutasyonu P16'ya taşındı, bu paket öbür senaryo paketlerini beklemez.
+
+D12-P21 (asama 18) Geri yükleme betiği ve aylık deneme
+  files=[]
+  notes=Trafiği kapatıp nesil, göç, kayıt ve iptallerden sonra açan geri-yukle.sh (ortak.sh ve pgbackrest.sh'yi kullanır, cli/geri-yukleme'yi çağırır), ayrı Compose projesinde (P18'in deneme dosyaları) PITR ve döküm dönüşünü sınayan aylık deneme ve geri yükleme kılavuzu yazılır; geri-yukleme-denemesi.sh gerçek yedekten koşup nesil, pg_amcheck, satır sayısı ve anahtar kurallarını raporlar. Deneme API, Mailpit ve xprem açan uçtan uca bir koşudur, bu yüzden geri yükleme komutunu bekler.
+
+D12-P22 (asama 20) Makine zamanlayıcıları ve takvim denetimi
+  files=['docker/postgres/zamanlayici/iu-yoklama-pgbackrest-tam.timer', 'docker/postgres/zamanlayici/iu-yoklama-pgbackrest-fark.timer', 'docker/postgres/zamanlayici/iu-yoklama-pgbackrest-dogrulama.timer', 'docker/postgres/zamanlayici/iu-yoklama-dokum.timer', 'docker/postgres/zamanlayici/iu-yoklama-geri-yukleme-denemesi.timer']
+  notes=Beş makine işinin systemd service ve timer dosyaları ile kurulum betiği yazılır; takvim-denetimi.sh her timer'da Europe/Istanbul ve Persistent=true olduğunu, systemd-analyze ile döküm saatinin 23:15 UTC ve denemenin ayın ilk cumartesisi olduğunu denetler. Service dosyaları betikleri yalnız yol ve komut adıyla anar, takvim denetimi betikleri çalıştırmaz; paket hiçbir şey beklemez.
+
+D14-P13 (asama 15) Kuyruk kurulumu ve kurulum senaryoları
+  files=[]
+  notes=Şemayı kuran yoklama_goc rolüyle sürüm ve kayma denetimi, pgboss yetkileri, kuyruk ve ölü kuyruk ayarları, zamanlama eşitlemesi ve acilistaBirKez işini yapan kuyruklariKur yazılır; tanımları parametre alır, worker.ts'i ve D15 iş listesini beklemez, D12'nin yetki senaryosu bu paketten sonra başlar. kurulum.feature ve eklenen kurulum-adimlari.ts ayarların aynen yazılmasını ve ikinci çalışmanın boş raporunu, API ve işçi rolü yetkilerini, şema sürümü uyuşmazlığını ve açılış işinin tekliğini D12 test veritabanında sınar.
+
+D14-P14 (asama 15) E-posta gönderim temizliği işi ve zamanlama senaryoları
+  files=[]
+  notes=1.000'lik partili temizlik (her parti ayrı D12.islem) ve eposta_gonderim_temizligi tanımı jobs/is-kuyrugu/index.ts isler dizisiyle yazılır. eposta-temizlik.feature saklama sabitinden bir gün eski ve yeni satırla silmeyi ve 'aynı veriyle iki kez çalışırsa' adımını; zamanlama.feature ve eklenen zamanlama-adimlari.ts zamanlamaliOrnekAc ve TestClock ile kaçan günlük işin bir kez çalışmasını ve İstanbul saatli tetiklemeyi sınar. Koruyucu bozma burada denenir: tz kaldırılınca 'Zamanlama İstanbul saatiyle' kırmızı.
+
+D14-P16 (asama 19) worker.ts bileşim kökü, altyapı uyarlayıcısı ve işçi süreci senaryoları
+  files=['apps/server/src/worker.ts']
+  notes=D15 tanımlarını isTanimla biçimine çeviren uyarlayıcı ve 11 adımlı açılış, kapanış ve kur alt komutunu taşıyan worker.ts yazılır; D14'te uygulamanın tamamını bekleyen tek pakettir ve arkasında D14 paketi yoktur. zamanlama.test.ts ve altyapi-uyarlayici.test.ts worker.ts'in topladığı gerçek kayıtta ad ve veri kurallarını, 14 günlük İstanbul zamanlama kurallarını ve uyarlanan işleri; isci-sureci.feature ve eklenen isci-adimlari.ts açılış sırasını, çıkış kodlarını ve kapanış sırasını denetler. Koruyucu testler: işçi bozmaları (isleriBaslat sırası, eposta.kapat sırası, ALTYAPI_CIKTI_SEMASI) burada denenir; öbür on beş bozma kendi paketlerinde denenmiştir ve bu paket on sekiz bozmanın hepsini tek betikle son kez koşar, her dosyanın md5'i geri yazımdan sonra denetlenir.
+
+D15-P22 (asama 15) Sunucu imajı ve server.ts girişi
+  files=['apps/server/src/server.ts']
+  notes=Çok aşamalı Dockerfile sunucu ve caddy hedefleriyle (caddy hedefi Caddyfile'ı ve gizlilik sayfasını, sunucu hedefi yayın bilgisi çıktısını alır), server.ts sekiz adımlı açılış ve kapanış sırasıyla yazılır; süreç girişi olduğu için uygulamaKur'u bekler. Deneme Dockerfile'ıyla derlenmiş sözleşme paketi olmadan imaj derlemesinin kırmızı, normal derlemenin yeşil olduğu denetlenir.
+
+D15-P24 (asama 16) Uyarı, kalp atışı ve sertifika senaryoları
+  files=[]
+  notes=uyarilar.feature uyarı birikmesini, maskelemeyi ve kesmeyi, özet e-postayı, hatırlatma ve düzeldi iletisini, süre bütçesini ve sessizlik kapanışını, kalp-atisi.feature SMTP düşükken kalp atışının sorun adresine döndüğünü, sertifika.feature sertifika uyarısını işletim denetiminin kapatmadığını denetler; kural, kapanış süzgeci ve kalp atışı sonBasariAni denetimi bilerek bozulunca ilgili testler kırmızıya döner, dosyalar md5 ile geri yazılır.
+
+D15-P28 (asama 16) Anahtar döndürme ve komut girişi senaryoları
+  files=[]
+  notes=anahtar-dondurme.feature yeni kidin önce yalnız doğrulamada sonra etkin olduğunu ve anahtar.sh ele-gecirildi sonrası şüphe anından sonraki kayıtların yeniden değerlendirildiğini, komut-girisleri.feature olay oturumlari-kapat'ın dört aboneyle personel oturumlarını kapattığını, QR yuvasının iptal olduğunu, eksik aboneyle girişin açılmadığını ve donem-arasi çıktısının D02.donemArasiMi ile aynı olduğunu denetler.
+

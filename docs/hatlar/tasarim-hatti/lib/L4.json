@@ -1,0 +1,574 @@
+{
+ "id": "L4",
+ "area": "Web paneli: hareket kütüphaneleri ve tarayıcı yetenekleri",
+ "summary": "Web panelindeki hareketin çoğu kütüphane istemiyor: hover, basma ve odak geçişleri CSS transition ile, yeni eklenen öğelerin girişi @starting-style ile (Baseline 2024), yay benzeri eğriler linear() ile (Haziran 2026'dan beri geniş destekli) yazılır. Dialog, popover, menü ve bildirimlerin kapanış animasyonu, seçilecek başsız bileşen kütüphanesinin durum öznitelikleriyle (ör. Base UI data-ending-style) CSS'te yapılır; tarayıcının kendi çıkış yoluna tek başına güvenilmez, çünkü Firefox display geçişini, Firefox ve Safari overlay özelliğini Ekim 2026'da hâlâ desteklemiyor. Sayfa geçişleri için TanStack Router'ın defaultViewTransition seçeneği yeterli: View Transitions API Ekim 2025'ten, geçiş türleri Ocak 2026'dan beri üç motorda da var, desteklemeyen tarayıcıda gezinme anında olur. React 19.3 (9 Eylül 2026) ViewTransition bileşenini kararlı yaptı; sekme içeriği ve Suspense açılışı gibi sayfa içi geçişlerde açılış ve kapanışı sıfır ek baytla çapraz geçişle verir, ama TanStack Router gezinmeleri henüz React Transition'ı olmadığı için rota geçişinde devreye girmez. Eklenecek tek JS kütüphanesi Motion (motion paketi, 14.0.0, 2 Ekim 2026): yalnız liste ve tablo satırlarının ekleme, silme, sıralama hareketi ve özel öğelerin çıkışı için, LazyMotion ve m bileşeniyle (ilk yük yaklaşık 4,6 kB, özellik paketi sonradan) yüklenir; layout animasyonları kesilebilir, görünüm geçişleri kesilemez. Hareket azaltma tek yerden yönetilir: CSS'te prefers-reduced-motion, Motion'da MotionConfig reducedMotion='user'. react-spring ikinci seçenek olarak kaldı; GSAP, anime.js, react-transition-group, react-flip-toolkit ve Lenis bu panel için ya aşırı, ya eski, ya da kullanıcı kaydırmasını bozduğu için elendi. Yükseklik açma kapamada interpolate-size yalnız Chromium'da olduğundan grid-template-rows yöntemi kullanılır.",
+ "needs": [
+  "Her etkileşimli öğede (düğme, bağlantı, tablo satırı, sekme, form alanı) fare üzerine gelince ve basınca kısa, yumuşak geri bildirim; dokunmatik ekranda yapışkan hover olmaması.",
+  "Dialog, popover, menü, açılır liste, ipucu, yan panel ve bildirimlerin hem açılışta hem kapanışta hareketli olması; kapanışta öğenin animasyon bitmeden DOM'dan silinmemesi.",
+  "Rota değişiminde yumuşak sayfa geçişi; ileri ve geri yönüne göre farklı hareket seçilebilmesi, sorgu parametresi değişiminde geçiş yapılmaması.",
+  "Sekme içeriği, yükleme iskeletinden gerçek veriye geçiş ve filtre sonucu gibi sayfa içi durum değişimlerinde açılış ve kapanış hareketi.",
+  "Onay listesi, düzeltmeler ve yoklama tablosunda satır ekleme, silme ve yeniden sıralamanın hareketli olması; eğitmen art arda hızlı tıkladığında hareketin kesilip yeni hedefe akabilmesi.",
+  "Akordeon, filtre paneli ve ayrıntı bölümlerinde yükseklik değişiminin akıcı olması.",
+  "Tarayıcı ve işletim sistemindeki hareket azaltma ayarına tek kuralla uyulması: konum ve ölçek hareketleri kapanır, renk ve saydamlık geçişleri kısa kalır (uygulama içi ayar yok, plan.html kararı).",
+  "Düşük donanımlı okul bilgisayarlarında bile 60 fps: yalnız transform ve opacity canlandırılır, animasyon kütüphanesi yalnız gereken ekranda yüklenir, projeksiyon (yalnız QR) sayfası kütüphanesiz açılır.",
+  "Tek hareket sözlüğü: süre ve eğri jetonları CSS değişkeni olarak tanımlanır, telefondaki yay değerleriyle aynı his linear() dizgesiyle verilir.",
+  "Yeni tarayıcı özelliğini desteklemeyen tarayıcıda arayüz bozulmadan, yalnız hareketsiz (anında) çalışması."
+ ],
+ "candidates": [
+  {
+   "id": "L4-C01",
+   "category": "Etkileşim geri bildirimi (hover, basma, odak)",
+   "package": "platform: CSS transition + linear()",
+   "repo": "",
+   "verdict": "gerekmez",
+   "version": "transitions Baseline geniş (2018-03-30), linear() Baseline geniş (2026-06-11); web-features 3.40.1",
+   "released": "2026-06-11",
+   "stars": "platform özelliği",
+   "role": "Düğme, bağlantı, tablo satırı, sekme ve form alanlarında hover, basma (:active) ve odak durumlarını renk, saydamlık ve transform geçişiyle kısa sürede yumuşatır. Süre ve eğriler CSS değişkeni (jeton) olarak tanımlanır; hover kuralları @media (hover: hover) and (pointer: fine) içinde yazılır.",
+   "why": "Her etkileşimli öğede çalışacak en ucuz ve en güvenilir yol: JS yükü sıfır, transform ve opacity geçişleri birleştirici (compositor) aşamasında çalışır. Hover medya sorgusu içinde tanımlanınca dokunmatik ekranda yapışkan hover oluşmaz. linear() ile yay benzeri eğri yazılabildiği için ayrı bir yay kütüphanesi gerekmez; tasarım klasöründeki spring.js aracı telefondaki Reanimated yay değerlerinden linear() dizgesi ve süresini üretir, iki platform aynı hissi verir.",
+   "compat": "Düz CSS, Vite 8 ve React 19 ile ilgisiz. linear(): Chrome 113, Firefox 112, Safari 17.2; Baseline geniş destek 2026-06-11 (web-features 3.40.1). Bağımsız transform özellikleri (translate, scale) Baseline geniş 2025-02-05.",
+   "modern": "Yay eğrisinin CSS'te linear() ile yazılması 2026'da her tarayıcıda; eskiden bunun için JS yay kütüphanesi gerekirdi.",
+   "risks": "Süre ve eğrilerin dağınık sabit değerlerle yazılması tutarlılığı bozar: yalnız jeton değişkenleri kullanılmalı. box-shadow, filter gibi boyama isteyen özelliklerin geçişe katılması düşük donanımda takılma yapar.",
+   "sources": [
+    { "url": "https://webstatus.dev/features/linear-easing", "title": "linear() easing: Baseline durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2026-06-11" },
+    { "url": "https://webstatus.dev/features/individual-transforms", "title": "Individual transform properties", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2025-02-05" },
+    { "url": "https://web.dev/articles/animations-guide", "title": "How to create high-performance CSS animations", "publisher": "web.dev (Kayce Basques, Rachel Andrew)", "date": "2020-10-06" }
+   ]
+  },
+  {
+   "id": "L4-C02",
+   "category": "Etkileşim geri bildirimi (hover, basma, odak)",
+   "package": "motion",
+   "repo": "motiondivision/motion",
+   "verdict": "reddedildi",
+   "version": "14.0.0",
+   "released": "2026-10-02",
+   "stars": "33.767 (ecosyste.ms)",
+   "role": "whileHover, whileTap ve whileFocus ile hover ve basma hareketini JS üzerinden vermek.",
+   "why": "Aynı sonucu CSS sıfır baytla veriyor. Her düğmeyi motion bileşenine çevirmek domAnimation özellik paketini (+15 kB) her sayfaya taşır ve hover durumunu React ağacına bağlar. Basma geri bildirimi sayfa meşgulken bile anında görünmeli; CSS :active ana iş parçacığını beklemez.",
+   "compat": "Teknik olarak uyumlu (14.0.0 peerDependencies react ^18.0.0 || ^19.0.0); ret gerekçesi maliyet, uyumluluk değil.",
+   "modern": "Güncel bir API, ama bu iş için gereksiz bir katman.",
+   "risks": "Ekip alışkanlığıyla her öğenin motion bileşenine dönmesi; LazyMotion strict kipi motion bileşeni kullanılınca hata vererek bunu yakalar.",
+   "sources": [
+    { "url": "https://motion.dev/docs/react-reduce-bundle-size", "title": "Reduce bundle size", "publisher": "Motion", "date": "erişim 2026-10-06" },
+    { "url": "https://registry.npmjs.org/motion", "title": "motion paket kaydı", "publisher": "npm", "date": "2026-10-02" }
+   ]
+  },
+  {
+   "id": "L4-C03",
+   "category": "Açılır katmanlar (dialog, popover, menü, yan panel, bildirim)",
+   "package": "platform: bileşen kütüphanesi durum öznitelikleri + @starting-style",
+   "repo": "",
+   "verdict": "gerekmez",
+   "version": "@starting-style ve transition-behavior Baseline 2024-08-06 (web-features 3.40.1, BCD 8.1.4)",
+   "released": "2024-08-06",
+   "stars": "platform özelliği",
+   "role": "Açılışta giriş, kapanışta çıkış animasyonu CSS transition ile yazılır: başsız bileşen kütüphanesi öğeyi animasyon bitene kadar DOM'da tutar ve durum özniteliği verir (Base UI: data-starting-style, data-ending-style; Radix: data-state). Kütüphane dışında yerel dialog veya popover kullanılan yerde @starting-style ve transition-behavior: allow-discrete eklenir.",
+   "why": "Kapanış animasyonunun asıl sorunu öğenin DOM'dan erken silinmesi; başsız bileşen kütüphaneleri bunu kendisi çözüyor (Base UI element.getAnimations() ile animasyonun bitmesini bekleyip sonra kaldırıyor), bu yüzden ayrı animasyon kütüphanesi gerekmez. Tarayıcının kendi çıkış yoluna tek başına güvenilmez: BCD 8.1.4'e göre Firefox display geçişini desteklemiyor (yerel dialog kapanışı anında olur), overlay özelliği yalnız Chromium'da (Chrome 117) var, Firefox ve Safari'de yok. Kütüphanenin JS ile yönettiği yaşam döngüsü üç motorda aynı çalışır.",
+   "compat": "@starting-style: Chrome 117, Firefox 129, Safari 17.5. transition-behavior: Chrome 117, Firefox 129, Safari 17.4; display geçişi Chrome 117 ve Safari 18, Firefox yok. overlay: yalnız Chrome 117 (deneysel). popover Baseline 2025-01-27, dialog geniş destekli. @base-ui/react 1.8.0 (2026-09-04) CSS transition'ı data-starting-style ve data-ending-style ile destekliyor.",
+   "modern": "@starting-style ile giriş animasyonu 2024'ten beri Baseline; eskiden giriş için bile JS gerekirdi. Durum öznitelikli başsız bileşen modeli 2026'da yerleşik yaklaşım.",
+   "risks": "Bileşen kütüphanesi henüz seçilmedi ve yazılacak CSS ona göre değişir: Radix çıkışta CSS keyframe animasyonu bekler, Base UI transition ile çalışır (yarıda kesilebildiği için önerdiği yöntem). Yerel dialog kullanılan yerde Firefox'ta kapanış animasyonsuz olur; bu kabul edilebilir bir bozulma.",
+   "sources": [
+    { "url": "https://webstatus.dev/features/starting-style", "title": "@starting-style: Baseline durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2024-08-06" },
+    { "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/transition-behavior", "title": "transition-behavior", "publisher": "MDN", "date": "erişim 2026-10-06" },
+    { "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/overlay", "title": "overlay", "publisher": "MDN", "date": "erişim 2026-10-06" },
+    { "url": "https://developer.chrome.com/blog/entry-exit-animations", "title": "Four new CSS features for smooth entry and exit animations", "publisher": "Chrome for Developers (Una Kravets, Joey Arhar)", "date": "2023-08-16" },
+    { "url": "https://base-ui.com/react/handbook/animation", "title": "Animation", "publisher": "Base UI", "date": "erişim 2026-10-06" }
+   ]
+  },
+  {
+   "id": "L4-C04",
+   "category": "Açılır katmanlar (dialog, popover, menü, yan panel, bildirim)",
+   "package": "motion",
+   "repo": "motiondivision/motion",
+   "verdict": "ikinci",
+   "version": "14.0.0",
+   "released": "2026-10-02",
+   "stars": "33.767 (ecosyste.ms)",
+   "role": "Bileşen kütüphanesinin çıkış yönetiminin yetmediği özel katmanlarda (ör. sürüklenerek kapanan yan panel) AnimatePresence ile çıkış; Base UI'da Portal keepMounted ve render prop ile motion bileşeni bağlanır.",
+   "why": "Base UI belgesi Motion ile birlikte kullanımı (keepMounted, render, actionsRef ile elle unmount) açıkça tarif ediyor; gerekirse ek kod azdır. Birinci değil, çünkü açılır katmanların çoğu CSS ile çözülüyor ve her katmana JS bağlamak gereksiz yük.",
+   "compat": "14.0.0 peerDependencies react ^18.0.0 || ^19.0.0; AnimatePresence domAnimation paketinde (+15 kB).",
+   "modern": "AnimatePresence React'te çıkış animasyonunun fiilî standardı; 13.0.0'da propagate ile ilgili çıkış hatası düzeltildi.",
+   "risks": "Kütüphanenin geçiş öznitelikleriyle Motion'u aynı öğede karıştırmak çift animasyon üretir; bir katmanda tek yöntem kullanılmalı.",
+   "sources": [
+    { "url": "https://base-ui.com/react/handbook/animation", "title": "Animation (JavaScript animation libraries)", "publisher": "Base UI", "date": "erişim 2026-10-06" },
+    { "url": "https://github.com/motiondivision/motion/blob/main/CHANGELOG.md", "title": "Motion CHANGELOG", "publisher": "Motion (GitHub)", "date": "2026-10-02" }
+   ]
+  },
+  {
+   "id": "L4-C05",
+   "category": "Sayfa (rota) geçişi",
+   "package": "@tanstack/react-router",
+   "repo": "TanStack/router",
+   "verdict": "seçildi",
+   "version": "1.170.41 (router-core 1.171.34)",
+   "released": "2026-09-30",
+   "stars": "15.152 (ecosyste.ms)",
+   "role": "createRouter seçeneklerinde defaultViewTransition ile her gezinmeyi document.startViewTransition içinde yapar. types bir işlev olabilir: gezinme bilgisine (fromLocation, toLocation, pathChanged, hrefChanged) göre 'ileri' veya 'geri' gibi tür döndürür, CSS'te :active-view-transition-type() ile yöne göre hareket yazılır; false dönerse o gezinmede geçiş yapılmaz (ör. yalnız sorgu parametresi değişince). Tek bağlantıda Link viewTransition ile de açılır.",
+   "why": "Yığında zaten olan yönlendiricinin bir seçeneği; ek bayt yok. Kaynak kod (router-core router.ts, startViewTransition) View Transitions yoksa değişikliği doğrudan uyguluyor, tür desteği yoksa (CSS.supports ile :active-view-transition-type denetimi) türsüz geçişe düşüyor; eski tarayıcıda gezinme bozulmuyor, yalnız anında oluyor. Bakım güçlü: son bir yılda 747 konunun 506'sı kapanmış, ortalama kapanma 24 gün; 1983 PR'ın 1208'i birleşmiş; son sürüm 2026-09-30, son commit 2026-10-05.",
+   "compat": "React 19 ve Vite 8 ile resmi yığın parçası (peerDependencies react >=18.0.0 || >=19.0.0; react-router 1.170.41, router-core 1.171.34'e bağlı). View Transitions API Baseline 2025-10-14 (Chrome 111, Firefox 144, Safari 18); geçiş türleri Baseline 2026-01-13 (Chrome 125, Firefox 147, Safari 18.2). Tek sayfalı uygulama olduğu için Firefox'ta olmayan belgeler arası geçiş gerekmez.",
+   "modern": "View Transitions API 2025 sonunda üç motorda da Baseline oldu, geçiş türleri 2026 başında; yönlendirici düzeyinde tek seçenekle açılıyor.",
+   "risks": "Görünüm geçişleri kesilemez: belge başına aynı anda tek geçiş çalışır, yenisi başlayınca eskisi sona atlar (Chrome belgesi). Hızlı art arda gezinmede atlama görülebilir; süre kısa tutulmalı. Eski görünüm durağan bir anlık görüntüdür. Hareket azaltmada ::view-transition-* animasyonları CSS ile kapatılmalı; yönlendirici bunu kendisi yapmıyor.",
+   "sources": [
+    { "url": "https://unpkg.com/@tanstack/router-core@1.171.34/src/router.ts", "title": "router-core router.ts (defaultViewTransition, ViewTransitionOptions, startViewTransition)", "publisher": "TanStack (unpkg)", "date": "erişim 2026-10-06" },
+    { "url": "https://tanstack.com/router/latest/docs/framework/react/examples/view-transitions", "title": "React TanStack Router View Transitions Example", "publisher": "TanStack", "date": "erişim 2026-10-06" },
+    { "url": "https://webstatus.dev/features/view-transitions", "title": "View transitions (same-document): Baseline durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2025-10-14" },
+    { "url": "https://webstatus.dev/features/active-view-transition", "title": "View transition types: Baseline durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2026-01-13" },
+    { "url": "https://developer.chrome.com/blog/view-transitions-misconceptions", "title": "Misconceptions about view transitions", "publisher": "Chrome for Developers (Bramus)", "date": "2024-07-11" },
+    { "url": "https://registry.npmjs.org/@tanstack%2Freact-router", "title": "@tanstack/react-router paket kaydı", "publisher": "npm", "date": "2026-09-30" }
+   ]
+  },
+  {
+   "id": "L4-C06",
+   "category": "Sayfa (rota) geçişi",
+   "package": "react",
+   "repo": "facebook/react",
+   "verdict": "ikinci",
+   "version": "19.3.0",
+   "released": "2026-09-09",
+   "stars": "250.904 (github.com depo sayfası; ecosyste.ms 404 döndü)",
+   "role": "Rota içeriğini <ViewTransition> ile sarıp enter, exit, update ve share (ortak öğe) animasyonlarını React'in yönetmesi; addTransitionType ile yön türü.",
+   "why": "React 19.3 ile kararlı oldu: unpkg'deki react 19.3.0 üretim derlemesi ViewTransition ve addTransitionType'ı unstable_ öneki olmadan dışa aktarıyor. Ama yalnız Transition içindeki güncellemelerde (startTransition, Suspense açılışı, useDeferredValue) çalışıyor ve TanStack Router gezinmeleri henüz React Transition'ı olarak işlenmiyor (GitHub tartışması #8345, 2026-09-10, öneri aşamasında). Bugün rota geçişini tetiklemez; yönlendirici bunu desteklediğinde birinci seçeneğin yerine geçebilir.",
+   "compat": "React 19.3 gerektirir (yığındaki React 19 için küçük sürüm yükseltmesi). Yalnız DOM'da çalışır, React Native desteği yok (telefon uygulamasını etkilemez). Yönlendiricinin defaultViewTransition seçeneğiyle aynı anda kullanılırsa iki ayrı startViewTransition çağrısı çakışır; rota geçişinde tek yöntem seçilmeli.",
+   "modern": "React'in tarayıcı View Transitions API'sine resmi köprüsü; 2026'nın en yeni kararlı React özelliği.",
+   "risks": "Kararlı sürüm dört haftalık. Hareket azaltma için React kendi önlem almıyor, CSS medya sorgusu gerekiyor. enter ve exit için <ViewTransition> alt ağaçta DOM düğümünden önce gelmeli, ortak öğe adları uygulama genelinde tekil olmalı.",
+   "sources": [
+    { "url": "https://react.dev/blog/2026/09/09/react-19-3", "title": "React 19.3", "publisher": "React ekibi (react.dev)", "date": "2026-09-09" },
+    { "url": "https://unpkg.com/react@19.3.0/cjs/react.production.js", "title": "react 19.3.0 üretim derlemesi (dışa aktarımlar)", "publisher": "unpkg", "date": "2026-09-09" },
+    { "url": "https://github.com/TanStack/router/discussions/8345", "title": "Navigations as Transitions", "publisher": "GitHub (TanStack/router)", "date": "2026-09-10" }
+   ]
+  },
+  {
+   "id": "L4-C07",
+   "category": "Sayfa (rota) geçişi",
+   "package": "motion",
+   "repo": "motiondivision/motion",
+   "verdict": "reddedildi",
+   "version": "14.0.0",
+   "released": "2026-10-02",
+   "stars": "33.767 (ecosyste.ms)",
+   "role": "AnimatePresence ile Outlet'i konum anahtarıyla sarıp eski sayfayı çıkış animasyonu boyunca ekranda tutmak.",
+   "why": "Eski rotanın bileşenini yapay olarak yaşatmak gerekir ve bu, yönlendiricinin yükleyici (loader) ve bekleme akışıyla yarışır. Aynı işi View Transitions sıfır baytla ve yönlendiricinin kendi akışında yapıyor; rota geçişi için Motion yüklemek panelin ilk açılışına gereksiz JS ekler.",
+   "compat": "Çalıştırılabilir ama TanStack Router'ın resmi yolu değil; resmi yol defaultViewTransition.",
+   "modern": "Framer Motion döneminin rota geçiş kalıbı; View Transitions ile eskidi.",
+   "risks": "Odak ve kaydırma konumu yönetiminin bozulması, iki sayfanın aynı anda render edilmesi.",
+   "sources": [
+    { "url": "https://tanstack.com/router/latest/docs/framework/react/examples/view-transitions", "title": "React TanStack Router View Transitions Example", "publisher": "TanStack", "date": "erişim 2026-10-06" },
+    { "url": "https://motion.dev/docs/react-reduce-bundle-size", "title": "Reduce bundle size", "publisher": "Motion", "date": "erişim 2026-10-06" }
+   ]
+  },
+  {
+   "id": "L4-C08",
+   "category": "Sayfa içi durum geçişi (sekme içeriği, yükleme, filtre sonucu)",
+   "package": "react",
+   "repo": "facebook/react",
+   "verdict": "seçildi",
+   "version": "19.3.0",
+   "released": "2026-09-09",
+   "stars": "250.904 (github.com depo sayfası; ecosyste.ms 404 döndü)",
+   "role": "Sekme içeriği değişimi, iskeletten gerçek veriye geçiş (Suspense) ve filtre sonucunda eski ve yeni içerik arasında çapraz geçiş: değişen bölge <ViewTransition> ile sarılır, güncelleme startTransition içinde yapılır; Suspense için <ViewTransition update='auto' default='none'> kalıbı. Varsayılan hareket çapraz geçiş, özel hareket view-transition-class ve CSS ile.",
+   "why": "Sahibin istediği 'açılış ve kapanış' her ikisini de veriyor (eski içerik çıkar, yeni girer) ve ek bayt yok, çünkü React zaten yığında. 19.3'te kararlı, deneysel değil. Rota geçişiyle çakışmaz: TanStack Router gezinmeleri Transition olmadığı için bu sınırlar yalnız sayfa içi güncellemelerde çalışır. Kesilemezlik burada sorun değil, çünkü sekme ve yükleme geçişleri kısa ve tekil olaylar; hızlı art arda gelen liste değişimleri Motion'a bırakıldı.",
+   "compat": "React ve React DOM 19.3.0 gerekir. View Transitions API Baseline 2025-10-14; view-transition-class Baseline 2025-10-14 (Chrome 125, Firefox 144, Safari 18.2). API'yi desteklemeyen tarayıcıda güncelleme animasyonsuz, anında uygulanır. TanStack Query'nin olağan veri güncellemeleri Transition olmadığından yalnız useSuspenseQuery ve startTransition ile sarılan durum değişimleri canlanır.",
+   "modern": "React'in tarayıcı View Transitions API'sine resmi köprüsü; Eylül 2026'da kararlı.",
+   "risks": "Kararlı sürüm dört haftalık; ilk yamalar izlenmeli. Belge başına tek geçiş: sayfa içi geçiş sürerken rota geçişi başlarsa biri sona atlar. Hareket azaltma için CSS medya sorgusu şart. TanStack Router ileride gezinmeleri Transition yaparsa (tartışma #8345) yönlendiricinin defaultViewTransition seçeneği kapatılıp rota geçişi de buraya taşınmalı.",
+   "sources": [
+    { "url": "https://react.dev/blog/2026/09/09/react-19-3", "title": "React 19.3", "publisher": "React ekibi (react.dev)", "date": "2026-09-09" },
+    { "url": "https://webstatus.dev/features/view-transition-class", "title": "view-transition-class: Baseline durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2025-10-14" },
+    { "url": "https://news.ycombinator.com/item?id=49550761", "title": "The browser's main thread is expensive (yorum: View Transitions FLIP tekniğini otomatikleştiriyor)", "publisher": "Hacker News", "date": "2026-09-03" }
+   ]
+  },
+  {
+   "id": "L4-C09",
+   "category": "Sayfa içi durum geçişi (sekme içeriği, yükleme, filtre sonucu)",
+   "package": "motion",
+   "repo": "motiondivision/motion",
+   "verdict": "ikinci",
+   "version": "14.0.0",
+   "released": "2026-10-02",
+   "stars": "33.767 (ecosyste.ms)",
+   "role": "AnimatePresence mode='wait' veya mode='popLayout' ile anahtarlı içerik değişiminde çıkış ve giriş.",
+   "why": "Kesilebilir ve tarayıcıdan bağımsız aynı sonucu verir, ama domAnimation paketini (+15 kB) liste dışı ekranlara da taşır ve her değişen bölgeye ayrı sarmalayıcı ister. React 19.3 yükseltmesi bir nedenle ertelenirse ya da bir geçişin kesilebilir olması gerekirse devreye girer.",
+   "compat": "14.0.0 peerDependencies react ^18.0.0 || ^19.0.0; React 19.3 gerektirmez.",
+   "modern": "Olgun ve yaygın kalıp.",
+   "risks": "React ViewTransition ile aynı bölgede birlikte kullanılırsa çift hareket; bölge başına tek yöntem.",
+   "sources": [
+    { "url": "https://motion.dev/docs/react-reduce-bundle-size", "title": "Reduce bundle size (domAnimation içeriği)", "publisher": "Motion", "date": "erişim 2026-10-06" },
+    { "url": "https://registry.npmjs.org/motion", "title": "motion paket kaydı", "publisher": "npm", "date": "2026-10-02" }
+   ]
+  },
+  {
+   "id": "L4-C10",
+   "category": "Sayfa içi durum geçişi (sekme içeriği, yükleme, filtre sonucu)",
+   "package": "motion",
+   "repo": "motiondivision/motion",
+   "verdict": "reddedildi",
+   "version": "14.0.0 (AnimateView 13.4.0 ile geldi)",
+   "released": "2026-09-14",
+   "stars": "33.767 (ecosyste.ms)",
+   "role": "motion/react-animate-view içindeki AnimateView: React ViewTransition üstüne yay eğrisi ve boyut ile konum için ayrı zamanlama.",
+   "why": "13.4.0 ile 2026-09-14'te geldi, üç haftalık; React ve React DOM 19.3 veya üstünü şart koşuyor. Altında yine kesilemeyen görünüm geçişi var: Motion belgesi görünüm geçişlerinin Motion'un layout animasyonları gibi kesilemediğini açıkça yazıyor. Yay hissi CSS linear() ile alınabildiği için bu ek katman şimdilik gereksiz.",
+   "compat": "motion 14.0.0 paketinde ayrı giriş noktası (./react-animate-view); Motion+ üyeliği artık gerekmiyor.",
+   "modern": "En yeni Motion özelliği, ama olgunlaşmamış.",
+   "risks": "Erken API değişikliği; 14.0.0 da yeni bir büyük sürüm.",
+   "sources": [
+    { "url": "https://motion.dev/docs/react-animate-view", "title": "AnimateView", "publisher": "Motion", "date": "erişim 2026-10-06" },
+    { "url": "https://github.com/motiondivision/motion/blob/main/CHANGELOG.md", "title": "Motion CHANGELOG (13.4.0: AnimateView)", "publisher": "Motion (GitHub)", "date": "2026-09-14" }
+   ]
+  },
+  {
+   "id": "L4-C11",
+   "category": "Yeni eklenen öğenin girişi (doğrulama mesajı, satır içi uyarı, kaydedildi işareti)",
+   "package": "platform: @starting-style",
+   "repo": "",
+   "verdict": "gerekmez",
+   "version": "Baseline 2024-08-06 (web-features 3.40.1)",
+   "released": "2024-08-06",
+   "stars": "platform özelliği",
+   "role": "React'in Transition dışında eklediği küçük öğeler (form doğrulama mesajı, satır içi uyarı, kaydedildi işareti) ilk çizimde @starting-style'daki değerden son stile saydamlık ve küçük kaydırmayla girer.",
+   "why": "@starting-style yeni eklenen öğede kendiliğinden çalışır; React kodu değişmez, startTransition sarmalaması gerekmez. Bu tür küçük öğelerde giriş hareketi yeterli; kaybolurken beklemek kullanıcıyı yavaşlatır, gerçekten çıkış gerekirse Motion AnimatePresence kullanılır.",
+   "compat": "Chrome 117, Firefox 129, Safari 17.5; desteklemeyen tarayıcıda öğe animasyonsuz görünür.",
+   "modern": "2024'ten beri Baseline; eskiden bunun için yükleme sonrası sınıf ekleme hileleri (requestAnimationFrame) gerekirdi.",
+   "risks": "Çok sayıda öğe aynı anda eklenirse hareket kalabalıklaşır; listelerde Motion kullanılır.",
+   "sources": [
+    { "url": "https://webstatus.dev/features/starting-style", "title": "@starting-style: Baseline durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2024-08-06" },
+    { "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/@starting-style", "title": "@starting-style", "publisher": "MDN", "date": "erişim 2026-10-06" }
+   ]
+  },
+  {
+   "id": "L4-C12",
+   "category": "JS animasyon motoru (çıkış, düzen, ortak öğe)",
+   "package": "motion",
+   "repo": "motiondivision/motion",
+   "verdict": "seçildi",
+   "version": "14.0.0",
+   "released": "2026-10-02",
+   "stars": "33.767 (ecosyste.ms)",
+   "role": "CSS'in ve React ViewTransition'ın iyi yapamadığı işler için tek JS kütüphanesi: liste ve tablo satırlarının kesilebilir yer değiştirmesi (layout), React'in kaldırdığı özel öğelerin çıkışı (AnimatePresence), ortak öğe göstergesi (layoutId). motion/react-m'deki m bileşeni ve LazyMotion ile yüklenir; özellik paketi (domAnimation +15 kB, düzen için domMax +25 kB) ilk çizimden sonra dinamik import ile ve yalnız gereken ekranda gelir. Kökte MotionConfig reducedMotion='user'.",
+   "why": "Yıldız 33.767; haftalık indirme motion 28,3 milyon, eski adıyla framer-motion 58,5 milyon; son sürüm 14.0.0 (2026-10-02), son commit 2026-10-05, 13.x serisinde Ağustos ile Ekim 2026 arasında sık sürüm. 14.0.0 yalnız framer-motion 13.0 ile 13.4 arası uyumluluk için tutulan iç API'leri kaldırdı, kullanıcı API'si değişmedi; 13.5.0'da m bileşeni yüzde 20 küçüldü. Rakiplerinden farkı çıkış, layout (FLIP) ve hareket azaltmayı tek yerden vermesi. Konu yanıtı orta: son bir yılda 38 konunun 13'ü kapandı (ortalama 33 gün), 109 PR'ın 66'sı birleşti.",
+   "compat": "14.0.0 peerDependencies react ^18.0.0 || ^19.0.0; React 19.3 için ayrıca AnimateView giriş noktası var. Vite 8 ile ESM, ek eklenti gerekmez. Base UI ile birlikte kullanım belgeli (render prop, keepMounted). Lisans MIT.",
+   "modern": "Framer Motion ve Motion One 11.0'da birleşti; motion paketi aktif geliştirilen güncel ad. LazyMotion ile ilk yük yaklaşık 4,6 kB (belge), tam motion bileşeni 34 kB; paket tamamı bundlephobia'da 46,5 kB gzip (ağaç sallama öncesi).",
+   "risks": "14.0.0 dört günlük: sürüm tam sabitlenmeli (lockfile), sorun çıkarsa 13.5.1'e dönülebilir. framer-motion 13.0 ile 13.4 arasına sabitlenmiş bir bağımlılıkla karışırsa iç API hatası çıkabilir; yalnız motion paketi kullanılmalı. motion bileşeni yerine m kullanılmazsa yük 34 kB'a çıkar; LazyMotion strict kipi açık tutulmalı.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/motion", "title": "motion paket kaydı (14.0.0, 13.0.0 2026-08-05)", "publisher": "npm", "date": "2026-10-02" },
+    { "url": "https://github.com/motiondivision/motion/blob/main/CHANGELOG.md", "title": "Motion CHANGELOG (14.0.0, 13.5.0, 13.4.0, 13.1.0, 13.0.0)", "publisher": "Motion (GitHub)", "date": "2026-10-02" },
+    { "url": "https://motion.dev/docs/react-reduce-bundle-size", "title": "Reduce bundle size", "publisher": "Motion", "date": "erişim 2026-10-06" },
+    { "url": "https://motion.dev/docs/react-accessibility", "title": "Accessibility (reducedMotion)", "publisher": "Motion", "date": "erişim 2026-10-06" },
+    { "url": "https://repos.ecosyste.ms/api/v1/hosts/GitHub/repositories/motiondivision%2Fmotion", "title": "motiondivision/motion depo verisi", "publisher": "ecosyste.ms", "date": "2026-10-06" },
+    { "url": "https://uithings.com/framer-motion", "title": "Framer Motion: Layout, Exits, and When CSS Wins", "publisher": "uithings.com (blog)", "date": "erişim 2026-10-06" }
+   ]
+  },
+  {
+   "id": "L4-C13",
+   "category": "JS animasyon motoru (çıkış, düzen, ortak öğe)",
+   "package": "@react-spring/web",
+   "repo": "pmndrs/react-spring",
+   "verdict": "ikinci",
+   "version": "10.1.2 (11.0.0-beta.1 beta etiketinde)",
+   "released": "2026-06-24",
+   "stars": "29.165 (ecosyste.ms)",
+   "role": "Yay fiziğine dayalı useSpring ve useTransition (v11 betasında usePresence) ile giriş, çıkış ve geçişler.",
+   "why": "Bakımı sürüyor: son bir yılda 178 PR'ın 151'i birleşti, 11.0.0-beta.1 2026-10-01'de çıktı, React 19 desteği 10.0.0 ile geldi (2025-05-14). İkinci kaldı, çünkü Motion'daki gibi hazır layout (FLIP) animasyonu yok, çıkış API'si v11'de yeniden yazılıyor (useTransition kullanımdan kalkıyor, usePresence ve usePresenceList geliyor), haftalık indirme 6,4 milyon ile Motion'un çok gerisinde, konu kapanma ortalaması 51 gün (son bir yılda 12 konunun 6'sı kapandı).",
+   "compat": "peerDependencies react ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0; @react-spring/web 10.1.2 bundlephobia'da 19,6 kB gzip. Lisans MIT.",
+   "modern": "Yay fiziği güçlü, ama API bir geçiş döneminde.",
+   "risks": "v11 kararlı olunca kırıcı değişiklikler gelecek (onRest davranışı, olay işleyici tipleri).",
+   "sources": [
+    { "url": "https://registry.npmjs.org/@react-spring%2Fweb", "title": "@react-spring/web paket kaydı", "publisher": "npm", "date": "2026-06-24" },
+    { "url": "https://github.com/pmndrs/react-spring/releases", "title": "react-spring releases (v11.0.0-beta.1)", "publisher": "GitHub (pmndrs)", "date": "2026-10-01" }
+   ]
+  },
+  {
+   "id": "L4-C14",
+   "category": "JS animasyon motoru (çıkış, düzen, ortak öğe)",
+   "package": "gsap",
+   "repo": "greensock/GSAP",
+   "verdict": "reddedildi",
+   "version": "3.15.0",
+   "released": "2026-04-13",
+   "stars": "28.729 (ecosyste.ms)",
+   "role": "Zaman çizelgesi (timeline), kaydırmaya bağlı sahneler, SVG ve metin animasyonları.",
+   "why": "Bu panelde zaman çizelgesi, kaydırma tetikli sahne ya da SVG biçim değiştirme yok; 26,7 kB gzip çekirdek (bundlephobia) ve emir kipindeki useGSAP kancası bildirimsel React bileşenlerine göre aşırı. 30 Nisan 2025'ten beri Webflow'un 'Standard no charge' lisansıyla eklentiler dahil ticari kullanım ücretsiz, ama lisans OSI onaylı açık kaynak değil ve Webflow'a rakip kodsuz görsel animasyon araçlarında kullanımı yasaklıyor. @gsap/react son sürümü 2.1.2 (2025-01-15).",
+   "compat": "React ile @gsap/react üzerinden çalışır; teknik engel yok, gerekçe aşırılık ve lisans.",
+   "modern": "Aktif (3.15.0, Nisan 2026) ve tümüyle ücretsiz oldu, ama pazarlama sitesi tipi işler için tasarlanmış.",
+   "risks": "Kapalı lisans koşulları sahibin (Webflow) kararıyla değişebilir; GitHub'daki dış katkılar fiilen birleşmiyor (son bir yılda 2 PR, 0 birleşme; 5 konunun 2'si kapandı).",
+   "sources": [
+    { "url": "https://gsap.com/standard-license", "title": "GSAP Standard 'No Charge' License", "publisher": "GSAP (Webflow)", "date": "2025-05-30" },
+    { "url": "https://registry.npmjs.org/gsap", "title": "gsap paket kaydı", "publisher": "npm", "date": "2026-04-13" },
+    { "url": "https://news.ycombinator.com/item?id=44236992", "title": "Animate a mesh across a sphere's surface (yorum: Webflow satın aldı, ek özellikler ücretsiz)", "publisher": "Hacker News", "date": "2025-06-10" },
+    { "url": "https://bundlephobia.com/package/gsap@3.15.0", "title": "gsap 3.15.0 boyut", "publisher": "bundlephobia", "date": "erişim 2026-10-06" }
+   ]
+  },
+  {
+   "id": "L4-C15",
+   "category": "JS animasyon motoru (çıkış, düzen, ortak öğe)",
+   "package": "animejs",
+   "repo": "juliangarnier/anime",
+   "verdict": "reddedildi",
+   "version": "4.5.0 (5.0.0-beta.2 beta etiketinde)",
+   "released": "2026-06-22",
+   "stars": "73.247 (ecosyste.ms)",
+   "role": "Çerçeveden bağımsız, emir kipinde genel animasyon motoru (zaman çizelgesi, SVG, metin).",
+   "why": "Yıldızı en yüksek aday ama React için bildirimsel bileşen, çıkış ve layout desteği yok; useEffect içinde emir kipinde yazılıyor. Konu yanıtı zayıf: son bir yılda 25 konunun 3'ü kapandı, 19 PR'ın 1'i birleşti. 5.0.0 betası yolda (yeni büyük sürüm geçişi). Paket tamamı bundlephobia'da 39,3 kB gzip (v4 modüler, kısmi içe aktarma daha küçük). Bu panel için aşırı.",
+   "compat": "React 19 ile çalışır ama entegrasyon elle yazılır. Lisans MIT.",
+   "modern": "v4 (2025-04-03) modern ESM yazımı, ama ihtiyacımızın dışında.",
+   "risks": "v5 geçişi, düşük konu yanıtı.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/animejs", "title": "animejs paket kaydı", "publisher": "npm", "date": "2026-06-22" },
+    { "url": "https://github.com/juliangarnier/anime/releases", "title": "anime.js releases (v4.5.0)", "publisher": "GitHub", "date": "2026-06-22" }
+   ]
+  },
+  {
+   "id": "L4-C16",
+   "category": "JS animasyon motoru (çıkış, düzen, ortak öğe)",
+   "package": "react-transition-group",
+   "repo": "reactjs/react-transition-group",
+   "verdict": "reddedildi",
+   "version": "4.4.5",
+   "released": "2022-08-01",
+   "stars": "10.215 (ecosyste.ms)",
+   "role": "CSSTransition ve TransitionGroup ile giriş ve çıkış sınıfları eklemek.",
+   "why": "Son sürüm 2022-08-01, son commit 2022-12-03 (commits.atom); dört yıldır yeni sürüm yok. nodeRef verilmezse findDOMNode'a başvuruyor, findDOMNode ise React 19'da kaldırıldı; her kullanımda elle ref zorunlu. Haftalık 65,6 milyon indirme eski bağımlılıklardan geliyor, güncel bir tercih göstergesi değil.",
+   "compat": "React 19'da yalnız nodeRef ile çalışır.",
+   "modern": "Eski (2016 dönemi API).",
+   "risks": "Bakımsız; React'in sonraki sürümlerinde kırılma.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/react-transition-group", "title": "react-transition-group paket kaydı", "publisher": "npm", "date": "2022-08-01" },
+    { "url": "https://react.dev/blog/2024/04/25/react-19-upgrade-guide", "title": "React 19 Upgrade Guide (findDOMNode kaldırıldı)", "publisher": "React ekibi (react.dev)", "date": "2024-04-25" }
+   ]
+  },
+  {
+   "id": "L4-C17",
+   "category": "Liste ve tablo hareketi (ekleme, silme, yeniden sıralama)",
+   "package": "motion",
+   "repo": "motiondivision/motion",
+   "verdict": "seçildi",
+   "version": "14.0.0",
+   "released": "2026-10-02",
+   "stars": "33.767 (ecosyste.ms)",
+   "role": "Onay listesi, düzeltmeler ve yoklama tablosunda satır eklenince girer, onaylanınca veya silinince çıkar, sıralama değişince yer değiştirir: m.li ve m.tr üzerinde layout ile AnimatePresence mode='popLayout'.",
+   "why": "Layout animasyonları kesilebilir: eğitmen art arda hızlı onay verdiğinde her satır o anki görünür konumundan yeni yerine akar. Aynı işi View Transitions ile yapmak belge başına tek geçiş sınırına takılır, yenisi eskisini sona atlatır; Motion belgesi de görünüm geçişlerinin kesilemediğini açıkça yazıyor. JS motoru seçimiyle (L4-C12) aynı paket, ek bağımlılık yok.",
+   "compat": "layout animasyonu domMax paketinde (+25 kB); yalnız liste ekranlarında LazyMotion features ile dinamik yüklenir. Tablo satırlarında yalnız transform kullanılır; hücre genişlikleri sabit tutulmalı.",
+   "modern": "13.1.0'da Reorder çok boyutlu sıralama ve RTL desteği aldı; layout motoru güncel bakımda.",
+   "risks": "Yüzlerce satırlık tablolarda layout ölçümü maliyetli; sanal liste kullanılan yerde hareket kapatılmalı ya da yalnız görünen satırlara uygulanmalı.",
+   "sources": [
+    { "url": "https://motion.dev/docs/react-reduce-bundle-size", "title": "Reduce bundle size (domMax ve layout)", "publisher": "Motion", "date": "erişim 2026-10-06" },
+    { "url": "https://motion.dev/docs/react-animate-view", "title": "AnimateView (görünüm geçişleri kesilemez notu)", "publisher": "Motion", "date": "erişim 2026-10-06" },
+    { "url": "https://developer.chrome.com/blog/view-transitions-misconceptions", "title": "Misconceptions about view transitions (aynı anda tek geçiş)", "publisher": "Chrome for Developers (Bramus)", "date": "2024-07-11" }
+   ]
+  },
+  {
+   "id": "L4-C18",
+   "category": "Liste ve tablo hareketi (ekleme, silme, yeniden sıralama)",
+   "package": "@formkit/auto-animate",
+   "repo": "formkit/auto-animate",
+   "verdict": "ikinci",
+   "version": "0.10.0",
+   "released": "2026-07-10",
+   "stars": "13.926 (ecosyste.ms)",
+   "role": "Üst öğeye tek ref (useAutoAnimate) verip doğrudan çocukların eklenme, silinme ve taşınmasını kendiliğinden canlandırmak.",
+   "why": "En küçük çözüm (bundlephobia'da 3,2 kB gzip) ve prefers-reduced-motion ayarına kendiliğinden uyuyor. İkinci kaldı: 1.0 öncesi (0.10.0), konu yanıtı zayıf (son bir yılda 7 konunun hiçbiri kapanmadı, 6 PR'ın 1'i birleşti), yalnız doğrudan çocuklarda çalışıyor, üst öğeye position: relative ekliyor ve belgesi esnek kutuda (flex) boyut sorunu olabileceğini yazıyor. Motion zaten yüklüyken ayrıca eklemeye değmez; Motion'dan vazgeçilirse ilk aday.",
+   "compat": "Çerçeveden bağımsız; React kancası @formkit/auto-animate/react içinde, React 19 ile çalışır. Lisans MIT.",
+   "modern": "Sıfır ayar yaklaşımı güncel, ama gelişim yavaş.",
+   "risks": "Tablo satırlarında (tr) çıkış sırasında düzen kayması olabilir; kullanılacaksa prototipte denenmeli.",
+   "sources": [
+    { "url": "https://auto-animate.formkit.com/", "title": "AutoAnimate belgeleri", "publisher": "FormKit", "date": "erişim 2026-10-06" },
+    { "url": "https://registry.npmjs.org/@formkit%2Fauto-animate", "title": "@formkit/auto-animate paket kaydı", "publisher": "npm", "date": "2026-07-10" }
+   ]
+  },
+  {
+   "id": "L4-C19",
+   "category": "Liste ve tablo hareketi (ekleme, silme, yeniden sıralama)",
+   "package": "react-flip-toolkit",
+   "repo": "aholachek/react-flip-toolkit",
+   "verdict": "reddedildi",
+   "version": "7.2.4",
+   "released": "2024-07-06",
+   "stars": "4.186 (ecosyste.ms)",
+   "role": "FLIP tekniğiyle liste ve düzen geçişleri.",
+   "why": "Son sürüm ve son commit 2024-07-06; son bir yılda hiç konu ya da PR hareketi yok (iki yıldır durgun). FLIP işini artık Motion layout ve View Transitions yapıyor.",
+   "compat": "peerDependencies react >= 16.x; son sürüm (2024-07-06) React 19'un kararlı çıkışından (Aralık 2024) önce, React 19 için sürüm notu yok.",
+   "modern": "Eski; yerini layout motorları aldı.",
+   "risks": "Bakımsız.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/react-flip-toolkit", "title": "react-flip-toolkit paket kaydı", "publisher": "npm", "date": "2024-07-06" }
+   ]
+  },
+  {
+   "id": "L4-C20",
+   "category": "Yükseklik açma kapama (akordeon, filtre paneli, ayrıntı)",
+   "package": "platform: grid-template-rows 0fr/1fr geçişi",
+   "repo": "",
+   "verdict": "gerekmez",
+   "version": "grid-animation Baseline geniş (2025-04-27; web-features 3.40.1)",
+   "released": "2025-04-27",
+   "stars": "platform özelliği",
+   "role": "Açılır içerik bir grid kabında grid-template-rows 0fr'den 1fr'ye geçerek yüksekliği akıcı açar ve kapar; bileşen kütüphanesinin Accordion veya Collapsible bileşeni kullanılıyorsa kütüphanenin verdiği panel yüksekliği CSS değişkeni kullanılır.",
+   "why": "Bugün üç motorda da çalışan, JS istemeyen yol. interpolate-size ile height: auto geçişi yalnız Chromium'da var (L4-C21). Ayrıntı öğesinin içeriğini seçen ::details-content Baseline 2025-09-16, ama height: auto'ya geçiş yine interpolate-size ister; bu yüzden ayrıntı bölümleri de grid yöntemiyle yazılır.",
+   "compat": "grid-template-rows geçişi: Chrome 107, Firefox 66, Safari 16 (BCD 8.1.4); Baseline ilk 2022-10-27, geniş 2025-04-27. ::details-content: Chrome 131, Firefox 143, Safari 18.4.",
+   "modern": "Yaygın ve kalıcı yöntem; interpolate-size her yere geldiğinde tek satırla değiştirilebilir.",
+   "risks": "Yükseklik geçişi yerleşim (layout) hesaplatır, compositor'da çalışmaz; yalnız küçük paneller için kullanılmalı, büyük kaplarda saydamlık ve kaydırma tercih edilmeli.",
+   "sources": [
+    { "url": "https://webstatus.dev/features/grid-animation", "title": "Grid animation (grid-template-rows ve columns geçişi): Baseline durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2025-04-27" },
+    { "url": "https://webstatus.dev/features/details-content", "title": "::details-content: Baseline durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2025-09-16" },
+    { "url": "https://webstatus.dev/features/interpolate-size", "title": "interpolate-size: destek durumu (limited)", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "erişim 2026-10-06" }
+   ]
+  },
+  {
+   "id": "L4-C21",
+   "category": "Yükseklik açma kapama (akordeon, filtre paneli, ayrıntı)",
+   "package": "platform: interpolate-size: allow-keywords",
+   "repo": "",
+   "verdict": "reddedildi",
+   "version": "Chrome ve Edge 129 (BCD 8.1.4)",
+   "released": "Chrome 129 (2024)",
+   "stars": "platform özelliği",
+   "role": ":root { interpolate-size: allow-keywords } ile height: auto ve calc-size() üzerinden doğrudan yükseklik geçişi.",
+   "why": "Ana yöntem olamaz: yalnız Chrome ve Edge 129 ve üstünde var, Firefox ve Safari'de yok (BCD 8.1.4; web-features 3.40.1 'limited', deneysel). Bir Hacker News yorumu (2026-02-16) bunu tüm tarayıcılarda çalışıyor diye sunan bir sitenin MDN'e göre yanlış olduğunu gösteriyor. İlerleyici iyileştirme olarak eklenebilir; desteklemeyen tarayıcıda açılış anında olur.",
+   "compat": "Chrome 129, Edge 129, Chrome Android 129; Firefox yok, Safari yok.",
+   "modern": "En yeni yöntem, ama tek motorda.",
+   "risks": "Tek başına kullanılırsa Firefox ve Safari kullanıcılarında akordeonlar hareketsiz kalır.",
+   "sources": [
+    { "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/interpolate-size", "title": "interpolate-size", "publisher": "MDN", "date": "erişim 2026-10-06" },
+    { "url": "https://webstatus.dev/features/interpolate-size", "title": "interpolate-size: destek durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "erişim 2026-10-06" },
+    { "url": "https://news.ycombinator.com/item?id=47033918", "title": "Modern CSS Code Snippets (yorum: interpolate-size her tarayıcıda yok)", "publisher": "Hacker News", "date": "2026-02-16" }
+   ]
+  },
+  {
+   "id": "L4-C22",
+   "category": "Sayı geçişi (canlı yoklama sayacı, özet kartları)",
+   "package": "platform: düz metin + aria-live",
+   "repo": "",
+   "verdict": "gerekmez",
+   "version": "WAI-ARIA 1.2",
+   "released": "2023-06-06",
+   "stars": "platform özelliği",
+   "role": "Oturum sürerken katılan sayısı ve özet kartlarındaki sayılar düz metin olarak güncellenir; değişimde kısa bir renk vurgusu CSS ile verilir, ekran okuyucuya aria-live='polite' ile bildirilir.",
+   "why": "Sayı değişimi kullanıcının yaptığı bir etkileşim değil; yuvarlanan rakam görsel bir süs. Projeksiyon sayfası yalnız QR gösterdiği için orada da gerekmez. Ek bağımlılık olmadan erişilebilir.",
+   "compat": "Tüm tarayıcılar ve ekran okuyucular.",
+   "modern": "Basit ve kalıcı.",
+   "risks": "Sahip canlı sayaçta rakam hareketi isterse NumberFlow eklenir (L4-C23).",
+   "sources": [
+    { "url": "https://www.w3.org/TR/wai-aria-1.2/#aria-live", "title": "WAI-ARIA 1.2: aria-live", "publisher": "W3C", "date": "2023-06-06" }
+   ]
+  },
+  {
+   "id": "L4-C23",
+   "category": "Sayı geçişi (canlı yoklama sayacı, özet kartları)",
+   "package": "@number-flow/react",
+   "repo": "barvian/number-flow",
+   "verdict": "ikinci",
+   "version": "0.6.2",
+   "released": "2026-07-18",
+   "stars": "7.726 (ecosyste.ms)",
+   "role": "Sayı değişince rakamları yuvarlayarak geçiren bileşen; Intl.NumberFormat ile tr-TR biçimi.",
+   "why": "Bakımlı (son bir yılda 7 konunun 6'sı kapandı, ortalama 22 gün), haftalık 2,3 milyon indirme, bundlephobia'da 6,1 kB gzip; respectMotionPreference varsayılanı açık, yani hareket azaltmaya kendiliğinden uyuyor. 1.0 öncesi; Latin dışı rakam ve sağdan sola dilleri desteklemiyor (Türkçe için sorun değil). Yalnız sahip canlı sayaçta hareket isterse eklenir.",
+   "compat": "peerDependencies react ^18 || ^19, react-dom ^18 || ^19; altta özel öğe (custom element). Lisans MIT.",
+   "modern": "Web Animations tabanlı güncel bir bileşen.",
+   "risks": "1.0 öncesi API değişikliği; arka plan ve kenarlık geçiş sırasında yumuşak ölçeklenmiyor (belge notu), sivri köşeli kart tasarımında görsel denenmeli.",
+   "sources": [
+    { "url": "https://number-flow.barvian.me/", "title": "NumberFlow belgeleri", "publisher": "barvian", "date": "erişim 2026-10-06" },
+    { "url": "https://registry.npmjs.org/@number-flow%2Freact", "title": "@number-flow/react paket kaydı", "publisher": "npm", "date": "2026-07-18" }
+   ]
+  },
+  {
+   "id": "L4-C24",
+   "category": "Kaydırma",
+   "package": "platform: scroll-behavior: smooth",
+   "repo": "",
+   "verdict": "gerekmez",
+   "version": "Baseline geniş (2024-09-14)",
+   "released": "2024-09-14",
+   "stars": "platform özelliği",
+   "role": "Sayfa içi bağlantı, hata alanına odaklanma ve 'başa dön' gibi programlı kaydırmalar CSS scroll-behavior: smooth ile, yalnız @media (prefers-reduced-motion: no-preference) içinde.",
+   "why": "Fare tekerleği ve dokunmatik kaydırma tarayıcıya bırakılır; kullanıcının alıştığı hız ve ivme bozulmaz. Programlı kaydırmanın yumuşaması için platform yeterli.",
+   "compat": "Chrome 61, Firefox 36, Safari 15.4; Baseline geniş destek 2024-09-14.",
+   "modern": "Kalıcı platform çözümü.",
+   "risks": "Hareket azaltma koşulu unutulursa uzun kaydırmalar bu ayarı açmış kullanıcıyı rahatsız eder.",
+   "sources": [
+    { "url": "https://webstatus.dev/features/scroll-behavior", "title": "scroll-behavior: Baseline durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2024-09-14" }
+   ]
+  },
+  {
+   "id": "L4-C25",
+   "category": "Kaydırma",
+   "package": "lenis",
+   "repo": "darkroomengineering/lenis",
+   "verdict": "reddedildi",
+   "version": "1.3.26 (2.0.0-dev.5 dev etiketinde)",
+   "released": "2026-08-05",
+   "stars": "16.166 (ecosyste.ms)",
+   "role": "Tekerlek ve dokunmatik kaydırmayı JS ile ele alıp yumuşatan 'smooth scroll' kütüphanesi.",
+   "why": "Kullanıcının kaydırmasını ele geçiriyor (scrolljacking): işletim sisteminin kaydırma hızı ve ivmesi değişir, form ve tablo yoğun bir yönetim panelinde okuma ve tarama hızını düşürür. Sahibin 'her şey yumuşak olsun' isteği etkileşim geri bildirimi içindir, kullanıcının alıştığı kaydırmayı değiştirmek için değil. Paket bakımlı (1.3.26, 2026-08-05; 5,3 kB gzip); ret gerekçesi kalite değil, uygunluk.",
+   "compat": "React 17 ve üstüyle çalışır; teknik engel yok.",
+   "modern": "Pazarlama ve vitrin sitelerinde popüler; uygulama arayüzlerinde değil.",
+   "risks": "Erişilebilirlik şikâyeti ve klavye ile kaydırmada beklenmedik davranış.",
+   "sources": [
+    { "url": "https://registry.npmjs.org/lenis", "title": "lenis paket kaydı", "publisher": "npm", "date": "2026-08-05" },
+    { "url": "https://webdesignerdepot.com/how-scrolljacking-breaks-ux-fundamentals/", "title": "How Scrolljacking Breaks UX Fundamentals", "publisher": "Webdesigner Depot", "date": "erişim 2026-10-06" }
+   ]
+  },
+  {
+   "id": "L4-C26",
+   "category": "Hareket azaltma",
+   "package": "platform: prefers-reduced-motion + MotionConfig",
+   "repo": "",
+   "verdict": "gerekmez",
+   "version": "prefers-reduced-motion Baseline geniş (2022-07-15)",
+   "released": "2022-07-15",
+   "stars": "platform özelliği",
+   "role": "Tek kural seti: CSS'te @media (prefers-reduced-motion: reduce) altında transform ve konum hareketleri kapanır, renk ve saydamlık geçişleri kısa kalır, ::view-transition-group(*), ::view-transition-old(*) ve ::view-transition-new(*) animasyonları kapatılır (yönlendirici ve React geçişlerinin ikisini de kapsar); Motion için kökte <MotionConfig reducedMotion='user'>, özel durumlarda useReducedMotion.",
+   "why": "Ayar uygulama içinde değil, işletim sistemi ve tarayıcıdan gelir; plan.html'deki 'uygulama içi erişilebilirlik ayarı yok, cihaz ayarı izlenir' kararıyla uyumlu. Motion'da reducedMotion='user' tüm motion bileşenlerinde transform ve layout animasyonlarını kapatıp opacity ve backgroundColor geçişini korur. WCAG 2.2 SC 2.3.3 (AAA) etkileşimden doğan hareketin kapatılabilmesini ister; hedef AA olsa da tasarım isteği bunu kapsar.",
+   "compat": "prefers-reduced-motion: Chrome 74, Firefox 63, Safari 10.1; Baseline geniş 2022-07-15. MotionConfig motion 14.0.0'da.",
+   "modern": "Kalıcı platform ve kütüphane çözümü.",
+   "risks": "Yükleme iskeleti parıltısı gibi sürekli döngüler unutulursa ayarı açan kullanıcıyı rahatsız eder; döngüsel animasyonlar da aynı medya sorgusuyla durdurulmalı.",
+   "sources": [
+    { "url": "https://motion.dev/docs/react-accessibility", "title": "Accessibility (MotionConfig reducedMotion)", "publisher": "Motion", "date": "erişim 2026-10-06" },
+    { "url": "https://webstatus.dev/features/prefers-reduced-motion", "title": "prefers-reduced-motion: Baseline durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2022-07-15" },
+    { "url": "https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html", "title": "Understanding SC 2.3.3: Animation from Interactions", "publisher": "W3C WAI", "date": "erişim 2026-10-06" },
+    { "url": "https://developer.chrome.com/blog/view-transitions-misconceptions", "title": "Misconceptions about view transitions (hareket azaltma notu)", "publisher": "Chrome for Developers (Bramus)", "date": "2024-07-11" }
+   ]
+  },
+  {
+   "id": "L4-C27",
+   "category": "Performans kuralları",
+   "package": "platform: transform, opacity, will-change",
+   "repo": "",
+   "verdict": "gerekmez",
+   "version": "will-change ve Web Animations Baseline geniş",
+   "released": "2023-03-16",
+   "stars": "platform özelliği",
+   "role": "Animasyonlar yalnız transform ve opacity üzerinde yapılır; width, height, top, left, box-shadow ve filter canlandırılmaz (gölge değişimi için gölgeli ayrı bir katmanın opacity'si değişir); will-change yalnız animasyondan hemen önce eklenir ve sonra kaldırılır; projeksiyon sayfası ve ilk açılış animasyon kütüphanesi yüklemez.",
+   "why": "web.dev rehberi: transform ve opacity birleştirici aşamasında çalışır, yerleşim ve boyama gerektirmez; will-change katman oluşturduğu için erken ve her yerde kullanılmamalı, değişim olacağı an eklenmeli. MDN de will-change'i son çare olarak tanımlıyor. Düşük donanımlı okul bilgisayarlarında akıcılığın yolu bu kurallar; kütüphane gerektirmez.",
+   "compat": "will-change Baseline geniş (2022-07-15); Web Animations Baseline geniş (2023-03-16).",
+   "modern": "Kalıcı kurallar.",
+   "risks": "Kural kod incelemesinde denetlenmezse yavaş yavaş bozulur; stil denetleyicide (stylelint) transition-property için izin listesi tutulmalı.",
+   "sources": [
+    { "url": "https://web.dev/articles/animations-guide", "title": "How to create high-performance CSS animations", "publisher": "web.dev (Kayce Basques, Rachel Andrew)", "date": "2020-10-06" },
+    { "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/will-change", "title": "will-change", "publisher": "MDN", "date": "erişim 2026-10-06" },
+    { "url": "https://webstatus.dev/features/web-animations", "title": "Web Animations: Baseline durumu", "publisher": "webstatus.dev (web-features 3.40.1)", "date": "2023-03-16" }
+   ]
+  }
+ ],
+ "stack": [
+  { "category": "Etkileşim geri bildirimi (hover, basma, odak)", "pick": "platform: CSS transition + linear()", "second": "", "note": "Kütüphane yok. Süre ve eğri jetonları CSS değişkeni; hover yalnız (hover: hover) and (pointer: fine) içinde; telefonla ortak yay değerleri spring.js ile linear() dizgesine çevrilir." },
+  { "category": "Açılır katmanlar (dialog, popover, menü, yan panel, bildirim)", "pick": "platform: bileşen kütüphanesi durum öznitelikleri + @starting-style", "second": "motion", "note": "Çıkışı başsız bileşen kütüphanesi yönetir (Base UI data-ending-style ile transition). Yerel display ve overlay geçişine tek başına güvenilmez: Firefox display geçişi yok, overlay yalnız Chromium'da." },
+  { "category": "Sayfa (rota) geçişi", "pick": "@tanstack/react-router", "second": "react", "note": "defaultViewTransition ve types işleviyle yöne göre hareket; sorgu parametresi değişiminde false. Eski tarayıcıda anında gezinme. Yönlendirici gezinmeleri React Transition'ı yapınca (#8345) React ViewTransition'a geçiş değerlendirilir." },
+  { "category": "Sayfa içi durum geçişi (sekme içeriği, yükleme, filtre sonucu)", "pick": "react", "second": "motion", "note": "React 19.3 ViewTransition, startTransition ve Suspense ile; react ve react-dom 19.3.0'a sabitlenir. Ek bayt yok." },
+  { "category": "Yeni eklenen öğenin girişi (doğrulama mesajı, satır içi uyarı, kaydedildi işareti)", "pick": "platform: @starting-style", "second": "", "note": "Transition dışı küçük eklemeler için yalnız giriş hareketi." },
+  { "category": "JS animasyon motoru (çıkış, düzen, ortak öğe)", "pick": "motion", "second": "@react-spring/web", "note": "Tek JS animasyon bağımlılığı. motion/react-m (m) ve LazyMotion strict; domAnimation veya domMax dinamik import ile ve yalnız gereken ekranda. 14.0.0 tam sabitlenir, geri dönüş 13.5.1." },
+  { "category": "Liste ve tablo hareketi (ekleme, silme, yeniden sıralama)", "pick": "motion", "second": "@formkit/auto-animate", "note": "layout ve AnimatePresence mode='popLayout'; kesilebilir hareket hızlı onaylarda gerekli. Uzun ve sanal listelerde kapatılır." },
+  { "category": "Yükseklik açma kapama (akordeon, filtre paneli, ayrıntı)", "pick": "platform: grid-template-rows 0fr/1fr geçişi", "second": "", "note": "interpolate-size yalnız ilerleyici iyileştirme; ana yöntem değil." },
+  { "category": "Sayı geçişi (canlı yoklama sayacı, özet kartları)", "pick": "platform: düz metin + aria-live", "second": "@number-flow/react", "note": "Rakam hareketi istenirse NumberFlow (tr-TR, hareket azaltmaya uyar)." },
+  { "category": "Kaydırma", "pick": "platform: scroll-behavior: smooth", "second": "", "note": "Yalnız programlı kaydırma ve yalnız prefers-reduced-motion: no-preference altında; kaydırmayı ele geçiren kütüphane yok." },
+  { "category": "Hareket azaltma", "pick": "platform: prefers-reduced-motion + MotionConfig", "second": "", "note": "CSS medya sorgusu, ::view-transition-* kapatma ve MotionConfig reducedMotion='user' tek yerde tanımlanır." },
+  { "category": "Performans kuralları", "pick": "platform: transform, opacity, will-change", "second": "", "note": "Yalnız transform ve opacity; will-change geçici; projeksiyon sayfası ve ilk açılış animasyon kütüphanesi yüklemez." }
+ ],
+ "open_questions": [
+  "Bileşen kütüphanesi (Base UI, Radix veya React Aria) henüz seçilmedi ve açılır katmanların CSS'i buna bağlı: Base UI transition ile (data-starting-style, data-ending-style), Radix çıkışta CSS keyframe animasyonu ile çalışır. Seçim hangisi olacak?",
+  "Motion 14.0.0 dört günlük; kullanıcı API'si değişmedi ama 14.0.x yamaları gelene kadar 13.5.1'e mi sabitlensin, yoksa doğrudan 14 mü kullanılsın?",
+  "React 19.3.0'a yükseltme onaylanıyor mu? Sayfa içi geçişler için ViewTransition bunu gerektiriyor; yükseltme olmazsa Motion AnimatePresence (ikinci seçenek) kullanılır ve sayfa içi ekranlarda da domAnimation yüklenir.",
+  "TanStack Router gezinmeleri React Transition'ı olarak işlemeye başlarsa (GitHub tartışması #8345) rota geçişi yönlendiricinin defaultViewTransition seçeneğinden React ViewTransition'a taşınsın mı?",
+  "Rota geçişinde yöne göre kaydırma mı, yoksa yalnız kısa çapraz geçiş mi isteniyor? Sahip panel animasyonlarını ayrıca konuşacağını söyledi; süre ve yön kararı o konuşmaya bırakılabilir.",
+  "Kurum bilgisayarlarındaki tarayıcı sürümleri bilinmiyor; eski veya uzun destekli (ESR) sürümlerde View Transitions ve @starting-style yoksa geçişler anında olur. Hedef tarayıcı listesi (browserslist) ne olacak?",
+  "Canlı yoklama sayacında rakam hareketi (NumberFlow) isteniyor mu, yoksa düz metin ve kısa renk vurgusu yeterli mi?"
+ ]
+}

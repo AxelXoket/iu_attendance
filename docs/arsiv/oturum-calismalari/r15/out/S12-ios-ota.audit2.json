@@ -1,0 +1,521 @@
+{
+ "verdicts": [
+  {
+   "id": "S12-F1",
+   "verdict": "CONFIRMED",
+   "note": "Apple states the 90 days run from upload and that an expired beta cannot be opened. The research's 'a pilot semester is longer than 90 days' is backed by İÜ's own regulation: a semester is 14 weeks including midterms (98 days), and finals come after. So at least one new TestFlight build per semester is unavoidable, which contradicts line 513 for the TestFlight phase. TestFlight 3 automatic updates exist as stated.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://testflight.apple.com/",
+     "quote": "Each build is available to test for up to 90 days, starting from the day the developer uploads their build.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://testflight.apple.com/",
+     "quote": "When the testing period is over, you'll no longer be able to open the beta build.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview",
+     "quote": "Your build becomes unavailable for testers after 90 days.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://www.resmigazete.gov.tr/eskiler/2025/09/20250928-2.htm",
+     "quote": "Bir yarıyıl, ara sınavlar dahil on dört haftadır.",
+     "date": "2025-09-28"
+    }
+   ]
+  },
+  {
+   "id": "S12-F2",
+   "verdict": "CONFIRMED",
+   "note": "Guideline 2.1(a) and the App Review Information page say exactly what the research quotes, and the conflicts with lines 66, 69, 84 and 87 are real. TestFlight needs the full review only for the first build, App Store needs it for every version. Two gaps in the recommendation are listed under recommendation_issues. The authgear source is secondary and only corroborates.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/app-store/review/guidelines/",
+     "quote": "include demo account info (and turn on your back-end service!) if your app includes a login. If you are unable to provide a demo account due to legal or security obligations, you may include a built-in demo mode in lieu of a demo account with prior approval by Apple.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://developer.apple.com/help/app-store-connect/reference/app-review-information",
+     "quote": "The demo account is used during the App Review process and must not expire.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview",
+     "quote": "A review is required only for the first build. Subsequent builds may not require a full review.",
+     "date": "2026-10-05 (accessed)"
+    }
+   ]
+  },
+  {
+   "id": "S12-F3",
+   "verdict": "CONFIRMED",
+   "note": "All four facts check out (transfer breaks keychain access, waiver only for legal entities, AUZEF publishes under İÜ's faculty name, no account-type limit on the unlisted page). There is stronger primary evidence than the absence on the unlisted page: Apple's unlisted distribution tech talk says an individual account can submit and manage unlisted apps. That settles the open sentence in line 496. Missing context: with an individual account Apple shows the owner's legal name as the seller (see misses).",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/help/app-store-connect/transfer-an-app/overview-of-app-transfer",
+     "quote": "After the update, users must re-login once as the app cannot retrieve the authentication token from the keychain.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://developer.apple.com/forums/thread/706128",
+     "quote": "Keychain access groups from the first two bullets depend on the App ID prefix. If that changes, you lose access to any keychain items in those groups.",
+     "date": "2026-03-31 (Apple DTS post, last update)"
+    },
+    {
+     "url": "https://developer.apple.com/videos/play/tech-talks/10892",
+     "quote": "You use your existing individual or organization developer program account to submit and manage the app on App Store Connect.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://developer.apple.com/support/membership-fee-waiver/",
+     "quote": "Not be an individual, sole proprietor, or single-person business",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://apps.apple.com/us/app/auzef-mobil-uygulama/id1625752422",
+     "quote": "İstanbul Üniversitesi Açık ve Uzaktan Eğitim Fakültesi (developer name)",
+     "date": "2026-10-05 (accessed)"
+    }
+   ]
+  },
+  {
+   "id": "S12-F4",
+   "verdict": "CONFIRMED",
+   "note": "Every fact verified: stateless mode needs EXPO_ACCESS_TOKEN and rejects --rollout-percentage, rollouts need the control plane and are MIT, control-plane publishing uses an xprem API key (EOO_TOKEN), MinIO is archived (last push 2026-04-24), the URL and certificate are embedded at build time, and plan.html line 768 still links github.com/axelmarciano/expo-open-ota. One nuance: xprem's local-storage warning is about several instances, and the page tolerates a single production instance. The stronger reason for a bucket here is bandwidth (see recommendation_issues). Partial answer to the research's open question on PostgreSQL 18: xprem's own docker-compose runs postgres:latest, and the docs set no version floor.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/stateless-mode/overview.md",
+     "quote": "Progressive rollouts: `--rollout-percentage` is rejected with an explicit error, and the dashboard shows no rollout controls.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/storage/local-storage.md",
+     "quote": "If you really want to use it in production, make sure to not have multiple instances of the server running, as the assets are stored locally and not shared between instances.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/eoas/publish-an-update.md",
+     "quote": "EOAS authenticates with `EOO_TOKEN`, the app-scoped API key created in the dashboard.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://api.github.com/repos/minio/minio",
+     "quote": "\"archived\": true, \"pushed_at\": \"2026-04-24T17:54:39Z\"",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/mercuretechnologies/xprem/main/docker-compose.yml",
+     "quote": "image: postgres:latest",
+     "date": "2026-10-05 (accessed)"
+    }
+   ]
+  },
+  {
+   "id": "S12-F5",
+   "verdict": "CORRECTED",
+   "note": "The core risk is confirmed by xprem's own docs: the server signs every manifest with a key held in PostgreSQL, and signing is meant to stop a compromised bucket or CDN, not whoever can publish. The unrecoverable master key, the Enterprise-only IP allowlist and SSO, and the dashboard on the same server are confirmed. Because OTA JavaScript runs inside the binary that App Attest and Play Integrity vouch for, the publish path is part of the attendance trust boundary, so high severity stands. One claim and one recommended step are wrong or unsupported (see correction).",
+   "correction": "Wrong: 'Line 519's offline backup only works if the key is generated outside xprem first.' In the database key store the private key is sealed inside PostgreSQL, so an offline copy of the master key plus the normal backup of the xprem database preserves it. Line 519 should name the xprem master key and the xprem database instead of a key file. Unsupported: 'generate the key with eoas generate-certs and give it to xprem on first boot'. On a control-plane server the documented stores are 'database' (the server generates the pair) and 'aws-secrets-manager' (own pair, adds AWS). Local or environment keys reach the database only through the stateless or v2 migration, and stateless mode needs an Expo access token. The 'not on the internet' part is directly supported: BIND_TO_ADDRESS=127.0.0.1 behind the reverse proxy, and USE_DASHBOARD can stay off.",
+   "evidence": [
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/installation-guide/database-configuration.md",
+     "quote": "xprem signs every update it serves. Your app embeds the matching certificate at build time and verifies that signature before applying an update so a compromised bucket or CDN can't push malicious code to your users.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/installation-guide/database-configuration.md",
+     "quote": "It is the only thing that can decrypt your signing keys, and there is no recovery path. Recovering means generating new signing keys, rebuilding your app, and shipping it through the app stores.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/key-store/keys.md",
+     "quote": "File paths and environment variables are not offered here, because they cannot be provisioned per app for every replica.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/changelog-and-migrations/migrate-from-v2-to-v3.md",
+     "quote": "If your keys were in `local` or `environment` mode, the same key pair is sealed into the database under the master key, so signed manifests keep verifying and no rebuild is needed.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/references/environment-variables.md",
+     "quote": "Address the server listens on. Defaults to `0.0.0.0`, every interface. Set `127.0.0.1` to keep the server on the loopback interface behind a reverse proxy on the same host.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/references/open-core-and-licensing.md",
+     "quote": "Token access rules, which scope an API key to the branches whose names match the patterns you give it, and restrict where it may be used from with an IP allowlist",
+     "date": "2026-10-05 (accessed, listed under Enterprise)"
+    }
+   ]
+  },
+  {
+   "id": "S12-F6",
+   "verdict": "CONFIRMED",
+   "note": "xprem recommends a fixed runtimeVersion and warns about fingerprint mismatches, word for word. The Expo quote is slightly reworded in the research (the page says 'Since the update would make calls...'), with the same meaning. A deterministic guard is suggested under recommendation_issues.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/eoas/publish-an-update.md",
+     "quote": "Bump it before every build that changes native code. This includes native dependencies, config plugins, and files under `ios/` or `android/`.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/eoas/publish-an-update.md",
+     "quote": "CI and local environments can produce different fingerprints for one commit. The only symptom is an update that never arrives.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://docs.expo.dev/eas-update/runtime-versions/",
+     "quote": "Since the update would make calls to code that does not exist inside the build, `expo-updates` may detect an error and attempt to roll back",
+     "date": "2026-07-03"
+    }
+   ]
+  },
+  {
+   "id": "S12-F7",
+   "verdict": "CONFIRMED",
+   "note": "Quotes verified. xprem has three ways back, not one: eoas rollback (to the embedded update), eoas republish, and reverting a rollout (the last two republish an older OTA update). All three run older JavaScript against data written by newer JavaScript, so the rule holds on every path. Expo's own guidance is to fix forward when persistent state changed.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://docs.expo.dev/eas-update/error-recovery/",
+     "quote": "your broken update may, for example, have modified persistent state (such as data stored in AsyncStorage or on the device's file system) in a non-backwards-compatible way.",
+     "date": "2026-05-23"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/eoas/rollback.md",
+     "quote": "A rollback update reverts the application on the specified branch to the embedded update without requiring a new native build.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/eoas/progressive-rollouts.md",
+     "quote": "Revert the rollout. The control update is republished as a new update, so every device converges back on the previous content.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    }
+   ]
+  },
+  {
+   "id": "S12-F8",
+   "verdict": "CONFIRMED",
+   "note": "Updates.updateId is documented as stated. xprem v3.2.4 and later can also write the published update IDs at publish time (--emitMetadata), so the server can map each ID to a release with no extra tool.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://docs.expo.dev/versions/latest/sdk/updates/",
+     "quote": "The UUID that uniquely identifies the currently running update.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/eoas/publish-an-update.md",
+     "quote": "Writes `xprem-update-metadata.json` to the output directory, with the update ID of each published platform. The ID is the value `Updates.updateId` returns on the device.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    }
+   ]
+  },
+  {
+   "id": "S12-F9",
+   "verdict": "CONFIRMED",
+   "note": "Both quotes verified. Side note: even the GitHub path never needed a token, because a server reading a public repo once per cache period stays far under 60 requests per hour. The single release-time file is still the simplest.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://developer.android.com/studio/publish/app-signing",
+     "quote": "When the system is installing an update to an app, it compares the certificate(s) in the new version with those in the existing version. The system allows the update if the certificates match.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens",
+     "quote": "To provide additional security, we highly recommend adding an expiration to your personal access tokens.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+     "quote": "The primary rate limit for unauthenticated requests is 60 requests per hour.",
+     "date": "2026-10-05 (accessed)"
+    }
+   ]
+  },
+  {
+   "id": "S12-F10",
+   "verdict": "CONFIRMED",
+   "note": "2.3.1(a) and DPLA 3.3.1(C) read exactly as quoted (DPLA PDF page 21, agreement last updated 2026-08-18 per Apple's terms page). DPLA 3.3.1(B) also limits downloaded interpreted code to code that does not change the app's primary purpose. Aşama 2 and 3 need new native modules anyway, so the rule mainly stops shipping those modules early and switching them on later.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/app-store/review/guidelines/",
+     "quote": "Don't include any hidden, dormant, or undocumented features in your app; your app's functionality should be clear to end users and App Review.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://developer.apple.com/support/downloads/terms/apple-developer-program/Apple-Developer-Program-License-Agreement-English.pdf",
+     "quote": "Without Apple's prior written approval or as permitted under Section 3.3.9(A) (In-App Purchase API), an Application may not provide, unlock or enable additional features or functionality through distribution mechanisms other than the App Store, Custom App Distribution or TestFlight.",
+     "date": "2026-08-18"
+    },
+    {
+     "url": "https://developer.apple.com/support/terms/",
+     "quote": "Last Update: August 18, 2026 (shown for the Apple Developer Program License Agreement)",
+     "date": "2026-08-18"
+    }
+   ]
+  },
+  {
+   "id": "S12-F11",
+   "verdict": "CONFIRMED",
+   "note": "Apple confirms both halves, including that installed apps keep working. Apple adds that website auto-renew is only available in certain regions; see recommendation_issues.",
+   "correction": "",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/support/renewal/",
+     "quote": "If your Apple Developer Program membership expires, your apps will no longer be available for download and you won't be able to submit new apps or updates or access Certificates, Identifiers & Profiles.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://developer.apple.com/support/renewal/",
+     "quote": "However, your apps will still function for users who have already installed or downloaded them",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://developer.apple.com/support/renewal/",
+     "quote": "Please note that automatic renewal is only available in certain regions.",
+     "date": "2026-10-05 (accessed)"
+    }
+   ]
+  }
+ ],
+ "recommendation_issues": [
+  {
+   "id": "S12-F5",
+   "problem": "Two problems. (1) 'Generate the key myself and hand it to xprem on first boot' has no documented path on a fresh control-plane server. The documented routes either add AWS Secrets Manager (a new external dependency, fails compact) or start in stateless mode with an Expo token, which contradicts S12-F4's 'no Expo account'. The compact, documented option: keep the database key store, put the xprem master key on the offline backup list (line 519) and keep the xprem database inside the normal PostgreSQL backup. (2) 'Dashboard only through an SSH tunnel' and 'publish token only in CI' pull against each other. The publish routes live on the same server as the manifest, so a CI runner outside the server needs them public, and there the app-scoped token is the only guard (branch scoping and IP allowlists are Enterprise). The plan must pick one: publish from my own machine through the tunnel, or keep the publish routes public and guard the token like the signing key."
+  },
+  {
+   "id": "S12-F4",
+   "problem": "The bucket passes the compact lens, but for a different reason than given. xprem tolerates local storage on a single production instance. The real gain is pre-signed URLs: phones fetch bundles from the bucket, so assets that 'can be tens of megabytes' per device do not cross the shared API server at class start. The pin must also cover the eoas CLI, not only the image: a v3.2.0 or later server rejects publishes from an older eoas."
+  },
+  {
+   "id": "S12-F6",
+   "problem": "A hand-bumped runtimeVersion depends on memory, and forgetting it is exactly the failure the finding describes. A deterministic guard needs no new dependency: @expo/fingerprint already ships with expo 57.0.26. CI records the native fingerprint when it starts a native build and blocks an OTA publish when the fingerprint changed but runtimeVersion did not. Both values come from CI, which avoids the CI-versus-local mismatch xprem warns about."
+  },
+  {
+   "id": "S12-F2",
+   "problem": "Incomplete. The demo instructor also needs an exemption from the 3-device limit in line 69, because each review may run on a new device. Reviewers often try account deletion with the demo account, so the demo accounts must recreate themselves to stay 'non-expiring'. The fixed code must open only the demo course."
+  },
+  {
+   "id": "S12-F3",
+   "problem": "'Bireysel hesabımla başvururum' is stated as a given. It leaves out that my legal name becomes the public seller name and that guideline 5.2.1 may still push toward İÜ's account (see misses). Deciding before the first TestFlight build is right; the account choice should be written as an open decision with both sides."
+  },
+  {
+   "id": "S12-F11",
+   "problem": "'Otomatik yenilemeyi açarım' may not be available: Apple says website auto-renew exists only in certain regions. Fallback: enrol through the Apple Developer app, which Apple sells as an auto-renewable membership."
+  }
+ ],
+ "checked_ok_disputes": [
+  {
+   "plan_line": 701,
+   "claim": "xprem handles the plan's peak. Its manifest endpoint held p95 1.39 ms at 650 req/s on 1 vCPU, and bundle bytes are served by object storage, not by the server process.",
+   "problem": "The numbers are right, but they only show that xprem copes when it runs alone. The benchmark ran xprem on its own 1 vCPU machine with a separate 2 vCPU PostgreSQL, wrote a device check-in for every poll (544 write IOPS at peak) and signed every response. The plan runs the API, worker, PostgreSQL and xprem in one Docker Compose (line 714), the research puts xprem's database on the same PostgreSQL server, and expo-updates polls on every cold start by default. At class start the polls, their database writes and the attendance sends therefore land on the same host and database together. Bytes skip the server only when a bucket is configured. The peak claim needs the polling change in misses (line 510).",
+   "evidence": [
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/references/benchmark.md",
+     "quote": "Code signing and device telemetry were both enabled, which means every response was RSA-signed and every device was written to the identity registry.",
+     "date": "2026-08-01 (benchmark run)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/references/benchmark.md",
+     "quote": "AWS RDS PostgreSQL `db.t4g.small`, 2 vCPU, 2 GiB RAM",
+     "date": "2026-08-01 (benchmark run)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/references/benchmark.md",
+     "quote": "Device telemetry is real work, up to 544 write IOPS at the peak",
+     "date": "2026-08-01 (benchmark run)"
+    },
+    {
+     "url": "https://docs.expo.dev/versions/latest/config/app/",
+     "quote": "By default, expo-updates will check for updates every time the app is loaded.",
+     "date": "2026-10-05 (accessed)"
+    }
+   ]
+  }
+ ],
+ "misses": [
+  {
+   "plan_line": 510,
+   "plan_quote": "Uygulama açılışta, günde en çok bir kez kendi sunucuma sorar.",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "The once-a-day rule covers only the plan's own version check. expo-updates runs its own check, by default on every cold start. Each poll reaches xprem, which signs the answer and, by default, writes a device check-in to its PostgreSQL database (at most one write per device per minute). xprem also sends an hourly usage ping by default. At the class-start peak (20,000 phones in 1 to 5 minutes) all of this lands on the same host and PostgreSQL server as the attendance sends. Phones that find a new update then start downloading assets that 'can be tens of megabytes' over campus Wi-Fi while the record is being sent. The research checked xprem's capacity but not the client's polling default.",
+   "evidence": [
+    {
+     "url": "https://docs.expo.dev/versions/latest/config/app/",
+     "quote": "By default, expo-updates will check for updates every time the app is loaded. Set this to `ON_ERROR_RECOVERY` to disable automatic checking unless recovering from an error.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/identity/overview.md",
+     "quote": "By default, a xprem server maintains a registry of the devices running your app.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/identity/overview.md",
+     "quote": "Last-seen bumps are debounced to at most one write per device per minute",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/references/environment-variables.md",
+     "quote": "`true` disables the hourly usage ping (instance id, base URL, version, configuration shape).",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/installation-guide/cdn-and-assets-delivery.md",
+     "quote": "A manifest is a few kilobytes; the assets behind it can be tens of megabytes, downloaded by every device on every update.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    }
+   ],
+   "recommendation_tr": "Uzaktan güncelleme kontrolü her açılışta yapılmaz. Kontrolü sürüm kontrolüyle birleştiririm: günde en çok bir kez ve yoklama kaydı gönderildikten sonra (checkAutomatically: ON_ERROR_RECOVERY, kontrolü uygulama kendisi başlatır). Böylece ders başındaki yoğunlukta güncelleme sorgusu, cihaz kaydı yazımı ve paket indirme yoklama gönderimiyle yarışmaz. xprem'in saatlik kullanım bildirimini kapatırım (DISABLE_TELEMETRY=true)."
+  },
+  {
+   "plan_line": 493,
+   "plan_quote": "İlk derleme Apple incelemesinden geçer ve süresi dolmayan bir deneme hesabı ister",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "App Review (TestFlight's first review and every App Store version) requires in-app account deletion for any app that creates accounts. Both students (line 72) and instructors (line 66) create accounts in the app. Line 84 forbids deletion while unsent records exist, and the plan says nothing about deleting an instructor account. Apple accepts a delayed deletion if the user is told, but rejects apps that make deletion unnecessarily difficult. The research only listed this as an open question.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/app-store/review/guidelines/",
+     "quote": "If your app supports account creation, you must also offer account deletion within the app.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://developer.apple.com/support/offering-account-deletion-in-your-app/",
+     "quote": "If the deletion request will take additional time to complete, let them know.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://developer.apple.com/support/offering-account-deletion-in-your-app/",
+     "quote": "However, apps that make it unnecessarily difficult for a user to delete their account will not pass review.",
+     "date": "2026-10-05 (accessed)"
+    }
+   ],
+   "recommendation_tr": "Öğrenci ve hoca hesabı için 'hesabımı sil' uygulamada her zaman başlatılabilir. Gönderilmemiş kayıt varsa silme isteği de sıraya girer, kayıtlardan sonra gönderilir ve ekranda 'bekleyen kayıtlar gönderilince hesabınız silinecek' yazar. 84. satırdaki 'hesap silme yapılamaz' kuralını buna göre değiştiririm. İnceleme için kurulan deneme hesapları silinirse sunucu onları kendiliğinden yeniden kurar."
+  },
+  {
+   "plan_line": 507,
+   "plan_quote": "kendi sunucumdaki güncelleme servisiyle (xprem, Expo Updates protokolü) güncellenir",
+   "kind": "RISK",
+   "severity": "medium",
+   "finding": "xprem is active but young and fast-moving, and the research did not weigh this. The repo was created on 2025-01-22 and already has 107 tags. Control-plane mode, which rollouts need and the research recommends, exists only since v3.0.0 (tagged 2026-07-20). v3.2.0 (2026-09-07) made the server refuse publishes from older eoas CLIs. The security policy supports only the latest 3.x and makes upgrading the only fix. One maintainer made 514 of the commits and the backing company is his. Enterprise code ships dormant in the same image. Because the Expo Updates protocol is standard, xprem stays replaceable only if the update URL and the signing key can move to another server. Alternatives remain weaker: hot-updater 1.0 is still at rc.30 with one npm maintainer, Expo's sample server calls itself a demo, xavia-ota has 33 commits and no percentage rollouts.",
+   "evidence": [
+    {
+     "url": "https://api.github.com/repos/mercuretechnologies/xprem",
+     "quote": "\"created_at\": \"2025-01-22T16:16:56Z\"",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://github.com/mercuretechnologies/xprem/tags?after=v3.0.4",
+     "quote": "v3.0.0 Jul 20, 2026",
+     "date": "2026-07-20"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/eoas/publish-an-update.md",
+     "quote": "Pin `eoas` to your server version. A server on v3.2.0 or later refuses a publish from an older CLI, which sends neither file hashes nor file roles, with `unknown role` or `expected exactly one launch asset`.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://raw.githubusercontent.com/mercuretechnologies/xprem/main/SECURITY.md",
+     "quote": "If a vulnerability affects older versions, the fix will land in the latest release. Upgrading is the supported remediation path.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://api.github.com/repos/mercuretechnologies/xprem/contributors?per_page=30",
+     "quote": "\"login\": \"axelmarciano\", \"contributions\": 514 (next highest: \"east-shine\", 6)",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/references/open-core-and-licensing.md",
+     "quote": "Enterprise features ship in the same binary and Docker image as the core and stay dormant until a license key is activated.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    },
+    {
+     "url": "https://github.com/expo/custom-expo-updates-server",
+     "quote": "It is not guaranteed to be complete, stable, or performant enough to use as a full-fledged backend for expo-updates.",
+     "date": "2026-10-05 (accessed)"
+    }
+   ],
+   "recommendation_tr": "xprem sunucu imajını ve eoas komut aracını aynı sürüme sabitlerim. Yükseltmeyi önce geliştirme ortamında denerim, çünkü v3.2.0'dan beri eski eoas ile yayın reddediliyor ve güvenlik düzeltmesi yalnız son 3.x sürümüne geliyor. Çıkış yolum hazır durur: güncelleme adresi kendi alan adımda, xprem ana anahtarı ve veritabanı yedekte, imza anahtarı bu ikisinden çıkarılabilir. xprem bırakılırsa Expo Updates protokolünü konuşan başka bir sunucu aynı adresi ve aynı imza anahtarını alır, uygulamayı yeniden derlemem gerekmez."
+  },
+  {
+   "plan_line": 499,
+   "plan_quote": "App Store incelemesi kurum adı ve logosu için izin ister; izin yoksa nötr bir ad kullanılır.",
+   "kind": "RISK",
+   "severity": "low",
+   "finding": "With an individual account Apple shows the account holder's legal name as the seller. In June 2026 App Review rejected an individual developer's app three times under 5.2.1 because the seller name did not match the app's name or metadata, although the developer said the brand was original. For content that needs an institution behind it, App Review has asked for a seller that reflects the institution and suggested the client add the developer to its own team. A neutral name lowers the 5.2.1 risk but does not remove it. Confidence medium: no rejection of an attendance app was found, only these neighbouring cases.",
+   "evidence": [
+    {
+     "url": "https://developer.apple.com/programs/enroll/",
+     "quote": "Your name will be displayed as the seller name of your apps on the App Store.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://developer.apple.com/forums/thread/835100",
+     "quote": "The seller and company names associated with the app do not reflect the name in the app or its metadata.",
+     "date": "2026-06 (forum post)"
+    },
+    {
+     "url": "https://developer.apple.com/forums/thread/129290",
+     "quote": "If you wish to distribute this app to the App Store your app must be published under a seller name and company name that reflects the source of the information in your app or by a recognized institution, such as a hospital, insurance company, pharmacy, non-governmental organization, or university, as required by Guideline 5.2.1 of the App Store Review Guidelines.",
+     "date": "2020-03 (forum post)"
+    },
+    {
+     "url": "https://developer.apple.com/app-store/review/guidelines/",
+     "quote": "Apps should be submitted by the person or legal entity that owns or has licensed the intellectual property and other relevant rights.",
+     "date": "2026-10-05 (accessed)"
+    }
+   ],
+   "recommendation_tr": "Bireysel hesapla yayınlarsam App Store'da satıcı olarak kendi adım görünür. Uygulamaya marka gibi duran değil, işi anlatan bir ad veririm. İÜ'nün adı ve logosu için yazılı izin alırsam izni inceleme notlarına eklerim. İnceleme yine kurum hesabı isterse yol, İÜ'nün App Store'daki mevcut hesabına (AUZEF) ekip üyesi olarak eklenmektir; bu yüzden hesap kararı ilk TestFlight derlemesinden önce verilir."
+  },
+  {
+   "plan_line": 513,
+   "plan_quote": "Dönem ortasında zorunlu güncelleme ve zorunlu yeniden giriş yok; güncellemeler kademeli açılır.",
+   "kind": "MISSING",
+   "severity": "low",
+   "finding": "Staging exists for the App Store (phased release) and for OTA (xprem rollouts), not for the Android APK from GitHub. A GitHub release is visible to everyone at once, and the version check in line 510 only reports the minimum version and the APK hash. Nothing stages the in-app APK update prompt, so 'kademeli açılır' has no mechanism on the Android APK path. xprem's rollout design shows the cheap way to do it in the existing version check.",
+   "evidence": [
+    {
+     "url": "https://mercure-technologies.gitbook.io/xprem/eoas/progressive-rollouts.md",
+     "quote": "The server hashes this identifier together with a salt that is unique to each rollout, which produces a number between 0 and 1, and a device is part of the rollout when that number falls below the configured percentage.",
+     "date": "2026-10-05 (accessed, docs v3.2.0)"
+    }
+   ],
+   "recommendation_tr": "Android APK'da kademeli açmayı sürüm kontrolü yapar: sunucu yeni sürümü önce cihazların bir yüzdesine bildirir, her cihaz kimliğinin özetine göre hep aynı grupta kalır. GitHub'daki dosya herkese açık kalır; kademe yalnız uygulama içindeki güncelleme çağrısını sınırlar."
+  },
+  {
+   "plan_line": 822,
+   "plan_quote": "iPhone'da TestFlight, sonra listelenmeyen App Store.",
+   "kind": "MISSING",
+   "severity": "low",
+   "finding": "The plan does not say how students move from the TestFlight build to the unlisted App Store version. Apple documents only the other direction (a beta replaces an installed App Store version) and tells testers to download the App Store version after testing; it says nothing about app data or keychain items in that move. Under line 84 a lost device key means a face-to-face device change for every iPhone student, so this needs one real test. Confidence low on the risk itself, high that it is undocumented.",
+   "evidence": [
+    {
+     "url": "https://testflight.apple.com/",
+     "quote": "If you already have the App Store version of the app installed on your device, the beta version of the app will replace it.",
+     "date": "2026-10-05 (accessed)"
+    },
+    {
+     "url": "https://testflight.apple.com/",
+     "quote": "To install the App Store version of the app, download or purchase the app from the App Store.",
+     "date": "2026-10-05 (accessed)"
+    }
+   ],
+   "recommendation_tr": "Listelenmeyen App Store sürümüne geçmeden önce bir test telefonunda TestFlight derlemesinin üstüne App Store sürümünü kurar, cihaz anahtarının ve bekleyen kayıtların korunduğunu doğrularım. Geçiş için listelenmeyen bağlantıyı öğrencilere uygulama içinden gösteririm."
+  }
+ ],
+ "slice_verdict": "PASS",
+ "verdict_reason": "The only high-severity finding (S12-F5) holds in substance. One secondary claim and its key-import step are corrected from xprem's own docs, without weakening the risk. No finding is refuted or unverifiable, and every checked_ok item with a version, date, limit, fee or rule wording was confirmed. The one dispute (line 701 peak) is about co-location, not wrong numbers. New misses: three medium (expo-updates polling on every launch at class start, in-app account deletion for App Review, xprem's young control-plane mode and exit path) and three low. None is high, so the slice passes."
+}

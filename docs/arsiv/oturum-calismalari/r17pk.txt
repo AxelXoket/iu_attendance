@@ -1,0 +1,202 @@
+D13-P01 M | Sözleşme paketi iskeleti ve temel şemalar | exp: MODULLER,ModulAdi,genisleyenEnum,anSemasi,gunSemasi,dersSaatiSemasi,sureMsSemasi,bindeSemasi,buyukSayiSemasi,Kimlik,KisiId,GirisOturumuId,CihazId,ProjeksiyonId,BirimId,kimlikNesnesiSemasi,kimlikSemasi,istemciKimligiSemasi,ogrenciNoSemasi,beklenenSurumNoSemasi,sayfaSemasi,sayfaSorgusuSemasi,tamListeSemasi,imzaliMetinSemasi | dep:  | needs: 
+D13-P02 M | Hata, hız, başlık ve öğe sözleşmeleri | exp: hataKodlariTanimla,HataTanimi,UygulamaHatasi,hataZarfiSemasi,GECICI_SQLSTATELER,HataAyrintisi,HIZ_SINIFLARI,BASLIKLAR,CEREZLER,IstemciBilgisi,ogeTuruTanimla,OgeTuruTanimi,ogeSonuclariSemasi | dep: D13-P01 | needs: 
+D13-P03 M | Rota tanımı, api sözleşmesi ve sürüm şemaları | exp: rotaTanimla,RotaTanimi,KimlikBirlesimi,RotaGirdisi,surumSemasi,surumAyristir,surumKarsilastir,API_HATALARI,API_ROTALARI,DEGISIM_BEKLEYEN_ROTALARI,PLATFORMLAR,KANALLAR,ESIK_KARARLARI,surumCevabiSemasi,yayinBilgisiSemasi,YayinBilgisi,KanalGirdisi,HataliSurum | dep: D13-P02 | needs: 
+D13-P04 M | Telefon ve panelin ortak fetch yardımcısı | exp: istemciKur,sonucSinifi,IstekSonucu | dep: D13-P03 | needs: 
+D13-P05 S | Hata kataloğu ve rota tablosu birleştirmesi | exp: TUM_HATALAR,HataKodu,ortukKodlar,TUM_ROTALAR,TUM_OGE_TURLERI | dep: D13-P03,D13-P04 | needs: D04.SAAT_ROTALARI,D04.PENCERE_SURESI_OGESI,D04.ERKEN_KAPATMA_OGESI,D09.elleEklemeOgeTuru,D09.sorunBildirimiOgeTuru,D14.IS_KUYRUGU_HATA_KODLARI,D15.ISLETIM_ROTALARI,D15.ISLETIM_HATALARI
+D13-P06 L | Altyapı tipleri, istek kancaları ve modül sınırı testi | exp:  | dep: D13-P05 | needs: D12.Islem,D12.veritabaniKur,D04.simdi,D04.SaatOznesi
+D13-P07 L | apiKur, rota kaydı, kök yakalayıcı ve senaryo düzeneği | exp:  | dep: D13-P06 | needs: D04.simdi,D14.IS_KUYRUGU_HATA_KODLARI
+D13-P08 L | Sürüm eşiği, GET /v1/surum ve api dış yüzü | exp: rotalariKaydet,uygulamaHatasi,istekKimligi,hizSinifi,enDusukSurumDenetle,EklentiTemelSecenekleri,FastifyRequest,apiKur,apiEklentisi,ApiBagimliliklari,OturumGirdisi,OturumSonucu,RotaIsleyicisi,DenemeSecenekleri,kalanSureMs,ISLEYICI_BUTCESI_MS,yayinBilgisi,yayinBilgisiYukle | dep: D13-P07 | needs: D12.tabloYardimcilari,D12.kisitAdi,D12.veritabaniKur,D12.testVeritabaniHazirla,D12.senaryoOncesiSifirla,D04.simdi
+D13-P09 L | Bileşim kökü uygulamaKur ve süreç türleri | exp: uygulamaKur,UygulamaBagimliliklari,saatOznesiKur | dep: D13-P08 | needs: D01.kimlikEklentisi,D01.kimlikDinleyicileriniKur,D01.kimlikDinleyicileriHazir,D01.oturumDogrula,D01.hesapSilindiMi,D01.hesabiSil,D02.derslerEklentisi,D02.derslerKimlikDinleyicisi,D02.donemArasiMi,D03.listelerEklentisi,D04.saatEklentisi,D04.saatBelgesiVer,D04.SaatOznesi,D04.simdi,D05.yoklamaEklentisi,D06.esitlemeEklentisi,D06.esitlemeKimlikDinleyicisi,D06.ogeTuruKaydet,D07.dogrulamaEklentisi,D08.devamEklentisi,D09.duzeltmelerEklentisi,D10.raporlarEklentisi,D11.projeksiyonEklentisi,D11.projeksiyonKimlikDinleyicisi,D12.veritabaniEklentisi,D12.danismaKilidi,D12.geriYuklemePencereleri,D12.Islem,D12.veritabaniKur,D12.testVeritabaniHazirla,D12.senaryoOncesiSifirla,D14.IsKuyrugu,D14.Eposta,D15.isletimEklentisi,D15.kimlikOlayiDinleyicisi,D15.Ayarlar,D15.ayarlariYukle
+D13-P10 S | Eşik kararı ve açılış alımı senaryoları | exp:  | dep: D13-P08,D13-P09 | needs: 
+D13-P11 M | Kimlik, köken ve rota beyanı senaryoları | exp:  | dep: D13-P07 | needs: 
+D13-P12 M | Gövde, hız, aşırı yük, saat belgesi ve süre bütçesi senaryoları | exp:  | dep: D13-P11 | needs: 
+D13-P13 M | OpenAPI belgesi üretimi ve saklama işi | exp:  | dep: D13-P09 | needs: D15.ayarlariYukle,D15.log,D04.simdi
+D13-P14 M | oasdiff kırılma kapısı ve sözleşme iş akışı | exp:  | dep: D13-P13 | needs: 
+D13-P15 M | Rota, hız ve hata kataloğu sözleşme kuralları | exp:  | dep: D13-P07,D13-P08,D13-P09,D13-P11,D13-P12 | needs: D14.IS_KUYRUGU_HATA_KODLARI
+D13-P16 M | Bütünleşik doğrulama | exp:  | dep: D13-P09 | needs: D15.TestDunyasi,D04.saatBelgesiDogrula,D04.saatSonucu
+D12-P01 S | Dış yüz girişi, tablo yardımcıları ve kısıt adı | exp: Islem,kisitAdi,tabloYardimcilari | dep:  | needs: 
+D12-P02 M | Sözleşme dosyası ve saklama kuralları | exp:  | dep:  | needs: D13.hataKodlariTanimla,D13.rotaTanimla,D13.ModulAdi,D13.sayfaSemasi,D13.sayfaSorgusuSemasi,D13.anSemasi,D13.genisleyenEnum,D13.kimlikSemasi,D13.UygulamaHatasi
+D12-P03 M | PostgreSQL imajı ve küme ayarları | exp:  | dep:  | needs: 
+D12-P04 L | Bağlantı havuzu, işlem yardımcısı, hata çevirisi ve nesil | exp: veritabaniKur,islem,islemSonuKancasi,kisitIhlali,nesilOku | dep: D12-P01,D12-P02 | needs: D13.UygulamaHatasi,D13.GECICI_SQLSTATELER
+D12-P05 M | Danışma kilidi ve dönem bölümleri | exp: danismaKilidi,danismaKilidiDene,donemBolumuAc | dep: D12-P04 | needs: D13.UygulamaHatasi
+D12-P06 L | Saklama mekanizması, D12 tabloları ve gece işleri | exp: saklamaIsleyicisiKaydet,saklamaIsleyicisiniCalistir,veritabaniIsleri | dep: D12-P02,D12-P05 | needs: D13.UygulamaHatasi
+D12-P07 M | Kurulum adımı ve SCRAM parola doğrulayıcısı | exp:  | dep: D12-P02,D12-P03 | needs: D13.UygulamaHatasi
+D12-P08 L | Göç çalıştırıcısı ve test veritabanı | exp: testVeritabaniHazirla,senaryoOncesiSifirla,testVeritabaniAdi | dep: D12-P01,D12-P04,D12-P07 | needs: D13.UygulamaHatasi
+D12-P09 M | Geri yükleme kayıtları ve yönetici ucu eklentisi | exp: geriYuklemePencereleri,veritabaniEklentisi | dep: D12-P06,D12-P08 | needs: D13.rotalariKaydet,D13.UygulamaHatasi
+D12-P10 M | Göç denetimi CI adımı | exp:  | dep: D12-P02,D12-P08 | needs: D13.UygulamaHatasi
+D12-P11 L | Yedek ortak katmanı, pgBackRest ve gecelik döküm | exp:  | dep: D12-P02,D12-P03 | needs: D15.TestDunyasi
+D12-P12 L | Kurulum, yetki ve yapılandırma senaryoları | exp:  | dep: D12-P06,D12-P07,D12-P08,D12-P11 | needs: D15.TestDunyasi,D09.denetimeYaz,D14.kuyruklariKur
+D12-P13 L | Şema denetimi senaryoları ve kod kuralları | exp:  | dep: D12-P06,D12-P08,D12-P12 | needs: D15.TestDunyasi
+D12-P14 L | İşlem, havuz ve danışma kilidi senaryoları | exp:  | dep: D12-P05,D12-P08 | needs: D15.TestDunyasi,D13.DenemeSecenekleri,D13.GECICI_SQLSTATELER,D13.TUM_HATALAR,D13.ortukKodlar,D13.rotaTanimla
+D12-P15 L | Göç akışı ve göç denetimi senaryoları | exp:  | dep: D12-P08,D12-P10 | needs: D15.TestDunyasi
+D12-P16 M | Saklama senaryoları | exp:  | dep: D12-P06,D12-P08 | needs: D15.TestDunyasi,D14.isGonder,D14.isTanimla
+D12-P17 M | Sıfırlama, hazırlık, bölüm ve log gizliliği senaryoları | exp:  | dep: D12-P05,D12-P08 | needs: D15.TestDunyasi
+D12-P18 L | Geri yükleme komutu, iptaller ve yönetici ucu senaryoları | exp:  | dep: D12-P09,D12-P14,D12-P15,D12-P16 | needs: D01.kimlikDinleyicileriniKur,D01.kimlikDinleyicileriHazir,D01.hesabiSil,D01.oturumlariKapat,D02.derslerKimlikDinleyicisi,D06.esitlemeKimlikDinleyicisi,D11.projeksiyonKimlikDinleyicisi,D15.kimlikOlayiDinleyicisi,D15.TestDunyasi
+D12-P19 L | Geri yükleme betiği ve aylık deneme | exp:  | dep: D12-P11,D12-P12,D12-P18 | needs: 
+D12-P20 S | Makine zamanlayıcıları ve takvim denetimi | exp:  | dep: D12-P11,D12-P19 | needs: 
+D15-P01 M | Çalışma alanı iskeleti ve Node sürümü denetimi | exp:  | dep:  | needs: 
+D15-P02 L | İşletim sözleşmesi ve anahtar dosyası doğrulaması | exp: ISLETIM_ROTALARI,ISLETIM_HATALARI,ISLETIM_OGE_GEREKCELERI,ekranSureleriIstegi,ekranSureleriCevabi,telefonSayaciGovdesiSemasi,gunAtlanirMi,ekranTavaniAnahtari,chronyDurumuSemasi,makineDurumuSemasi,bakimDosyasiSemasi,apiOlcumDosyasiSemasi,gizliAnahtarDosyasiSemasi,kalpAtisiSirriSemasi,EKRAN_TURLERI,SAYAC_ADLARI,UYARI_TURLERI,ISLETIM_GIRDILERI,ISLETIM_ESIKLERI,YEDEK_ESIKLERI,EKRAN_SURESI_TAVANI,ISLETIM_GIZLI_ALANLAR,OLCULEN_LOG_OLAYLARI,SIR_MATRISI | dep: D15-P01 | needs: D13.rotaTanimla,D13.RotaTanimi,D13.hataKodlariTanimla,D13.genisleyenEnum,D13.anSemasi,D13.gunSemasi,D13.kimlikSemasi,D13.istemciKimligiSemasi,D13.ModulAdi
+D15-P03 L | Ayar şeması, GizliDeger ve ayarlariYukle | exp: ayarlariYukle,ayarlar,Ayarlar,GizliDeger,gizliAnahtar,gizliAnahtarSeti | dep: D15-P01,D15-P02 | needs: D11.projeksiyonAyarSemasi
+D15-P04 M | Kök kaydedici ve gizleyen log biçimlendiricisi | exp: log,logOlustur | dep: D15-P02,D15-P03 | needs: 
+D15-P05 L | İşletim tabloları, uyarı defteri ve kuralları | exp: uyariAc | dep: D15-P02,D15-P04 | needs: D12.Islem,D12.tabloYardimcilari,D12.kisitAdi,D14.IsSagligi
+D15-P06 L | Saat ve makine betikleri, durum dosyası okuyucusu | exp: saatEsitlemeDurumu | dep: D15-P01,D15-P02,D15-P03 | needs: 
+D15-P07 L | Telefon sayacı öğesi ve kimlik olayı abonesi | exp: telefonSayaciOgesi,kimlikOlayiDinleyicisi | dep: D15-P02,D15-P04,D15-P05 | needs: D12.Islem,D12.veritabaniKur,D01.KimlikDinleyicisi,D01.KimlikOlayi,D13.KisiId,D04.simdi
+D15-P08 L | İşletim eklentisi, uçlar, kapanış ve API ölçüsü | exp: isletimEklentisi,kapanisiBaslat,kapanisDurumu | dep: D15-P03,D15-P04,D15-P05,D15-P07 | needs: D13.EklentiTemelSecenekleri,D13.UygulamaHatasi,D13.KisiId,D12.Islem
+D15-P09 M | Test dünyası sınıfı ve kurucu kaydı | exp: TestDunyasi,KurucuHaritasi,kurucuTanimla | dep: D15-P01 | needs: D13.RotaTanimi,D13.RotaGirdisi,D13.hataZarfiSemasi,D13.API_HATALARI,D14.sahtePostaKutusu,D04.simdi
+D15-P10 L | Compose, Caddy ve xprem yapılandırması | exp:  | dep: D15-P01,D15-P02 | needs: 
+D15-P11 L | Kalite ve güvenlik iş akışları, OTA denetimi | exp:  | dep: D15-P01,D15-P10 | needs: 
+D15-P12 L | Yayın ve log arşivi betikleri | exp:  | dep: D15-P02,D15-P06,D15-P10 | needs: 
+D15-P13 L | Test kancaları ve sağlık senaryoları | exp:  | dep: D15-P03,D15-P04,D15-P08,D15-P09 | needs: D13.uygulamaKur,D13.TUM_ROTALAR,D13.TUM_HATALAR,D13.DenemeSecenekleri,D12.testVeritabaniHazirla,D12.senaryoOncesiSifirla,D12.testVeritabaniAdi,D12.veritabaniKur,D14.sahtePostaKutusu,D14.isKuyrugunuBosalt,D14.isKuyruguKur,D14.epostaKur,D04.simdi
+D15-P14 L | Sunucu imajı, server.ts girişi ve yayın bilgisi | exp:  | dep: D15-P03,D15-P04,D15-P08,D15-P10 | needs: D12.veritabaniKur,D13.uygulamaKur,D13.yayinBilgisiSemasi,D14.isKuyruguKur,D14.epostaKur,D14.smtpTasiyicisi,D04.simdi
+D15-P15 L | Ölçüm görünümleri ve özet sorguları | exp:  | dep: D15-P05,D15-P13 | needs: D12.Islem,D12.veritabaniKur
+D15-P16 L | Anahtar komutu, döndürme betiği ve ele geçirme | exp:  | dep: D15-P03,D15-P04,D15-P06,D15-P07,D15-P09,D15-P13 | needs: D01.kimlikDinleyicileriniKur,D01.kimlikDinleyicileriHazir,D02.derslerKimlikDinleyicisi,D02.donemArasiMi,D06.esitlemeKimlikDinleyicisi,D11.projeksiyonKimlikDinleyicisi,D07.yenidenDegerlendir,D12.veritabaniKur,D04.saatBelgesiDogrula
+D15-P17 M | Eski sürüm istek örnekleri | exp:  | dep: D15-P09,D15-P13 | needs: D13.TUM_ROTALAR,D13.surumKarsilastir
+D15-P18 L | Haftalık iş, yayın akışları ve mutasyon eşikleri | exp:  | dep: D15-P06,D15-P12,D15-P14,D15-P11 | needs: 
+D15-P19 L | Yük testi ortak parçaları ve ders çıkışı | exp:  | dep: D15-P09,D15-P13,D15-P10 | needs: D13.HIZ_SINIFLARI,D11.KODLAR_ISTEGI
+D15-P20 L | Sayaç, ekran süresi ve hesap silme senaryoları | exp:  | dep: D15-P07,D15-P08,D15-P09,D15-P13,D15-P15 | needs: D13.TUM_ROTALAR,D12.islem
+D15-P21 L | İşletim denetimi işi ve girdileri | exp:  | dep: D15-P05,D15-P06,D15-P08,D15-P09,D15-P13,D15-P15 | needs: D14.isSagligi,D14.epostaGonder,D14.isiCalistirVeBekle,D12.Islem,D12.islem
+D15-P22 L | Haftalık ölçüm özeti ve olcum-raporu | exp:  | dep: D15-P09,D15-P13,D15-P15 | needs: D14.epostaGonder,D14.isiCalistirVeBekle,D12.Islem,D12.veritabaniKur
+D15-P23 M | Olay komutu ve komut girişleri | exp:  | dep: D15-P07,D15-P09,D15-P13,D15-P16 | needs: D01.kimlikDinleyicileriniKur,D01.kimlikDinleyicileriHazir,D01.oturumlariKapat,D02.derslerKimlikDinleyicisi,D02.donemArasiMi,D06.esitlemeKimlikDinleyicisi,D11.projeksiyonKimlikDinleyicisi,D12.veritabaniKur
+D15-P24 S | Ders başı, gece ve giriş yığılması yük profilleri | exp:  | dep: D15-P19 | needs: 
+D15-P25 L | Uyarı bildirimi, kalp atışı, sertifika ve iş listesi | exp: isletimIsleri | dep: D15-P05,D15-P09,D15-P13,D15-P21,D15-P22 | needs: D14.isSagligi,D14.epostaGonder,D14.isiCalistirVeBekle,D12.Islem
+D15-P26 M | ASVS eşlemesi ve eksiksizlik denetimi | exp:  | dep: D15-P03,D15-P09,D15-P13,D15-P20,D15-P21,D15-P25,D15-P22,D15-P16,D15-P23,D15-P17 | needs: 
+D06-P01 L | Sözleşme, tablolar ve sürüm yaprağı | exp: surumAl,surumDamgasiIste,ogrenciDurumuDegisti,kurulumSonTemasi,kurulumSonTemaslari,kararTeslimAni | dep:  | needs: D12.islem,D12.islemSonuKancasi,D12.kisitAdi,D13.rotaTanimla,D13.hataKodlariTanimla,D13.genisleyenEnum,D13.imzaliMetinSemasi
+D06-P02 M | Çekirdek: imleç, su seviyesi ve sayfa kesme | exp:  | dep:  | needs: 
+D06-P03 M | Çekirdek: ikinci çapa metni ve makbuz biçimi | exp:  | dep:  | needs: 
+D06-P04 M | Çekirdek: telefon kuyruk protokolü | exp:  | dep:  | needs: 
+D06-P05 S | Çekirdek: gönderme süresi ve dizin | exp: gondermeSuresiSonu | dep: D06-P02,D06-P03,D06-P04 | needs: 
+D06-P06 L | Öğe dağıtıcısı ve gönderim test dili | exp:  | dep: D06-P01 | needs: D12.islem,D12.kisitIhlali
+D06-P07 M | Kurulum satırı, karar teslimi ve iz | exp:  | dep: D06-P01,D06-P05 | needs: D12.islem,D12.danismaKilidi,D13.uygulamaHatasi
+D06-P08 L | Defter, ulaşma anı ve ikinci çapa bağlamı | exp:  | dep: D06-P01,D06-P05,D06-P06 | needs: D04.IKINCI_CAPA_YOK_NEDENLERI
+D06-P09 L | Gönderim ucu | exp:  | dep: D06-P06,D06-P07,D06-P08 | needs: D12.islem,D12.danismaKilidi,D13.kalanSureMs,D13.uygulamaHatasi,D13.istekKimligi
+D06-P10 L | İndirme ucu | exp:  | dep: D06-P05,D06-P06,D06-P07 | needs: D12.islem,D12.nesilOku,D13.uygulamaHatasi
+D06-P11 M | Gönderim kimlik kancası | exp:  | dep: D06-P09,D06-P10 | needs: D12.islem,D13.uygulamaHatasi,D04.IKINCI_CAPA_YOK_NEDENLERI
+D06-P12 L | Eklenti, dizin ve sözleşme denetimleri | exp: ogeTuruKaydet,indirmeKaynagiKaydet,esitlemeKimlikDinleyicisi,enEskiGecerliSurumuYukselt,esitlemeEklentisi | dep: D06-P09,D06-P10,D06-P11 | needs: D13.rotalariKaydet,D12.saklamaIsleyicisiKaydet,D12.saklamaIsleyicisiniCalistir
+D06-P13 M | Sıra boşluğu raporu ve en eski sürüm komutu | exp:  | dep: D06-P12 | needs: D14.isTanimla,D14.isiCalistirVeBekle,D04.istanbulTarihi,D12.veritabaniKur,D12.islem,D15.ayarlariYukle,D09.denetimeYaz,D09.denetimOlaylariniKaydet
+D06-P14 M | Uçtan uca senaryolar ve yük testi | exp:  | dep: D06-P12 | needs: D05.kararSutunlariniYaz
+D02-P01 L | Dersler sözleşmesi ve ders kodu normalleştirme | exp: OturumUretimOlayi,OTURUM_TURLERI,OTURUM_DURUMLARI,IPTAL_NEDENLERI,YAPILDI_DURUMLARI,DERSLER_DENETIM_OLAYLARI | dep:  | needs: D13.rotaTanimla,D13.hataKodlariTanimla,D13.genisleyenEnum,D13.beklenenSurumNoSemasi,D13.anSemasi,D13.gunSemasi,D13.dersSaatiSemasi,D13.kimlikSemasi,D13.ogeSonuclariSemasi,D13.tamListeSemasi,D13.sayfaSemasi,D13.sayfaSorgusuSemasi
+D02-P02 M | Takvim ve çakışma kuralları | exp:  | dep: D02-P01 | needs: 
+D02-P03 L | Oturum üretim planı | exp:  | dep: D02-P01,D02-P02 | needs: 
+D02-P04 L | Şema, göç, saat çevirisi ve test kurucuları | exp:  | dep: D02-P01 | needs: D12.tabloYardimcilari,D12.kisitAdi
+D02-P05 L | Okuma yaprağı, kayıt defterleri ve liste sorguları | exp: dersGetir,dersYetkisi,subeGetir,dersSubeleri,birimGetir,kilitliBirimDonemleri,hocaninDersleri,oturumGetir,oturumlariGetir,oturumSayfasi,oturumSubeleri,birimDonemiGetir,kilitDurumu,takvimGetir,donemArasiMi,denetlenecekDersler,oturumUretimDinleyicisiKaydet,kilitAdimiKaydet,listeKaynagiKaydet | dep: D02-P02,D02-P04 | needs: D12.Islem,D13.Kimlik
+D02-P06 L | Oturum yazım hattı ve program kaydı | exp:  | dep: D02-P03,D02-P04,D02-P05 | needs: D01.yetkiDenetle,D06.surumAl,D06.surumDamgasiIste,D08.devamHesaplaIsiKoy,D08.DEVAM_NEDENLERI,D09.denetimeYaz,D13.uygulamaHatasi
+D02-P07 M | Dönem kilidi | exp:  | dep: D02-P06 | needs: D06.surumAl,D06.surumDamgasiIste,D08.devamHesaplaIsiKoy,D08.DEVAM_NEDENLERI,D13.uygulamaHatasi
+D02-P08 L | Birim, dönem, takvim ve yenileme işi | exp:  | dep: D02-P06,D02-P07 | needs: D12.donemBolumuAc,D14.isGonder,D14.KuyrukTanimi,D06.surumAl,D06.surumDamgasiIste,D13.uygulamaHatasi,D15.log
+D02-P09 L | Ders, şube ve devir | exp: oranlariYaz | dep: D02-P06 | needs: D01.kisiGetir,D01.personelRolleri,D01.hesapSilindiMi,D06.surumAl,D06.surumDamgasiIste,D08.devamHesaplaIsiKoy,D08.DEVAM_NEDENLERI,D13.uygulamaHatasi
+D02-P10 L | Oturum işlemleri ve Ders yapıldı mı | exp: kafaSayisiniYaz | dep: D02-P06 | needs: D06.surumAl,D06.surumDamgasiIste,D08.devamHesaplaIsiKoy,D08.DEVAM_NEDENLERI,D13.uygulamaHatasi
+D02-P11 S | Çakışma ucu | exp:  | dep: D02-P06 | needs: 
+D02-P12 M | Deneme dersi ve hesap olayları | exp: denemeDersiniKur,derslerKimlikDinleyicisi | dep: D02-P09 | needs: D01.kisiGetir,D01.KimlikDinleyicisi,D01.KimlikOlayi,D12.donemBolumuAc,D06.surumAl,D06.surumDamgasiIste,D08.devamHesaplaIsiKoy,D08.DEVAM_NEDENLERI,D15.log
+D02-P13 M | İndirme kaynakları ve personel kapsamı | exp:  | dep: D02-P05 | needs: D01.kisiGetir
+D02-P14 M | Rotalar, eklenti ve modül girişi | exp: derslerEklentisi,DerslerEklentisiSecenekleri | dep: D02-P06,D02-P07,D02-P08,D02-P09,D02-P10,D02-P11,D02-P12,D02-P13 | needs: D13.rotalariKaydet,D13.EklentiTemelSecenekleri,D06.indirmeKaynagiKaydet
+D02-P15 M | İş tanımları, sözleşme ve eşzamanlılık doğrulaması | exp: isler | dep: D02-P07,D02-P08,D02-P12,D02-P14 | needs: D14.isTanimla
+D01-P01 L | Kimlik sözleşmesi ve yetki işlevi | exp: KimlikDinleyicisi,KimlikOlayi | dep:  | needs: D13.rotaTanimla,D13.hataKodlariTanimla,D13.genisleyenEnum,D13.Kimlik,D13.KisiId,D13.BirimId,D13.DEGISIM_BEKLEYEN_ROTALARI,D13.HIZ_SINIFLARI,D12.Islem
+D01-P02 M | Saf kurallar: e-posta, bekleme ve oturum seçimi | exp: epostaNormallestir | dep: D01-P01 | needs: 
+D01-P03 M | Saf kurallar: cihaz etiketi, kayıt kodu ve toplu teyit | exp: topluTeyitUygunMu | dep: D01-P01,D01-P02 | needs: 
+D01-P04 L | Şema, göç ve yaprak okuyucular | exp: yetkiDenetle,kisiGetir,personelRolleri,hesapSilindiMi,ogrenciHesabiGetir,cihazGetir,cihazAnahtariGetir,girisOturumuGetir | dep: D01-P01,D01-P03 | needs: D12.tabloYardimcilari,D12.Islem
+D01-P05 L | Olay yayını, cihaz satırı ve ortak sorgular | exp: kimlikDinleyicileriniKur,kimlikDinleyicileriHazir,cihazDogrulamaSonucunuYaz | dep: D01-P04 | needs: D09.denetimeYaz,D15.log,D15.ayarlar
+D01-P06 L | Oturum servisi ve kök oturum kancası | exp: oturumDogrula,oturumlariKapat | dep: D01-P05,D01-P02 | needs: D13.OturumGirdisi,D13.OturumSonucu,D13.CEREZLER,D13.IstemciBilgisi,D04.simdi,D12.islem,D09.denetimeYaz
+D01-P07 S | Kişi bağı saklama işleyicisi | exp:  | dep: D01-P04 | needs: D12.saklamaIsleyicisiniCalistir
+D01-P08 L | Kod isteği, e-posta yolu ve personel girişi | exp:  | dep: D01-P06,D01-P03 | needs: D14.epostaSiniriDenetle,D14.epostaGonder,D15.gizliAnahtar,D09.denetimeYaz,D04.simdi
+D01-P09 M | Hoca başvurusu ve yönetici onayı | exp:  | dep: D01-P08 | needs: D02.birimGetir,D09.denetimeYaz
+D01-P10 L | Oturumlarım ve yönetici hesap işlemleri | exp:  | dep: D01-P08 | needs: D02.birimGetir,D09.denetimeYaz
+D01-P11 L | İlk kayıt teyidi ve liste eşleştirmesi | exp: ogrenciTeyitEt,ogrenciTeyidiniReddet,bekleyenKayitlariEslestir | dep: D01-P06 | needs: D02.dersYetkisi,D02.dersGetir,D03.ogrencininEtkinSatirlari,D03.numaraIleEslestir,D06.ogrenciDurumuDegisti,D07.yenidenDegerlendir,D07.dogrulamaTeyitAnahtari,D12.danismaKilidi,D12.danismaKilidiDene,D09.denetimeYaz,D15.gizliAnahtar,D15.ayarlar
+D01-P12 L | Cihaz değişimi ve App Attest yenilemesi | exp:  | dep: D01-P11 | needs: D07.dogrulamaDegeriniTuket,D07.cihazKanitiniDogrula,D07.yenidenDegerlendir,D02.dersYetkisi,D03.ogrencininEtkinSatirlari,D09.denetimeYaz,D15.ayarlar
+D01-P13 L | Öğrenci kaydı, çıkış ve kayıt kodu | exp:  | dep: D01-P12 | needs: D07.dogrulamaDegeriniTuket,D07.cihazKanitiniDogrula,D07.yenidenDegerlendir,D07.dogrulamaTeyitAnahtari,D03.numaraIleEslestir,D03.listeKovaAnahtari,D02.dersGetir,D06.ogrenciDurumuDegisti,D12.danismaKilidi,D09.denetimeYaz,D15.ayarlar
+D01-P14 L | Hesap silme | exp: hesabiSil | dep: D01-P13,D01-P10,D01-P09 | needs: D07.yenidenDegerlendir,D07.dogrulamaTeyitAnahtari,D02.dersYetkisi,D02.dersGetir,D03.ogrencininEtkinSatirlari,D12.danismaKilidi,D14.isGonder,D14.KuyrukTanimi,D09.denetimeYaz,D15.gizliAnahtar
+D01-P15 L | Eklenti, uç bağlama ve dış yüz | exp: kimlikEklentisi | dep: D01-P07,D01-P09,D01-P10,D01-P14 | needs: D13.rotalariKaydet,D13.EklentiTemelSecenekleri,D03.listeDegisikligiDinleyicisiKaydet,D12.saklamaIsleyicisiKaydet,D09.denetimOlaylariniKaydet
+D01-P16 M | İnceleme hesapları kurulum işi | exp:  | dep: D01-P15 | needs: D02.denemeDersiniKur,D03.denemeListesiniKur,D03.ogrencininEtkinSatirlari,D15.ayarlar,D15.uyariAc,D13.uygulamaKur
+D01-P17 L | Temizlik, silme yürütücü ve bekleyen kayıt kapatma işleri | exp:  | dep: D01-P16 | needs: D14.isTanimla,D14.isiCalistirVeBekle,D02.kilitliBirimDonemleri,D03.numaraIleEslestir,D03.listeKovaAnahtari,D07.yenidenDegerlendir,D07.dogrulamaTeyitAnahtari,D12.danismaKilidi,D13.uygulamaKur
+D01-P18 M | Gerçek kanca, köken ve yetki senaryoları | exp:  | dep: D01-P15 | needs: D13.uygulamaKur,D15.kurucuTanimla
+D01-P19 L | Bileşim kökleri ve ilk yönetici komutu | exp:  | dep: D01-P17,D01-P18 | needs: D13.uygulamaKur,D02.derslerKimlikDinleyicisi,D06.esitlemeKimlikDinleyicisi,D11.projeksiyonKimlikDinleyicisi,D15.kimlikOlayiDinleyicisi,D15.ayarlariYukle,D12.veritabaniKur
+D01-P20 L | Eşzamanlılık, kilit katmanları ve gizlilik taramaları | exp:  | dep: D01-P19 | needs: 
+D03-P01 M | Liste sözleşmesi | exp:  | dep:  | needs: D13.rotaTanimla,D13.hataKodlariTanimla,D13.genisleyenEnum,D13.kimlikSemasi,D13.ogrenciNoSemasi,D13.sayfaSorgusuSemasi
+D03-P02 M | Ad eşleştirme, kova ve şube anahtarları | exp: listeKovaAnahtari | dep:  | needs: 
+D03-P03 L | Üyelik aralığı ve liste farkı | exp:  | dep: D03-P02 | needs: 
+D03-P04 M | Numara, satır denetimi ve fark özeti | exp:  | dep: D03-P02,D03-P03 | needs: 
+D03-P05 M | Dosya türü, kodlama ve CSV | exp:  | dep:  | needs: 
+D03-P06 L | Başlık eşleme, dosya okuma ve örnek dosyalar | exp:  | dep: D03-P02,D03-P03,D03-P04,D03-P05 | needs: 
+D03-P07 M | Liste tabloları, göç ve dinleyici defteri | exp:  | dep: D03-P01 | needs: D12.tabloYardimcilari,D12.kisitAdi,D12.Islem
+D03-P08 L | Kilit sırası, okuma işlevleri ve kaynaklar | exp:  | dep: D03-P01,D03-P02,D03-P07 | needs: D12.Islem,D12.danismaKilidi,D12.danismaKilidiDene,D07.dogrulamaListeAnahtari,D02.subeGetir,D02.dersGetir,D02.dersSubeleri,D02.kilitDurumu,D06.surumAl,D09.denetimeYaz,D13.uygulamaHatasi
+D03-P09 L | Yazma servisi, uçlar ve eklenti | exp: listeSatirlari,satirGetir,uyelikDenetle,numaraIleEslestir,ogrencininEtkinSatirlari,ogrencininSatirlari,muafIsaretle,denemeListesiniKur,listeDegisikligiDinleyicisiKaydet,listelerEklentisi | dep: D03-P01,D03-P03,D03-P04,D03-P07,D03-P08 | needs: D02.dersYetkisi,D02.subeGetir,D02.kilitDurumu,D02.oturumlariGetir,D02.OTURUM_DURUMLARI,D02.OTURUM_TURLERI,D02.IPTAL_NEDENLERI,D02.listeKaynagiKaydet,D02.kilitAdimiKaydet,D06.surumAl,D06.indirmeKaynagiKaydet,D09.denetimOlaylariniKaydet,D12.Islem,D12.islem,D12.saklamaIsleyicisiKaydet,D13.rotalariKaydet,D13.EklentiTemelSecenekleri,D13.uygulamaHatasi,D04.simdi
+D03-P10 L | Liste kurucusu, ortak adımlar ve yükleme senaryoları | exp:  | dep: D03-P09 | needs: D15.TestDunyasi,D15.kurucuTanimla,D02.denemeDersiniKur
+D03-P11 L | Eşleme, üyelik ve indirme senaryoları | exp:  | dep: D03-P10 | needs: D15.TestDunyasi,D08.devamEklentisi
+D03-P12 M | Satır, yetki ve kilit senaryoları | exp:  | dep: D03-P10,D03-P11 | needs: D15.TestDunyasi,D08.devamEklentisi,D09.duzeltmelerEklentisi
+D03-P13 M | Açılış, deneme, saklama ve dinleyici zinciri senaryoları | exp:  | dep: D03-P10,D03-P11 | needs: D15.TestDunyasi,D13.uygulamaKur,D02.derslerEklentisi,D02.isler,D12.saklamaIsleyicisiniCalistir,D09.denetimeYaz,D01.kimlikEklentisi,D07.dogrulamaEklentisi,D08.devamEklentisi
+D03-P14 L | Eşzamanlılık senaryoları | exp:  | dep: D03-P10,D03-P11 | needs: D15.TestDunyasi,D12.danismaKilidi,D07.dogrulamaListeAnahtari,D01.kimlikEklentisi,D02.derslerEklentisi,D08.devamEklentisi
+D03-P15 M | Yük testi ve hata kodu kapsaması | exp:  | dep: D03-P11,D03-P12,D03-P13,D03-P14 | needs: D01.kimlikEklentisi
+D04-P01 S | Saat arayüzü ve İstanbul yardımcıları | exp: simdi,istanbulTarihi,istanbulAni,istanbulGunSonuAni,duvarSaatiFarkiMs | dep:  | needs: 
+D04-P02 M | Saat sözleşmesi ve belge biçimi | exp: ILK_CAPA_DURUMLARI,IKINCI_CAPA_DURUMLARI,IKINCI_CAPA_YOK_NEDENLERI,ILK_CAPA_TELEFON_BILDIRIMLERI,SAAT_DURUMLARI,SAAT_KAYNAKLARI,PENCERE_SONUCLARI,KAPANIS_NEDENLERI,DEGISIKLIK_TURLERI,SAAT_DENETIM_OLAYLARI,SAAT_ROTALARI,PENCERE_SURESI_OGESI,ERKEN_KAPATMA_OGESI | dep:  | needs: D13.CihazId,D13.KisiId,D13.rotaTanimla,D13.ogeTuruTanimla,D13.genisleyenEnum,D13.hataKodlariTanimla,D13.anSemasi
+D04-P03 M | Çapa aralığı ve saat sonucu | exp:  | dep: D04-P02 | needs: 
+D04-P04 L | Pencere hesabı ve çekirdek girişi | exp: SaatOznesi,saatSonucu,capaAraligi,pencereHesapla,pencereIcindeMi,pencereDurumu,belgeCoz,belgeImzaGirdisi,KAYMA_PPM,BELGE_EN_COK_YAS_MS,BELGE_ISTEK_EN_COK_MS,BELGE_BAYT,BELGE_KARAKTER,DEGER_BAYT | dep: D04-P01,D04-P02,D04-P03 | needs: 
+D04-P05 L | Saat tabloları ve pencere servisi | exp:  | dep: D04-P01,D04-P02,D04-P04 | needs: D12.tabloYardimcilari,D12.kisitAdi,D12.Islem,D02.dersGetir,D02.oturumGetir,D02.OturumUretimOlayi,D02.OTURUM_DURUMLARI,D06.surumDamgasiIste,D06.surumAl
+D04-P06 L | Eşitleme denetimi ve kesinti kaydı | exp:  | dep: D04-P01,D04-P05 | needs: D12.islem,D14.isGonder,D14.KuyrukTanimi,D15.saatEsitlemeDurumu,D15.log,D13.uygulamaHatasi
+D04-P07 M | Saat belgesi servisi ve uçlar | exp:  | dep: D04-P04,D04-P05,D04-P06 | needs: D15.gizliAnahtar,D13.uygulamaHatasi,D02.dersYetkisi
+D04-P08 L | Ders içi pencere değişikliği | exp:  | dep: D04-P04,D04-P05,D04-P07 | needs: D02.dersGetir,D02.dersYetkisi,D02.kilitDurumu,D02.birimDonemiGetir,D06.gondermeSuresiSonu,D09.denetimeYaz
+D04-P09 S | Pencereler indirme kaynağı | exp:  | dep: D04-P05 | needs: 
+D04-P10 M | Saklama, saat eklentisi ve dış yüz | exp: saatBelgesiVer,saatBelgesiDogrula,pencereleriHesapla,pencereGetir,pencereSonucu,esitlemeSaglikliMi,kesintiAraliklari,oturumKapandiDinleyicisiKaydet,kesintiKapandiDinleyicisiKaydet,pencereDegistiDinleyicisiKaydet,saatEklentisi,SaatEklentisiSecenekleri | dep: D04-P05,D04-P06,D04-P07,D04-P08,D04-P09 | needs: D02.oturumUretimDinleyicisiKaydet,D06.ogeTuruKaydet,D06.indirmeKaynagiKaydet,D12.saklamaIsleyicisiKaydet,D12.saklamaIsleyicisiniCalistir,D13.rotalariKaydet,D13.EklentiTemelSecenekleri,D13.TUM_OGE_TURLERI
+D04-P11 M | Kapanış ve yeniden değerlendirme işleri | exp:  | dep: D04-P10 | needs: D14.isTanimla,D12.islem,D15.uyariAc,D15.log
+D04-P12 M | Bütünleşik saat senaryoları | exp:  | dep: D04-P10,D04-P11 | needs: D15.kurucuTanimla,D13.uygulamaKur
+D05-P01 M | Sözleşme, zarf kodlaması ve çift anahtarı | exp: yoklamaCiftAnahtari | dep:  | needs: D13.ogeTuruTanimla,D13.rotaTanimla,D13.hataKodlariTanimla,D13.genisleyenEnum,D13.kimlikSemasi,D13.anSemasi
+D05-P02 M | Saf çekirdek: karşılaştırma, sayılan sırası, gerekçe tablosu ve panel sayıları | exp:  | dep: D05-P01 | needs: D04.IKINCI_CAPA_YOK_NEDENLERI
+D05-P03 L | Tablolar, tablo göçü, saat sütunları ve test kurucusu | exp:  | dep: D05-P01 | needs: D12.tabloYardimcilari,D12.kisitAdi,D04.saatSonucu,D04.ILK_CAPA_DURUMLARI,D04.IKINCI_CAPA_DURUMLARI,D04.SAAT_DURUMLARI,D04.SAAT_KAYNAKLARI,D04.PENCERE_SONUCLARI
+D05-P04 L | Yaprak: kayıt okuma, kilitleme, sayılan seçimi ve karar yazımı | exp: kayitGetir,kayitlariKilitle,oturumKayitlari,sayilanKayitlar,kararSutunlariniYaz | dep: D05-P02,D05-P03 | needs: D12.danismaKilidi,D08.devamHesaplaIsiKoy,D06.ogrenciDurumuDegisti
+D05-P05 L | İmza ve bağ denetimi, kilit anahtarları, denetim sınırı, kanıt ve yetki göçü | exp: kanitCikar | dep: D05-P04 | needs: D01.cihazAnahtariGetir,D01.kisiGetir,D02.oturumGetir,D07.kararAnahtarlari,D11.qrKilitAnahtarlari,D09.denetimeYaz,D04.istanbulTarihi,D15.log,D12.veritabaniKur
+D05-P06 L | Öğrenci kaydı gönderimi: kayıt işleme çekirdeği ve kayıt işleyicisi | exp: yoklamaKaydiOgesi | dep: D05-P04,D05-P05 | needs: D04.saatSonucu,D04.pencereSonucu,D04.esitlemeSaglikliMi,D07.kararHesapla,D07.kararGecmisineYaz,D07.appAttestSayaciniDenetle,D11.qrKanitiniAyristir,D08.devamHesaplaIsiKoy,D06.ogrenciDurumuDegisti,D06.ogeTuruKaydet,D09.denetimOlaylariniKaydet,D15.log
+D05-P07 L | Makbuz okutması ve eşzamanlı gönderim durum makinesi | exp: makbuzOkutmasiOgesi | dep: D05-P05,D05-P06 | needs: D02.dersYetkisi,D02.dersGetir,D04.saatSonucu,D06.ogeTuruKaydet
+D05-P08 M | Oturum kayıtları ucu | exp:  | dep: D05-P04 | needs: D02.oturumGetir,D02.dersYetkisi,D02.kilitDurumu,D02.OTURUM_TURLERI,D02.OTURUM_DURUMLARI,D02.IPTAL_NEDENLERI,D03.listeSatirlari,D01.ogrenciHesabiGetir,D09.duzeltmeleriGetir,D09.sonDurumOnceligi,D06.gondermeSuresiSonu,D08.DEVAM_SON_DURUMLARI,D13.hizSinifi,D13.uygulamaHatasi
+D05-P09 M | Eklenti, indirme kaynağı, saklama ve tam bileşim senaryoları | exp: yoklamaEklentisi,ogrencininKayitlari | dep: D05-P06,D05-P07,D05-P08 | needs: D06.ogeTuruKaydet,D06.indirmeKaynagiKaydet,D12.saklamaIsleyicisiKaydet,D12.saklamaIsleyicisiniCalistir,D09.denetimOlaylariniKaydet,D13.rotalariKaydet,D13.EklentiTemelSecenekleri,D02.kilitliBirimDonemleri
+D07-P01 L | Sözleşme ve kod kataloğu | exp: dogrulamaTeyitAnahtari,dogrulamaListeAnahtari,kararAnahtarlari | dep:  | needs: D05.yoklamaCiftAnahtari,D13.rotaTanimla,D13.hataKodlariTanimla,D13.genisleyenEnum,D13.ogeTuruTanimla,D13.anSemasi,D13.kimlikSemasi
+D07-P02 L | Tablolar, göç ve saklama | exp:  | dep: D07-P01 | needs: D12.tabloYardimcilari,D12.kisitAdi,D12.saklamaIsleyicisiKaydet,D12.saklamaIsleyicisiniCalistir,D15.kurucuTanimla
+D07-P03 S | Meydan okuma düzeni ve örnek kanıtlar | exp:  | dep: D07-P01 | needs: 
+D07-P04 L | Doğrulama değeri, kanıt arayüzü ve ölçütler | exp: dogrulamaDegeriniTuket,cihazKanitiniDogrula,cihazDogrulanmadiMi | dep: D07-P01,D07-P02,D07-P03 | needs: D04.simdi,D15.ayarlar,D15.uyariAc,D15.log
+D07-P05 L | Gerçek doğrulayıcılar ve cihaz senaryoları | exp:  | dep: D07-P02,D07-P03,D07-P04 | needs: 
+D07-P06 M | App Attest sayacı ve danışma kilitleri | exp: appAttestSayaciniDenetle | dep: D07-P01,D07-P02 | needs: D12.danismaKilidi,D12.danismaKilidiDene
+D07-P07 L | Saf karar motoru | exp:  | dep: D07-P01 | needs: D11.DOGRULAMA,D11.GECIKME,D04.PENCERE_SONUCLARI
+D07-P08 L | Geçiş yüklemi, eşik ve karar bağlamı | exp:  | dep: D07-P01,D07-P02,D07-P03,D07-P04,D07-P06,D07-P07 | needs: D11.DOGRULAMA,D11.GECIKME,D04.PENCERE_SONUCLARI,D03.uyelikDenetle,D04.pencereSonucu,D04.kesintiAraliklari,D01.cihazGetir,D01.ogrenciHesabiGetir,D01.cihazAnahtariGetir,D02.oturumGetir,D02.kilitDurumu,D02.OTURUM_DURUMLARI,D02.OTURUM_TURLERI,D02.IPTAL_NEDENLERI,D06.gondermeSuresiSonu,D13.yayinBilgisi
+D07-P09 L | İlk karar ve karar yazıcısı | exp: kararHesapla,kararGecmisineYaz,kararDegistir | dep: D07-P02,D07-P06,D07-P08 | needs: D05.kayitGetir,D05.kayitlariKilitle,D05.kararSutunlariniYaz,D02.dersGetir,D02.kilitDurumu,D09.denetimeYaz,D09.duzeltmeleriGetir,D13.uygulamaHatasi,D13.yayinBilgisi,D12.danismaKilidi,D12.danismaKilidiDene,D04.simdi
+D07-P10 L | Yeniden değerlendirme ve karar kuralları | exp: yenidenDegerlendir | dep: D07-P05,D07-P09 | needs: D05.sayilanKayitlar,D05.kayitlariKilitle,D02.kilitDurumu,D12.danismaKilidi,D12.danismaKilidiDene,D15.log
+D07-P11 L | Olay dinleyicileri ve eşzamanlılık | exp:  | dep: D07-P10 | needs: D04.kesintiAraliklari,D11.gosterimAraliklari,D03.satirGetir,D05.kayitlariKilitle
+D07-P12 L | Kafa sayısı ve oturum işaretleri | exp: kafaSayisiOgesi,oturumIsaretleri,isaretIncelendi | dep: D07-P11 | needs: D02.oturumGetir,D02.birimDonemiGetir,D02.dersYetkisi,D02.kafaSayisiniYaz,D06.gondermeSuresiSonu,D09.denetimeYaz,D13.uygulamaHatasi,D04.simdi
+D07-P13 L | Rastgele isim, burada değil ve dönem kilidi | exp: donemKilidiKararKapanisi | dep: D07-P12 | needs: D02.oturumGetir,D02.dersYetkisi,D02.oturumSayfasi,D03.satirGetir,D05.sayilanKayitlar,D09.denetimeYaz,D13.uygulamaHatasi,D04.simdi,D04.istanbulTarihi
+D07-P14 L | Arka plan işleri | exp:  | dep: D07-P12 | needs: D14.isGonder,D14.isTanimla,D02.oturumSayfasi,D02.birimDonemiGetir,D02.OTURUM_TURLERI,D06.gondermeSuresiSonu,D15.ayarlar,D15.uyariAc,D01.cihazDogrulamaSonucunuYaz,D09.denetimeYaz,D04.simdi
+D07-P15 L | Eklenti, rotalar ve uçtan uca senaryolar | exp: dogrulamaEklentisi | dep: D07-P02,D07-P05,D07-P13,D07-P14 | needs: D13.rotalariKaydet,D13.hizSinifi,D06.ogeTuruKaydet,D02.kilitAdimiKaydet,D03.listeDegisikligiDinleyicisiKaydet,D04.pencereDegistiDinleyicisiKaydet,D04.oturumKapandiDinleyicisiKaydet,D04.kesintiKapandiDinleyicisiKaydet,D11.gosterimKaydiDinleyicisiKaydet,D12.saklamaIsleyicisiKaydet,D09.denetimOlaylariniKaydet,D01.cihazDogrulamaSonucunuYaz,D08.ogrenciDevamDurumu
+D08-P01 M | Çekirdek: tipler, hak formülü ve kapsam yüklemi | exp: oturumSaatleri,kapsamdaMi | dep:  | needs: 
+D08-P02 L | Devam sözleşmesi, hesap işi yaprağı ve şema | exp: DEVAM_NEDENLERI,DEVAM_SON_DURUMLARI,DEVAM_DENETIM_OLAYLARI,devamHesaplaIsiKoy | dep:  | needs: D09.SON_DURUMLAR,D13.rotaTanimla,D13.hataKodlariTanimla,D13.genisleyenEnum,D13.kimlikSemasi,D13.ogrenciNoSemasi,D13.anSemasi,D13.gunSemasi,D14.isGonder,D12.tabloYardimcilari,D12.kisitAdi
+D08-P03 S | Çekirdek: oturum katmanı ve MUAF örtüsü | exp:  | dep: D08-P01 | needs: D09.sonDurumOnceligi
+D08-P04 M | Çekirdek: uyarı seviyesi ve geri gitmez kuralı | exp:  | dep: D08-P01 | needs: 
+D08-P05 M | Çekirdek: genel sonuç ve karar bekliyor nedenleri | exp:  | dep: D08-P01,D08-P04 | needs: 
+D08-P06 M | Çekirdek: telafi eksiği, telefon düzeltmesi ve dış yüz | exp:  | dep: D08-P03,D08-P04,D08-P05 | needs: 
+D08-P07 L | Canlı hesap: girdiler, dersSonuclari ve sonucuDegistirebilirMi | exp: dersSonuclari,oturumSonDurumlari,sonucuDegistirebilirMi | dep: D08-P02,D08-P06 | needs: D01.ogrenciHesabiGetir,D02.dersGetir,D02.dersSubeleri,D02.oturumlariGetir,D02.kilitDurumu,D02.takvimGetir,D02.OTURUM_TURLERI,D02.OTURUM_DURUMLARI,D02.IPTAL_NEDENLERI,D03.listeSatirlari,D05.sayilanKayitlar,D05.kayitGetir,D06.kurulumSonTemaslari,D09.duzeltmeleriGetir,D09.acikSorunBildirimleri
+D08-P08 M | Saklanan durumun yazımı ve seviye geçmişi | exp: ogrenciDevamDurumu | dep: D08-P07 | needs: D01.ogrenciHesabiGetir,D06.ogrenciDurumuDegisti
+D08-P09 M | devam_hesapla parti işleyicisi | exp:  | dep: D08-P08 | needs: D02.dersGetir,D12.islem,D12.danismaKilidi
+D08-P10 M | Gece tutarlılık denetimi ve iş tanımları | exp:  | dep: D08-P09 | needs: D02.denetlenecekDersler,D12.islem,D14.isTanimla
+D08-P11 L | Muaf, oran ve karar bekleyenler uçları | exp:  | dep: D08-P07,D08-P10 | needs: D01.yetkiDenetle,D02.dersYetkisi,D02.dersGetir,D02.oranlariYaz,D03.satirGetir,D03.muafIsaretle,D09.denetimeYaz,D12.islem,D13.uygulamaHatasi,D13.istekKimligi
+D08-P12 S | Öğrenci indirme kaynağı | exp:  | dep: D08-P08,D08-P10 | needs: D01.ogrenciHesabiGetir
+D08-P13 M | Eklenti, dinleyiciler, saklama ve modül girişi | exp: devamEklentisi | dep: D08-P11,D08-P12 | needs: D02.oturumUretimDinleyicisiKaydet,D02.kilitAdimiKaydet,D03.listeDegisikligiDinleyicisiKaydet,D04.oturumKapandiDinleyicisiKaydet,D06.indirmeKaynagiKaydet,D12.saklamaIsleyicisiKaydet,D13.rotalariKaydet
+D08-P14 L | Bağımsız kahin, örnek ders kurucusu ve yük | exp:  | dep: D08-P06,D08-P13 | needs: 
+D10-P01 L | Rapor sözleşmesi, kod sabitleri ve çıktı durumu | exp: AksisAnligi | dep:  | needs: D13.rotaTanimla,D13.hataKodlariTanimla,D13.genisleyenEnum,D13.anSemasi,D13.gunSemasi,D13.bindeSemasi,D13.istemciKimligiSemasi,D13.ogrenciNoSemasi,D02.OTURUM_TURLERI,D02.YAPILDI_DURUMLARI
+D10-P02 L | Anlık tabloları, göç, taban okuması ve saklama işleyicisi | exp: aksisAnligiGetir | dep: D10-P01,D10-P07 | needs: D12.tabloYardimcilari,D12.kisitAdi,D12.Islem,D12.saklamaIsleyicisiniCalistir
+D10-P03 S | Değişim sınıfı | exp: degisimSinifi | dep:  | needs: D09.SEBEP_KODLARI,D09.SON_DURUMLAR
+D10-P04 M | Harf, yüzde, tarih ve hücre metinleri | exp:  | dep: D10-P01 | needs: D09.SON_DURUMLAR,D08.DEVAM_SON_DURUMLARI
+D10-P05 M | Geçicilik kuralı ve kanonik özet içeriği | exp:  | dep: D10-P01 | needs: 
+D10-P06 M | Excel satır modeli, dosya adı ve ortak paket girişi | exp:  | dep: D10-P01,D10-P03,D10-P04,D10-P05 | needs: 
+D10-P07 M | Rapor test kurucusu | exp:  | dep:  | needs: 
+D10-P08 L | Okuma işlemi, okunan tablolar ve kaynak yetkisi | exp:  | dep: D10-P01,D10-P02,D10-P07 | needs: D12.islem,D12.Islem,D13.kalanSureMs,D13.uygulamaHatasi,D02.dersYetkisi,D02.dersGetir,D02.subeGetir,D01.yetkiDenetle
+D10-P09 L | AKSİS özeti ve geçici nedenleri | exp:  | dep: D10-P01,D10-P02,D10-P05,D10-P08 | needs: D08.dersSonuclari,D02.dersGetir,D02.subeGetir,D02.oturumlariGetir,D02.kilitDurumu,D02.birimDonemiGetir,D02.OTURUM_DURUMLARI,D02.YAPILDI_DURUMLARI,D06.gondermeSuresiSonu,D13.uygulamaHatasi
+D10-P10 L | Ders raporu | exp:  | dep: D10-P08,D10-P09 | needs: D08.oturumSonDurumlari,D08.dersSonuclari,D02.dersGetir,D02.dersSubeleri,D02.oturumlariGetir,D02.takvimGetir,D02.kilitDurumu,D02.birimDonemiGetir,D02.OTURUM_DURUMLARI,D06.gondermeSuresiSonu,D13.uygulamaHatasi
+D10-P11 S | Öğrenci raporu | exp:  | dep: D10-P10 | needs: D03.satirGetir,D08.oturumSonDurumlari,D08.dersSonuclari,D01.ogrenciHesabiGetir,D02.oturumlariGetir,D13.uygulamaHatasi
+D10-P12 L | AKSİS özeti çıktısı ve hoca çıktısı anlığı | exp:  | dep: D10-P02,D10-P09,D10-P10 | needs: D12.islem,D13.kalanSureMs,D13.uygulamaHatasi
+D10-P13 M | Dönem sonu raporu | exp:  | dep: D10-P02,D10-P03,D10-P08,D10-P10 | needs: D01.ogrenciHesabiGetir,D02.kilitDurumu,D02.birimDonemiGetir,D13.uygulamaHatasi
+D10-P14 M | Raporlar eklentisi, rotalar, kuyruk ve kilit adımı | exp: raporlarEklentisi | dep: D10-P02,D10-P08,D10-P09,D10-P10,D10-P11,D10-P12,D10-P13 | needs: D13.rotalariKaydet,D13.EklentiTemelSecenekleri,D02.kilitAdimiKaydet,D12.saklamaIsleyicisiKaydet,D14.isGonder,D14.KuyrukTanimi
+D10-P15 L | Gün sonu anlığı işi ve güvenlik ağı | exp:  | dep: D10-P02,D10-P09,D10-P12,D10-P14 | needs: D14.isTanimla,D14.isGonder,D02.kilitDurumu,D02.kilitliBirimDonemleri,D12.islem
+D10-P16 M | Rapor gizliliği, hata kodu kapsamı ve sunucu mutasyonları | exp:  | dep: D10-P14,D10-P15 | needs: 
+D14-P01 L | Sözleşme tipleri, hata kataloğu ve iş tanımı doğrulaması | exp: KuyrukTanimi,IsBaglami,PartiIsi,PartiBaglami,IsSagligi,IsKuyrugu,Eposta,IS_KUYRUGU_HATA_KODLARI,isTanimla | dep:  | needs: D13.hataKodlariTanimla
+D14-P02 M | E-posta türleri, sabit metinler, Türkçe saat biçimi ve bağlantı denetimi | exp: EPOSTA_TURLERI,EpostaVerisi,EpostaHataTuru,baglantiDenetle | dep:  | needs: 
+D14-P03 M | E-posta şablonları | exp:  | dep: D14-P02 | needs: 
+D14-P04 L | Gönderim tablosu, adres özeti, kayan pencere sınırı ve temizlik işi | exp: epostaSagligi,epostaGonderimleriniTemizle | dep: D14-P01,D14-P02 | needs: D12.tabloYardimcilari,D12.kisitAdi,D12.danismaKilidi,D12.islem
+D14-P05 L | SMTP taşıyıcısı, süreç içi gönderici, sahte posta kutusu ve epostaKur | exp: epostaKur,epostaGonder,epostaSiniriDenetle,smtpTasiyicisi,sahtePostaKutusu | dep: D14-P01,D14-P02,D14-P03,D14-P04 | needs: D12.islem
+D14-P06 L | pg-boss örneği, iş gönderme, tek iş sarmalayıcısı ve test yardımcıları | exp: isKuyrugunuBosalt,isiCalistirVeBekle,kuyruktakiIsler,zamanlamaliOrnekAc | dep: D14-P01 | needs: 
+D14-P07 L | Parti işleyicisi, iş sağlığı, kuyruk politikası ve isKuyruguKur dış yüzü | exp: isGonder,isSagligi,isKuyruguKur | dep: D14-P01,D14-P05,D14-P06 | needs: 
+D14-P08 L | Altyapı iş uyarlayıcısı, kur adımı ve worker.ts bileşim kökü | exp: altyapiIsleriniUyarla,kuyruklariKur | dep: D14-P01,D14-P04,D14-P05,D14-P07 | needs: D15.ayarlariYukle,D15.logOlustur,D15.gizliAnahtar,D15.isletimIsleri,D12.veritabaniKur,D12.veritabaniIsleri,D13.uygulamaKur
+D14-P09 L | İş kuyruğu senaryoları, iş adımları ve kancalar | exp:  | dep: D14-P05,D14-P06,D14-P07,D14-P08 | needs: D15.TestDunyasi,D13.TUM_HATALAR,D12.veritabaniKur,D12.islem
+D14-P10 L | E-posta senaryoları ve e-posta adımları | exp:  | dep: D14-P04,D14-P05,D14-P09 | needs: D15.TestDunyasi,D12.islem,D12.danismaKilidi,D12.danismaKilidiDene

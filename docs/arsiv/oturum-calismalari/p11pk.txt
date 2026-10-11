@@ -1,0 +1,537 @@
+===== D10-P12
+{
+ "id": "D10-P12",
+ "title": "AKSİS özeti çıktısı ve hoca çıktısı anlığı",
+ "files": [
+  "apps/server/src/modules/raporlar/cikti.ts",
+  "apps/server/src/modules/raporlar/anlik.ts",
+  "apps/server/test/features/raporlar/aksis-ozeti-ciktisi.feature"
+ ],
+ "tables": [],
+ "endpoints": [
+  "POST /v1/raporlar/subeler/{subeId}/aksis-ozeti/ciktilar"
+ ],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D12.islem",
+  "D13.kalanSureMs",
+  "D13.uygulamaHatasi",
+  "D08.dersSonuclari"
+ ],
+ "tests": [
+  "KARAR BEKLİYOR öğrenci hesaplanan Sonuç ile döner",
+  "Dönem sonu penceresinde cevapsız oturum çıktıyı engeller",
+  "Özet değiştiyse çıktı reddedilir",
+  "Çıktı anlığı yalnız dönem sonu penceresinde yazılır",
+  "Aynı çıktı kimliği yeniden gelince aynı anlık döner",
+  "Telafi edilmeyen saat işareti D08 değeridir",
+  "Anlık özeti yeniden hesaplanınca tutar"
+ ],
+ "depends_on": [
+  "D10-P01",
+  "D10-P02",
+  "D10-P08",
+  "D10-P09"
+ ],
+ "size": "L",
+ "notes": "Çıktı ucu D10-P09 özet kurucusuyla özeti yeniden kurar, özet karşılaştırması, cevapsız oturum engeli, çıktı kimliğiyle tekrar ve 40001 sonrası yeniden çalıştırma ile çalışır, anlik.ts başlık ve satırları aynı işlemde yazar (gün sonu işi de bu yazıcıyı kullanır); ders raporunu beklemez. aksis-ozeti-ciktisi.feature 201 ve 200 ayrımını, 409 kodlarını, anlık satır sayısını, KARAR BEKLİYOR ve telafi değerlerinin (D08.dersSonuclari casusuyla) anlığa aynen geçtiğini ve ozet_ozeti değerinin yeniden hesapla tuttuğunu denetler."
+}
+===== D10-P11
+{
+ "id": "D10-P11",
+ "title": "Öğrenci raporu ve rapor toplamlarının özetle tutması",
+ "files": [
+  "apps/server/src/modules/raporlar/ogrenci-raporu.ts",
+  "apps/server/test/features/raporlar/ogrenci-raporu.feature"
+ ],
+ "tables": [],
+ "endpoints": [
+  "GET /v1/raporlar/ogrenciler/{satirId}"
+ ],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D03.satirGetir",
+  "D08.oturumSonDurumlari",
+  "D08.dersSonuclari",
+  "D01.ogrenciHesabiGetir",
+  "D02.oturumlariGetir",
+  "D13.uygulamaHatasi"
+ ],
+ "tests": [
+  "Öğrenci raporu yalnız isteyen hocanın derslerini kapsar",
+  "Ders raporu toplamları AKSİS özetiyle her an tutar"
+ ],
+ "depends_on": [
+  "D10-P07",
+  "D10-P08",
+  "D10-P09",
+  "D10-P10"
+ ],
+ "size": "M",
+ "notes": "Öğrenci raporu ucu numarayı D03.satirGetir ile çözer, ders-raporu.ts kırpma ve hücre işlevlerini içe aktararak yalnız isteyen hocanın aynı dönemdeki derslerindeki satırları tek öğrenci olarak toplar ve kayıt kararını ekler. ogrenci-raporu.feature başka hocanın dersinin cevapta olmadığını ve o hocanın satır kimliğiyle 404 döndüğünü, ayrıca D10-P07 kurucusunun tohumu yazılı 50 dersinde her (ders, numara) ve tür için ders raporu hücre toplamlarının AKSİS özetiyle ve D08.dersSonuclari(tx, subeId, { an, hucreler: true }) hücreleriyle tuttuğunu denetler; bu karşılaştırma ders raporu ve özet ucu bittikten sonra koşabildiği için buradadır."
+}
+===== D10-P13
+{
+ "id": "D10-P13",
+ "title": "Dönem sonu raporu",
+ "files": [
+  "apps/server/src/modules/raporlar/donem-sonu.ts",
+  "apps/server/test/features/raporlar/donem-sonu-raporu.feature"
+ ],
+ "tables": [],
+ "endpoints": [
+  "GET /v1/raporlar/yonetim/donem-sonu"
+ ],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D01.ogrenciHesabiGetir",
+  "D02.kilitDurumu",
+  "D02.birimDonemiGetir",
+  "D13.uygulamaHatasi"
+ ],
+ "tests": [
+  "Dönem sonu raporu Haksız devamsızı ve mazeretli dönüşü ayırır"
+ ],
+ "depends_on": [
+  "D10-P02",
+  "D10-P03",
+  "D10-P08",
+  "D10-P10"
+ ],
+ "size": "M",
+ "notes": "Dönem sonu ucu taban anlığına göre Haksız devamsız, mazeretli dönüş ve KARAR BEKLİYOR kalanı tek küme sorgusu ve degisimSinifi ile isimsiz sayar, D08 dış yüzünü çağırmaz; donem-sonu-raporu.feature sınıflamayı, onda bir birimli oranı, kilitSonrasiHesapTamam değerini, 409 RAPORLAR_DONEM_KILITLI_DEGIL kodunu ve cevapta numara olmadığını denetler. Taban anlıkları anlik-adimlari.ts adımlarıyla yazılır; D10-P10 yalnız testin olumlu kontrolü (kurulumdaki ad hocanın ders raporunda görünür) için beklenir."
+}
+===== D02-P16
+{
+ "id": "D02-P16",
+ "title": "İndirme kaynakları ve personel kapsamı",
+ "files": [
+  "apps/server/src/modules/dersler/indirme.ts",
+  "apps/server/src/modules/dersler/kapsam.ts",
+  "apps/server/src/modules/dersler/indirme.test.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D01.kisiGetir",
+  "D12.Islem"
+ ],
+ "tests": [
+  "Beş indirme kaynağı imleç ile üst sürüm arasını rol başına satır şemasıyla döner, tatiller birim dönemi sürümüyle GREATEST alır; personel kapsamı kişinin hocası olduğu derslerden türer"
+ ],
+ "depends_on": [
+  "D02-P04",
+  "D02-P05"
+ ],
+ "size": "M",
+ "notes": "Beş genel kaynak (dersler, program saatleri, oturumlar, tatiller, kilit) ve personel kapsam kaynağı kendi tipleriyle yazılır, D06 kaydını eklenti yapar; test dosyası kaynak işlevlerini geçici test veritabanında doğrudan çağırır, indirme senaryoları uçtan uca pakette koşar."
+}
+===== D03-P11
+{
+ "id": "D03-P11",
+ "title": "Liste ve indirme kaynakları, saklama işleyicisi",
+ "files": [
+  "apps/server/src/modules/listeler/liste-kaynagi.ts",
+  "apps/server/src/modules/listeler/indirme-kaynagi.ts",
+  "apps/server/src/modules/listeler/kapsam-kaynagi.ts",
+  "apps/server/src/modules/listeler/saklama.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D12.Islem",
+  "D02.subeGetir",
+  "D02.dersGetir"
+ ],
+ "tests": [
+  "Modül sınırı: saklama.ts hiçbir modülün index.ts'ini içe aktarmaz"
+ ],
+ "depends_on": [
+  "D03-P01",
+  "D03-P08"
+ ],
+ "size": "M",
+ "notes": "D02 liste kaynağının etkinSatirlar işlevi, D06'nın iki indirme kaynağı (liste_satirlari ve ogrenci_liste_kapsami; kapsam dersleri ve birimleri D02.subeGetir ve dersGetir'den) ve saklama partiIsle ile kilit adımı calistir işlevleri yazılır. Kaynak ve işleyici tipleri packages/contracts'tan (esitleme.ts, dersler.ts, veritabani.ts) gelir; kayıt çağrılarının hepsi P12'deki eklenti.ts'tedir. Davranışı P15, P16 ve P17 senaryoları sınar."
+}
+===== D04-P10
+{
+ "id": "D04-P10",
+ "title": "Saat uçları ve veri kurucusu",
+ "files": [
+  "apps/server/src/modules/saat/rotalar.ts",
+  "apps/server/test/features/saat/pencere-ucu.feature",
+  "apps/server/test/steps/saat/uc-adimlari.ts",
+  "apps/server/test/support/kurucular/saat.ts"
+ ],
+ "tables": [],
+ "endpoints": [
+  "POST /v1/saat/belge",
+  "GET /v1/saat/pencereler/{oturumId}"
+ ],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D12.Islem",
+  "D13.Kimlik",
+  "D13.uygulamaHatasi",
+  "D13.rotalariKaydet",
+  "D13.DenemeSecenekleri",
+  "D02.dersYetkisi",
+  "D15.saatEsitlemeDurumu",
+  "D15.TestDunyasi",
+  "D15.kurucuTanimla"
+ ],
+ "tests": [
+  "Saat belgesi ucu",
+  "Belge ucu yalnız Bearer oturumuyla",
+  "Eşitleme bozukken belge verilmez",
+  "Belge servisi veritabanına dokunmaz",
+  "Belge ucu hız sınırı",
+  "Pencere ucu yetkisi"
+ ],
+ "depends_on": [
+  "D04-P02",
+  "D04-P04",
+  "D04-P06",
+  "D04-P07"
+ ],
+ "size": "M",
+ "notes": "Belge ve pencere uçlarının işleyicileri ile saat veri kurucusu (pencere ve değişiklik satırları; sonraki senaryolar da kullanır) yazılır. pencere-ucu.feature iki ucun HTTP senaryolarını (Bearer kimliği, hız sınırı, eşitleme bozukken 503 ve başlık, sorgu sayacı, pencere ucu yetkisi) D13 senaryo düzeneğinde rotaları rotalariKaydet ile bağlayarak denetler; değişiklik geçmişi kurucuyla kurulur, bu yüzden P09 ve bileşik uygulama beklenmez."
+}
+===== D04-P11
+{
+ "id": "D04-P11",
+ "title": "Pencereler indirme kaynağı ve saklama işleyicisi",
+ "files": [
+  "apps/server/src/modules/saat/indirme-kaynagi.ts",
+  "apps/server/test/features/saat/pencere-indirme.feature",
+  "apps/server/src/modules/saat/saklama.ts",
+  "apps/server/test/features/saat/saat-saklama.feature",
+  "apps/server/test/steps/saat/indirme-saklama-adimlari.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D12.Islem",
+  "D12.saklamaIsleyicisiKaydet",
+  "D12.saklamaIsleyicisiniCalistir",
+  "D15.TestDunyasi"
+ ],
+ "tests": [
+  "Şube eklenen oturumun penceresi yeni şubeye iner",
+  "Pencereler indirmesinin kapsamı",
+  "Saklama sınıfı ve partisi",
+  "pencere_degisiklikleri yalnız eklenir"
+ ],
+ "depends_on": [
+  "D04-P06"
+ ],
+ "size": "M",
+ "notes": "Şube ve sürüm süzgeçli pencereler indirme kaynağı ile saat.donem_verisi saklama partisi yazılır; ikisi de yalnız saat tablolarını okur ve eklentide kaydedilir. pencere-indirme.feature öğrenci ve hoca kapsamını, başka şubenin inmediğini ve şube eklenince yeniden damgalanan satırı; saat-saklama.feature saklama sınıfını, partiyi ve yoklama_api ile UPDATE ve DELETE izin hatasını atılabilir veritabanında denetler."
+}
+===== D07-P16
+{
+ "id": "D07-P16",
+ "title": "Dönem kilidi karar kapanışı",
+ "files": [
+  "apps/server/src/modules/dogrulama/kilit.ts",
+  "apps/server/test/features/dogrulama/donem-kilidi.feature"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "donemKilidiKararKapanisi"
+ ],
+ "needs": [
+  "D02.oturumSayfasi",
+  "D05.sayilanKayitlar",
+  "D09.denetimeYaz",
+  "D15.TestDunyasi"
+ ],
+ "tests": [
+  "Kilit ve son gün"
+ ],
+ "depends_on": [
+  "D07-P02",
+  "D07-P03",
+  "D07-P10",
+  "D07-P11"
+ ],
+ "size": "S",
+ "notes": "donemKilidiKararKapanisi'ni oturumları D02.oturumSayfasi ile, kayıtları D05.sayilanKayitlar ile sayfa sayfa okuyup 150 kayıtlık olay parçalarıyla kilit.ts'te yazar; kararları değiştirmez. donem-kilidi.feature kilitli dönemde kararDegistir'in DOGRULAMA_DONEM_KILITLI döndüğünü, yeniden değerlendirmenin kayıtları atladığını, son günden sonra gelen kaydı ve 400 onay bekleyen kayıtta kilit olaylarının işlemle birlikte geri alındığını sınar; adımları karar.steps.ts ve isler.steps.ts'ten gelir."
+}
+===== D09-P05
+{
+ "id": "D09-P05",
+ "title": "Denetim okuma uçları ve öğrenci indirme kaynakları",
+ "files": [
+  "apps/server/src/modules/duzeltmeler/denetim-sorgulari.ts",
+  "apps/server/src/modules/duzeltmeler/indirme-kaynaklari.ts",
+  "apps/server/test/features/duzeltmeler/denetim-kaydi.feature"
+ ],
+ "tables": [],
+ "endpoints": [
+  "GET /v1/duzeltmeler",
+  "GET /v1/duzeltmeler/denetim"
+ ],
+ "jobs": [],
+ "exports": [
+  "ogrencininDuzeltmeleri",
+  "ogrencininSorunBildirimleri"
+ ],
+ "needs": [
+  "D01.kisiGetir",
+  "D01.ogrenciHesabiGetir",
+  "D02.dersSubeleri",
+  "D02.oturumlariGetir",
+  "D02.kilitDurumu",
+  "D03.listeSatirlari",
+  "D03.ogrencininSatirlari",
+  "D13.uygulamaHatasi"
+ ],
+ "tests": [
+  "Denetim okuma yetkisi, birim kapsamı ve sayfalama"
+ ],
+ "depends_on": [
+  "D09-P01",
+  "D09-P02",
+  "D09-P03",
+  "D09-P04"
+ ],
+ "size": "M",
+ "notes": "Yalnız okuyan iki uç ve iki öğrenci kaynağı; hiçbir yazma servisini beklemez. GET /v1/duzeltmeler ad soyadı liste satırından (D03), oturum başlangıcını ve kilit sonrası bilgisini D02'den, denetim ucu yapanın adını D01.kisiGetir'den alır. Kaynaklar duzeltmeleriGetir ve sorun_bildirimleri'nden tam liste kurar, etkin ve harf çekirdek son durum işleviyle; OgrenciKaynagi tipi D06 sözleşmesinden gelir, kaydı eklentidedir. Eşitleme indirmesi senaryosu düzeltme ve bildirim yazımı ister, D09-P16'dadır."
+}
+===== D09-P09
+{
+ "id": "D09-P09",
+ "title": "İlk kayıt teyidi",
+ "files": [
+  "apps/server/src/modules/duzeltmeler/teyit-servisi.ts",
+  "apps/server/test/features/duzeltmeler/ilk-kayit-teyidi.feature"
+ ],
+ "tables": [],
+ "endpoints": [
+  "GET /v1/duzeltmeler/teyitler",
+  "POST /v1/duzeltmeler/teyitler/kararlar"
+ ],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D01.ogrenciTeyitEt",
+  "D01.ogrenciTeyidiniReddet",
+  "D06.ogrenciDurumuDegisti",
+  "D07.dogrulamaTeyitAnahtari",
+  "D12.islem",
+  "D13.uygulamaHatasi"
+ ],
+ "tests": [
+  "İlk kayıt teyidi grupları, eşleme ve tekrar",
+  "Teyit reddi gerekçeyle D01'e gider",
+  "Toplu teyit öğe başına ayrı işlemle yürür"
+ ],
+ "depends_on": [
+  "D09-P02",
+  "D09-P03",
+  "D09-P04",
+  "D09-P08"
+ ],
+ "size": "M",
+ "notes": "Teyit listesi D09-P08'in aday sorgusundan dört gruba ayrılır; kararlar öğe başına ayrı işlemde D01.ogrenciTeyitEt ve ogrenciTeyidiniReddet'e islemId ile gider, sonuç öğe koduna eşlenir. Grup, gerekçeli ret, tekrar ve 200 öğelik sıra denetimi senaryolarıyla doğrulanır."
+}
+===== D09-P11
+{
+ "id": "D09-P11",
+ "title": "Sonradan değişenler",
+ "files": [
+  "apps/server/src/modules/duzeltmeler/sonradan-degisenler.ts",
+  "apps/server/test/features/duzeltmeler/sonradan-degisenler.feature"
+ ],
+ "tables": [],
+ "endpoints": [
+  "GET /v1/duzeltmeler/sonradan-degisenler"
+ ],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D02.birimDonemiGetir",
+  "D02.dersSubeleri",
+  "D02.kilitDurumu",
+  "D02.oturumlariGetir",
+  "D03.listeSatirlari",
+  "D05.sayilanKayitlar",
+  "D06.gondermeSuresiSonu",
+  "D08.dersSonuclari",
+  "D08.sonucuDegistirebilirMi",
+  "D10.aksisAnligiGetir",
+  "D10.degisimSinifi",
+  "D12.islem",
+  "D13.uygulamaHatasi"
+ ],
+ "tests": [
+  "Sonradan değişenler üç bölümü doğru kurar ve sayfalar"
+ ],
+ "depends_on": [
+  "D09-P01",
+  "D09-P02",
+  "D09-P03",
+  "D09-P04"
+ ],
+ "size": "M",
+ "notes": "GEC_ULASAN, SONUCU_DEGISEN ve SAYILIRSA_DEGISECEK bölümleri repeatable read işleminde D08 ve D10 işlevleriyle sorgu anında kurulur ve tek keyset akışıyla sayfalanır. Senaryonun kilit sonrası düzeltmesi D09 kurucusuyla yazılır, düzeltme servisini beklemez; kilit sonrası anlık bekleme senaryosu D09-P17'de."
+}
+===== D11-P14
+{
+ "id": "D11-P14",
+ "title": "Bağlantı uçları ve oturum kapanış dinleyicisi",
+ "files": [
+  "apps/server/src/modules/projeksiyon/baglanti.ts",
+  "apps/server/src/modules/projeksiyon/baglanti.test.ts"
+ ],
+ "tables": [],
+ "endpoints": [
+  "GET /v1/projeksiyon/baglantilar",
+  "DELETE /v1/projeksiyon/baglantilar/{id}"
+ ],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D02.oturumGetir",
+  "D02.dersGetir",
+  "D02.OTURUM_DURUMLARI",
+  "D04.pencereGetir",
+  "D13.uygulamaHatasi",
+  "D14.isGonder"
+ ],
+ "tests": [
+  "Bağlantı listesi kapanmış sayılanı yazmadan gösterir ve kesme yalnız onaylayan hocaya açıktır",
+  "Oturum kapanış dinleyicisi kapatma işini ders bitişine koyar"
+ ],
+ "depends_on": [
+  "D11-P06",
+  "D11-P08",
+  "D11-P09",
+  "D11-P10"
+ ],
+ "size": "M",
+ "notes": "Bağlantı listesi (salt okunur işlem, kapanmış sayılan bağlantı etkin durumuyla) ve kesme ucu (HOCA_KESTI, ortak kapatma işleviyle) ile eklentinin D04'e kaydedeceği oturum kapanış dinleyicisi yazılır; dinleyici projeksiyon_baglanti_kapat işini D04.pencereGetir ders bitişine D14.isGonder ile koyar. Eklenen baglanti.test.ts geçici veritabanında doğrudan kurulan bağlantı satırlarıyla sınanır; uçtan senaryolar D11-P23'tedir."
+}
+===== D11-P15
+{
+ "id": "D11-P15",
+ "title": "Kürsü uçları: eşleştirme kodu, dönen kodlar ve tarayıcı kapatma",
+ "files": [
+  "apps/server/src/modules/projeksiyon/kurusu.ts",
+  "apps/server/test/steps/projeksiyon/kurusu.steps.ts",
+  "apps/server/test/features/projeksiyon/eslestirme.feature"
+ ],
+ "tables": [],
+ "endpoints": [
+  "POST /v1/projeksiyon/eslestirme-kodu",
+  "GET /v1/projeksiyon/kodlar",
+  "DELETE /v1/projeksiyon/tarayici"
+ ],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D02.oturumGetir",
+  "D02.dersGetir",
+  "D04.pencereGetir",
+  "D04.esitlemeSaglikliMi",
+  "D13.uygulamaHatasi",
+  "D15.log"
+ ],
+ "tests": [
+  "Kürsü sayfası eşleştirme kodu alır",
+  "Aynı çerezle ikinci kod isteği aynı tarayıcıyı kullanır",
+  "Yeni tarayıcı sınırı istemci adresi başına",
+  "Eşleştirme kodu çakışması kullanılmış koda düşer"
+ ],
+ "depends_on": [
+  "D11-P06",
+  "D11-P07",
+  "D11-P08",
+  "D11-P09",
+  "D11-P10",
+  "D11-P11"
+ ],
+ "size": "M",
+ "notes": "Üç kürsü ucu ve kimlik kancası yazılır; kapanmış sayılan ya da kapatılan tarayıcının bağlantısı ortak kapatma işleviyle (D11-P10) kapanır, GET kodlar kursuDurumu, kod penceresi, D04 penceresi ve eşitleme sağlığıyla salt okunur işlemde çalışır. Kürsü adımları rota tanımlarından istek kurar ve öbür senaryo paketlerince de kullanılır; kod alma, aynı çerezle yenileme, adres başına yeni tarayıcı sınırı ve kullanılmış koda düşen çakışma senaryolarıyla denetlenir (onay sonrası GET kodlar davranışı D11-P21'dedir)."
+}
+===== D11-P16
+{
+ "id": "D11-P16",
+ "title": "Hoca onayı ucu",
+ "files": [
+  "apps/server/src/modules/projeksiyon/onay.ts",
+  "apps/server/src/modules/projeksiyon/onay.test.ts"
+ ],
+ "tables": [],
+ "endpoints": [
+  "POST /v1/projeksiyon/onay"
+ ],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D02.dersYetkisi",
+  "D02.oturumGetir",
+  "D02.dersGetir",
+  "D02.OTURUM_DURUMLARI",
+  "D04.pencereGetir",
+  "D13.uygulamaHatasi",
+  "D14.isGonder"
+ ],
+ "tests": [
+  "Onay kodu setteki her kid ile bulur, tekrarı aynı bağlantıyı döner"
+ ],
+ "depends_on": [
+  "D11-P06",
+  "D11-P07",
+  "D11-P08",
+  "D11-P09",
+  "D11-P10"
+ ],
+ "size": "M",
+ "notes": "Onay ucu kod özetini setteki her kid ile arar, yanlış deneme sayacını, ikinci kullanımı, zaman aşımı tekrarını ve dersteki tek projeksiyonu danışma kilitleri altında işler; önceki bağlantıyı ortak kapatma işleviyle kapatır, kapatma işini D14.isGonder ile koyar, referans konumla gelen onayda oturumun konum BEKLENIYOR satırlarını çekirdeğin konum karşılaştırmasıyla günceller (yeniden-hesap.ts içe aktarılmaz). Eklenen onay.test.ts geçici veritabanında anahtar türetmeyle kurulan kod satırıyla sınanır; uçtan güvenlik senaryoları D11-P22'dedir."
+}
+===== D11-P17
+{
+ "id": "D11-P17",
+ "title": "QR anahtarları ucu ve hoca telefonu adımları",
+ "files": [
+  "apps/server/src/modules/projeksiyon/qr-anahtarlari.ts",
+  "apps/server/test/steps/projeksiyon/hoca-telefonu.steps.ts",
+  "apps/server/test/features/projeksiyon/qr-anahtarlari.feature"
+ ],
+ "tables": [],
+ "endpoints": [
+  "POST /v1/projeksiyon/qr-anahtarlari"
+ ],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D01.kisiGetir",
+  "D13.uygulamaHatasi"
+ ],
+ "tests": [
+  "QR anahtarları 5 gün için iner ve aynı gün aynı anahtar döner",
+  "Rakam son gün geçmeden yeniden verilmez"
+ ],
+ "depends_on": [
+  "D11-P06",
+  "D11-P07",
+  "D11-P08",
+  "D11-P09"
+ ],
+ "size": "M",
+ "notes": "QR anahtarları ucu yuva seçip bugün dahil 5 günün anahtarını türetir ve indirme satırını yazar (inceleme hesabı D01.kisiGetir ile). Hoca telefonu adımları onay, bağlantılar ve QR anahtarı isteklerini yalnız rota tanımlarından kurar, modül kodunu içe aktarmaz, bu yüzden öbür senaryo paketleri bu pakete bağlanır (gösterim kaydı adımları D11-P18'deki gosterim.steps.ts'tedir). Aynı gün aynı bayt, dokuz rakam sınırı ve inceleme hesabı senaryolarıyla denetlenir."
+}

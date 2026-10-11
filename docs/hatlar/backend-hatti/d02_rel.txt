@@ -1,0 +1,160 @@
+ENT birim: Takvimin ve kilidin bağlandığı akademik birim (fakülte, enstitü, yüksekokul, meslek yüksekokulu, konservatuvar).
+   id (uuidv7), ad, tur (metin + CHECK), ust_birim_id, etkin
+ENT bolum: Birime bağlı bölüm; hoca kaydında seçilir, dersin varsayılan birimini verir.
+   id (uuidv7), birim_id, ad, etkin
+ENT donem: Genel akademik dönem; yoklama kaydının tekil anahtarındaki ve bölme anahtarındaki dönem kimliği.
+   id (uuidv7), akademik_yil (ör. 2026-2027), yariyil (guz, bahar, yaz; CHECK), inceleme_donemi (evet/hayır; deneme dersi için süresiz), tekil (akademik_yil, yariyil)
+ENT takvim: Bir dönemin tarih seti; birden çok birim aynı takvime bağlanabilir (genel takvim ya da birime özel takvim).
+   id (uuidv7), donem_id, ad, ders_baslangic (date), ders_bitis (date), ekle_birak_bitis (date), devamsizlik_son_gun (date), degisiklik_surumu
+ENT takvim_tatili: Takvimdeki tatil; tam gün ya da yarım gün; telefona tatil satırı olarak iner.
+   id (uuidv7), takvim_id, baslangic_tarihi (date), bitis_tarihi (date), yarim_gun_baslangic (time, boş = tam gün), ad, degisiklik_surumu, silindi
+ENT takvim_sinav_haftasi: Takvimdeki sınav haftası; oturum üretiminde ders yapılıp yapılmadığını belirler.
+   id (uuidv7), takvim_id, baslangic_tarihi, bitis_tarihi, tur (ara, final, butunleme; CHECK), ders_yapilir (evet/hayır)
+ENT birim_donemi: Birim x dönem: hangi takvim kullanılıyor, kilit anı ve kilidin uygulanıp uygulanmadığı.
+   birim_id + donem_id (birincil anahtar), takvim_id, kilit_ani (timestamptz; son günün bitişi Europe/Istanbul, takvim değişince aynı işlemde güncellenir), kilit_uygulandi_at, degisiklik_surumu
+ENT ders: Bir hocanın bir dönemdeki ders açılışı; sahiplik, birim ve ders ayarları. p alanlarının anlamı D08'in, süre alanınınki D04'ün.
+   id (uuidv7), donem_id, birim_id, sahip_hoca_id, kod, ad, teori_p (varsayılan 70), uygulama_p (varsayılan 80), yoklama_suresi_dk (boş = süre seçilmedi), deneme_dersi (evet/hayır), takip_baslangici (date, dönem ortası başlangıç için), qr_li (Aşama 2), arsivlendi_at, degisiklik_surumu, tekil (donem_id, sahip_hoca_id, kod)
+ENT sube: Dersin şubesi; öğrenci listesi satırları şubeye bağlanır (D03).
+   id (uuidv7), ders_id, etiket, pasif_at, degisiklik_surumu, tekil (ders_id, etiket)
+ENT program_saati: Haftalık program saati (slot): gün, yerel saat aralığı, türe göre saat sayısı, derslik, geçerlilik aralığı.
+   id (uuidv7), ders_id, gun (1-7 ISO; CHECK), baslangic_saati (time), bitis_saati (time), teori_saat, uygulama_saat, derslik, gecerlilik_baslangic (date), gecerlilik_bitis (date), degisiklik_surumu, silindi
+ENT program_saati_subesi: Slotun hangi şubeleri kapsadığı (birlikte işlenen şubeler dahil).
+   program_saati_id, sube_id
+ENT oturum: Dersin tek buluşması; programdan ya da telafiden üretilir, hiç silinmez. Pencere sütunları ve kapandı mı D04'ün, kafa sayısı D07'nin.
+   id (uuidv7), ders_id, donem_id, program_saati_id (telafide boş), tur (normal, telafi; CHECK), tarih (date), baslangic (timestamptz), bitis (timestamptz), teori_saat, uygulama_saat, derslik, durum (planlandi, iptal; CHECK), iptal_nedeni (hoca, tatil, tasindi), yapildi (boş, evet, hayır), telafi_edilen_oturum_id, kisa_kod (bigint, tekil, Aşama 2), degisiklik_surumu
+ENT oturum_subesi: Oturumun kapsadığı şubeler; öğrenciye hangi oturumun ineceğini ve kaydın hangi oturuma sayılacağını belirler.
+   oturum_id, sube_id
+ENT oturum_degisikligi: Oturumun program kaynaklı değişiklik geçmişi (önceki anlar, derslik, durum); D07'nin eski programla gelen kayıt kararı için kanıt.
+   id (uuidv7), oturum_id, onceki_baslangic, onceki_bitis, onceki_derslik, onceki_durum, degistiren_kisi_id, zaman (timestamptz), neden_kodu
+ENT degisiklik_sayaci: Tek satırlık değişiklik sürümü sayacı; D02 tabloları her yazımda sürümünü buradan alır.
+   deger (bigint)
+ENT denetim_kaydi: Program, telafi, iptal, yapıldı mı cevabı, takvim, kilit, p ve devir değişikliklerinin kaydı; yalnız eklenir.
+   kim, zaman, nesne türü ve kimliği, önceki ve yeni değer, neden kodu
+
+D02-B01 Q: Ders kaydı neyi temsil eder ve sahibi kimdir: bir hocanın bir dönemdeki ders açılışı mı (altında şubeler), dönemdeki ortak ders kodu mu (şube başına hoca), yoksa ders yok yalnız şube mi?
+   R: Birincisi. Plan dersi tek hocaya bağlı anlatıyor ("sınıf listesi yalnız o dersin hocasının telefonuna iner", plan.html#kararlar-indirme), asistan ve ortak hoca rolleri sonra (plan.html#kararlar-roller), dersi hoca panelden kendisi açar (plan.html#hoca). Aynı kodu farklı hocalar ayrı açılış olarak açar; tekillik (dönem, sahip, kod). Yetki tek sütunla denetlenir; ortak hoca ya da asistan gelince üyelik tablosu "önce genişlet, sonra daralt" ile eklenir (D02-B46).
+   owner:false
+
+D02-B02 Q: Haftalık program saati (slot) derse mi, şubeye mi bağlanır; aynı dersin şubeleri farklı saatlerdeyse öğrenciye hangi oturumlar iner?
+   R: Birincisi: farklı saatli şubeleri de birlikte işlenen şubeleri de tek yapıyla karşılar. İndirme (D06) ve kayıt kabulü (D07) "öğrencinin şubesi oturumun şube kümesinde mi" sorusuyla yapılır; bu, D02'nin dış yüzünde tek fonksiyon olur.
+   owner:false
+
+D02-B08 Q: Dönem genel bir varlık mı (akademik yıl + yarıyıl) ve birim takvimi ona mı bağlanır, yoksa her birimin ayrı dönem satırı mı olur?
+   R: Birincisi: kaydın dönemi oturumun dersinin genel dönemidir; bölme tek anahtarla olur; farklı birimden ders alan çift anadal öğrencisi aynı dönemde kalır; kilit birim x dönem satırında tutulur.
+   owner:false
+
+D02-B10 Q: Hangi birim türleri var, birim ile bölüm ilişkisi ne, listeyi kim tutar ve ders hangi birimin takvimini kullanır?
+   R: Birincisi: takvim fakülte ve enstitü düzeyinde (plan.html#hoca), bölüm alt birim; tür listesi metin + CHECK ve x-extensible-enum.
+   owner:false
+
+D02-B11 Q: Ders kodu, ders adı ve şube etiketi hangi biçimde tutulur, neler tekildir, hoca sonradan değiştirebilir mi?
+   R: Birincisi: AKSİS'e otomatik bağlantı yok kararıyla uyumlu. Liste satırı olan şube silinmez, pasif olur (listelerdeki "silinmez, pasif olur" ilkesiyle aynı).
+   owner:false
+
+D02-B14 Q: Program değişikliği hangi oturumlara uygulanır; başlamış ya da geçmiş oturum ve kilitli dönem düzenlenebilir mi; değişiklik ve slot hangi tarih aralığında geçerli olur?
+   R: Birincisi: sayımı geriye dönük değiştirmez; geçmişi düzeltme yolu zaten düzeltmelerdir (D09).
+   owner:false
+
+D02-B16 Q: Telafi dersi ne zaman girilebilir (önceden, aynı gün, geçmiş gün), hangi tarih aralığında, tatile denk gelebilir mi, hangi şubeleri kapsar, yoklama süresi ne olur?
+   R: Birincisi: unutulan telafiyi kaydetmenin tek yolu, uyarı hocanın listeden işaretlemesi gerektiğini söyler. Geçmiş gün telafisine izin vermek ürün kararıdır.
+   owner:true
+
+D02-B17 Q: "Hoca kaydı olmayan öğrencileri listeden işaretler" hangi kayıt ve sebep koduyla sonuçlanır?
+   R: Birincisi: öğrenciyi suçlamaz ve ölçümde ayrı görünür. Sebep kodu listesi ve son durum eşlemesi ürün kararıdır (sahibi D09 ile).
+   owner:true
+
+D02-B18 Q: Bir oturum ne zaman "geçmiş ve onaysız" sayılır, soru hangi istemcide çıkar, toplu cevap olur mu, "yapılmadı" cevabından sonra kuyruktan gelen kafa sayısı ne yapar?
+   R: Birincisi: dönem sonu çıktısı zaten cevap bekliyor, çelişki aynı mekanizmayla görünür olur; her cevap denetim kaydına yazılır (D02-B40).
+   owner:false
+
+D02-B19 Q: Kilit tam olarak ne zaman olur (son günün başı mı sonu mu), otomatik mi, yönetici düğmesiyle mi?
+   R: Birincisi: plandaki "bağlı" sözüne ve "süre en geç bu gündür" kuralına uyar; kural için SQL now() kullanılmaz (teknik.html#testler-veritabani-sifirlama). İş gecikse de durum saatten türediği için doğru kalır.
+   owner:false
+
+D02-B20 Q: Kilit tam olarak neyi dondurur, neye izin verir?
+   R: Birincisi: plan kilitten sonra sayımın "ancak denetim kaydı bırakan düzeltmeyle" değişebileceğini söylüyor (plan.html#kararlar-gonderme-suresi); ikincisi bu yolu kapatır.
+   owner:false
+
+D02-B21 Q: Son gün yanlış girildiyse ya da birim ertelediyse kilit geri alınır ya da tarih ileri alınabilir mi?
+   R: Birincisi; yeniden açılan dönemde gelen kayıtlar yine sayılır. Yönetici yetkisini genişlettiği için sahibi onaylamalı.
+   owner:true
+
+D02-B22 Q: Yönetici bütün birimlerin takvimini, kilidini ve p değerlerini mi değiştirir, yalnız kendi biriminin mi?
+   R: Birincisi: ilk sürüm tek birimle denenecek; alan baştan durduğundan birim bazlı yetki göçsüz açılır. Yetki kapsamı ürün kararıdır.
+   owner:true
+
+D02-B23 Q: Ders başka hocaya devredilebilir mi (hoca ayrılırsa, izne çıkarsa, hesabı silinirse)?
+   R: Birincisi: kayıtlar ve hak hesabı tek derste kalır. Plan yöneticinin yetkilerini tek tek sayıyor, devir yeni yetki olduğu için sahibi onaylamalı.
+   owner:true
+
+D02-B24 Q: Yönetici dersleri, öğrenci listelerini ve yoklamaları görebilir mi?
+   R: Birincisi. Kişisel veriye erişim ürün ve gizlilik kararıdır, sahibi onaylamalı.
+   owner:true
+
+D02-B25 Q: Birim takvimi girilmeden ders ve program kaydedilebilir mi; kilitli döneme ders açılabilir mi; ders açmak yönetici onayı ister mi?
+   R: Birincisi: sade, sıra hatası yok; ilk yönetici sahibin kendisi olduğu için takvim önce girilir.
+   owner:false
+
+D02-B26 Q: Yoklama süresi ders ayarı mı, program saati alanı mı, oturum alanı mı?
+   R: Birincisi: plandaki "ders ayarı" sözüne uyar; süre değişince yalnız başlamamış oturumlara yansır (D02-B14).
+   owner:false
+
+D02-B28 Q: "Aynı saatte" neyi ifade eder, çakışmayı kim ne zaman hesaplar, hocaya ne gösterilir; aynı öğrenci iki programda farklı numarayla görünüyorsa nasıl eşleşir?
+   R: Birincisi: ayrı tablo gerekmez, sorgu ve dizin yeter; telefondaki "tek derse yoklama" kuralı D04 ve D07'de kalır.
+   owner:false
+
+D02-B29 Q: Öğrenci ve hoca telefonuna inen ders ve oturum satırları hangi alanları taşır (kod, ad, tür, derslik, saatler, hoca adı ve unvanı, kilit durumu, iptal durumu)?
+   R: Birincisi: hoca adı başka öğrencinin verisi değil, veri amaçla sınırlı ilkesine uyar; unvan alanı D01'in kararıdır.
+   owner:false
+
+D02-B30 Q: İnceleme hesaplarının "her an açık deneme dersi" nasıl modellenir?
+   R: Birincisi: oturumsuz pencere kayıt modelini bozar. Aynı günde ikinci kayıt "tek sayılan kayıt" kuralıyla sayılmayan kayıt olur, hata vermez.
+   owner:false
+
+D02-B31 Q: Ekle-bırak bitişi sunucuda neye girer?
+   R: Birincisi: plandaki varsayılanı değiştirmez; ikincisi ürün kararını değiştirir.
+   owner:false
+
+D02-B32 Q: "Son hafta", "son ders günü" ve "son oturum" nasıl tanımlanır?
+   R: Birincisi: gönderme süresi kuralıyla (7 gün ve son gün) aynı ölçü; telefon hesaplayabilsin diye son gün ders satırıyla iner.
+   owner:false
+
+D02-B33 Q: Birim takviminde hangi tarih alanları, hangi kısıtlarla tutulur?
+   R: Bu liste; son gün dersin bittiği güne eşit olabildiği için (Eczacılık örneği, plan.html#devam-donem-sonu) kısıt <= ile kurulur; ekle-bırak dersler başlamadan da bitebileceği için ders başlangıcına bağlanmaz.
+   owner:false
+
+D02-B34 Q: Yarıyıl türleri neler; yaz okulu ayrı dönem mi?
+   R: Birincisi.
+   owner:false
+
+D02-B36 Q: Arşivleme ne zaman olur ve ne yapar?
+   R: Birincisi: yanlış açılan dersi kaldırmanın silmesiz yolu.
+   owner:false
+
+D02-B37 Q: D02 satırları değişiklik akışında nasıl iner: iptal edilen oturum, arşivlenen ders, kaldırılan slot ve tatil?
+   R: Birincisi: öğrenci iptali görür; değişiklik sürümü her yazımda tek sayaç satırından artar (teknik.html#kod-veri-modeli).
+   owner:false
+
+D02-B40 Q: Program, telafi, iptal, "Ders yapıldı mı?" cevabı, takvim, kilit, p ve sahiplik değişiklikleri denetim kaydına yazılır mı?
+   R: Birincisi: itirazda kanıt ve Haksız devamsız hesabı için gerekir.
+   owner:false
+
+D02-B41 Q: D02 hangi sunucu modüllerine dağılır, uç yolları ve tablo adları nasıl yazılır?
+   R: Birincisi; yol harf kuralı D13'ün, giriş oturumu tablo adı D01'in kararıdır.
+   owner:false
+
+D02-B42 Q: Farklı kodlu iki ders (ör. iki bölümün ortak dersi) birlikte işlenirse nasıl modellenir; AKSİS özeti ders mi şube başına çıkar?
+   R: Birincisi: açık nokta kapanana kadar en sade yol.
+   owner:false
+
+D02-B43 Q: Program, telafi ve iptal yalnız panelde mi, hoca telefonunda da mı yapılır?
+   R: Birincisi: plana uyar; uçlar istemciden bağımsız olduğu için telefon ekranı sonra eklenebilir.
+   owner:false
+
+D02-B46 Q: Uygulama (lab) derslerinin oturumlarını asistan yürütüyorsa sahiplik ve yetki modeli ne olur; blok derste ikinci okutma oturumu bölmeyi gerektirir mi?
+   R: Birincisi; cevap ürün kararıdır ve modelin genişleme yolu hazırdır.
+   owner:true
+
+D02-B49 Q: Girdi sınırları ne olmalı: ders başına slot, şube ve telafi sayısı; kod, ad, şube etiketi ve derslik uzunlukları?
+   R: Birincisi; sayılar başlangıç değeri, ilk dönemin gerçek verisiyle ayarlanır.
+   owner:false

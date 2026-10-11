@@ -1,0 +1,38 @@
+
+[donemKilidiKararKapanisi]
+ SIG: donemKilidiKararKapanisi(tx: Tx, birimId: BirimId, donemId: DonemId): Promise<{ onaysizKendiBeyani: number; kararsiz: number }>
+ PURPOSE: D02'nin donem_kilidi işlemi kilitAdimiKaydet ile kayıtlı adımı aynı işlemde çağırır. Kararları değiştirmez; onaysız Kendi beyanı için dogrulama.onaysiz_kilitlendi, açık Beklemede ve İncelemede için dogrulama.kararsiz_kilitlendi olayını oturum başına yazar.
+
+[yenidenDegerlendir]
+ SIG: yenidenDegerlendir(tx: Tx, suzgec: YenidenSuzgec, neden: YenidenNeden): Promise<{ incelenen: number; degisen: number }>
+ PURPOSE: Bir olaydan sonra süzgece uyan kayıtların otomatik kararlarını aynı kurallarla baştan hesaplar, değişenleri kararDegistir yoluyla yazar. Hoca kararına, kilitli döneme ve etiketlere dokunmaz. Süzgeç: kayıt anahtarları, oturum, öğrenci ve şube, cihaz ya da gerekçe ve ulaşma aralığı.
+
+[kafaSayisiOgesi]
+ SIG: kafaSayisiOgesi(tx: Tx, oge: KuyrukOgesi<KafaSayisiGovdesi>): Promise<OgeSonucu>
+ PURPOSE: kafa_sayisi kuyruk öğesinin işleyicisi. Göndereni dersin hocası olarak doğrular, D02.kafaSayisiniYaz ile değeri ve yapıldı onayını yazdırır, denetim olayını yazar, aynı işlemde oturumun pencereye bağlı kararlarını son ayara göre çözer, karşılaştırmayı hesaplayıp işareti açar.
+* D07.tables.4.columns.0.note :: donemler(id) (D02).
+
+* D07.tables.4.columns.2.note :: dersler(id) (D02); teori ve uygulama birlikte sayılır.
+
+* D07.tables.6.columns.2.note :: oturumlar(id) (D02).
+
+* D07.endpoints.1.auth :: Hoca oturumu (telefonda Bearer, panelde çerez ve Origin). Oturumun dersinin hocası olmalı (D02.dersYetkisi); değilse ya da oturum yoksa 404 DOGRULAMA_OTURUM_BULUNAMADI.
+
+* D07.endpoints.1.response.yapildi :: boolean | null; "Ders yapıldı mı?" cevabı (D02)
+
+* D07.jobs.1.does :: Gönderme süresi biten oturumların kapanışı: (1) güncel kararı Beklemede QR_GOSTERIM_BEKLENIYOR olan kayıtları İncelemede QR_GOSTERIM_GELMEDI yapar (Aşama 2); (2) AYAR_KESINLESMEDI kaydı kalan oturumlar için pencere_beklemede_kesinlestir işini koyar; (3) CIHAZ_DEGISIMI_BEKLIYOR kayıtlarında talebi artık beklemeyen cihazları yeniden değerlendirir; (4) bitişi son 21 gün içinde olan, kafa sayısı girilmiş ve gönderme süresi bitmiş oturumların karşılaştırmasını kesinleştirir (kesinlesti_ani), eşik aşılmışsa işareti açar; 21 gün, 7 günlük süreye işçinin iki haftalık kesintisini ekler. Oturumlar kayit_karar_gecmisi'nin güncel Beklemede dizininden ve D02.oturumlariGetir'den, süre D06.gondermeSuresiSo
+
+* D07.state_machines.0.transitions.19.by :: donemKilidiKararKapanisi (D02 kilit işlemi)
+
+* D07.resolved_gaps.15.decision :: Kilit adımı D02'nin donem_kilidi işleminde, aynı veritabanı işleminde çalışır (kilitAdimiKaydet). Kararlar o haliyle donar: onaysız Kendi beyanı sayılmış kalır ve oturum başına dogrulama.onaysiz_kilitlendi, açık İncelemede ve Beklemede sayılmadan kalır ve oturum başına dogrulama.kararsiz_kilitlendi yazılır. Kilitten sonra kararDegistir DOGRULAMA_DONEM_KILITLI döner, yeniden değerlendirme kilitli kayıtları atlar.
+
+* D07.resolved_gaps.20.decision :: Kayıt saatleri çakışan iki oturumda aynı öğrenciden ikinci ulaşan kayıt İncelemede CAKISAN_OTURUM; ilk ulaşan değişmez. Çakışma oturumların başlangıç ve bitişinden (D02) ve öğrencinin aynı gündeki güncel Ret olmayan kayıtlarından (kayit_karar_gecmisi) bulunur. D04-B24 ikinci kayda Ret ve kayıt saatine göre sıra öneriyor; sahip Ret derse yalnız katalogda bu kodun sınıfı değişir (D07-A03).
+
+* D07.resolved_gaps.23.decision :: Yerleşim sözleşmeyle kesinleşti: ayrı modül apps/server/src/modules/dogrulama. Doğrulayıcı tek arayüzün (CihazDogrulayici) arkasında D07'de; D01 kayıt, değişim ve yenileme işlemlerinden cihazKanitiniDogrula'yı çağırır. Etiket ve karar kuralları packages/core/src/dogrulama'da saf fonksiyon; D05 gönderim işleminde çağırır. Kafa sayısı değeri ve yapıldı oturum satırında (D02.kafaSayisiniYaz); karşılaştırma, işaret ve rastgele isim D07'de.
+
+* D07.resolved_gaps.24.decision :: Yapılmadı cevabı oturum düzeyindedir (D02'nin yapildi sütunu); kayıt kararları değişmez, sayım (D08) bu oturumu dışlar. Hoca sonra yapıldı derse hiçbir karar yeniden hesaplanmaz.
+
+* D07.open_points.1.recommendation :: Derste hocanın açtığı QR'lı ayarı (D02 sütunu, gelecekteki oturumlara kopyalanır); o oturumda QR gösterim kaydı hiç yoksa oturum Aşama 1 kuralıyla değerlendirilir (D02-B47). Eşleme gerekçe kataloğundaki Aşama 2 kodlarıyla (D11-B23): MAC tutmayan, başka oturumun ya da yetkisiz anahtarın QR'ı ve 30 saniyeyi aşan gecikme Ret; 10 (yedek kodda 20) ile 30 saniye arası, önce okutulmuş, gösterim dışı, hoca saati yok ve anahtar iptal İncelemede; gösterim kaydı gelene kadar Beklemede (Değişme ve kabul (plan.html#asama23-degisme-ve-kabul)). İki çapası da eski QR kaydının 2'lik ortak sınıra sayılması önerilir (D11-B20). Aşama 1 kodu ayarı false varsayılanla taşır.
+
+* D07.open_points.8.question :: D02 hizalaması: oturum alanları ve süzgeç.
+

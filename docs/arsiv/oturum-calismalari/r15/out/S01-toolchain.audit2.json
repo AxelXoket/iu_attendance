@@ -1,0 +1,360 @@
+{
+ "verdicts": [
+  {
+   "id": "S01-01",
+   "verdict": "CORRECTED",
+   "note": "Risk confirmed against the cited sources and the pnpm lockfile page: GitHub's ecosystem table still lists pnpm v7 to v10; dependabot-core #15904 (opened 2026-08-13) is still open; pnpm 12 version-update support merged 2026-09-15 (#16169); registry shows pnpm 12.0.0 on 2026-08-26 and 12.9.1 (latest) on 2026-10-03. pnpm's own docs warn that a reader of only the first document 'does not fail loudly'. The pmOnFail workaround is documented by pnpm and its self-update leak (#12228) is closed. One trigger is stated too broadly, see correction.",
+   "correction": "Not every pinned pnpm 11+ project gets the env document. Per pnpm's lockfile docs, packageManagerDependencies (first YAML document) is written when the project declares devEngines.packageManager, or pins pnpm 12 or newer through the legacy packageManager field; configDependencies also go there. pnpm init writes devEngines.packageManager since v11, so new projects hit it by default. A pnpm 11 pin through the legacy packageManager field does not write it. pmOnFail: ignore removes the document only because pnpm then stops enforcing the pinned version.",
+   "evidence": [
+    {"url": "https://pnpm.io/lockfile", "quote": "pins pnpm 12 or newer through the legacy packageManager field", "date": "accessed 2026-10-05"},
+    {"url": "https://pnpm.io/lockfile", "quote": "pnpm then doesn't enforce the pinned version, so it has nothing to record.", "date": "accessed 2026-10-05"},
+    {"url": "https://pnpm.io/lockfile", "quote": "A tool that reads only the first document of a two-document lockfile does not fail loudly.", "date": "accessed 2026-10-05"},
+    {"url": "https://pnpm.io/blog/releases/11.0", "quote": "pnpm init writes devEngines.packageManager instead of packageManager", "date": "2026-04-28"},
+    {"url": "https://github.com/dependabot/dependabot-core/issues/15904", "quote": "treats the first document as the whole lockfile, reports zero project dependencies, and closes alerts without an actual dependency update.", "date": "2026-08-13 (still open 2026-10-05)"},
+    {"url": "https://docs.github.com/en/code-security/dependabot/ecosystems-supported-by-dependabot/supported-ecosystems-and-repositories", "quote": "pnpm: v7, v8, v9, v10", "date": "accessed 2026-10-05"},
+    {"url": "https://github.com/dependabot/dependabot-core/pull/16169", "quote": "Adds pnpm 12 to PNPMPackageManager::SUPPORTED_VERSIONS", "date": "merged 2026-09-15"},
+    {"url": "https://github.com/pnpm/pnpm/issues/12228", "quote": "some commands, at least pnpm self-update, write packageManagerDependencies even when it is not normally written due to pmOnFail: ignore", "date": "2026-06-05 (closed via PR #12231)"},
+    {"url": "https://registry.npmjs.org/pnpm", "quote": "\"latest\": \"12.9.1\" ... \"12.0.0\": \"2026-08-26T15:12:06.912Z\"", "date": "2026-10-03"}
+   ]
+  },
+  {
+   "id": "S01-02",
+   "verdict": "CONFIRMED",
+   "note": "pnpm's dependency-resolution settings contain no version-downgrade ban; trustPolicy no-downgrade (added v10.21.0, default off, judged by publish date) is the matching control. minimumReleaseAge added v10.16.0, default 1440 since v11, built-in default non-strict; minimumReleaseAgeStrict (v11.0.0) turns on when the value is set explicitly. dependabot-core #16375 confirmed and closed; its fix PR #16376 merged 2026-10-01.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://pnpm.io/settings/dependency-resolution", "quote": "When set to no-downgrade, pnpm will fail if a package's trust level has decreased compared to previous releases.", "date": "accessed 2026-10-05"},
+    {"url": "https://pnpm.io/settings/dependency-resolution", "quote": "Trust checks are based solely on publish date, not semver.", "date": "accessed 2026-10-05"},
+    {"url": "https://pnpm.io/settings/dependency-resolution", "quote": "The built-in default of minimumReleaseAge (1440 minutes) is non-strict for backward compatibility.", "date": "accessed 2026-10-05"},
+    {"url": "https://github.com/dependabot/dependabot-core/issues/16375", "quote": "pnpm: repo-configured minimumReleaseAge fails every update with ERR_PNPM_STRICT_MIN_RELEASE_AGE_REQUIRES_SAVE on pnpm 12.3+", "date": "2026-09-23 (closed)"},
+    {"url": "https://github.com/dependabot/dependabot-core/pull/16376", "quote": "fix(npm_and_yarn): keep pnpm --no-save updates working under a repo release-age gate", "date": "merged 2026-10-01"}
+   ]
+  },
+  {
+   "id": "S01-03",
+   "verdict": "CONFIRMED",
+   "note": "Since pnpm 11.1.3 (2026-05-18) install re-validates every lockfile entry before fetching, and a too-young entry aborts the install unless it is in minimumReleaseAgeExclude; trustLockfile (v11.3.0, default false) is the opt-out. Dependabot's cooldown exempts security PRs, pnpm's check does not, so 'can fail CI until it ages' holds. Confidence medium: whether Dependabot commits pnpm's auto-added exclude line was not documented anywhere I could find.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://github.com/pnpm/pnpm/releases/tag/v11.1.3", "quote": "Violating entries abort the install with ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION, ERR_PNPM_TRUST_DOWNGRADE, or the generic ERR_PNPM_LOCKFILE_RESOLUTION_VERIFICATION when both policies trip in the same batch; minimumReleaseAgeExclude and trustPolicyExclude are honored.", "date": "2026-05-18"},
+    {"url": "https://pnpm.io/settings/dependency-resolution", "quote": "When true, pnpm install skips the supply-chain verification pass that re-applies minimumReleaseAge and trustPolicy to every entry in the loaded lockfile.", "date": "accessed 2026-10-05"},
+    {"url": "https://github.blog/changelog/2026-07-14-dependabot-version-updates-introduce-default-package-cooldown/", "quote": "Security updates still open immediately, so critical fixes are never delayed.", "date": "2026-07-14"},
+    {"url": "https://pnpm.io/blog/releases/11.0", "quote": "pnpm audit --fix also adds the minimum patched version for each advisory to minimumReleaseAgeExclude", "date": "2026-04-28"}
+   ]
+  },
+  {
+   "id": "S01-04",
+   "verdict": "CONFIRMED",
+   "note": "Changelog and the options reference agree: 3-day default cooldown for version updates, no configuration, security updates exempt, all ecosystems on github.com.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://github.blog/changelog/2026-07-14-dependabot-version-updates-introduce-default-package-cooldown/", "quote": "This cooldown is now the default and requires no configuration.", "date": "2026-07-14"},
+    {"url": "https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference", "quote": "If not specified, Dependabot applies a default cooldown of 3 days.", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference", "quote": "This default cooldown does not apply to security updates.", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S01-05",
+   "verdict": "CONFIRMED",
+   "note": "TS 7.0 post (2026-07-08) confirms no API and a 'new (and different)' API expected in 7.1. Registry: typescript latest is 7.0.2 (2026-07-08) and its exports map has only ./lib/version.cjs plus ./unstable/* entry points, so tools that require('typescript') break; latest 6.x of the typescript package is 6.0.3 (2026-04-16). openapi-typescript 7.13.0 peer ^5.x and dependency-cruiser v18.1.0 note confirmed. The 6.0 deprecation list matches the 6.0 and 7.0 posts. Missing from the finding: the TS team ships an official side-by-side package, @typescript/typescript6 with a tsc6 binary, for API-dependent tools.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/", "quote": "TypeScript 7.0 does not ship with an API.", "date": "2026-07-08"},
+    {"url": "https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/", "quote": "This package provides an executable named tsc6, so that if needed, you can install TypeScript 7.0 (which ships its own tsc binary) side-by-side without naming conflicts.", "date": "2026-07-08"},
+    {"url": "https://registry.npmjs.org/typescript", "quote": "\"latest\": \"7.0.2\" ... \"exports\": { \".\": \"./lib/version.cjs\", \"./unstable/sync\": \"./dist/api/sync/api.js\" ...}", "date": "2026-07-08"},
+    {"url": "https://registry.npmjs.org/openapi-typescript", "quote": "\"peerDependencies\": { \"typescript\": \"^5.x\" }", "date": "7.13.0 published 2026-02-11"},
+    {"url": "https://github.com/sverweij/dependency-cruiser/releases", "quote": "typescript@7.1.0 is expected to ship with a public API - so that's the first version in the TypeScript 7 (formerly tsgo) version range dependency-cruiser will be able to support.", "date": "v18.1.0, 2026-07-12"},
+    {"url": "https://devblogs.microsoft.com/typescript/announcing-typescript-6-0/", "quote": "TypeScript 6.0 is a unique release in that we intend for it to be the last release based on the current JavaScript codebase.", "date": "2026-03-23"}
+   ]
+  },
+  {
+   "id": "S01-06",
+   "verdict": "CONFIRMED",
+   "note": "schedule.json and the Node announcement match. Engines checked in the registry: Cucumber 13.2.1 '22 || 24 || >=26', Vitest 5.0.3 '^22.12.0 || ^24.0.0 || >=26.0.0', pg-boss 12.36.0 '>=22.12.0', Testcontainers 12.2.0 '>= 22.22', Vite 8.3.2 '^20.19.0 || >=22.12.0', react-native 0.86 '>= 25.0.0' branch. GitHub billing quote current.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://raw.githubusercontent.com/nodejs/Release/main/schedule.json", "quote": "\"v26\": \"start\": \"2026-05-05\", \"lts\": \"2026-10-28\", \"maintenance\": \"2027-10-20\", \"end\": \"2029-04-30\"", "date": "accessed 2026-10-05"},
+    {"url": "https://raw.githubusercontent.com/nodejs/Release/main/schedule.json", "quote": "\"v24\": \"start\": \"2025-05-06\", \"lts\": \"2025-10-28\", \"maintenance\": \"2026-10-20\", \"end\": \"2028-04-30\"", "date": "accessed 2026-10-05"},
+    {"url": "https://nodejs.org/en/blog/announcements/evolving-the-nodejs-release-schedule", "quote": "Node.js 26 follows the existing schedule. This is the last release line under the current model.", "date": "2026-03-10"},
+    {"url": "https://registry.npmjs.org/react-native", "quote": "\"node\": \"^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0\"", "date": "0.86, accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S01-07",
+   "verdict": "CONFIRMED",
+   "note": "Node 25.0.0 notes, EAS infrastructure page (Linux and macOS images: Node 22.23.1, pnpm 11.9.0), eas.json node and pnpm fields, pnpm/setup and the ghcr.io/pnpm/pnpm image all confirmed. pnpm/action-setup's README itself points pnpm 11+ users to pnpm/setup.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://nodejs.org/en/blog/release/v25.0.0", "quote": "build: stop distributing Corepack", "date": "2025-10-15"},
+    {"url": "https://docs.expo.dev/build-reference/infrastructure/", "quote": "Node.js 22.23.1 ... pnpm 11.9.0", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/eas/json/", "quote": "Version of pnpm used for build.", "date": "accessed 2026-10-05"},
+    {"url": "https://github.com/pnpm/setup", "quote": "Install pnpm and a JavaScript runtime (Node.js, Bun, or Deno) in a single GitHub Actions step.", "date": "v3.0.0, 2026-09-20"},
+    {"url": "https://pnpm.io/docker", "quote": "An official pnpm base image is published to GitHub Container Registry as ghcr.io/pnpm/pnpm", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S01-08",
+   "verdict": "CONFIRMED",
+   "note": "All five quotes verified. Nothing else in the plan depends on Turborepo: 'pnpm dev' (line 747) maps to a recursive pnpm run, generated OpenAPI client files are committed (line 717 regenerates and diffs them), and pnpm deploy builds the server image. Since pnpm 12.2.0, pnpm deploy no longer needs injectWorkspacePackages. Net: one tool and turbo.json removed, no replacement.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://pnpm.io/cli/recursive", "quote": "By default, recursive run, exec, and test execute projects in topological order: dependencies run before their dependents.", "date": "accessed 2026-10-05"},
+    {"url": "https://pnpm.io/filtering", "quote": "Selects all the packages changed since the specified commit/branch.", "date": "accessed 2026-10-05"},
+    {"url": "https://turborepo.dev/docs/core-concepts/remote-caching", "quote": "Since Turborepo only caches to the local filesystem by default, the same task (turbo run build) must be re-executed on each machine", "date": "accessed 2026-10-05"},
+    {"url": "https://turborepo.dev/docs/crafting-your-repository/using-environment-variables", "quote": "Failing to account for environment variables in your configuration can result in shipping your application with the wrong configuration.", "date": "accessed 2026-10-05"},
+    {"url": "https://pnpm.io/cli/deploy", "quote": "pnpm deploy no longer requires injectWorkspacePackages", "date": "since v12.2.0, accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S01-09",
+   "verdict": "CONFIRMED",
+   "note": "Facts hold: noPrivateImports exists since v2.0.0, is recommended within the project domain, and @package limits imports to the same folder and subfolders. Two facts the finding leaves out change how the recommendation must be written (see recommendation_issues): the project domain is opt-in, and the rule's default severity is warning.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://biomejs.dev/linter/rules/no-private-imports/", "quote": "any module that resides in the same folder, or one of its subfolders, is allowed to import the symbol", "date": "accessed 2026-10-05"},
+    {"url": "https://biomejs.dev/linter/rules/no-private-imports/", "quote": "The default severity of this rule is warning.", "date": "accessed 2026-10-05"},
+    {"url": "https://biomejs.dev/linter/domains/", "quote": "When enabling rules that belong to this domain, Biome will scan the entire project.", "date": "accessed 2026-10-05"},
+    {"url": "https://registry.npmjs.org/dependency-cruiser", "quote": "\"version\": \"18.5.0\" ... \"maintainers\": [\"sverweij\", \"foureightone\"]", "date": "2026-09-30"}
+   ]
+  },
+  {
+   "id": "S01-10",
+   "verdict": "CONFIRMED",
+   "note": "Rule page: lint/nursery/noFloatingPromises, default severity information, types domain (enables the inference engine). The 75% figure is from the June 2025 v2 post and may be dated.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://biomejs.dev/linter/rules/no-floating-promises/", "quote": "This rule is part of the nursery group. This means that it is experimental and the behavior can change at any time.", "date": "accessed 2026-10-05"},
+    {"url": "https://biomejs.dev/blog/biome-v2/", "quote": "can detect floating promises in about 75% of the cases that would be detected by using typescript-eslint, at a fraction of the performance impact.", "date": "2025-06-17"}
+   ]
+  },
+  {
+   "id": "S01-11",
+   "verdict": "CONFIRMED",
+   "note": "Node 20 removal date, SHA-pin and read-only GITHUB_TOKEN guidance, and Dependabot comment updates all verified. actions/checkout's newest major is v7.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/", "quote": "we upgrade the runner and remove Node20 on September 23rd, 2026.", "date": "2025-09-19"},
+    {"url": "https://docs.github.com/en/actions/reference/security/secure-use", "quote": "Pinning an action to a full-length commit SHA is currently the only way to use an action as an immutable release.", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.github.com/en/actions/reference/security/secure-use", "quote": "set the default permission for the GITHUB_TOKEN to read access only for repository contents.", "date": "accessed 2026-10-05"},
+    {"url": "https://github.blog/changelog/2022-10-31-dependabot-now-updates-comments-in-github-actions-workflows-referencing-action-versions/", "quote": "Dependabot will now update the semver version in comments when updating Actions workflows with a commit SHA version.", "date": "2022-10-31"}
+   ]
+  },
+  {
+   "id": "S01-12",
+   "verdict": "CONFIRMED",
+   "note": "plan-text.md line 653 says weekly, line 717 says nightly. Internal contradiction, no external source needed.",
+   "correction": "",
+   "evidence": [
+    {"url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html", "quote": "Haftada bir: çekirdek kurallar için mutasyon testi (Stryker).", "date": "2026-10-04"},
+    {"url": "file:///C:/Users/USER/Desktop/iu_attendance/plan.html", "quote": "Gece: Schemathesis, Stryker, k6.", "date": "2026-10-04"}
+   ]
+  },
+  {
+   "id": "S01-13",
+   "verdict": "CONFIRMED",
+   "note": "Plans page lists Protected branches under Pro's private-repository tools; Free gets 2,000 Actions minutes a month; Actions is free on public repositories with standard runners. Line 476 (APK downloaded from GitHub Releases) suggests a public repository, in which case both limits fall away.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://docs.github.com/en/get-started/learning-about-github/githubs-plans", "quote": "Advanced tools and insights in private repositories ... Protected branches", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.github.com/en/billing/concepts/product-billing/github-actions", "quote": "GitHub Actions usage is free for self-hosted runners and for public repositories that use standard GitHub-hosted runners.", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S01-14",
+   "verdict": "CONFIRMED",
+   "note": "Gap is real: line 714 lists no TLS terminator and nothing serves the panel build. All four quotes verified. The net part count holds (Caddy in, @fastify/cors out) and it fixes a defect. Dev-time caveat in recommendation_issues.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://developer.android.com/privacy-and-security/security-config", "quote": "Starting with Android 9 (API level 28), cleartext support is disabled by default.", "date": "accessed 2026-10-05"},
+    {"url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS", "quote": "allows a server to indicate any origins (domain, scheme, or port) other than its own from which a browser should permit loading resources.", "date": "accessed 2026-10-05"},
+    {"url": "https://caddyserver.com/docs/automatic-https", "quote": "Automatic HTTPS provisions TLS certificates for all your sites and keeps them renewed.", "date": "accessed 2026-10-05"},
+    {"url": "https://caddyserver.com/docs/caddyfile/directives/reverse_proxy", "quote": "Proxies requests to one or more backends with configurable transport, load balancing, health checking, request manipulation, and buffering options.", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S01-15",
+   "verdict": "CONFIRMED",
+   "note": "Registry: @fastify/otel 0.21.1 (2026-10-02), @opentelemetry/sdk-node 0.222.0, @opentelemetry/instrumentation-http 0.222.0, all pre-1.0. pino is a direct dependency of fastify 5.12.5 ('^9.14.0 || ^10.1.0'). No collector or tracing backend in the line 714 Compose list.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://github.com/fastify/otel", "quote": "This instrumentation requires @opentelemetry/instrumentation-http to be able to propagate the traces all the way back to upstream", "date": "0.21.1, 2026-10-02"},
+    {"url": "https://registry.npmjs.org/@opentelemetry/sdk-node", "quote": "\"latest\": \"0.222.0\"", "date": "accessed 2026-10-05"},
+    {"url": "https://fastify.dev/docs/latest/Reference/Logging/", "quote": "As Fastify is focused on performance, it uses pino as its logger", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S01-16",
+   "verdict": "CONFIRMED",
+   "note": "Expo CLI docs (SDK 57 line) use ngrok via @expo/ngrok; PR #50829 merged 2026-09-30 ships in @expo/cli 58.1.0 (published 2026-10-01, SDK 58 line, still on the next tag). Cloudflare Quick Tunnel limits and Tailscale Personal plan verified.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://docs.expo.dev/more/expo-cli/", "quote": "Tunnel URLs are public and can be accessed by any device with a network connection.", "date": "accessed 2026-10-05"},
+    {"url": "https://github.com/expo/expo/pull/50829", "quote": "Remove EXPO_UNSTABLE_TUNNEL_V2 env flag, and instead make Expo Tunnels the default.", "date": "merged 2026-09-30"},
+    {"url": "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/", "quote": "Quick Tunnels are for testing and development", "date": "accessed 2026-10-05"},
+    {"url": "https://tailscale.com/pricing", "quote": "Up to 6 users", "date": "accessed 2026-10-05"}
+   ]
+  },
+  {
+   "id": "S01-17",
+   "verdict": "CONFIRMED",
+   "note": "Registry: openapi-typescript 7.13.0 and openapi-fetch 0.17.0 both 2026-02-11, nothing newer on latest. #2550 open since 2025-12-18 with no replies; #2872 open since 2026-09-12. fastify-zod-openapi (samchungy) and graphile-worker (benjie) have one npm maintainer each. Orval 8.40.0 (2026-10-04), two maintainers, no typescript in orval or @orval/core dependencies.",
+   "correction": "",
+   "evidence": [
+    {"url": "https://github.com/openapi-ts/openapi-typescript/issues/2550", "quote": "npm warn Could not resolve dependency: npm warn peer typescript@'^5.x' from openapi-typescript@7.10.1", "date": "2025-12-18"},
+    {"url": "https://github.com/openapi-ts/openapi-typescript/pull/2872", "quote": "Generate TypeScript source through string builders instead of the classic compiler API.", "date": "2026-09-12 (open)"},
+    {"url": "https://registry.npmjs.org/openapi-typescript", "quote": "\"7.13.0\": \"2026-02-11T16:02:25.378Z\"", "date": "2026-02-11"},
+    {"url": "https://registry.npmjs.org/orval", "quote": "\"8.40.0\": \"2026-10-04T14:55:32.938Z\" ... \"maintainers\": [\"anymaniax\", \"melloware\"]", "date": "2026-10-04"}
+   ]
+  },
+  {
+   "id": "S01-18",
+   "verdict": "CONFIRMED",
+   "note": "Catalog behaviour and Dependabot catalog support verified; named catalogs exist. The react part of the recommendation conflicts with Expo's version pins (see recommendation_issues).",
+   "correction": "",
+   "evidence": [
+    {"url": "https://pnpm.io/catalogs", "quote": "When upgrading a dependency, only the catalog entry in pnpm-workspace.yaml needs to be edited rather than all package.json files using that dependency.", "date": "accessed 2026-10-05"},
+    {"url": "https://github.blog/changelog/2025-02-04-dependabot-now-supports-pnpm-workspace-catalogs-ga/", "quote": "Starting today, Dependabot offers full support for pnpm workspace catalogs.", "date": "2025-02-04"}
+   ]
+  }
+ ],
+ "recommendation_issues": [
+  {
+   "id": "S01-01",
+   "problem": "pmOnFail: ignore is not free. pnpm's lockfile page says 'pnpm then doesn't enforce the pinned version, so it has nothing to record', so the plan's 'sürümü depoda sabit' then holds only where something installs that exact version (pnpm/setup in CI, the Docker image tag, eas.json); the developer machine runs whatever pnpm is installed. The Turkish text must say this. The proposed fallback to pnpm 10 is the weakest exit: pnpm/setup installs only v11+, minimumReleaseAge defaults to 0 before v11, trustLockfile starts at 11.3.0. A fallback that keeps pnpm's own enforcement and a single-document lockfile is pnpm 11 pinned through the legacy packageManager field with no devEngines.packageManager (https://pnpm.io/lockfile); its cost is that pnpm deploy dropped the injectWorkspacePackages requirement only in v12.2.0 (https://pnpm.io/cli/deploy)."
+  },
+  {
+   "id": "S01-02",
+   "problem": "'ayrıca yazmam' keeps pnpm in loose mode, where per the 11.1.3 release notes pnpm 'auto-adds the immature picks to minimumReleaseAgeExclude in pnpm-workspace.yaml and lets the install proceed'. The 1-day hold becomes a preference and the exclude list grows by itself. The reason given for not writing the value (dependabot-core #16375) was fixed by PR #16376, merged 2026-10-01. The sentence should either set minimumReleaseAge explicitly (strict) or keep the default and say new minimumReleaseAgeExclude lines are reviewed in each diff."
+  },
+  {
+   "id": "S01-06",
+   "problem": "'Sürüm tek dosyada (.node-version) yazılır; Docker imajı ve EAS derlemesi aynı sürümü kullanır' overstates it. EAS reads Node from the eas.json 'node' field (https://docs.expo.dev/eas/json/) and the Dockerfile carries its own base tag, so the version lives in three places that must match. Also Node 26 is still 'Current' until its LTS date in schedule.json, so the plan's own 'LTS dışı sürüm kullanılmaz' needs the wording 'Node 26 (LTS)' rather than an unqualified start."
+  },
+  {
+   "id": "S01-07",
+   "problem": "pnpm/setup is young: v1.0.0 'Ready for production use' on 15 June 2026, v3.0.0 on 2026-09-20, 144 stars, three majors in about three months (https://github.com/pnpm/setup/releases). Acceptable because pnpm/action-setup's README recommends it for pnpm 11+, but it raises the value of S01-11's full-SHA pin; expect more majors."
+  },
+  {
+   "id": "S01-09",
+   "problem": "As written the replacement is weaker than the check it removes. The project domain is opt-in ('project': 'recommended' or the rule set explicitly, https://biomejs.dev/linter/domains/); the rule's default severity is warning, so biome ci passes unless it is set to error; exports without a tag are public, so a forgotten @package tag silently allows a cross-module import. test/support data builders and any file that gathers all Drizzle tables would need an override. Accept only if the plan names: rule as error, @package on every module-internal export (or a non-public default visibility, which the rule page says is configurable), and a test override. Otherwise keep dependency-cruiser until the TS 7 move; it is maintained (18.5.0 on 2026-09-30, two maintainers) and blocks nothing that openapi-typescript does not already block."
+  },
+  {
+   "id": "S01-05",
+   "problem": "Inconsistent with S01-09: S01-05 names dependency-cruiser as a TS 7 blocker while S01-09 removes it. Whichever is accepted, the final plan text must list the same tools."
+  },
+  {
+   "id": "S01-08",
+   "problem": "Minor: the changed-only filter compares against the merge base since pnpm 12.7.0 and needs Git 2.24+ and the base branch history in the CI checkout (https://pnpm.io/filtering). For three apps and two packages, plain pnpm -r for every run is simpler; the filter should be an option, not the default."
+  },
+  {
+   "id": "S01-14",
+   "problem": "Removing @fastify/cors is safe in production only. In development the panel runs on Vite's own dev server port, so calls to the API are cross-origin unless Vite's server.proxy forwards /v1 ('Configure custom proxy rules for the dev server', https://vite.dev/config/server-options). The recommendation must name the Vite proxy or the dev panel breaks. Caddy's automatic HTTPS also needs the domain's A/AAAA records on the server and ports 80 and 443 open externally (https://caddyserver.com/docs/automatic-https), which a university network may refuse; then the institution's proxy and certificate are the path."
+  },
+  {
+   "id": "S01-18",
+   "problem": "react must not share one catalog entry between panel and mobile. Expo SDK 57 fixes React at 19.2.3 (https://docs.expo.dev/versions/latest/) while npm latest is 19.3.0, and Expo CLI docs say React Native packages 'often need to be the exact right version'. A shared entry makes every panel React bump a mobile bump, and a Dependabot catalog PR would move the app off the SDK set. Keep expo, expo-*, react and react-native out of the shared catalog; typescript, zod and vitest are fine there."
+  },
+  {
+   "id": "S01-16",
+   "problem": "Names two tunnel products for one job. Pick one in the plan: Cloudflare Quick Tunnel needs no account but its hostname changes on every run, which forces a new API URL into each test build; if that matters, Tailscale alone."
+  },
+  {
+   "id": "S01-03",
+   "problem": "Minor: pnpm already has the route for urgent fixes. pnpm audit --fix writes the minimum patched version into minimumReleaseAgeExclude (pnpm 11.0 release notes), which is shorter than a manual edit; the 'oturunca çıkarırım' clause still applies."
+  }
+ ],
+ "checked_ok_disputes": [],
+ "misses": [
+  {
+   "plan_line": 720,
+   "plan_quote": "Dependabot gruplu ve 3 gün bekletmeli; güvenlik güncellemeleri beklemez. Büyük sürümler elle ve testler yeşilken alınır.",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "Expo SDK 57 fixes the versions of react-native (0.86), react (19.2.3) and the expo-* packages, and Expo's tool for aligning them is npx expo install --fix plus expo-doctor. npm latest react is already 19.3.0. Dependabot proposes the newest version its config allows and nothing in its options reads Expo's SDK set, so its minor and patch PRs for apps/mobile can pass the server-heavy CI while moving the app off the SDK set. Dependabot's ignore option takes name wildcards, so the fix is configuration only, no new tool.",
+   "evidence": [
+    {"url": "https://docs.expo.dev/more/expo-cli/", "quote": "Unlike the web, React Native is not backwards compatible. This means that npm packages often need to be the exact right version for the currently installed copy of react-native in your project.", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/versions/latest/", "quote": "React Native version | 0.86 | React version | 19.2.3", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/", "quote": "Upgrade all dependencies to match the installed SDK version.", "date": "accessed 2026-10-05"},
+    {"url": "https://registry.npmjs.org/react", "quote": "\"latest\": \"19.3.0\"", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference", "quote": "Ignore updates for dependencies with matching names, optionally using * to match zero or more characters.", "date": "accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "Telefon uygulamasında sürümünü Expo SDK'nın belirlediği paketleri (expo, expo-*, react, react-native) Dependabot'un sürüm güncellemelerinin dışında tutarım. Bunları yalnız SDK yükseltirken npx expo install --fix ile topluca alır, ardından npx expo-doctor çalıştırırım."
+  },
+  {
+   "plan_line": 554,
+   "plan_quote": "TypeScript 6, sıkı modda. Ayarlar TypeScript 7 ile uyumlu tutulur.",
+   "kind": "MISSING",
+   "severity": "medium",
+   "finding": "The plan never says how server TypeScript runs in development, in the Cucumber and Vitest runs, and inside the image (line 714: 'Sunucu imajı çok aşamalı derlenir'). Node's type stripping is stable since v24.12.0 and v25.2.0, so Node 26 runs .ts files directly with no tsx or ts-node. Limits: no enum, namespace with runtime code or parameter properties, tsconfig paths are not applied, no type checking, and Node refuses .ts files under node_modules, which is where pnpm deploy places packages/core and packages/contracts, so those two must ship as JS in the image. The flags Node recommends (erasableSyntaxOnly, verbatimModuleSyntax) also suit the TS 7 path. Cucumber's own docs still suggest tsx for TypeScript steps, so that one runner may keep it.",
+   "evidence": [
+    {"url": "https://nodejs.org/api/typescript.html", "quote": "v25.2.0, v24.12.0: Type stripping is now stable", "date": "accessed 2026-10-05"},
+    {"url": "https://nodejs.org/api/typescript.html", "quote": "Node.js refuses to handle TypeScript files inside folders under a node_modules path.", "date": "accessed 2026-10-05"},
+    {"url": "https://nodejs.org/api/typescript.html", "quote": "Node.js will replace TypeScript syntax with whitespace, and no type checking is performed.", "date": "accessed 2026-10-05"},
+    {"url": "https://github.com/cucumber/cucumber-js/blob/main/docs/transpiling.md", "quote": "For compiling TypeScript on the fly, we suggest tsx.", "date": "accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "Sunucuyu, işçiyi ve testleri Node 26'nın yerleşik TypeScript desteğiyle doğrudan .ts olarak çalıştırırım; tsconfig'de erasableSyntaxOnly ve verbatimModuleSyntax açık olur, enum ve tsconfig paths kullanmam. Tip kontrolünü yalnız tsc yapar. İmajda packages/core ve packages/contracts JS'e derlenir, çünkü Node node_modules altındaki .ts dosyasını çalıştırmaz. Cucumber adımları bu yolla yüklenmezse yalnız onun için tsx kalır."
+  },
+  {
+   "plan_line": 560,
+   "plan_quote": "Yeni yayımlanan paket sürümü en az 1 gün bekletilir, sürüm düşürmeye izin verilmez.",
+   "kind": "MISSING",
+   "severity": "low",
+   "finding": "The pnpm sentence lists the release-age and trust controls but not the build-script control, which is on by default and breaks the first CI install: dependency build scripts run only if listed in allowBuilds, and strictDepBuilds (default true) makes install exit non-zero on any unreviewed one. In this plan esbuild (postinstall, pulled in by drizzle-kit) and ssh2 (install script, pulled in by Testcontainers through ssh-remote-port-forward) have such scripts.",
+   "evidence": [
+    {"url": "https://pnpm.io/settings/build", "quote": "When strictDepBuilds is enabled, the installation will exit with a non-zero exit code if any dependencies have unreviewed build scripts (aka postinstall scripts).", "date": "accessed 2026-10-05"},
+    {"url": "https://registry.npmjs.org/esbuild", "quote": "\"postinstall\": \"node install.js\"", "date": "accessed 2026-10-05"},
+    {"url": "https://registry.npmjs.org/ssh2", "quote": "\"install\": \"node install.js\"", "date": "accessed 2026-10-05"},
+    {"url": "https://registry.npmjs.org/drizzle-kit", "quote": "\"esbuild\": \"^0.25.4\"", "date": "0.31.11, accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "pnpm bağımlılıkların kurulum betiklerini varsayılan olarak çalıştırmaz. Çalışması gerekenleri pnpm-workspace.yaml'daki allowBuilds listesine tek tek yazarım, gerekmeyenleri false yaparım; her ekleme gerekçeli olur."
+  },
+  {
+   "plan_line": 717,
+   "plan_quote": "Gece: Schemathesis, Stryker, k6.",
+   "kind": "RISK",
+   "severity": "low",
+   "finding": "Line 476 distributes the APK from GitHub Releases, which suggests a public repository. In a public repository GitHub disables scheduled workflows after 60 days without activity, so the nightly and weekly jobs (line 653) can stop without notice during a long break.",
+   "evidence": [
+    {"url": "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows", "quote": "In a public repository, scheduled workflows are automatically disabled when no repository activity has occurred in 60 days.", "date": "accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "Açık depoda 60 gün hareket olmazsa GitHub gece ve hafta işlerini kapatır; uzun aralardan sonra bu işleri Actions sekmesinden yeniden açarım."
+  },
+  {
+   "plan_line": 717,
+   "plan_quote": "4 paralel Cucumber koşusu",
+   "kind": "RISK",
+   "severity": "low",
+   "finding": "Standard GitHub-hosted Linux runners have 4 CPUs and 16 GB in public repositories but 2 CPUs and 8 GB in private ones. With PostgreSQL in Testcontainers on the same runner, a fixed 4 workers fits a public repository and oversubscribes a private one. Cucumber exposes the worker count, so the number can follow the machine.",
+   "evidence": [
+    {"url": "https://docs.github.com/en/actions/reference/runners/github-hosted-runners", "quote": "Standard GitHub-hosted runners for private repositories ... Linux | 2 CPUs | 8 GB RAM | 14 GB SSD | x64 | ubuntu-latest, ubuntu-24.04, ubuntu-22.04, ubuntu-26.04", "date": "accessed 2026-10-05"},
+    {"url": "https://docs.github.com/en/actions/reference/runners/github-hosted-runners", "quote": "Standard GitHub-hosted runners for public repositories ... Linux | 4 | 16 GB | 14 GB | x64 | ubuntu-latest", "date": "accessed 2026-10-05"},
+    {"url": "https://github.com/cucumber/cucumber-js/blob/main/docs/parallel.md", "quote": "CUCUMBER_TOTAL_WORKERS", "date": "accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "CI'da Cucumber'ın paralel koşu sayısını makinenin işlemci sayısına eşitlerim: açık depoda 4, özel depoda 2."
+  },
+  {
+   "plan_line": 720,
+   "plan_quote": "Dependabot gruplu ve 3 gün bekletmeli",
+   "kind": "MISSING",
+   "severity": "low",
+   "finding": "Dependabot updates only the ecosystems listed in dependabot.yml. Besides npm (pnpm) and github-actions (S01-11), this repository has a Dockerfile base image and Compose images (PostgreSQL, xprem, Mailpit). Dependabot covers docker and, since 2025-02-25, docker-compose.",
+   "evidence": [
+    {"url": "https://github.blog/changelog/2025-02-25-dependabot-version-updates-now-support-docker-compose-in-general-availability/", "quote": "Developers can now use Dependabot to keep their Docker Compose", "date": "2025-02-25"}
+   ],
+   "recommendation_tr": "dependabot.yml'de npm ve github-actions'ın yanında docker (sunucu imajının tabanı) ve docker-compose (PostgreSQL, xprem ve Mailpit imajları) da açık olur, aynı gruplama kuralıyla."
+  },
+  {
+   "plan_line": 802,
+   "plan_quote": "docker compose up ile PostgreSQL ve Mailpit ayağa kalkar",
+   "kind": "WRONG",
+   "severity": "low",
+   "finding": "Line 714 puts API, worker, PostgreSQL, xprem and Mailpit into Compose. Docker documents that services without a profiles attribute are always enabled, so a plain docker compose up starts all five, not only PostgreSQL and Mailpit.",
+   "evidence": [
+    {"url": "https://docs.docker.com/compose/how-tos/profiles/", "quote": "Services without a profiles attribute are always enabled.", "date": "accessed 2026-10-05"}
+   ],
+   "recommendation_tr": "Compose dosyasında API, işçi ve xprem 'prod' profiline, Mailpit 'dev' profiline konur; geliştirmede docker compose --profile dev up yalnız PostgreSQL ve Mailpit'i açar."
+  }
+ ],
+ "slice_verdict": "PASS",
+ "verdict_reason": "All 18 findings re-checked against their cited sources plus at least one independent primary source (npm registry, vendor docs, release notes). 17 CONFIRMED, 1 CORRECTED (S01-01, high: the trigger for pnpm's env lockfile document is narrower than stated, the Dependabot alert risk itself is confirmed), 0 REFUTED, 0 UNVERIFIABLE. 33 checked_ok items with versions, dates or setting names spot-checked against the registry and docs; none disputed. 7 misses, none high (2 medium: Expo-managed packages under Dependabot, TypeScript execution path on Node 26; 5 low). 11 recommendation issues, the heaviest being S01-01 (pmOnFail: ignore drops pnpm's own version enforcement), S01-09 (Biome rule opt-in and warning-level as written) and S01-18 (react in a shared catalog fights Expo's pins); these need wording fixes before the plan absorbs them. The net moving-part count of the accepted recommendations stays negative."
+}

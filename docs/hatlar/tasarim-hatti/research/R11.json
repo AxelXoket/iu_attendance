@@ -1,0 +1,1429 @@
+{
+  "id": "R11",
+  "angle": "Erişilebilirlik ve kapsayıcı tasarım (tasarım düzeyi)",
+  "summary": "Bağlayıcı ölçüt hâlâ WCAG 2.2 (12 Aralık 2024 sürümü). WCAG 3, 10 Eylül 2026'da da taslak ve kontrast yöntemi henüz belirlenmemiş, bu yüzden APCA yalnız yardımcı denetim olarak kullanılabilir. Kırık beyaz zemin (örnek #F0F2F4) beyaza göre 1.12:1 kontrast kaybettiriyor: 4.5:1 için ikincil gri en açık oklch L 0.54 olabilir, denetim kenarlıkları için 3:1 sınırı L 0.63; şık görünsün diye kullanılan açık gri çizgiler (#B9BEC6, 1.66:1) yalnız süs çizgisi olabilir. Gece mavisi alt ton kontrast için rahat: koyu tonları zeminde 11:1'in, beyaz yazıyla dolguda 12:1'in üstünde ve odak halkasına uygun. Durum renkleri renk körlüğünde birbirine yaklaşıyor (yeşil ile kırmızı arasındaki uzaklık döteranopide 0.265'ten 0.045'e düşüyor), bu yüzden her durum simge, metin ve renkle birlikte verilmeli. Sahibin istediği yumuşak animasyonlar, iPhone'un Hareketi Azalt ve Android'in Animasyonları kaldır ayarları açıkken konum ve ölçek yerine opaklığa ya da anında değişime dönmeli; Reanimated bu durumda animasyonu kendiliğinden atladığından yerine geçecek davranış ayrıca tasarlanmalı. Yazı iOS'ta gövde metni için 17 pt'den 53 pt'ye (3.118 kat), Android'de %200'e kadar büyüyebiliyor; ad, ders adı, durum ve hata metinleri hiçbir boyutta kesilmemeli. Panel ve pencereler açılınca odak içeri girmeli, kapanınca açan öğeye dönmeli; başarılı yoklama ekran okuyucuya sonuç başlığına odak taşınarak ve kibar canlı bölgeyle bildirilmeli, Android'de kullanımdan kalkan duyuru yöntemine dayanılmamalı. QR siyah beyaz, ters çevrilmemiş, her kenarda 4 modül boşluklu ve okuma uzaklığının onda biri boyutunda olmalı; 5 saniyede bir değişim animasyonsuz yapılmalı.",
+  "findings": [
+    {
+      "id": "R11-F01",
+      "title": "Metin kontrastı eşikleri (WCAG 2.2, 1.4.3)",
+      "claim": "WCAG 2.2 AA metin için en az 4.5:1, büyük metin için en az 3:1 kontrast ister; hesaplanan oran yuvarlanmaz.",
+      "evidence": "WCAG 2.2 (W3C Tavsiyesi, 12 December 2024) 1.4.3 Contrast (Minimum), AA: metin ve metin görselleri en az 4.5:1 kontrast vermeli. İstisnalar: büyük metin 'at least 3:1'; etkin olmayan bileşenin metni, süs ve logo için şart yok. Büyük metin tanımı: 'at least 18 point or 14 point bold'. Understanding 1.4.3: '1pt = 1.333px , therefore 14pt and 18pt are equivalent to approximately 18.5px and 24px'; ayrıca hesaplanan değer yuvarlanmamalı (örneğin 4.499:1, 4.5:1 eşiğini karşılamaz). Aynı sayfa ince ya da alışılmadık yazı tiplerinin kenar yumuşatma yüzünden tanımlanan renkten daha soluk çizilebileceğini söylüyor.",
+      "implication": "Plan bütün metinlerde 4.5:1 diyor; büyük metin istisnasını hiç kullanmamak plana uyar ve iOS puntosu ile WCAG puntosu arasındaki karışıklığı ortadan kaldırır (Apple'ın tablosu 18 pt'yi büyük sayar, WCAG'de büyük metin yaklaşık 24 CSS px). Denetim tam hex değeriyle yapılır; 4.49:1 geçmez. İnce ağırlıklar kâğıt üstünde geçse de gerçekte daha soluk görünür.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/TR/WCAG22/",
+          "title": "Web Content Accessibility Guidelines (WCAG) 2.2",
+          "publisher": "W3C",
+          "date": "2024-12-12"
+        },
+        {
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+          "title": "Understanding Success Criterion 1.4.3: Contrast (Minimum) | WAI | W3C",
+          "publisher": "W3C WAI",
+          "date": ""
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/accessibility.json",
+          "title": "Accessibility",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-06-09"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F02",
+      "title": "Denetim ve grafik kontrastı (1.4.11)",
+      "claim": "Bir denetimi ve durumunu tanımaya yarayan görsel bilgi (kenarlık, onay işareti, seçili durum, simge) bitişik renge karşı en az 3:1 olmalı; kırık beyaz zeminde bu, açık gri çizgileri denetim sınırı olarak kullanmayı engeller.",
+      "evidence": "1.4.11 Non-text Contrast, AA: 'a contrast ratio of at least 3:1 against adjacent color(s)' için kullanıcı arayüzü bileşenleri (bileşeni ve durumunu tanımak için gereken görsel bilgi, etkin olmayan bileşenler hariç) ve 'Graphical Objects: Parts of graphics required to understand the content'. color.js ile #F0F2F4 (oklch 0.96 0.004 255) zemin üstünde gri (C 0.012, H 255) hesabı: L 0.63 #848A90 3.11:1 (geçer), L 0.64 #878D94 2.99:1 (geçmez), L 0.80 #B9BEC6 1.66:1.",
+      "implication": "Giriş alanı kenarlığı, onay kutusu ve radyo çerçevesi, anahtar yolu, seçili sekme çizgisi, yalnız simgeli düğme ve odak halkası 3:1 ister. Köşeli ve ince çizgili şık görünüm için kullanılan çok açık griler yalnız süs ayırıcısı olabilir; denetimin tek sınırı olamaz.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/TR/WCAG22/",
+          "title": "Web Content Accessibility Guidelines (WCAG) 2.2",
+          "publisher": "W3C",
+          "date": "2024-12-12"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F03",
+      "title": "Kırık beyaz zeminde gri ve gece mavisi sınırları",
+      "claim": "Zemin beyazdan biraz koyulaşınca her metin rengi için kontrast payı azalır; gece mavisi koyu tonlar ise bu zeminde çok rahat geçer.",
+      "evidence": "color.js hesapları, zemin #F0F2F4 (oklch 0.96 0.004 255): beyaza karşı 1.12:1. Gri (C 0.012, H 255): L 0.45 #51565C 6.60:1; L 0.50 #5F646A 5.32:1; L 0.54 #6A6F76 4.51:1; L 0.55 #6D7279 4.32:1 (geçmez); L 0.43 #4B5056 7.25:1; L 0.44 #4E5359 6.92:1. Gece mavisi (C 0.09, H 265): L 0.32 #1C3060 zeminde 11.40:1, üstünde beyaz yazı 12.80:1; L 0.50 #4A6297 zeminde 5.37:1, beyaz yazı 6.03:1. CSS midnightblue #191970 = oklch(0.2881 0.1436 272.8). Understanding 1.4.3: 20/80 görme keskinliği yaklaşık 7:1 kontrast ister; bu oran 1.4.6 başarı ölçütünde kullanılır.",
+      "implication": "4.5:1 için ikincil metin en açık L 0.54 olabilir ama bu sınırda pay yoktur; pratikte L 0.50 civarı güvenli. 7:1 isteyen artırılmış kontrast setinde metin en açık L 0.43. Gece mavisi alt ton hem birincil düğme dolgusu hem odak halkası için yeterli kontrast verir. Bu hex değerleri örnektir, son palet aynı araçla yeniden ölçülür.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+          "title": "Understanding Success Criterion 1.4.3: Contrast (Minimum) | WAI | W3C",
+          "publisher": "W3C WAI",
+          "date": ""
+        },
+        {
+          "url": "https://www.w3.org/TR/WCAG22/",
+          "title": "Web Content Accessibility Guidelines (WCAG) 2.2",
+          "publisher": "W3C",
+          "date": "2024-12-12"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F04",
+      "title": "Odak görünürlüğü ve görünümü (2.4.7, 2.4.11, 2.4.13)",
+      "claim": "Klavye odağı her zaman görünmeli, yazarın koyduğu içerik onu tamamen örtmemeli; AAA düzeyindeki 2.4.13 odak göstergesi için ölçülebilir bir alan ve kontrast tanımlar.",
+      "evidence": "2.4.7 Focus Visible (AA): klavyeyle kullanılabilen her arayüzde klavye odak göstergesinin göründüğü bir çalışma biçimi olmalı. 2.4.11 Focus Not Obscured (Minimum) (AA): 'the component is not entirely hidden due to author-created content.' 2.4.13 Focus Appearance (AAA): gösterge alanı en az odaklanmamış bileşenin çevresindeki 2 CSS piksel kalınlığında bir çerçevenin alanı kadar ve aynı piksellerde odaklı ile odaksız hal arasında en az 3:1 kontrast. color.js: #4A6297 halka #F0F2F4 zeminde 5.37:1.",
+      "implication": "Plan paneli yalnız klavyeyle kullanılabilir kılıyor; bu yüzden her etkileşimli öğede 2 px kalınlıkta, bileşeni saran, zemine karşı en az 3:1 bir halka gerekir. Köşeli yapı halkayı da köşeli yapar. Yapışkan üst ve alt çubuklar, açılan alt paneller ve bildirimler odaklanan öğeyi örtmemeli.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/TR/WCAG22/",
+          "title": "Web Content Accessibility Guidelines (WCAG) 2.2",
+          "publisher": "W3C",
+          "date": "2024-12-12"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F05",
+      "title": "Hedef boyutları: WCAG 24 px, Apple 44 pt, Android 48 dp",
+      "claim": "WCAG 2.2 AA en az 24 x 24 CSS px hedef ister; telefon platformları çok daha büyük hedef önerir.",
+      "evidence": "2.5.8 Target Size (Minimum): işaretçi girdisi için hedef en az 24 x 24 CSS piksel, istisnalar: Spacing (küçük hedefin sınır kutusuna ortalanan '24 CSS pixel diameter circle' başka hedefe ya da başka küçük hedefin dairesine değmez), Equivalent, Inline, User Agent Control, Essential. Apple HIG Accessibility: iOS, iPadOS varsayılan denetim boyutu 44x44 pt, en küçük 28x28 pt; 'add about 12 points of padding around elements that include a bezel', çerçevesiz öğelerde 'about 24 points of padding'. Android: 'touch target size , of at least 48dpx48dp. Larger is even better.'",
+      "implication": "Panelde plan kararı olan 24 px alt sınırdır; telefonda ise 48 x 48 hedef hem Android'i hem Apple'ın 44 pt varsayılanını karşılar. Köşeli, sıkı bir düzen hedefleri küçültmeye çeker; görünen öğe küçük olsa bile dokunma alanı büyük tutulmalı.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html",
+          "title": "Understanding Success Criterion 2.5.8: Target Size (Minimum) | WAI | W3C",
+          "publisher": "W3C WAI",
+          "date": ""
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/accessibility.json",
+          "title": "Accessibility",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-06-09"
+        },
+        {
+          "url": "https://developer.android.com/guide/topics/ui/accessibility/apps",
+          "title": "Make apps more accessible | App quality | Android Developers",
+          "publisher": "Android Developers (Google)",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F06",
+      "title": "Metin büyütme, yeniden akış ve metin aralığı (1.4.4, 1.4.10, 1.4.12)",
+      "claim": "Web panelinde metin %200'e büyütülebilmeli, içerik 320 CSS px genişlikte iki yönlü kaydırma olmadan akmalı ve kullanıcı metin aralığını değiştirince içerik kaybolmamalı.",
+      "evidence": "1.4.4 Resize Text (AA): metin yardımcı teknoloji olmadan yüzde 200'e kadar büyütülebilmeli, içerik ya da işlev kaybolmamalı. 1.4.10 Reflow (AA): 'Vertical scrolling content at a width equivalent to 320 CSS pixels', 'Horizontal scrolling content at a height equivalent to 256 CSS pixels', istisna: 'parts of the content which require two-dimensional layout for usage or meaning'. 1.4.12 Text Spacing (AA): satır yüksekliği 'at least 1.5 times the font size', paragraf sonrası 'at least 2 times', harf aralığı 'at least 0.12 times', sözcük aralığı 'at least 0.16 times'.",
+      "implication": "Panelin yoklama tabloları iki boyutlu düzen istisnasına girer ve kendi kabında yatay kayabilir; menü, form, kart ve başlıklar 320 px'te tek sütuna inmeli. Metin kaplarına sabit yükseklik verilmez, yoksa aralık artınca yazı kesilir.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/TR/WCAG22/",
+          "title": "Web Content Accessibility Guidelines (WCAG) 2.2",
+          "publisher": "W3C",
+          "date": "2024-12-12"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F07",
+      "title": "iOS Dynamic Type: gövde metni 17 pt'den 53 pt'ye",
+      "claim": "iOS'ta gövde metni varsayılan 17 pt'den en büyük erişilebilirlik boyutunda 53 pt'ye çıkar (3.118 kat) ve Apple kesmeyi en aza indirip düzeni yığmayı önerir.",
+      "evidence": "Apple HIG Typography, iOS Dynamic Type tablosu: Large (varsayılan) Body 17 pt / 22 satır aralığı; xxxLarge Body 23/29; AX1 Body 28/34; AX5 Body 53/62; Large Title Large'da 34, AX5'te 60; Caption 2 Large'da 11, AX5'te 40. Oran (node ile): 53/17 = 3.118. Apple: 'consider using a stacked layout where text appears above secondary items', 'Reduce the number of columns when the font size increases', en büyük erişilebilirlik boyutunda da en büyük standart boyuttaki kadar yararlı metin gösterilmesi öğüdü. Accessibility sayfası: 'give people the option to enlarge text by at least 200 percent'; iOS varsayılan 17 pt, en küçük 11 pt.",
+      "implication": "Telefon ekranları gövde metni 53 pt iken de çalışmalı: yan yana satırlar alt alta geçer, kart içi sütunlar teke iner. Ad, ders adı, saat, durum ve hata metni kesilmez. Kırık beyaz temanın sıkı köşeli kartları büyük yazıda yüksekliği içerikten almalı.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/typography.json",
+          "title": "Typography",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-12-16"
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/accessibility.json",
+          "title": "Accessibility",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-06-09"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F08",
+      "title": "Android 14 ve sonrası: %200'e kadar doğrusal olmayan yazı ölçekleme",
+      "claim": "Android 14'ten beri yazı boyutu %200'e kadar büyür; büyük yazı küçük yazıdan daha az büyür ve sp ile çizilen boşluklar orantılı kalmaz.",
+      "evidence": "Android 14 özellikleri: 'the system supports font scaling up to 200%'; 'large text doesn't scale at the same rate as smaller text'. Rehber: yazı boyutu sp ile; 'Don't use sp units for padding'; '4sp + 20sp might not equal 24sp'; 'Always define android:lineHeight using sp units'. Android Erişilebilirlik Yardımı: yazı boyutu Hızlı Ayarlar'dan '200%' değerine kadar ayarlanabilir.",
+      "implication": "Türkiye'de öğrencilerin çoğu Android kullandığından %200 ana test koşuludur. Boşluk tokenları yazıya bağlanmaz (dp kalır), satır yüksekliği yazıyla birlikte ölçeklenir; düğme yüksekliği içerikten büyür.",
+      "sources": [
+        {
+          "url": "https://developer.android.com/about/versions/14/features",
+          "title": "Features and APIs Overview | Android Developers",
+          "publisher": "Android Developers (Google)",
+          "date": ""
+        },
+        {
+          "url": "https://support.google.com/accessibility/android/answer/11183305?hl=en",
+          "title": "Change text & display settings - Android Accessibility Help",
+          "publisher": "Google",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F09",
+      "title": "React Native Text ölçekleme ayarları",
+      "claim": "React Native'de yazı ölçeklemesi varsayılan olarak açıktır; en büyük katsayı sınırlanabilir, satır sayısı sınırı metni üç noktayla keser.",
+      "evidence": "Text belgesi: allowFontScaling 'Specifies whether fonts should scale to respect Text Size accessibility settings', varsayılan true. maxFontSizeMultiplier 'Specifies the largest possible scale a font can reach when allowFontScaling is enabled', değerler: null/undefined üstten alır, 0 sınırsız, '>= 1' bu düğümün sınırı. adjustsFontSizeToFit varsayılan false. numberOfLines 'Used to truncate the text with an ellipsis'.",
+      "implication": "allowFontScaling hiçbir içerik metninde kapatılmamalı. numberOfLines ad, ders adı, durum ve hata metninde kullanılmamalı. maxFontSizeMultiplier yalnız sabit yükseklikli gezinme etiketleri gibi dar yerlerde ve %200'ün altına inmeyecek biçimde kullanılabilir.",
+      "sources": [
+        {
+          "url": "https://reactnative.dev/docs/text",
+          "title": "Text · React Native",
+          "publisher": "Meta (React Native)",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F10",
+      "title": "Renk tek başına bilgi taşımaz (1.4.1) ve renk körlüğü",
+      "claim": "Bilgi, eylem ya da durum yalnız renkle gösterilemez; erkeklerin yaklaşık 12'de biri renk görme bozukluğu yaşar, en yaygını kırmızı ile yeşili ayırt edememektir.",
+      "evidence": "1.4.1 Use of Color (A): renk; bilgi vermenin, eylem göstermenin, yanıt istemenin ya da görsel öğe ayırmanın tek görsel yolu olarak kullanılmaz. Apple HIG: renk körü kullanıcılar kırmızı ile yeşil ve mavi ile turuncu gibi eşlerde özellikle zorlanabilir, bu yüzden rengin yanında ayrı şekil ya da ikon gibi görsel işaretler verilmeli. NEI: 'About 1 in 12 men have color vision deficiency'; en yaygın renk görme bozukluğu kırmızı ile yeşili ayırmayı zorlaştırır.",
+      "implication": "Var, yok, geç, onay bekliyor ve çevrimdışı kaydedildi durumları yalnız yeşil, kırmızı, sarı ile ayrılamaz; her biri farklı biçimli simge ve metin etiketi taşır. Panel raporlarında ve devamsızlık uyarı düzeylerinde de aynı kural geçerlidir.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/TR/WCAG22/",
+          "title": "Web Content Accessibility Guidelines (WCAG) 2.2",
+          "publisher": "W3C",
+          "date": "2024-12-12"
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/accessibility.json",
+          "title": "Accessibility",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-06-09"
+        },
+        {
+          "url": "https://www.nei.nih.gov/learn-about-eye-health/eye-conditions-and-diseases/color-blindness",
+          "title": "Color Blindness | National Eye Institute",
+          "publisher": "National Eye Institute (NIH)",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F11",
+      "title": "Durum renkleri: kontrast ve renk körlüğü benzetimi",
+      "claim": "Zemin üstünde 4.5:1 sağlayan yeşil, kırmızı ve mavi kolayca bulunur; sarı turuncu uyarı rengi ise daha koyu olmak zorundadır ve durum renkleri renk körlüğünde birbirine çok yaklaşır.",
+      "evidence": "color.js, zemin #F0F2F4: başarı #137738 (oklch 0.50 0.13 150) 5.03:1; hata #B6322D (oklch 0.52 0.17 27) 5.37:1; bilgi #2266A4 (oklch 0.50 0.12 250) 5.34:1; uyarı #9D6300 (oklch 0.55 0.12 70) 4.44:1 geçmez, #996000 (L 0.54) 4.65:1 geçer, #915B00 (L 0.52) 5.06:1. Dolguda beyaz yazı: #137738 5.64:1, #B6322D 6.03:1, #2266A4 5.99:1. OKLab uzaklığı #137738 ile #B6322D: normal 0.265, protan 0.100, deutan 0.045, tritan 0.300; #B6322D ile #9D6300: normal 0.120, deutan 0.037.",
+      "implication": "Durum renkleri örnek değerlerle kontrastı geçer ama döteranopide başarı ve hata neredeyse aynı görünür; bu, F10'daki simge ve metin kuralını hesapla doğrular. Uyarı rengi oklch L 0.54 ya da daha koyu olmalı.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/TR/WCAG22/",
+          "title": "Web Content Accessibility Guidelines (WCAG) 2.2",
+          "publisher": "W3C",
+          "date": "2024-12-12"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F12",
+      "title": "iOS Hareketi Azalt: hareketin yerine ne konur",
+      "claim": "Apple, Hareketi Azalt açıkken yakınlaşma, ölçeklenme ve çevresel hareketin azaltılmasını, eksen boyunca kaymaların solmaya çevrilmesini ister.",
+      "evidence": "Apple HIG Accessibility: ayar açıkken uygulama kendiliğinden başlayan ve tekrarlanan animasyonları (yakınlaştırma, ölçekleme ve çevresel hareket dahil) azaltmalı. Diğer uygulamalar: 'Tightening animation springs to reduce bounce effects', 'Tracking animations directly with people's gestures', 'Avoiding animating depth changes in z-axis layers', 'Replacing transitions in x-, y-, and z-axes with fades to avoid motion', 'Avoiding animating into and out of blurs'.",
+      "implication": "Sahibin istediği panel açılış kapanış ve düğme animasyonları varsayılan durumda kalır; Hareketi Azalt açıkken kayma ve ölçek yerine opaklık geçişi, sekmeyen yaylar, bulanıklık ve derinlik animasyonu olmadan çalışır. Her hareket tokenının bir azaltılmış karşılığı olmalı.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/accessibility.json",
+          "title": "Accessibility",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-06-09"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F13",
+      "title": "Apple Motion ilkeleri: isteğe bağlı, kısa, sık etkileşimde az",
+      "claim": "Hareket önemli bilginin tek taşıyıcısı olmamalı, geri bildirim animasyonları kısa olmalı ve sık yapılan etkileşimlere hareket eklenmemeli.",
+      "evidence": "Apple HIG Motion: 'Make motion optional.' ve 'avoid using it as the only way to communicate important information'; 'supplement visual feedback by also using alternatives like haptics and audio'. 'Aim for brevity and precision in feedback animations.' 'In apps, generally avoid adding motion to UI interactions that occur frequently.' Ayrıca: bir görünümü yukarıdan aşağı kaydırarak açan kişi onu yana kaydırarak kapatmayı beklemez.",
+      "implication": "Panelde tablo satırı üstüne gelme gibi çok sık olaylarda hareket yerine renk ya da opaklık değişimi kullanılmalı. Yoklama başarısı yalnız animasyonla değil metin, simge ve titreşimle bildirilmeli. Panel hangi yönden açılıyorsa o yöne kapanmalı.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/motion.json",
+          "title": "Motion",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-09-09"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F14",
+      "title": "Hareket ayarlarının sinyalleri: iOS, Android, web",
+      "claim": "Uygulama, işletim sisteminin hareket ayarlarını React Native ve CSS üzerinden okuyabilir; iOS çapraz geçiş tercihini ayrıca bildirir.",
+      "evidence": "React Native AccessibilityInfo (belge sürümü 0.87): isReduceMotionEnabled() iki platformda; sonuç hareketi azalt açıkken ya da Geliştirici seçeneklerindeki 'Transition Animation Scale' kapalıyken true. prefersCrossFadeTransitions() yalnız iOS: 'reduce motion and prefer cross-fade transitions settings'. reduceMotionChanged olayı iki platformda. Android Yardım: Settings > Accessibility > Color and motion > 'Remove animations'. Apple Destek: Settings > Accessibility > Motion > Reduce Motion ('When off, you'll see more motion, like the fluid morphing effects of Liquid Glass'). MDN prefers-reduced-motion: değerler 'no-preference' ve 'reduce'; Windows 11: Settings > Accessibility > Visual Effects > Animation Effects; 'In Android 9+: Settings > Accessibility > Remove animations'.",
+      "implication": "Telefon ve panel aynı kuralı izler, uygulama içinde ayrı hareket ayarı gerekmez (plandaki 'telefonun ayarına uyulur' ilkesiyle uyumlu). React Native belgesi Android için yalnız geliştirici seçeneğini anıyor; Animasyonları kaldır ayarının bu sinyali açtığı cihazda doğrulanmalı.",
+      "sources": [
+        {
+          "url": "https://reactnative.dev/docs/accessibilityinfo",
+          "title": "AccessibilityInfo · React Native",
+          "publisher": "Meta (React Native)",
+          "date": ""
+        },
+        {
+          "url": "https://support.google.com/accessibility/android/answer/11183305?hl=en",
+          "title": "Change text & display settings - Android Accessibility Help",
+          "publisher": "Google",
+          "date": ""
+        },
+        {
+          "url": "https://support.apple.com/guide/iphone/reduce-onscreen-motion-iph0b691d3ed/ios",
+          "title": "Customize onscreen motion on iPhone - Apple Support",
+          "publisher": "Apple",
+          "date": ""
+        },
+        {
+          "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion",
+          "title": "prefers-reduced-motion CSS media feature - CSS | MDN",
+          "publisher": "MDN (Mozilla)",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F15",
+      "title": "Reanimated 4 azaltılmış harekette animasyonu atlar",
+      "claim": "Reanimated, azaltılmış hareket açıkken zamanlama ve yay animasyonlarını hiç oynatmadan son değere atlar; yerine opaklık geçişi kendiliğinden gelmez.",
+      "evidence": "Reanimated 4.x belgesi: 'withSpring and withTiming return the toValue immediately' ve 'withDecay returns the current value immediately'. 'By default all animations are configured with ReduceMotion.System'; ReduceMotion.Always her zaman kapalı, ReduceMotion.Never her zaman açık. useReducedMotion uygulama açılırken hareketi azalt ayarının açık olup olmadığını boolean olarak döndürür.",
+      "implication": "Azaltılmış modda gösterilecek opaklık geçişi ayrıca tanımlanmalı, yoksa paneller anında belirir. useReducedMotion uygulama açıkken yapılan ayar değişikliğini görmez; canlı değişim için reduceMotionChanged olayı dinlenmeli.",
+      "sources": [
+        {
+          "url": "https://docs.swmansion.com/react-native-reanimated/docs/guides/accessibility/",
+          "title": "Accessibility | React Native Reanimated",
+          "publisher": "Software Mansion",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F16",
+      "title": "Vestibüler tetikleyiciler, otomatik hareket ve yanıp sönme (2.3.3, 2.2.2, 2.3.1)",
+      "claim": "Etkileşimle tetiklenen gereksiz hareket baş dönmesi ve bulantı yapabilir; otomatik başlayan uzun hareket durdurulabilmeli ve hiçbir şey saniyede üç kereden fazla yanıp sönmemeli.",
+      "evidence": "2.3.3 Animation from Interactions (AAA): 'Motion animation triggered by interaction can be disabled, unless the animation is essential'. Understanding 2.3.3: vestibüler tepkiler 'dizziness, nausea and headaches'; 'Another animation that is often non-essential is parallax scrolling'; çözümlerden biri 'Take advantage of the reduce motion feature in the user agent or operating system.' 2.2.2 Pause, Stop, Hide (A): otomatik başlayan, 'lasts more than five seconds' ve başka içerikle yan yana duran hareket için durdurma yolu, 'unless ... essential'; kendiliğinden güncellenen bilgi için de aynı. 2.3.1 (A): 'anything that flashes more than three times in any one second period' olmaz. Plan: QR 5 saniyede bir değişir.",
+      "implication": "Paralaks, kaydırmaya bağlı süs hareketi, büyük yakınlaşma geçişleri ve süs amaçlı dönme kullanılmaz. Dönen QR yoklamanın özü olduğundan 'essential' kapsamındadır; saniyede 0.2 değişim yanıp sönme sınırının çok altındadır, ama değişim geçiş animasyonsuz yapılmalı ve QR sayfasına süs hareketi eklenmemeli.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/animation-from-interactions.html",
+          "title": "Understanding Success Criterion 2.3.3: Animation from Interactions | WAI | W3C",
+          "publisher": "W3C WAI",
+          "date": ""
+        },
+        {
+          "url": "https://www.w3.org/TR/WCAG22/",
+          "title": "Web Content Accessibility Guidelines (WCAG) 2.2",
+          "publisher": "W3C",
+          "date": "2024-12-12"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F17",
+      "title": "WCAG 3'ün Ekim 2026 durumu",
+      "claim": "WCAG 3 hâlâ çalışma taslağıdır, uygunluk için kullanılamaz ve kontrast hesaplama yöntemi belirlenmemiştir.",
+      "evidence": "W3C Accessibility Guidelines (WCAG) 3.0, 'W3C Working Draft', '10 September 2026'. Durum bölümü: 'It is inappropriate to cite this document as other than a work in progress.' Kontrast: 'Text contrast sufficient (minimum)' gereksinimi var ama 'The contrast algorithm used in WCAG 3 is yet to be determined.'; yöntemin boyut ve ağırlık etkeni içereceği söyleniyor; taslakta APCA adı geçmiyor; Aday Tavsiye ya da Tavsiye için tarih yok.",
+      "implication": "Plandaki WCAG 2.2 AA hedefi değişmez. Tasarım tokenları WCAG 2.2 oranıyla doğrulanır; WCAG 3 ve APCA yalnız ileriye dönük bir göz olarak izlenir.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/TR/wcag-3.0/",
+          "title": "W3C Accessibility Guidelines (WCAG) 3.0",
+          "publisher": "W3C",
+          "date": "2026-09-10"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F18",
+      "title": "APCA Lc düzeyleri ve bizim grilerimiz",
+      "claim": "APCA, gövde metni için WCAG 2'den daha sıkı sonuç verir: 4.5:1'i kıl payı geçen ikincil gri, APCA'nın gövde metni alt sınırının altında kalır.",
+      "evidence": "APCA in a Nutshell (2022): Lc 90 'Preferred level for fluent text and columns of body text'; Lc 75 'The minimum level for columns of body text'; Lc 60 gövde, sütun ya da blok metni olmayan içerik metni için önerilen en düşük değer; Lc 45 'The minimum for larger, heavier text (36px normal weight or 24px bold)'; Lc 30 'The absolute minimum for any text not listed above'; Lc 15 'The absolute minimum for any non-semantic non-text'. Sayfa APCA'yı 'the candidate contrast method for the future WCAG 3' diye anar ve çiftteki renklerden biri siyaha yakınsa 4.5:1'in fiilen okunmaz olabileceğini söyler. color.js, #F0F2F4 üstünde: #6A6F76 4.51:1 Lc 67.1; #5F646A 5.32:1 Lc 72; #51565C 6.60:1 Lc 77.9; #4B5056 7.25:1 Lc 80.3.",
+      "implication": "Paragraf ve uzun metin birincil metin rengiyle (Lc 75 ve üstü) yazılmalı; ikincil gri yalnız kısa etiket, saat ve yardımcı bilgi için kullanılmalı. APCA sayfası 2022 tarihli ve W3C taslağı APCA'yı artık anmıyor, bu yüzden geçme koşulu değil yardımcı denetimdir.",
+      "sources": [
+        {
+          "url": "https://git.apcacontrast.com/documentation/APCA_in_a_Nutshell.html",
+          "title": "APCA in a Nutshell | APCA",
+          "publisher": "APCA (Myndex)",
+          "date": "2022"
+        },
+        {
+          "url": "https://www.w3.org/TR/wcag-3.0/",
+          "title": "W3C Accessibility Guidelines (WCAG) 3.0",
+          "publisher": "W3C",
+          "date": "2026-09-10"
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F19",
+      "title": "Artırılmış kontrast: iOS, Android ve web sinyalleri",
+      "claim": "Apple her özel renk için artırılmış kontrast karşılığı ister; Android ve tarayıcılar da kullanıcının yüksek kontrast isteğini bildirir.",
+      "evidence": "Apple HIG Accessibility: uygulama bu en düşük kontrastı varsayılan olarak vermiyorsa, en azından sistemin Increase Contrast ayarı açıkken daha yüksek kontrastlı bir renk düzeni sunmalı. Apple HIG Color: özel renk tanımlanırsa açık ve koyu çeşidiyle, her çeşit için artırılmış kontrast seçeneğiyle birlikte verilmeli. React Native: isDarkerSystemColorsEnabled() (iOS), isHighTextContrastEnabled() (Android). Android UiModeManager.getContrast(): 'Added in API level 34', -1 ile 1 arası ondalık sayı: 0 varsayılan, -1 en düşük, 1 en yüksek kontrast; React Native bu değeri vermiyor. MDN prefers-contrast: 'more' daha yüksek kontrast isteği; sayfa 20 Nisan 2026'da güncellenmiş. Android Yardım: Display size and text altında 'Outline text', 'Android 16 and up'.",
+      "implication": "Plan uygulama içinde kontrast ayarı koymuyor; bu yüzden işletim sisteminin isteğiyle devreye giren ikinci bir renk seti gerekir. Bu sette metin 7:1'e çıkar, kenarlıklar koyulaşır, saydamlık kalkar. Android'in kontrast düzeyini okumak küçük bir yerel modül ister.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/accessibility.json",
+          "title": "Accessibility",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-06-09"
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/color.json",
+          "title": "Color",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-12-16"
+        },
+        {
+          "url": "https://reactnative.dev/docs/accessibilityinfo",
+          "title": "AccessibilityInfo · React Native",
+          "publisher": "Meta (React Native)",
+          "date": ""
+        },
+        {
+          "url": "https://developer.android.com/reference/android/app/UiModeManager",
+          "title": "UiModeManager | API reference | Android Developers",
+          "publisher": "Android Developers (Google)",
+          "date": ""
+        },
+        {
+          "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-contrast",
+          "title": "prefers-contrast CSS media feature - CSS | MDN",
+          "publisher": "MDN (Mozilla)",
+          "date": "2026-04-20"
+        },
+        {
+          "url": "https://support.google.com/accessibility/android/answer/11183305?hl=en",
+          "title": "Change text & display settings - Android Accessibility Help",
+          "publisher": "Google",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F20",
+      "title": "Kalın Metin ayarı ve yazı ağırlıkları",
+      "claim": "İnce yazı ağırlıkları okunurluğu düşürür; iOS ve Android'de kullanıcı kalın metin isteyebilir ve bazı uygulamalar bunu yok sayar.",
+      "evidence": "Apple HIG Typography: Regular, Medium, Semibold ya da Bold ağırlıkları seçilmeli, Ultralight, Thin ve Light ağırlıklarından kaçınılmalı. Apple Accessibility: ince ağırlıklı özel yazı tipi kullanılıyorsa önerilen boyutlardan büyüğü hedeflenmeli. React Native: isBoldTextEnabled() (iOS) ve boldTextChanged olayı. Android Yardım: Settings > Accessibility > Display size and text > 'Bold text', not: 'Some apps won't use this setting'.",
+      "implication": "Zarif görünüm ince ağırlıkla değil boşluk, keskin geometri ve az renkle kurulmalı. Ağırlık tokenlarının bir kalın eşlemesi olmalı ve düzen daha geniş harflere dayanmalı.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/typography.json",
+          "title": "Typography",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-12-16"
+        },
+        {
+          "url": "https://reactnative.dev/docs/accessibilityinfo",
+          "title": "AccessibilityInfo · React Native",
+          "publisher": "Meta (React Native)",
+          "date": ""
+        },
+        {
+          "url": "https://support.google.com/accessibility/android/answer/11183305?hl=en",
+          "title": "Change text & display settings - Android Accessibility Help",
+          "publisher": "Google",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F21",
+      "title": "Panel ve pencere açılıp kapanırken odak sırası",
+      "claim": "Kalıcı pencere açılınca odak içine girer, Tab içeride döner, Esc kapatır ve kapanınca odak açan öğeye döner; telefonda ekran okuyucunun arka planı görmemesi ayrıca söylenmelidir.",
+      "evidence": "W3C APG Dialog (Modal): 'When a dialog opens, focus moves to an element inside the dialog'; Tab son öğeden ilk öğeye döner; 'Escape : Closes the dialog'; diyalog kapanınca odak onu açan öğeye döner (açan öğe artık yoksa bu kural geçerli olmaz). React Native: accessibilityViewIsModal (iOS) 'whether VoiceOver should ignore the elements within views that are siblings of the receiver'; accessibilityElementsHidden (iOS) Android'deki importantForAccessibility=\"no-hide-descendants\" ile benzer. setAccessibilityFocus kullanımdan kalktı, yerine sendAccessibilityEvent ile 'focus'. Apple HIG VoiceOver: 'Inform VoiceOver when visible content or layout changes occur.'",
+      "implication": "Panel açılış animasyonu odağı bekletmemeli; odak açılış başlarken içeri taşınır. Kapanış animasyonu bittiğinde değil kapatma anında odak açan düğmeye döner. Telefondaki alt paneller ve onay pencereleri arka planı ekran okuyucudan gizler.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/",
+          "title": "Dialog (Modal) Pattern | APG | WAI | W3C",
+          "publisher": "W3C WAI",
+          "date": ""
+        },
+        {
+          "url": "https://reactnative.dev/docs/accessibility",
+          "title": "Accessibility · React Native",
+          "publisher": "Meta (React Native)",
+          "date": ""
+        },
+        {
+          "url": "https://reactnative.dev/docs/accessibilityinfo",
+          "title": "AccessibilityInfo · React Native",
+          "publisher": "Meta (React Native)",
+          "date": ""
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/voiceover.json",
+          "title": "VoiceOver",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-03-07"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F22",
+      "title": "Durum mesajları ve başarılı yoklamanın duyurulması",
+      "claim": "Durum mesajları odak almadan ekran okuyucuya ulaşmalı; Android'de doğrudan duyuru yöntemi kullanımdan kalktı ve yok sayılabilir.",
+      "evidence": "4.1.3 Status Messages (AA): durum mesajları rol ya da özelliklerle programdan tanınabilmeli ki yardımcı teknoloji onları odak almadan kullanıcıya sunabilsin. Understanding 4.1.3 hatalar listesi: 'Using role=\"alert\" or aria-live=\"assertive\" on content which is not important and time-sensitive'. React Native: accessibilityLiveRegion (Android) 'none', 'polite', 'assertive'; announceForAccessibility() iki platformda; announceForAccessibilityWithOptions() iOS'ta 'queue' ile sıraya alınabilir; announcementFinished (iOS). Android View.announceForAccessibility: 'Deprecated in API level 36', 'accessibility services may choose to ignore events dispatched with this method.'",
+      "implication": "Yoklama sonucu yeni bir ekransa erişilebilirlik odağı sonuç başlığına taşınır; aynı ekranda değişiyorsa Android'de kibar canlı bölge, iOS'ta sıraya alınan duyuru kullanılır. Kesen duyuru yalnız işlemi durduran hatalara ayrılır. Panelde 'kaydedildi' gibi bildirimler role=\"status\" ile verilir.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html",
+          "title": "Understanding Success Criterion 4.1.3: Status Messages | WAI | W3C",
+          "publisher": "W3C WAI",
+          "date": ""
+        },
+        {
+          "url": "https://reactnative.dev/docs/accessibility",
+          "title": "Accessibility · React Native",
+          "publisher": "Meta (React Native)",
+          "date": ""
+        },
+        {
+          "url": "https://reactnative.dev/docs/accessibilityinfo",
+          "title": "AccessibilityInfo · React Native",
+          "publisher": "Meta (React Native)",
+          "date": ""
+        },
+        {
+          "url": "https://developer.android.com/reference/android/view/View",
+          "title": "View | API reference | Android Developers",
+          "publisher": "Android Developers (Google)",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F23",
+      "title": "Kullanıcının istediği eylem süresi (Android)",
+      "claim": "Android'de kullanıcı, kendiliğinden kaybolan mesajların ne kadar kalacağını erişilebilirlik ayarından belirleyebilir ve uygulama bu değeri okuyabilir.",
+      "evidence": "React Native AccessibilityInfo: getRecommendedTimeoutMillis() (Android) kullanıcının ihtiyaç duyduğu bekleme süresini milisaniye olarak verir; değer Erişilebilirlik ayarlarındaki 'Time to take action (Accessibility timeout)' seçeneğinden gelir.",
+      "implication": "Kendiliğinden kapanan bildirimler bu süreden kısa olamaz. Yoklama sonucu gibi önemli durumlar hiç kendiliğinden kapanmamalı.",
+      "sources": [
+        {
+          "url": "https://reactnative.dev/docs/accessibilityinfo",
+          "title": "AccessibilityInfo · React Native",
+          "publisher": "Meta (React Native)",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F24",
+      "title": "QR gösterimi: sessiz bölge, boyut, renk",
+      "claim": "QR'ın her kenarında 4 modül boşluk olmalı, boyutu okuma uzaklığıyla büyümeli ve koyu modül açık zemin üstünde, ters çevrilmeden gösterilmeli.",
+      "evidence": "DENSO WAVE: 'QR Code requires a four-module wide margin at all sides of a symbol.'; örnek: 29 modül x 0.254 mm = 7.366 mm, boşlukla 9.398 mm. NN/g (9 Şubat 2024): koda olan uzaklığın her 10 cm'si için kodun eni ve boyu 1 cm büyümeli; '10 cm away, the code can be 1 cm x 1 cm'; 50 cm uzaklıkta kod en az 5 cm x 5 cm olmalı. 'Do Not Invert QR-Code Colors': 'dark foreground and a light background', 'not all scanning technology used in physical locations can do so', özellikle 'dark rooms or direct sunlight' koşullarında. Bağlam: kısa etiket ya da adres; 'a logo by itself is not sufficient contextual information'. Hesap (node): 6 m için en az 60 cm, 10 m için 100 cm, 15 m için 150 cm. color.js: #000000 / #FFFFFF 21:1; #191970 / #F0F2F4 13.23:1.",
+      "implication": "Projeksiyon QR'ı temanın renklerini almaz: saf siyah modül, saf beyaz zemin, beyaz sessiz bölge. Arka sıralardan okunabilmesi için QR perdede olabildiğince büyük ve tek başına durmalı; ders adı gibi kısa bir etiket QR'ın dışında yer alır. Öğrencinin makbuz QR'ı da beyaz yüzeyde gösterilir.",
+      "sources": [
+        {
+          "url": "https://www.qrcode.com/en/howto/code.html",
+          "title": "Point for determining the code area | QRcode.com | DENSO WAVE",
+          "publisher": "DENSO WAVE",
+          "date": ""
+        },
+        {
+          "url": "https://www.nngroup.com/articles/qr-code-guidelines/",
+          "title": "13 QR-Code Usability Guidelines - NN/G",
+          "publisher": "Nielsen Norman Group",
+          "date": "2024-02-09"
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": true
+    },
+    {
+      "id": "R11-F25",
+      "title": "Güneş ve sınıf ışığında okunurluk",
+      "claim": "Parlak ortamda renkler daha koyu ve soluk görünür; ince yazı ve düşük renkli alt tonlar bu koşulda ilk kaybolan şeylerdir.",
+      "evidence": "Apple HIG Color: 'Test your app's color scheme under a variety of lighting conditions.' aydınlık ortamda renkler daha koyu ve soluk, karanlık ortamda parlak ve doygun görünür. Understanding 1.4.3: ince yazı tipleri kenar yumuşatma yüzünden 'much fainter' çizilebilir. NN/g QR: 'extreme lighting conditions, such as in dark rooms or direct sunlight'.",
+      "implication": "Gece mavisi alt ton zemine ve griye düşük doygunlukla girerse parlak ışıkta fark edilmez; bu yüzden hiçbir anlam yalnız alt tona yüklenmez. Sonuç ekranı ve QR gibi kritik yerlerde kontrast alt sınırın çok üstünde tutulmalı ve tasarım dışarıda ve projeksiyonlu sınıfta denenmeli.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/color.json",
+          "title": "Color",
+          "publisher": "Apple (Human Interface Guidelines)",
+          "date": "2025-12-16"
+        },
+        {
+          "url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+          "title": "Understanding Success Criterion 1.4.3: Contrast (Minimum) | WAI | W3C",
+          "publisher": "W3C WAI",
+          "date": ""
+        },
+        {
+          "url": "https://www.nngroup.com/articles/qr-code-guidelines/",
+          "title": "13 QR-Code Usability Guidelines - NN/G",
+          "publisher": "Nielsen Norman Group",
+          "date": "2024-02-09"
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F26",
+      "title": "Bilişsel yük: kısa kritik yol, az dikkat dağıtıcı",
+      "claim": "W3C'nin bilişsel erişilebilirlik notu kritik işlerde yalnız gerekli adımları, isteğe bağlı adımları ayrı tutmayı ve kesintileri sınırlamayı önerir.",
+      "evidence": "W3C Working Group Note 29 April 2021, 'Make Short Critical Paths': süreçler yalnız gereken adımları içerecek kadar sadeleştirilmeli, isteğe bağlı adımlar ayrılmalı ve kullanıcı bunlardan geçmeye zorlanmamalı. 'Limit Interruptions': 'Avoid interruptions.' NN/g (22 Aralık 2013): 'Avoid visual clutter'; 'Offload tasks': 'can you show a picture, re-display previously entered information, or set a smart default?'",
+      "implication": "Sınıfta birkaç saniyede biten öğrenci akışında her ekranda tek birincil eylem olmalı, akış içinde seçim ya da isteğe bağlı adım olmamalı. Ders ve saat gibi bilgiler öğrenciye sorulmaz, uygulama gösterir.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/TR/coga-usable/",
+          "title": "Making Content Usable for People with Cognitive and Learning Disabilities",
+          "publisher": "W3C",
+          "date": "2021-04-29"
+        },
+        {
+          "url": "https://www.nngroup.com/articles/minimize-cognitive-load/",
+          "title": "Minimize Cognitive Load to Maximize Usability - NN/G",
+          "publisher": "Nielsen Norman Group",
+          "date": "2013-12-22"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R11-F27",
+      "title": "Üzerine gelince ya da odakta çıkan içerik (1.4.13)",
+      "claim": "Üzerine gelince ya da odakta beliren ipucu ve kartlar kapatılabilir, üzerine gelinebilir ve kalıcı olmalı.",
+      "evidence": "1.4.13 Content on Hover or Focus (AA): 'Dismissible': ek içerik, imleci ya da klavye odağını taşımadan kapatılabilmeli; 'Hoverable': imleç ek içeriğin üstüne götürülebilmeli ve içerik kaybolmamalı; 'Persistent': ek içerik, hover ya da odak tetikleyicisi kalkana, kullanıcı kapatana ya da bilgisi geçersiz olana kadar görünür kalmalı.",
+      "implication": "Sahibin istediği üzerine gelme animasyonları panelde ipucu ve önizleme kartlarına uygulanırken bu üç kural bozulmamalı: Esc kapatır, imleç ipucuna geçince kaybolmaz, kısa süre sonra kendiliğinden kaybolmaz. Her üzerine gelme etkisinin klavye odağında da karşılığı olmalı.",
+      "sources": [
+        {
+          "url": "https://www.w3.org/TR/WCAG22/",
+          "title": "Web Content Accessibility Guidelines (WCAG) 2.2",
+          "publisher": "W3C",
+          "date": "2024-12-12"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "R11-K01",
+      "topic": "Metin kontrastı tokenları",
+      "recommendation": "Bütün metinler, boyuttan bağımsız olarak, bulunduğu yüzeye karşı en az 4.5:1 olsun; büyük metin istisnası kullanılmasın ve oran yuvarlanmadan tam hex değerle ölçülsün. Paragraf metni birincil metin rengiyle, ikincil gri yalnız kısa yardımcı bilgiyle yazılsın.",
+      "values": [
+        {
+          "name": "text.contrast.min",
+          "value": "4.5:1",
+          "note": "Bütün boyutlarda, yer tutucu metin dahil."
+        },
+        {
+          "name": "contrast.rounding",
+          "value": "yok (4.499:1 geçmez)",
+          "note": ""
+        },
+        {
+          "name": "text.primary (örnek, #F0F2F4 üstünde)",
+          "value": "oklch(0.45 0.012 255) = #51565C, 6.60:1, APCA Lc 77.9",
+          "note": ""
+        },
+        {
+          "name": "text.secondary (önerilen)",
+          "value": "oklch(0.50 0.012 255) = #5F646A, 5.32:1",
+          "note": "Sınırdan pay bırakır."
+        },
+        {
+          "name": "text.secondary (en açık sınır)",
+          "value": "oklch(0.54 0.012 255) = #6A6F76, 4.51:1",
+          "note": "L 0.55 (#6D7279) 4.32:1 ile geçmez."
+        },
+        {
+          "name": "surface.base (örnek)",
+          "value": "oklch(0.96 0.004 255) = #F0F2F4",
+          "note": "Beyaza karşı 1.12:1; her yüzey için hesap ayrı yapılır."
+        }
+      ],
+      "reasons": "Plan zaten metinde 4.5:1 diyor; iOS puntosu ile WCAG puntosu farklı olduğundan büyük metin istisnası karışıklık yaratır. Kırık beyaz zemin pay bırakmadığından ikincil gri sınırı dar.",
+      "alternatives": [
+        {
+          "option": "Büyük metinde 3:1 istisnası",
+          "why_not": "Plana aykırı ve Apple 18 pt ile WCAG 24 CSS px tanımları uyuşmuyor."
+        },
+        {
+          "option": "Daha açık zarif gri (oklch L 0.60, #7B8187)",
+          "why_not": "#F0F2F4 üstünde 3.51:1, metinde geçmez."
+        }
+      ],
+      "based_on": [
+        "R11-F01",
+        "R11-F03",
+        "R11-F25"
+      ]
+    },
+    {
+      "id": "R11-K02",
+      "topic": "Denetim kenarlıkları ve durum göstergeleri",
+      "recommendation": "Bir denetimi tanıtan her çizgi, işaret ve seçili durum göstergesi bitişik renge karşı en az 3:1 olsun; çok açık griler yalnız süs ayırıcısında kalsın.",
+      "values": [
+        {
+          "name": "border.control.contrast.min",
+          "value": "3:1",
+          "note": "Giriş alanı, onay kutusu, radyo, anahtar, seçili sekme, yalnız simgeli düğme."
+        },
+        {
+          "name": "border.control (örnek, #F0F2F4 üstünde)",
+          "value": "oklch(0.63 0.012 255) = #848A90, 3.11:1",
+          "note": "L 0.64 (#878D94) 2.99:1 geçmez."
+        },
+        {
+          "name": "divider.decorative (örnek)",
+          "value": "oklch(0.80 0.012 255) = #B9BEC6, 1.66:1",
+          "note": "Yalnız bilgi taşımayan ayırıcı çizgi."
+        }
+      ],
+      "reasons": "1.4.11 AA şartı; köşeli ve ince çizgili şık görünüm genelde bu sınırın altında kalan çok açık gri kullanır.",
+      "alternatives": [
+        {
+          "option": "Kenarlıksız dolgulu alanlar",
+          "why_not": "Dolgu ile zemin arası da 3:1 ister; açık griyle bu sağlanamaz."
+        }
+      ],
+      "based_on": [
+        "R11-F02",
+        "R11-F03"
+      ]
+    },
+    {
+      "id": "R11-K03",
+      "topic": "Odak halkası",
+      "recommendation": "Her etkileşimli öğede 2 px kalınlıkta, 2 px aralıklı, köşeli ve gece mavisi bir odak halkası olsun; odak hiçbir yapışkan çubuk ya da açılan katman altında kalmasın.",
+      "values": [
+        {
+          "name": "focus.ring.width",
+          "value": "2px",
+          "note": "2.4.13 alt sınırı: 2 CSS px kalınlıkta çevre alanı."
+        },
+        {
+          "name": "focus.ring.offset",
+          "value": "2px",
+          "note": "Bizim seçimimiz: koyu dolgulu düğmede halka zeminde kalır."
+        },
+        {
+          "name": "focus.ring.color (örnek)",
+          "value": "#4A6297 (oklch 0.50 0.09 265), #F0F2F4 üstünde 5.37:1",
+          "note": ""
+        },
+        {
+          "name": "focus.ring.change.min",
+          "value": "3:1",
+          "note": "Odaklı ve odaksız aynı pikseller arasında."
+        },
+        {
+          "name": "focus.ring.shape",
+          "value": "köşeli, bileşenin dış çizgisini izler",
+          "note": ""
+        }
+      ],
+      "reasons": "Plan paneli yalnız klavyeyle kullanılır kılıyor; 2.4.7 ve 2.4.11 AA, 2.4.13 AAA ölçüsü ise halkayı ölçülebilir kılar.",
+      "alternatives": [
+        {
+          "option": "Yalnız arka plan rengini değiştiren odak",
+          "why_not": "Açık zeminde 3:1 değişim sağlamak zor ve köşeli dilde zayıf görünür."
+        },
+        {
+          "option": "Tarayıcının varsayılan halkası",
+          "why_not": "Görünümü tarayıcıya göre değişir, tasarım diliyle uyumsuz."
+        }
+      ],
+      "based_on": [
+        "R11-F04",
+        "R11-F21"
+      ]
+    },
+    {
+      "id": "R11-K04",
+      "topic": "Dokunma ve tıklama hedefleri",
+      "recommendation": "Telefonda her etkileşimli öğenin dokunma alanı en az 48 x 48 olsun; panelde plan kararı olan 24 px alt sınır korunsun ve birincil düğmeler 44 px yüksekliğe çıksın.",
+      "values": [
+        {
+          "name": "target.phone.min",
+          "value": "48 x 48 (dp / pt)",
+          "note": "Android 48dpx48dp; Apple varsayılanı 44x44 pt."
+        },
+        {
+          "name": "target.phone.spacing",
+          "value": "çerçeveli öğe çevresinde yaklaşık 12 pt, çerçevesiz öğenin görünen kenarı çevresinde yaklaşık 24 pt",
+          "note": "Apple HIG."
+        },
+        {
+          "name": "target.panel.min",
+          "value": "24 x 24 CSS px",
+          "note": "Plan kararı ve 2.5.8."
+        },
+        {
+          "name": "target.panel.undersized",
+          "value": "24 CSS px çaplı daire başka hedefe ya da daireye değmez",
+          "note": "Tablo içi küçük simgeler için."
+        },
+        {
+          "name": "target.panel.primary.height",
+          "value": "44 px",
+          "note": "Bizim seçimimiz, Apple 44 pt varsayılanına denk."
+        }
+      ],
+      "reasons": "Sınıfta aceleyle, tek elle ve çoğu zaman orta ve alt sınıf Android telefonla kullanılan bir akışta küçük hedef yanlış dokunma demektir.",
+      "alternatives": [
+        {
+          "option": "Telefonda da 24 px",
+          "why_not": "WCAG'yi geçer ama iki platformun önerisinin yarısı."
+        }
+      ],
+      "based_on": [
+        "R11-F05"
+      ]
+    },
+    {
+      "id": "R11-K05",
+      "topic": "Yazı ölçekleme ve kesilmeme",
+      "recommendation": "Telefon ekranları iOS'ta AX5 (gövde 53 pt) ve Android'de %200 yazı ölçeğinde bozulmadan çalışsın; büyük yazıda yan yana öğeler alt alta geçsin ve kritik metinler hiç kesilmesin.",
+      "values": [
+        {
+          "name": "test.ios.sizes",
+          "value": "Large (gövde 17 pt), xxxLarge (23 pt), AX1 (28 pt), AX5 (53 pt)",
+          "note": "53/17 = 3.118 kat."
+        },
+        {
+          "name": "test.android.fontScale",
+          "value": "%200",
+          "note": "Doğrusal değil."
+        },
+        {
+          "name": "allowFontScaling",
+          "value": "true",
+          "note": "Hiçbir içerik metninde kapatılmaz."
+        },
+        {
+          "name": "maxFontSizeMultiplier",
+          "value": "2",
+          "note": "Bizim seçimimiz: yalnız sabit yükseklikli gezinme etiketlerinde, %200'ün altına inmez."
+        },
+        {
+          "name": "numberOfLines",
+          "value": "kullanılmaz",
+          "note": "Öğrenci adı, ders adı, saat, durum ve hata metninde."
+        },
+        {
+          "name": "text.size.min",
+          "value": "11 pt",
+          "note": "Apple iOS en küçük."
+        },
+        {
+          "name": "spacing.unit.android",
+          "value": "boşluk dp, yazı ve satır yüksekliği sp",
+          "note": ""
+        }
+      ],
+      "reasons": "Apple en büyük erişilebilirlik boyutunda da aynı bilgiyi göstermeyi, Android %200 ölçeği ve sp ile satır yüksekliğini ister; WCAG 1.4.4 %200 büyütmede kayıp olmamasını şart koşar.",
+      "alternatives": [
+        {
+          "option": "Yazı ölçeğini uygulama genelinde sınırlamak",
+          "why_not": "Plan telefonun ayarına uyulacağını söylüyor ve az gören kullanıcıyı dışarıda bırakır."
+        },
+        {
+          "option": "adjustsFontSizeToFit ile küçültmek",
+          "why_not": "Kullanıcının istediği büyütmeyi geri alır."
+        }
+      ],
+      "based_on": [
+        "R11-F07",
+        "R11-F08",
+        "R11-F09",
+        "R11-F06"
+      ]
+    },
+    {
+      "id": "R11-K06",
+      "topic": "Yazı ağırlıkları ve Kalın Metin",
+      "recommendation": "Yalnız Regular, Medium, Semibold ve Bold kullanılsın; Kalın Metin açıkken her ağırlık bir basamak kalınlaşsın ve düzen daha geniş harflere dayansın.",
+      "values": [
+        {
+          "name": "font.weights.allowed",
+          "value": "Regular, Medium, Semibold, Bold",
+          "note": ""
+        },
+        {
+          "name": "font.weights.forbidden",
+          "value": "Ultralight, Thin, Light",
+          "note": ""
+        },
+        {
+          "name": "boldText.mapping",
+          "value": "Regular -> Semibold, Medium -> Bold, Semibold -> Bold, Bold -> Bold",
+          "note": "Bizim seçimimiz."
+        },
+        {
+          "name": "boldText.signal.ios",
+          "value": "AccessibilityInfo.isBoldTextEnabled() + boldTextChanged",
+          "note": ""
+        }
+      ],
+      "reasons": "Zarif görünüm için ince ağırlık cazip ama Apple bunlardan kaçınmayı öneriyor ve ince yazı kontrast ölçüsünden daha soluk görünür.",
+      "alternatives": [
+        {
+          "option": "Başlıklarda Light ağırlık",
+          "why_not": "Küçük boyutta ve parlak ışıkta okunurluğu düşürür."
+        }
+      ],
+      "based_on": [
+        "R11-F20",
+        "R11-F01",
+        "R11-F25"
+      ]
+    },
+    {
+      "id": "R11-K07",
+      "topic": "Durumlar: renk, simge ve metin birlikte",
+      "recommendation": "Her yoklama ve uyarı durumu farklı biçimli bir simge, Türkçe bir metin etiketi ve renkle birlikte gösterilsin; renk tek başına hiçbir durumu ayırmasın.",
+      "values": [
+        {
+          "name": "status.success (örnek)",
+          "value": "#137738 (oklch 0.50 0.13 150): zeminde 5.03:1, dolguda beyaz 5.64:1",
+          "note": ""
+        },
+        {
+          "name": "status.error (örnek)",
+          "value": "#B6322D (oklch 0.52 0.17 27): zeminde 5.37:1, dolguda beyaz 6.03:1",
+          "note": ""
+        },
+        {
+          "name": "status.warning (örnek)",
+          "value": "#996000 (oklch 0.54 0.12 70): zeminde 4.65:1",
+          "note": "L 0.55 (#9D6300) 4.44:1 geçmez."
+        },
+        {
+          "name": "status.info (örnek)",
+          "value": "#2266A4 (oklch 0.50 0.12 250): zeminde 5.34:1, dolguda beyaz 5.99:1",
+          "note": ""
+        },
+        {
+          "name": "status.encoding",
+          "value": "simge biçimi + metin etiketi + renk",
+          "note": "Döteranopide başarı ile hata uzaklığı 0.265'ten 0.045'e düşüyor."
+        }
+      ],
+      "reasons": "1.4.1 A düzeyi şart; erkeklerin yaklaşık 12'de biri renk görme bozukluğu yaşıyor ve hesap durum renklerinin bu kişilerde birbirine çok yaklaştığını gösteriyor.",
+      "alternatives": [
+        {
+          "option": "Renk körlüğüne uygun özel palet",
+          "why_not": "Yardımcı olur ama tek başına 1.4.1'i karşılamaz ve parlak ışıkta yine zayıflar."
+        }
+      ],
+      "based_on": [
+        "R11-F10",
+        "R11-F11"
+      ]
+    },
+    {
+      "id": "R11-K08",
+      "topic": "Artırılmış kontrast renk seti",
+      "recommendation": "Uygulama içinde ayar olmadan, işletim sistemi yüksek kontrast istediğinde devreye giren ikinci bir renk seti tanımlansın: metin en az 7:1, kenarlıklar daha koyu, saydamlık ve bulanıklık yok.",
+      "values": [
+        {
+          "name": "hc.trigger.ios",
+          "value": "AccessibilityInfo.isDarkerSystemColorsEnabled() (Increase Contrast)",
+          "note": ""
+        },
+        {
+          "name": "hc.trigger.android",
+          "value": "UiModeManager.getContrast() > 0 (API 34) ya da AccessibilityInfo.isHighTextContrastEnabled()",
+          "note": "getContrast için küçük yerel modül gerekir."
+        },
+        {
+          "name": "hc.trigger.web",
+          "value": "@media (prefers-contrast: more)",
+          "note": ""
+        },
+        {
+          "name": "hc.text.contrast.min",
+          "value": "7:1",
+          "note": "1.4.6 gerekçesi: yaklaşık 20/80 görme."
+        },
+        {
+          "name": "hc.text (örnek, #F0F2F4 üstünde)",
+          "value": "oklch(0.43 0.012 255) = #4B5056, 7.25:1",
+          "note": "L 0.44 (#4E5359) 6.92:1 yetmez."
+        },
+        {
+          "name": "hc.border.contrast.min",
+          "value": "4.5:1",
+          "note": "Bizim seçimimiz; normal sette 3:1."
+        },
+        {
+          "name": "in-app contrast setting",
+          "value": "yok",
+          "note": "Plan kararı."
+        }
+      ],
+      "reasons": "Apple her özel renk için artırılmış kontrast karşılığı istiyor; plan kontrastı uygulamaya değil telefona bırakıyor.",
+      "alternatives": [
+        {
+          "option": "Uygulama içi yüksek kontrast anahtarı",
+          "why_not": "Plan uygulama içi kontrast ayarını reddediyor."
+        },
+        {
+          "option": "Tek set, ek varyant yok",
+          "why_not": "Apple önerisine uymaz; az gören kullanıcıya ek pay kalmaz."
+        }
+      ],
+      "based_on": [
+        "R11-F19",
+        "R11-F03"
+      ]
+    },
+    {
+      "id": "R11-K09",
+      "topic": "Azaltılmış hareket eşlemesi",
+      "recommendation": "Her hareket tokenının bir azaltılmış karşılığı olsun: konum, ölçek, döndürme, bulanıklık ve derinlik yerine iOS'ta opaklık geçişi, Android'de animasyonlar kaldırıldıysa anında değişim, panelde prefers-reduced-motion ile opaklık ya da anında değişim.",
+      "values": [
+        {
+          "name": "reduced.ios",
+          "value": "isReduceMotionEnabled() true: yalnız opaklık geçişi, yay sekmesiz",
+          "note": "Apple: x, y, z kaymaları solmaya çevrilir."
+        },
+        {
+          "name": "reduced.ios.crossfade",
+          "value": "prefersCrossFadeTransitions() true: ekran ve panel geçişleri çapraz geçiş",
+          "note": ""
+        },
+        {
+          "name": "reduced.android",
+          "value": "isReduceMotionEnabled() true: anında durum değişimi",
+          "note": "Reanimated ReduceMotion.System varsayılanı zaten son değere atlar."
+        },
+        {
+          "name": "reduced.web",
+          "value": "@media (prefers-reduced-motion: reduce): yalnız opaklık ya da anında",
+          "note": "Üzerine gelme etkileri renk değişimine iner."
+        },
+        {
+          "name": "reduced.ios.opacity.config",
+          "value": "opaklık animasyonu ReduceMotion.Never ile ayrıca tanımlanır",
+          "note": "Yoksa Reanimated onu da atlar."
+        },
+        {
+          "name": "reduced.live",
+          "value": "reduceMotionChanged olayı dinlenir",
+          "note": "useReducedMotion yalnız açılıştaki değeri verir."
+        }
+      ],
+      "reasons": "Sahip her etkileşimde yumuşak animasyon istiyor; Apple ve WCAG 2.3.3 bunun işletim sistemi ayarıyla kapanabilmesini ve yerine hareketsiz bir geri bildirim konmasını öneriyor.",
+      "alternatives": [
+        {
+          "option": "Azaltılmış modda da aynı animasyonu kısaltmak",
+          "why_not": "Kayma ve ölçek kısa da olsa vestibüler tetikleyicidir."
+        },
+        {
+          "option": "Uygulama içi hareket anahtarı",
+          "why_not": "Plan telefonun ayarına uyulmasını seçti; sinyal zaten mevcut."
+        }
+      ],
+      "based_on": [
+        "R11-F12",
+        "R11-F13",
+        "R11-F14",
+        "R11-F15"
+      ]
+    },
+    {
+      "id": "R11-K10",
+      "topic": "Yasak hareketler ve QR değişimi",
+      "recommendation": "Paralaks, kaydırmaya bağlı süs hareketi, tam ekran yakınlaşma geçişi, süs amaçlı dönme, z ekseninde derinlik ve bulanıklığa girip çıkma hiç kullanılmasın; 5 saniyede bir değişen QR geçiş animasyonu olmadan anında değişsin.",
+      "values": [
+        {
+          "name": "motion.forbidden",
+          "value": "paralaks, kaydırmaya bağlı süs hareketi, tam ekran yakınlaşma, süs dönmesi, z derinliği, bulanıklık geçişi",
+          "note": ""
+        },
+        {
+          "name": "autoplay.rule",
+          "value": "otomatik başlayıp 5 saniyeden uzun süren, içerikle yan yana hareket durdurulamıyorsa yok",
+          "note": "2.2.2."
+        },
+        {
+          "name": "flash.max",
+          "value": "1 saniyede en çok 3",
+          "note": "2.3.1."
+        },
+        {
+          "name": "qr.swap",
+          "value": "anında, animasyonsuz; saniyede 0.2 değişim",
+          "note": "Ara kareler okunamaz QR üretir."
+        }
+      ],
+      "reasons": "Bu hareketler vestibüler tepkileri tetikleyen bilinen türler; QR'ın soluklaşarak değişmesi okumayı da bozar.",
+      "alternatives": [
+        {
+          "option": "QR değişiminde kısa çapraz geçiş",
+          "why_not": "Geçiş sırasında iki kod üst üste biner ve okuma başarısız olur."
+        }
+      ],
+      "based_on": [
+        "R11-F16",
+        "R11-F12"
+      ]
+    },
+    {
+      "id": "R11-K11",
+      "topic": "Panel ve pencere odak düzeni",
+      "recommendation": "Panel ya da pencere açılınca odak hemen içeri girsin, Tab içeride dönsün, Esc kapatsın, kapanınca odak açan öğeye dönsün; telefonda alt panel ve onay pencereleri arka planı ekran okuyucudan gizlesin.",
+      "values": [
+        {
+          "name": "dialog.open.focus",
+          "value": "ilk odaklanabilir öğe; içerik uzunsa başlık",
+          "note": "Animasyonun bitmesi beklenmez."
+        },
+        {
+          "name": "dialog.tab",
+          "value": "odak pencere içinde döner",
+          "note": ""
+        },
+        {
+          "name": "dialog.escape",
+          "value": "kapatır",
+          "note": ""
+        },
+        {
+          "name": "dialog.close.focus",
+          "value": "açan öğeye; o öğe yoksa mantıklı sonraki öğeye",
+          "note": ""
+        },
+        {
+          "name": "phone.modal.ios",
+          "value": "accessibilityViewIsModal={true}",
+          "note": ""
+        },
+        {
+          "name": "phone.modal.android",
+          "value": "arka planda importantForAccessibility=\"no-hide-descendants\"",
+          "note": ""
+        },
+        {
+          "name": "phone.focus.move",
+          "value": "AccessibilityInfo.sendAccessibilityEvent(ref, 'focus')",
+          "note": "setAccessibilityFocus kullanımdan kalktı."
+        }
+      ],
+      "reasons": "Açılış ve kapanış animasyonları odak yönetimini geciktirmemeli; klavye ve ekran okuyucu kullanıcısı nerede olduğunu kaybetmemeli.",
+      "alternatives": [
+        {
+          "option": "Odağı animasyon bitince taşımak",
+          "why_not": "Hızlı klavye kullanıcısının tuşları arka plana gider."
+        }
+      ],
+      "based_on": [
+        "R11-F21",
+        "R11-F04"
+      ]
+    },
+    {
+      "id": "R11-K12",
+      "topic": "Yoklama sonucunun bildirilmesi",
+      "recommendation": "Yoklama sonucu görsel olarak simge ve büyük metinle, dokunsal olarak titreşimle, ekran okuyucuya ise sonuç başlığına odak taşınarak bildirilsin; sonuç ekranı kendiliğinden kapanmasın.",
+      "values": [
+        {
+          "name": "result.a11y.focus",
+          "value": "sonuç başlığına sendAccessibilityEvent 'focus'",
+          "note": "İki platformda."
+        },
+        {
+          "name": "result.liveRegion.android",
+          "value": "accessibilityLiveRegion=\"polite\"",
+          "note": "Aynı ekranda değişen durum metni için."
+        },
+        {
+          "name": "result.announce.ios",
+          "value": "announceForAccessibilityWithOptions(metin, { queue: true })",
+          "note": "Yalnız ekran değişmiyorsa."
+        },
+        {
+          "name": "assertive",
+          "value": "yalnız işlemi durduran hata",
+          "note": ""
+        },
+        {
+          "name": "android.announceForAccessibility",
+          "value": "dayanılmaz",
+          "note": "API düzeyi 36'da kullanımdan kalktı."
+        },
+        {
+          "name": "web.status",
+          "value": "role=\"status\"; role=\"alert\" yalnız önemli ve zamana bağlı hata",
+          "note": ""
+        },
+        {
+          "name": "toast.duration.android",
+          "value": "en az getRecommendedTimeoutMillis()",
+          "note": ""
+        },
+        {
+          "name": "result.autoDismiss",
+          "value": "yok",
+          "note": ""
+        }
+      ],
+      "reasons": "4.1.3 durum mesajlarının odak almadan iletilmesini ister; Apple hareketin tek bilgi taşıyıcısı olmamasını ve dokunsal geri bildirimle desteklenmesini önerir.",
+      "alternatives": [
+        {
+          "option": "Yalnız announceForAccessibility",
+          "why_not": "Android'de kullanımdan kalktı ve servisler yok sayabilir."
+        },
+        {
+          "option": "Yalnız yeşil onay animasyonu",
+          "why_not": "Renk ve hareket tek başına bilgi taşıyamaz."
+        }
+      ],
+      "based_on": [
+        "R11-F22",
+        "R11-F13",
+        "R11-F23"
+      ]
+    },
+    {
+      "id": "R11-K13",
+      "topic": "QR gösterim kuralları",
+      "recommendation": "QR her zaman saf siyah modül ve saf beyaz zeminle, her kenarda en az 4 modül beyaz boşlukla, okuma uzaklığının onda biri kenar uzunluğunda ve tema rengi almadan gösterilsin.",
+      "values": [
+        {
+          "name": "qr.colors",
+          "value": "#000000 modül, #FFFFFF zemin (21:1)",
+          "note": ""
+        },
+        {
+          "name": "qr.inverted",
+          "value": "yok",
+          "note": "Koyu modül, açık zemin."
+        },
+        {
+          "name": "qr.themed",
+          "value": "yok (gece mavisi modül, kırık beyaz zemin yok)",
+          "note": "#191970 / #F0F2F4 13.23:1."
+        },
+        {
+          "name": "qr.quietZone",
+          "value": "her kenarda en az 4 modül",
+          "note": ""
+        },
+        {
+          "name": "qr.size.rule",
+          "value": "kenar >= okuma uzaklığı / 10",
+          "note": "NN/g kuralı."
+        },
+        {
+          "name": "qr.size.examples",
+          "value": "6 m -> 60 cm; 10 m -> 100 cm; 15 m -> 150 cm",
+          "note": ""
+        },
+        {
+          "name": "qr.label",
+          "value": "kısa ders etiketi QR'ın dışında",
+          "note": "Logo tek başına bağlam değildir."
+        },
+        {
+          "name": "receipt.qr",
+          "value": "beyaz yüzeyde, sessiz bölge dahil",
+          "note": ""
+        }
+      ],
+      "reasons": "Projeksiyon ışığı ve sınıf aydınlatması kontrastı düşürür; ters ya da renkli QR bazı okuyucularda başarısız olur.",
+      "alternatives": [
+        {
+          "option": "Markalı renkli QR",
+          "why_not": "Kontrast düşer, aşırı ışıkta okuma riski artar."
+        }
+      ],
+      "based_on": [
+        "R11-F24",
+        "R11-F16",
+        "R11-F25"
+      ]
+    },
+    {
+      "id": "R11-K14",
+      "topic": "Sınıf akışında tek birincil eylem",
+      "recommendation": "Öğrencinin yoklama akışında her ekranda tek birincil eylem olsun ve akışta seçim ya da isteğe bağlı adım bulunmasın.",
+      "values": [
+        {
+          "name": "flow.home",
+          "value": "tek birincil düğme: QR okut",
+          "note": ""
+        },
+        {
+          "name": "flow.scan",
+          "value": "kamera ve tek Vazgeç",
+          "note": ""
+        },
+        {
+          "name": "flow.result",
+          "value": "durum, ders, saat ve tek Tamam",
+          "note": ""
+        },
+        {
+          "name": "primary.actions.per.screen",
+          "value": "1",
+          "note": ""
+        }
+      ],
+      "reasons": "W3C bilişsel erişilebilirlik notu kritik yolda yalnız gerekli adımları ve az kesintiyi öneriyor; sınıfta acele ve dikkat dağınıklığı yüksek.",
+      "alternatives": [
+        {
+          "option": "Ana ekranda birden çok eşit düğme",
+          "why_not": "Karar yükü ve yanlış dokunma artar."
+        }
+      ],
+      "based_on": [
+        "R11-F26"
+      ]
+    },
+    {
+      "id": "R11-K15",
+      "topic": "Web paneli: yeniden akış, metin aralığı, üzerine gelme",
+      "recommendation": "Panel 320 CSS px genişlikte tek sütuna insin (tablolar kendi kabında kaysın), %200 büyütmede ve metin aralığı değişince bozulmasın; üzerine gelince çıkan içerik Esc ile kapansın, üzerine gelinebilsin, kendiliğinden kaybolmasın.",
+      "values": [
+        {
+          "name": "reflow.width",
+          "value": "320 CSS px",
+          "note": "Veri tabloları istisna, kendi kabında yatay kayar."
+        },
+        {
+          "name": "reflow.height",
+          "value": "256 CSS px",
+          "note": "Yatay kayan içerikte."
+        },
+        {
+          "name": "text.resize",
+          "value": "%200, kayıp yok",
+          "note": ""
+        },
+        {
+          "name": "text.spacing.test",
+          "value": "satır 1.5, paragraf sonrası 2, harf 0.12, sözcük 0.16 (yazı boyutunun katı)",
+          "note": "Metin kaplarına sabit yükseklik yok."
+        },
+        {
+          "name": "hover.content",
+          "value": "Esc kapatır, üzerine gelinebilir, tetik kalkana dek kalır",
+          "note": ""
+        },
+        {
+          "name": "hover.focus.parity",
+          "value": "her üzerine gelme etkisinin :focus-visible karşılığı var",
+          "note": ""
+        }
+      ],
+      "reasons": "1.4.4, 1.4.10, 1.4.12 ve 1.4.13 AA şartları; sahibin istediği üzerine gelme animasyonları klavye kullanıcısını dışarıda bırakmamalı.",
+      "alternatives": [
+        {
+          "option": "Panel için en küçük genişlik sınırı",
+          "why_not": "1.4.10'u bozar."
+        }
+      ],
+      "based_on": [
+        "R11-F06",
+        "R11-F27"
+      ]
+    },
+    {
+      "id": "R11-K16",
+      "topic": "WCAG 3 ve APCA'ya karşı tutum",
+      "recommendation": "Geçme koşulu WCAG 2.2 AA olarak kalsın; APCA yalnız gövde metni seçiminde yardımcı denetim olarak kullanılsın.",
+      "values": [
+        {
+          "name": "conformance.target",
+          "value": "WCAG 2.2 AA",
+          "note": "Plan kararı."
+        },
+        {
+          "name": "apca.body.advisory",
+          "value": "Lc 75 en az, Lc 90 tercih",
+          "note": "Gövde metni sütunu."
+        },
+        {
+          "name": "apca.other.advisory",
+          "value": "Lc 60 en az",
+          "note": "Gövde dışı içerik metni."
+        },
+        {
+          "name": "apca.check (örnek)",
+          "value": "#6A6F76 Lc 67.1; #51565C Lc 77.9 (#F0F2F4 üstünde)",
+          "note": ""
+        }
+      ],
+      "reasons": "WCAG 3 Eylül 2026'da da taslak ve kontrast yöntemi belirsiz; APCA ise gövde metninde WCAG 2'nin kaçırdığı zayıflığı gösteriyor.",
+      "alternatives": [
+        {
+          "option": "APCA'yı geçme koşulu yapmak",
+          "why_not": "Bağlayıcı değil ve W3C taslağı artık APCA'yı anmıyor."
+        }
+      ],
+      "based_on": [
+        "R11-F17",
+        "R11-F18",
+        "R11-F01"
+      ]
+    }
+  ],
+  "signals": [],
+  "benchmarks": [],
+  "open_questions": [
+    "Uygulama telefonun koyu temasını izleyecek mi? Plan yalnız yazı boyutu ve kontrastı söylüyor; izlenecekse koyu palet aynı eşiklerle ayrıca hesaplanmalı (APCA belgesi WCAG 2 oranının koyu temada yanıltıcı olduğunu söylüyor).",
+    "Android'in kontrast düzeyi (UiModeManager.getContrast) React Native'de yok; küçük bir Expo yerel modülü kabul edilir mi, yoksa yalnız isHighTextContrastEnabled mı kullanılır?",
+    "İÜ dersliklerinde perdeye en uzak sıra kaç metre ve perdenin yüksekliği ne kadar? QR boyutu bu ölçüme bağlı.",
+    "Öğrenci makbuz QR'ını gösterirken ekran parlaklığı artırılacak mı? Kaynakla doğrulanmış bir kural bulamadım; cihazda denenmeli.",
+    "Android'de Animasyonları kaldır ayarı React Native'in isReduceMotionEnabled sinyalini açıyor mu? Belge yalnız geliştirici seçeneğini anıyor; cihazda doğrulanmalı.",
+    "Özel yazı tipi seçilirse Android'in Kalın metin ayarına ve %200 ölçeğe nasıl uyduğu cihazda denenmeli.",
+    "Projeksiyon QR'ının içerik uzunluğu ve hata düzeltme düzeyi modül boyutunu belirler; aynı perde boyutunda daha büyük modül için teknik tarafla en kısa içerik seçilmeli."
+  ]
+}

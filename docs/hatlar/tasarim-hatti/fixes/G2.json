@@ -1,0 +1,310 @@
+[
+ {
+  "severity": "MEDIUM",
+  "where": "#ekranlar Akış 02: \"QR yakalanınca köşeler 110 ms'de oturur\"; #hareket Süreler dur.hizli Kullanım: \"tarama kilidi\"",
+  "problem": "On the phone the corners use withSpring(spring.hizli), which settles in 282 ms, and #hareket lists the same pattern under both dur.hizli and spring.hizli. The Kullanım column mixes phone and panel the same way: Anahtar (dur.hizli vs spring.hizli), sekme göstergesi (dur.uzun vs spring.hizli), satır yer değişimi (dur.uzun vs spring.orta).",
+  "fix": "Label the Kullanım column \"panel ve bu sayfa\" and mark spring-driven patterns \"(telefonda yay)\". Change the flow text to \"köşeler spring.hizli ile oturur\".",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#gece-mavisi Hiçbir zaman: \"Kamera ekranı: hedef çerçevesi ve yazılar beyaz\"; #platform: \"Durum çubuğu simgeleri koyu (expo-status-bar style: 'auto')\"",
+  "problem": "The camera screen needs values that appear nowhere in the text or the tokens: dimming at rgba(26,32,48,0.5) instead of the 0.48 scrim; a 236 px frame with 28 px corners drawn at 3 px, a line width the system does not define; an inverse button variant (border neutral.7, hover 10 percent white, pressed 16 percent white); and light status bar icons. With style 'auto' in a light app, the status bar icons are dark on neutral.12.",
+  "fix": "Add a camera row to the anatomy: frame, corners, dimming (the 48 percent scrim or a new scrim.camera token), and the inverse button with tokens for its hover and pressed overlays. State expo-status-bar style 'light' on the camera screen.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#durumlar Uyarı seviyeleri: \"Seviye 1 ile 3 mürekkep ve ikonla yazılır\"",
+  "problem": "The ink and icon for each level exist only in the demo markup: 1 is status.info with info, 2 is status.warning with warning, 3 is status.danger with error, 4 is solid danger with report. The meter geometry (four 10 x 8 px segments, gap 2, empty segments neutral.6, empty segments on the solid bar 40 percent white) is in neither the text nor the tokens.",
+  "fix": "Add a four-row table: level → ink token, icon, meter fill. Put the meter size in the anatomy and the 40 percent overlay in the tokens.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#gece-mavisi lead: \"renk olarak gece mavisi yalnız aşağıdaki sekiz rolde görünür\"",
+  "problem": "Midnight blue also appears in places the usage map's \"nerede\" lists leave out: the correct-code digits (status.success.text), the success toast icon (status.success.text), the check icon on selected list and sheet rows (accent.mark), and the check inside the switch knob (accent.fill in the demo).",
+  "fix": "Add these four places under roles 7, 4 and 5.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#gece-mavisi Hiçbir zaman: \"Sayfa zemini kırık beyaz (neutral.2); kart, liste\"",
+  "problem": "Six of the eleven items state what is used (off-white page, white camera UI, violet and red for warnings). Read under the heading \"Hiçbir zaman\", they say the opposite of what is meant.",
+  "fix": "Phrase every item as a prohibition, for example \"Zemin ve yüzeyler gece mavisi olmaz (sayfa neutral.2, yüzey neutral.1)\".",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#durumlar lead: \"burada yalnız görünüşleri var\"; the .desc lines and Durum metinleri help lines; #bilesenler Seçim: \"FF, DC, DD ile tekrarda muaf yok\"",
+  "problem": "The section claims to cover appearance only, yet it restates plan.html rules word for word: \"Sebep kodu görevlendirme\", \"Öğrenci işlerinin yazısı ya da kurul kararıyla gelen düzeltme\", the 3-day rule for Ret, the Bluetooth and Konum consequences, and the login e-mail contents. The muaf rule also appears as switch help text. This is duplication with plan.html (D11).",
+  "fix": "Cut every .desc and help sentence that states a product rule. Keep the name, icon, ink, report letter and plan link. Use neutral sample text for the switch help.",
+  "angle": "The developer "
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ekranlar with Röntgen switched on. Caption 'Kalan gece mavisi: 1 birincil eylem, 4 seçim işareti, 8 ilerleme'. Evidence: review2/c/xray-00.png, review2/c/xray-01.png",
+  "problem": "The black caption bar is drawn inside the screen, over its header. 'Bugün', 'QR'ı okut' and 'BİL 301 Veri Yapıları' are half covered and the close icon is cut. In the very demo that answers the owner's 'nerede ve nasıl' question, this looks like a rendering bug.",
+  "fix": "Move the caption outside the screen: into .device-cap under the frame, or above the frame.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#panel lead: 'Bu çerçeve ekran izin verdikçe 1280 px'e kadar genişler'. Evidence: shots/1440-panel.png against review2/h/panel-1920.png",
+  "problem": "The 232 px sidebar layout only renders when the viewport is about 1,880 px or wider. Kırılma noktaları says a 1366 or 1440 laptop gets this layout, yet the owner reviewing at 1440 only ever sees the 672 to 1279 top-bar variant of the one panel screen.",
+  "fix": "Draw the frame at a fixed 1280 px and scale it down with transform: scale, as the phones already are, and print the scale under it.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ekranlar QR okut, 'Okutmayı dene' button. Spec in #etkilesim scan row: 'Köşeler QR'a scale(0,86) ile oturur'. Evidence: review2/c/v-scan.png (frame 1 and frame 5), review2/c/scan1440-00.png",
+  "problem": "At 2x the code is about 105 px wide inside a 232 px frame. Scaled to 0,86 the frame is still about 200 px, so it frames the projector board, not the code, and the capture moment does not read as 'found'. The .cam-heads blobs render as dark smudges under the board, worst at 1x.",
+  "fix": "Animate the corners to the QR's measured bounds, or size the demo QR so it fills the frame at 2x. Delete the head blobs or redraw them as readable silhouettes.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#gece-mavisi: 'durumlar da zeminsizdir (tek istisna: Durumlar)'. #durumlar: 'seviye 4 tek dolu kırmızı şerittir'. Evidence: review2/c/gm1440-00.png, review2/c/du1440-01.png",
+  "problem": "The document draws two coloured-ground exceptions: a rose ground for Yok and Ret in dense tables, and a solid red strip for warning level 4. 'Tek istisna' (single exception) is false.",
+  "fix": "Write: 'iki istisna: yoğun tabloda Yok ve Ret gül zemin; seviye 4 dolu kırmızı şerit (Durumlar)'.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ust key-figure strip: 'Mürekkep #143065 accent.11, yalnız sekiz rolde'. #renk accent.11 'Mürekkep: birincil eylem'. neutral.12 'Elle eklendi mürekkebi'. Evidence: shots/1440-ust.png",
+  "problem": "'Mürekkep' (ink) names the accent fill, the status foregrounds and neutral.12, while body text is #1A2030. A developer cold-reading cannot tell which token 'mürekkep' means (rubric D13).",
+  "fix": "Rename the hero label 'Gece mavisi'. Use 'mürekkep' only for status foregrounds (att.*.fg) and define it once in Renk.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ekranlar QR okut caption: 'Kamera ana (1x) kamerayla açılır'. Akış 02: '2x yakınlaştırmayla açılır'. Evidence: review2/c/ek1440-01.png, review2/c/ek1440-02.png",
+  "problem": "'1x' means the lens in one sentence and the zoom level in the other. Read together, the two lines contradict each other on the opening zoom.",
+  "fix": "Rewrite as: 'Ana lensle açılır; yoklama QR'ında yakınlaştırma 2x, makbuz QR'ında 1x'.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#gece-mavisi role 4 and #bicim 'işaret' row: 'seçili liste, seçenek ve tablo satırının solu, etkin sekmenin altı'",
+  "problem": "The list of places where the selection mark appears is printed twice, word for word.",
+  "fix": "Biçim row: '2 px accent.mark; yerleri Gece mavisi nerede, rol 4'.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#gece-mavisi 'Ölçülen pay' chart (6 bars, review2/c/gm1440-03.png) and the coverage bar under every phone and the panel (review2/c/ek1440-01.png)",
+  "problem": "Each screen's midnight-blue percentage and budget is drawn twice with the same numbers.",
+  "fix": "Delete the Ölçülen pay chart and keep the bars under each screen, plus one line in Gece mavisi that links to them.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#gece-mavisi 'Ana ekranda roller' phone and 'Bir ders boyunca gece mavisi' timeline. Evidence: shots/1440-gece-mavisi.png against shots/1440-ekranlar.png",
+  "problem": "The usage-map phone is a second copy of the Bugün screen, and the Röntgen switch in Telefon ekranları already numbers the roles on it. The timeline's event lists repeat where roles 1, 4, 7 and 8 appear.",
+  "fix": "Replace the duplicate phone with a link that turns Röntgen on. Shorten the timeline to one sentence: 'dolu gece mavisi derste 15 dakika, %13,6'.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ekranlar lead and #acik item 18: 'Türkiye'de telefonların çoğu Android'",
+  "problem": "The same fact and the same plan link appear twice.",
+  "fix": "Keep it in #ekranlar and cut it from item 18.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "LOW",
+  "where": "Ragged grids. #durumlar Durum metinleri: row 1 card bottoms differ (296, 306, 352 px) and one card sits alone on row 3 (review2/c/du1440-02.png). #renk Anlam rolleri: columns of 8, 10, 2 and 4 cards (review2/c/rk1440-01.png). #ikonlar: last grid row has 6 of 8 cells and a borderless white hole (review2/c/ik1440-00.png). #bicim Köşe: the last row's rule stops at 3 of 4 cells (review2/c/bi1440-00.png)",
+  "problem": "Uneven bottoms and holes break the 0-corner, aligned-grid look.",
+  "fix": "Stretch the cards in each row. Flow the role groups as a single list. Pad grids with bordered empty cells or paint the empty area bg.page.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "LOW",
+  "where": "#panel key-figure tiles: 'Görevli 1, Belgeli düzeltme 1, Elle eklendi 1, Devamdan muaf 1'. Evidence: shots/1440-panel.png, review2/h/panel-1920.png",
+  "problem": "At 1440 a lone '1' wraps onto its own line. At 1920 'İncelemede ve beklemede' wraps and pushes its numeral 17 px below the others.",
+  "fix": "Give the tile label a fixed two-line area so the numerals align, and shorten the description, for example 'dört tür, birer kayıt'.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "LOW",
+  "where": "#ekranlar QR gösterme screen: 'Yoklama 11:42 kaldı' (review2/c/xray-01.png)",
+  "problem": "This countdown is static while the home and scan screens count down, so at the same 10:03 the screens disagree (11:26 against 11:42). The lead says 'Ekranlar canlıdır: sayaç işler'.",
+  "fix": "Add data-countdown to the QR screen's remaining-time span.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "LOW",
+  "where": "#panel mock: '.pnl-menu' (Menü) at widths under 672 px and the 53 'Diğer' row buttons",
+  "problem": "They look live, with hover and press, but have no handler. Nowhere does the document demonstrate the drawer (yan panel), even though dur.genis is specified for it.",
+  "fix": "Wire .pnl-menu to open the nav as a right drawer: dur.genis in, dur.orta out, opacity only under reduced motion. Or mark these buttons as static.",
+  "angle": "Visual quality"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#gece-mavisi rule 01: \"Her ekranda en çok bir dolu gece mavisi alan vardır: birincil eylem.\" Also the #ekranlar caption \"tek dolu mavi alan Yoklamamı ver düğmesi\"",
+  "problem": "The same section names filled midnight-blue roles that are not the primary action: role 5 (the checkbox fill and the switch track) and role 8 (the 4 dp progress bar). The page's own panel mock shows two filled checkboxes (the header one and Cem Polat's) next to \"Excel olarak indir\", and the home screen shows the filled progress bar next to \"Yoklamamı ver\". A developer cannot tell whether a checked box may sit beside a primary button.",
+  "fix": "Reword: \"Her ekranda en çok bir dolu gece mavisi düğme vardır (birincil eylem); işaretli kutu, açık anahtar rayı ve 4 dp ilerleme çubuğu bu sayıya girmez.\" Change the home caption to \"tek dolu düğme Yoklamamı ver\".",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#gece-mavisi > Hiçbir zaman (ul.never), items 1 \"Sayfa zemini kırık beyaz (neutral.2); kart, liste...\", 6 \"Kamera ekranı: hedef çerçevesi ve yazılar beyaz\" and 7 \"Çevrimdışı şeridi açık gri (neutral.3)\"",
+  "problem": "This is the never list that O3c requires, but three items are affirmative statements printed behind a block icon. Read as written, they forbid an off-white page, white camera marks and a gray offline strip, which is the opposite of the intent. The other eight items name the forbidden thing, so the list mixes two grammars.",
+  "fix": "Open with \"Gece mavisi şuralarda hiç yoktur:\" and rewrite the three items: \"Zeminler: sayfa, kart, liste, alt sekme çubuğu, alt sayfa, diyalog, başlık çubuğu, seçili ve hover satır (hepsi nötr).\" / \"Kamera ekranı: çerçeve, yazı ve yakınlaştırma seçimi beyaz.\" / \"Çevrimdışı şeridi ve bildirim zemini: nötr.\"",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "Hero \"tek imza anı 400 ms\"; #ekranlar caption \"Tek imza anı: kare ve onay çizilir (400 ms)\"; tokens dur.imza, ease.imza, spring.imza; #hareket lead \"Tek vurgu anı\"",
+  "problem": "Two names are used for one moment. Worse, \"imza\" is a product term in plan.html (\"Yoklama kayıtları donanım anahtarıyla imzalanır\", \"İmza doğrulama\"), and the same success screen prints \"İmzalandı, telefona yazıldı\". A developer reading spring.imza next to the signing code will confuse the two.",
+  "fix": "Use one term, \"vurgu anı\", and rename the tokens dur.vurgu, ease.vurgu and spring.vurgu (with --spring-vurgu and --spring-vurgu-dur).",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#durumlar > Durum metinleri: lead \"Sözcükler plan.html'deki gibi\"; Bluetooth and Konum cards \"Açarsan yoklaman güçlenir; açmasan da yoklaman alınır.\"",
+  "problem": "The claim is false. \"Bluetooth kapalı\", \"Konum kapalı\" and \"yoklaman güçlenir\" do not appear in plan.html. Plan says the app asks the student to turn the setting on and otherwise records \"Bluetooth yok\" or \"konum yok\", not used against the student. \"güçlenir\" is also a vague promise that no rule backs.",
+  "fix": "Either label the cards \"örnek metin, planda yok\", or use plan facts: \"Bluetooth kapalı. Açman istenir; açmazsan kayıt Bluetooth yok diye alınır ve aleyhine kullanılmaz.\" Do the same for Konum.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ekranlar > Yoklaman kaydedildi, offline variant, step 2: visible \"Sunucuya gönderilecek\" plus hidden \", henüz gönderilmedi\"",
+  "problem": "This invents a third receipt state beside the plan's two (\"Telefonda kayıtlı, gönderilmedi\" and \"Sunucuya ulaştı\", per brief.md section 4). Screen readers also hear \"gönderilmedi\" twice in a row: step 1 already says it.",
+  "fix": "Label step 2 \"Sunucuya ulaştı\" in the pending style (empty node, \"bekliyor\") with the sub-line \"İnternet yok\". This matches the swap pattern the document already defines.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ekranlar > QR okut caption: \"1x ve 2x düğmesi tasarımın önerisidir, planda yok.\"",
+  "problem": "A new product control enters through a screen mock without an owner decision. plan.html#asama23-okutma fixes the zoom per QR type (2x for the attendance QR, 1x for the receipt QR), and Açık noktalar has no item for a manual toggle.",
+  "fix": "Add an open point \"Tarama ekranında elle 1x/2x seçimi olsun mu?\" with the R09-S23 reason and a recommendation, or drop the toggle from the mock until it is decided.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "Repeated rules: selection-mark place list word for word in #gece-mavisi role 4 and #bicim > Çizgiler \"işaret\"; focus-visible \"fareyle tıklayana görünmez\" 4 times (role 2, #erisilebilirlik Odak halkası, #hareket Kurallar, #bilesenler lead); reduced-motion summary 4 times (#ozet, #erisilebilirlik first line, #hareket Kurallar, #tokenlar Okuma anahtarı item 4 second sentence); \"Tek vurgu anı\" 3 times in #hareket; 48 x 48 dp and 24 px 4 times (#ozet, #bicim Boşluk help, #erisilebilirlik, Anatomi); rose background for Yok and Ret 5 times (#renk, #durumlar exc-demo, Anatomi Damga and Tablo satırı rows, #bilesenler Baskı)",
+  "problem": "Each value or rule lives in two to five places, against the document's own header line \"Her bilgi tek yerde durur, öbür dosya bağlantı verir.\" The next edit will update one copy and miss the others.",
+  "fix": "Keep one home for each and link from the rest: selection list in role 4; focus ring in #erisilebilirlik; reduced motion in Süreler and the interaction table; vurgu anı in the #hareket lead; touch targets in #erisilebilirlik; rose exception in #renk Durum renkleri.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#durumlar status descriptions (lead \"burada yalnız görünüşleri var\"), e.g. Yok \"Sayılan kaydı yok: kayıt gelmedi ya da Ret aldı\", Ret \"öğrenci 3 gün içinde Sorun bildir ile bildirir\"; #ekranlar QR okut caption \"Kamera ana (1x) kamerayla açılır; ... 2x ... 1x kalır\"; \"Türkiye'de telefonların çoğu Android\" twice (#ekranlar, #acik 18); kafa sayısı timing 3 times (#gece-mavisi role 6, #panel caption, #kutuphaneler Sayı geçişi); #kutuphaneler lead restating plan's Sürdürülebilirlik ilkeleri",
+  "problem": "Plan facts are copied into the design document, against D11 and the section's own lead that says only the visual form lives here.",
+  "fix": "Delete the .desc paragraphs in Son durumlar and in Sunucu kararları; keep name, icon, ink, report letter and the plan link. Replace each copied plan sentence with its plan.html link.",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "LOW",
+  "where": "#panel caption \"Var dışındaki kararın gerekçesi kararın yanında yazar\" vs row Kaan Çelik \"Var hoca onayladı\"; #erisilebilirlik \"Diğer: Ayşe Yılmaz\" vs table \"Ayşe Yıldız\"; #platform link label \"Açık noktalar, Açılır parçalar\" pointing to open point 05 titled \"Yerel tarih kutusunda Türkçe biçim kuralı nasıl tutulur?\"",
+  "problem": "The rule and the example disagree, the example name does not match the screen it cites, and the link label names no existing item.",
+  "fix": "Remove \"hoca onayladı\" or change the rule to \"Var dışındaki kararın, ve hoca onaylı Var'ın, gerekçesi\". Use \"Ayşe Yıldız\". Change the label to \"Açık noktalar, Tarih kutusu\".",
+  "angle": "Owner constrai"
+ },
+ {
+  "severity": "HIGH",
+  "where": "#ilke-guven, #scr-success caption and #scr-records strip: 'İnternet gelince kendiliğinden gönderilir. Uygulamayı kapatabilirsin.'",
+  "problem": "This contradicts teknik.html#telefon-arka-plan ('expo-background-task (çalışması garanti değil; gönderme asıl olarak uygulama açılınca') and teknik.html#telefon-gonderme-protokolu ('kullanıcı uygulamayı kaydırıp kapatırsa görev durur' on iPhone). The expo-network listener only runs while the app is running. Background runs come at most every 15 minutes on Android and mostly at night on iPhone. The plan depends on students opening the app with internet: plan.html#devam-donem-sonu says the instructor asks them to 'uygulamayı internetle açmalarını', and the last-week reminder says the same. #ilke-guven even names plan.html as 'Dayanak' for this sentence. The copy promises something the stack cannot do and works against the plan.html#hedefler target of 95% of records within 24 hours.",
+  "fix": "Use one string in all three places: 'Kaydın telefonda güvende. İnternet varken uygulamayı aç, kendiliğinden gönderilir.' Delete 'Uygulamayı kapatabilirsin'. Keep '2 kayıt telefonda bekliyor'.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "HIGH",
+  "where": "#dlg-del 'Hesabın silinsin mi?': 'Giriş bilgilerin (e-posta adresi, giriş kodları) silinir, oturumların kapanır.'",
+  "problem": "plan.html#kararlar-hesap-silme: 'Silme ekranı ve web adresi neyin silinip neyin kaldığını, nedenini ve süresini yazar', and the plan cites this as the condition Apple and Google set for keeping data. The design's only deletion UI says what is deleted and what stays. It does not say why records stay ('devam kararının dayanağı ve itirazda kanıt') or for how long (the retention period, plan.html#acik-saklama-suresi). It also covers instructors only: students have no e-mail or codes, and their local database and keys are deleted only after pending records leave. Built as drawn, the deletion screen would fail the plan's store requirement.",
+  "fix": "Make it a screen, or a dialog with a 'Ne silinir, ne kalır' block. Per role it needs four lines: silinenler; kalanlar; neden kalır; ne kadar kalır ('üniversitenin saklama süresi dolunca', link plan.html#acik-saklama-suresi). Then the queue sentence ('Gönderilmemiş iş varsa silme sıraya girer'). Add the student variant.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#ekranlar 'Akış öğrenci, Aşama 2'; #scr-scan '1x ve 2x düğmesi tasarımın önerisidir, planda yok'; #durumlar 'yalnız hocanın listesinde etiket olarak görünür'; #katmanlar 'plan bir neden listesi tanımlamaz'",
+  "problem": "Four product decisions the plan does not make are taken inside sections instead of in #acik: (1) In Aşama 2, 'Yoklamamı ver' opens the camera; the plan never ties the button to QR, and no research entry mentions it. (2) A manual 1x/2x zoom control, while plan.html#asama23-okutma has the app choose the zoom. (3) 'Bluetooth yok' and 'Konum yok' shown as labels in the instructor's list. They are not in the plan.html#gun-kayit-etiketleri label set, and each label is its own yes/no column (teknik.html#kod-veri-modeli), so a new label is a schema change. (4) Three invented Sorun bildir reasons. The owner cannot approve these in one place, and the angle's rule (a change to plan.html must be an open point) is broken four times.",
+  "fix": "Add four items under 'Sahibin kararı', each with the question, the recommendation and the plan.html line it would change: Aşama 2'de giriş düğmesi; elle yakınlaştırma seçimi; Bluetooth yok ve Konum yok etiket mi; Sorun bildir nedenleri. Replace the inline remarks with links to those items.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#durumlar (Son durumlar, Sunucu kararları ve makbuz, Uyarı seviyeleri, Durum metinleri), #scr-scan caption, #kutuphaneler-panel 'CSS derleme': 'Adlar ve anlamlar plan.html'den; burada yalnız görünüşleri var.'",
+  "problem": "The section says it shows looks only, and #ozet says warning texts are 'burada yazılmaz, bağlantı verilir', yet plan definitions are copied anyway: 'Geçerli kayıt; sayılır.', 'Teyidi gelmemiş öğrencinin ya da ders içinde ayarı değişen dersin kaydı.', 'Şüpheli kayıt; hoca onaylayana kadar sayılmaz.', 'Geçersiz kayıt; sayılmaz.', 'Sebep kodu görevlendirme.', the Elle eklendi reason codes, the level-2 variant rule, the Ret and receipt-QR paths, the Konum yok and Onay bekliyor rules, and the login e-mail contents. The #scr-scan caption repeats the plan.html#asama23-okutma lens sentence, and the CSS derleme row repeats the teknik.html#panel-cati target list. Every copy is a second place that can drift.",
+  "fix": "Under each status keep only name, icon, letter and ink. Delete 'Kalan hak sonraki oturumun o türdeki saatinden azsa: ...' but keep the four sample texts as component content. In Durum metinleri keep only the visual and motion notes. In #scr-scan delete the first sentence; the caption already links plan.html#asama23-okutma. In the CSS derleme row write 'teknik.html#panel-cati'deki hedef listesi'. Roughly 200 to 300 words go and no decision is lost.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#durumlar 'Durum metinleri': 'Sözcükler plan.html'deki gibi; hiçbiri gece mavisi taşımaz.'",
+  "problem": "Many strings in this block are new copy, not plan words: 'Bluetooth kapalı', 'Açarsan yoklaman güçlenir; açmasan da yoklaman alınır.', 'Konum kapalı', 'Hesabına ... giriş yapıldı.', 'Bu girişle en eski oturumun kapandı: Android telefon.' Readers will take them as approved plan text. The e-mail example also shows the rare case. plan.html#kararlar closes the oldest panel session first, so a Chrome/Windows login can close an 'Android telefon' only when the instructor has no panel session at all.",
+  "fix": "Separate the two: quote plan strings with a link and label everything else 'öneri metni'. Change the example to 'Bu girişle en eski oturumun kapandı: Chrome, Windows.'",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#scr-home and #ph-home-map: 'Teori · 2 hak kaldı' above 'Bir ders daha kaçırırsan hakkın biter.'",
+  "problem": "plan.html#devam-uyari-seviyeleri counts hak in class hours (T = yapılan saatler; 'Sayım: Ders saati bazında'). BİL 301 runs 10:00 ile 11:50, two hours, so '2 hak kaldı' reads as two absences left while the next line says one more absence ends it. The plan's level-2 wording only makes sense if the reader knows hak is counted in hours.",
+  "fix": "Show the unit: 'Teori · 2 saat hakkın kaldı' (or 'Kalan hak: 2 saat') in #scr-home, #ph-home-map and the Uyarı seviyeleri samples.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "MEDIUM",
+  "where": "#panel 'Yoklama tablosu · 53 öğrenci'",
+  "problem": "The 53 sample rows take about 490 words. 38 of them are plain 'ek etiket yok · Var · Var' rows that carry no decision. Sorting, filtering and every status or label variant can be shown with about 17 rows.",
+  "fix": "Keep one row per variant (15 today: each label, Beklemede, İncelemede twice, Ret to Yok, kayıt yok to Yok, Görevli, Belgeli düzeltme, Elle eklendi, Devamdan muaf) plus 2 plain Var rows. Recompute the summary tiles, Kafa sayısı and the footnote.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "LOW",
+  "where": "#ust lead: 'Bu dosya görünüş ve etkileşim kararlarını ve onları kuran kütüphaneleri ... anlatır'",
+  "problem": "The plan.html and teknik.html headers both say library and version decisions live in teknik.html. tasarim.html states its own rule as settled while #acik-kutuphane-yeri still asks the owner.",
+  "fix": "Append '(kütüphanelerin yeri: Açık noktalar 03)' to the lead until the owner decides.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "LOW",
+  "where": "#scr-records status bar above 'İnternet yok. ...'",
+  "problem": "The offline screen draws full Wi-Fi and signal icons while its strip says 'İnternet yok' (see 390-el-4.png).",
+  "fix": "Draw no-signal icons on the offline screens (#scr-records, the offline success variant).",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "LOW",
+  "where": "#durumlar Eşleştirme 'İÜ Yoklama uygulamasıyla okutup dersi onaylar'; #platform-titresim 'İÜ Yoklama QR'ı değilse'",
+  "problem": "plan.html#dagitim 'Ad ve logo' makes the institution's name and logo depend on permission, with a neutral name as the fallback. The UI copy and the e-mail header hard-code 'İÜ Yoklama'.",
+  "fix": "Use an app-name token in copy, or write 'uygulamayla'.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "LOW",
+  "where": "#panel intro 'kafa sayısından sonra gördüğü tablo'",
+  "problem": "plan.html#kararlar-kafa-sayisi has the instructor see the record count only after entering the head count. The design defines only the 'after' state. If the table appears before that, its rows reveal the count.",
+  "fix": "Add one line: until the head count is entered, the page shows only the head-count field; the record columns appear afterwards.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "LOW",
+  "where": "#ekranlar 'Akış öğrenci, Aşama 2', step 'Kaydedildi'",
+  "problem": "The plan (plan.html#kararlar, Bildirim) asks for notification permission right after the first attendance, with its purpose stated. The flow does not say where that request appears relative to the success moment and haptic.",
+  "fix": "Add a step after 'Tamam' that shows the purpose sentence and then the system dialog.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "LOW",
+  "where": "#scr-panel primary action 'Excel olarak indir' on the session page",
+  "problem": "teknik.html#panel-excel loads SheetJS only on the list-upload and report-download pages.",
+  "fix": "Make the button open Raporlar with ders and tarih preset, or state that this page loads SheetJS lazily as a report page.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "LOW",
+  "where": "#scr-panel nav 'Çıkış' vs #katmanlar menu 'Çıkış yap'",
+  "problem": "The same action has two labels.",
+  "fix": "Use one label in both places.",
+  "angle": "Consistency wi"
+ },
+ {
+  "severity": "LOW",
+  "where": "#scr-scan top bar button aria-label 'Fener'",
+  "problem": "The plan has no torch, and a torch makes a projected or phone-screen QR harder to read because of glare.",
+  "fix": "Remove it, or raise it as an open point with a reason.",
+  "angle": "Consistency wi"
+ }
+]

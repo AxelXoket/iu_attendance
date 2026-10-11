@@ -1,0 +1,684 @@
+{
+ "id": "D13",
+ "packages": [
+  {
+   "id": "D13-P01",
+   "title": "Sözleşme paketi iskeleti ile rota, hata, kimlik, sayfa ve öğe temelleri",
+   "files": [
+    "packages/contracts/package.json",
+    "packages/contracts/tsconfig.json",
+    "packages/contracts/tsconfig.build.json",
+    "packages/contracts/src/ortak/moduller.ts",
+    "packages/contracts/src/ortak/enum.ts",
+    "packages/contracts/src/ortak/zaman.ts",
+    "packages/contracts/src/ortak/kimlik.ts",
+    "packages/contracts/src/ortak/sayfa.ts",
+    "packages/contracts/src/ortak/hata.ts",
+    "packages/contracts/src/ortak/hiz.ts",
+    "packages/contracts/src/ortak/basliklar.ts",
+    "packages/contracts/src/ortak/oge.ts",
+    "packages/contracts/src/ortak/oge-sonucu.ts",
+    "packages/contracts/src/ortak/rota.ts",
+    "packages/contracts/src/ortak/testler/kimlik.test.ts",
+    "packages/contracts/src/ortak/testler/semalar.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "MODULLER",
+    "ModulAdi",
+    "genisleyenEnum",
+    "anSemasi",
+    "gunSemasi",
+    "dersSaatiSemasi",
+    "sureMsSemasi",
+    "bindeSemasi",
+    "buyukSayiSemasi",
+    "Kimlik",
+    "KisiId",
+    "GirisOturumuId",
+    "CihazId",
+    "ProjeksiyonId",
+    "BirimId",
+    "kimlikNesnesiSemasi",
+    "kimlikSemasi",
+    "istemciKimligiSemasi",
+    "ogrenciNoSemasi",
+    "beklenenSurumNoSemasi",
+    "sayfaSemasi",
+    "sayfaSorgusuSemasi",
+    "tamListeSemasi",
+    "hataKodlariTanimla",
+    "HataTanimi",
+    "UygulamaHatasi",
+    "hataZarfiSemasi",
+    "GECICI_SQLSTATELER",
+    "HataAyrintisi",
+    "HIZ_SINIFLARI",
+    "BASLIKLAR",
+    "CEREZLER",
+    "IstemciBilgisi",
+    "ogeTuruTanimla",
+    "OgeTuruTanimi",
+    "ogeSonuclariSemasi",
+    "rotaTanimla",
+    "RotaTanimi",
+    "KimlikBirlesimi",
+    "RotaGirdisi"
+   ],
+   "needs": [],
+   "tests": [
+    "Kimlik nesnesi tek şemaya uyar",
+    "Öğe sonucu şeması yalnız ekleme alanlarını kabul eder"
+   ],
+   "depends_on": [],
+   "size": "L",
+   "notes": "Her modülün sözleşme paketinin ilk adımda içe aktardığı her şey tek pakette ve hiçbir şeyi beklemeden yazılır, böylece modül sözleşmeleri ikinci aşamada başlar: packages/contracts çalışma alanı paketi kaynak ve default koşullu giriş noktalarıyla ve Node tipsiz tsconfig ile kurulur; modül adları, genişleyen enum, zaman, kimlik, sayfa, hata kataloğu tanımı ile markalı UygulamaHatasi ve hata zarfı, geçici SQLSTATE tablosu, hız sınıfları, başlık ve çerez adları, öğe türü ve öğe sonucu şemaları ve tanım anı kurallarıyla rotaTanimla yazılır (HataAyrintisi hatalar.ts içe aktarılmadan onun genişlettiği kayıt arayüzüyle kurulur). Kimlik nesnesi testi geçerli ve geçersiz örnekleri, öğe sonucu testi ek alan kabulünü ve reddini denetler."
+  },
+  {
+   "id": "D13-P02",
+   "title": "İmzalı metin, sürüm şemaları ve api sözleşmesi",
+   "files": [
+    "packages/contracts/src/ortak/imzali-metin.ts",
+    "packages/contracts/src/ortak/surum.ts",
+    "packages/contracts/src/ortak/index.ts",
+    "packages/contracts/src/api.ts",
+    "packages/contracts/src/ortak/testler/surum.test.ts",
+    "apps/server/test/features/api/ornekler/yayin-bilgisi/d07-ornegi.json"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "imzaliMetinSemasi",
+    "surumSemasi",
+    "surumAyristir",
+    "surumKarsilastir",
+    "API_HATALARI",
+    "API_ROTALARI",
+    "DEGISIM_BEKLEYEN_ROTALARI",
+    "PLATFORMLAR",
+    "KANALLAR",
+    "ESIK_KARARLARI",
+    "surumCevabiSemasi",
+    "yayinBilgisiSemasi",
+    "YayinBilgisi",
+    "KanalGirdisi",
+    "HataliSurum"
+   ],
+   "needs": [],
+   "tests": [
+    "Sürüm karşılaştırması toplam sıralamadır",
+    "Yayın bilgisi D07 alanlarıyla katı doğrulanır"
+   ],
+   "depends_on": [
+    "D13-P01"
+   ],
+   "size": "M",
+   "notes": "İmzalı metin şeması, sürüm ayrıştırma ve karşılaştırma, api.ts içindeki D13 hata kodları, GET /v1/surum rota tanımı, değişim bekleyen rotalar listesi, platform, kanal ve eşik kararı listeleri ile katı yayın bilgisi şeması yazılır, ortak/index.ts açılır; yalnız ilk paketin tanımlarını kullanır. fast-check sürüm sıralamasını, D07 örnek dosyası yayın bilgisi şemasını denetler."
+  },
+  {
+   "id": "D13-P03",
+   "title": "Hata kataloğu ve rota tablosu birleştirmesi",
+   "files": [
+    "packages/contracts/src/hatalar.ts",
+    "packages/contracts/src/rotalar.ts",
+    "packages/contracts/src/ortak/testler/rota-tablosu.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "TUM_HATALAR",
+    "HataKodu",
+    "ortukKodlar",
+    "TUM_ROTALAR",
+    "TUM_OGE_TURLERI"
+   ],
+   "needs": [
+    "D04.SAAT_ROTALARI",
+    "D04.PENCERE_SURESI_OGESI",
+    "D04.ERKEN_KAPATMA_OGESI",
+    "D09.elleEklemeOgeTuru",
+    "D09.sorunBildirimiOgeTuru",
+    "D14.IS_KUYRUGU_HATA_KODLARI",
+    "D15.ISLETIM_ROTALARI",
+    "D15.ISLETIM_HATALARI"
+   ],
+   "tests": [
+    "Rota tablosu kuralları"
+   ],
+   "depends_on": [
+    "D13-P01",
+    "D13-P02"
+   ],
+   "size": "M",
+   "notes": "hatalar.ts ve rotalar.ts on beş modülün sözleşme dosyalarındaki katalogları, rota listelerini ve öğe türlerini bir kez birleştirir, çift kod ve çift rota yüklenirken reddedilir, ortukKodlar kimlik beyanına göre örtük kodları verir. Bu paket her modülün sözleşme dosyasını içe aktarır: needs yalnız adlandırılmış dışa açığı olan dört modülü gösterir, öteki modüllerin sözleşme paketleri de bundan önce bitmiş olmalıdır. Rota tablosu sözleşme testi yalnız sözleşme verisini taradığı için burada koşar: tekil yol ve ad, önek, kimlik birleşimi, hız sınıfı, gövde sınırı, hatalar listesinin katalogda olması ve değişim bekleyen rotalar zemin denetimli sayımlarla denetlenir."
+  },
+  {
+   "id": "D13-P04",
+   "title": "Telefon ve panelin ortak fetch yardımcısı ve derlenmiş paket denetimi",
+   "files": [
+    "packages/contracts/src/istemci.ts",
+    "packages/contracts/src/ortak/testler/istemci.test.ts",
+    "packages/contracts/src/ortak/testler/paket.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "istemciKur",
+    "sonucSinifi",
+    "IstekSonucu"
+   ],
+   "needs": [],
+   "tests": [
+    "İstemci yardımcısı protokol tablosuna uyar",
+    "Derlenmiş sözleşme paketi Node'da açılır"
+   ],
+   "depends_on": [
+    "D13-P01",
+    "D13-P02",
+    "D13-P03"
+   ],
+   "size": "M",
+   "notes": "istemciKur girdiyi istek şemasıyla denetleyip zaman aşımıyla gönderir ve sonucu protokol tablosuna göre basari, gecici, bol ya da dur diye sınıflar; sahte fetch ile protokol tablosu testi her satırı denetler. Derlenmiş paket testi bütün giriş noktalarını (istemci, hatalar ve rotalar dahil) dist üstünden Node ile açtığı için birleştirmeden sonra koşar; sunucu bu paketin dışa açıklarını beklemez."
+  },
+  {
+   "id": "D13-P05",
+   "title": "Sürüm eşiği tablosu, yayın bilgisi okuyucusu ve eşik karar işlevleri",
+   "files": [
+    "apps/server/src/infra/api/tablolar.ts",
+    "apps/server/migrations/20261012090000_api_istemci_surum_esikleri/migration.sql",
+    "apps/server/migrations/20261012090000_api_istemci_surum_esikleri/snapshot.json",
+    "apps/server/src/infra/api/surum/yayin-bilgisi.ts",
+    "apps/server/src/infra/api/surum/esik-karari.ts",
+    "apps/server/src/infra/api/surum/esik-deposu.ts",
+    "apps/server/src/infra/api/surum/kova.ts"
+   ],
+   "tables": [
+    "istemci_surum_esikleri"
+   ],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D12.tabloYardimcilari",
+    "D12.kisitAdi",
+    "D12.Islem",
+    "D04.simdi"
+   ],
+   "tests": [
+    "Kurulum kovası kararlı ve düzgün dağılır",
+    "Eşik karar işlevi dönem içinde yükseltmez"
+   ],
+   "depends_on": [
+    "D13-P01",
+    "D13-P02"
+   ],
+   "size": "M",
+   "notes": "istemci_surum_esikleri tablosu ve api göçü, yayın bilgisi okuyucusu ve süreç önbelleği, saf eşik karar işlevi, eşik deposu ve kurulum kovası yazılır; altyapı kancalarını beklemez, yalnız sözleşmedeki yayın bilgisi şemasını, D12 tablo yardımcılarını ve D04 saatini kullanır. Kova ve karar işlevinin fast-check özellikleri denetler; okuyucu ve depo GET /v1/surum paketindeki senaryolarda veritabanıyla koşar, index.ts satırlarını o paket ekler."
+  },
+  {
+   "id": "D13-P06",
+   "title": "Altyapı dış yüzü: tipler, hata yakalayıcı, istek kimliği, süre bütçesi ve sınır testi",
+   "files": [
+    "apps/server/src/infra/api/tipler.ts",
+    "apps/server/src/infra/api/kancalar/istek-kimligi.ts",
+    "apps/server/src/infra/api/hata-yakalayici.ts",
+    "apps/server/src/infra/api/sure-butcesi.ts",
+    "apps/server/src/infra/api/index.ts",
+    "apps/server/test/steps/api/sinir-adimlari.ts",
+    "apps/server/test/features/api/bilesim.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "uygulamaHatasi",
+    "istekKimligi",
+    "kalanSureMs",
+    "ISLEYICI_BUTCESI_MS",
+    "EklentiTemelSecenekleri",
+    "FastifyRequest",
+    "ApiBagimliliklari",
+    "OturumGirdisi",
+    "OturumSonucu",
+    "RotaIsleyicisi",
+    "DenemeSecenekleri"
+   ],
+   "needs": [
+    "D12.Islem",
+    "D12.veritabaniKur",
+    "D04.simdi",
+    "D04.SaatOznesi"
+   ],
+   "tests": [
+    "Sınır testi içe aktarma kurallarını sıfır ihlalle geçer"
+   ],
+   "depends_on": [
+    "D13-P01",
+    "D13-P03"
+   ],
+   "size": "L",
+   "notes": "Modüllerin en erken beklediği altyapı dışa açıkları kancalardan ve apiKur'dan önce teslim edilir: tipler.ts (Fastify istek eklemesi, eklenti ve api bağımlılık tipleri, D12 ve D04'ten yalnız import type), uygulamaHatasi ile kök hata ve bulunamadı yakalayıcıları, istek kimliği kancası, süre bütçesi ve index.ts. index.ts bu pakette açılır; sonraki altyapı paketleri (apiKur paketi ve GET /v1/surum paketi) depends_on ile sıralı oldukları için yalnız kendi dışa açık satırlarını ekler. dependency-cruiser sınır testi infra/api ve modül içe aktarma kurallarını pozitif denetimlerle denetler; yakalayıcının davranışı apiKur paketinin hata zarfı senaryolarında koşar."
+  },
+  {
+   "id": "D13-P07",
+   "title": "Kök kancalar, hız sınıfları, saatli depo ve aşırı yük",
+   "files": [
+    "apps/server/src/infra/api/kancalar/istemci-basliklari.ts",
+    "apps/server/src/infra/api/kancalar/koken.ts",
+    "apps/server/src/infra/api/kancalar/kimlik.ts",
+    "apps/server/src/infra/api/kancalar/beyan-denetimi.ts",
+    "apps/server/src/infra/api/kancalar/kimliksiz-sayac.ts",
+    "apps/server/src/infra/api/kancalar/cevap-basliklari.ts",
+    "apps/server/src/infra/api/kancalar/saat-belgesi.ts",
+    "apps/server/src/infra/api/kancalar/istek-logu.ts",
+    "apps/server/src/infra/api/hiz-siniflari.ts",
+    "apps/server/src/infra/api/saatli-depo.ts",
+    "apps/server/src/infra/api/asiri-yuk.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D04.simdi"
+   ],
+   "tests": [
+    "İstemci başlık ayrıştırıcısı hiçbir girdide fırlatmaz"
+   ],
+   "depends_on": [
+    "D13-P01",
+    "D13-P06"
+   ],
+   "size": "L",
+   "notes": "İstemci başlıkları, köken, oturum, beyan denetimi, kimliksiz sayaç, cevap başlıkları, saat belgesi ve istek logu kancaları, hız sınıfları, saatli depo ve aşırı yük yazılır; hepsi tipler.ts ve uygulamaHatasi üstüne kurulur, oturum ve saat belgesi işlevleri ApiBagimliliklari ile içeri verilir. İstemci başlık ayrıştırıcısının fast-check özelliği denetler; kancaların davranışı apiKur paketi ve senaryo paketlerinde koşar."
+  },
+  {
+   "id": "D13-P08",
+   "title": "apiKur, rota kaydı ve senaryo düzeneği ile hata zarfı senaryoları",
+   "files": [
+    "apps/server/src/infra/api/kur.ts",
+    "apps/server/src/infra/api/rota-kaydi.ts",
+    "apps/server/test/steps/api/ortak-adimlar.ts",
+    "apps/server/test/steps/api/deneme-eklentisi.ts",
+    "apps/server/test/features/api/hata-zarfi.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "rotalariKaydet",
+    "apiKur",
+    "hizSinifi"
+   ],
+   "needs": [
+    "D04.simdi",
+    "D14.IS_KUYRUGU_HATA_KODLARI"
+   ],
+   "tests": [
+    "Bozuk JSON gövdesi tek zarfla 400 alır",
+    "Şemaya uymayan istekte yalnız alan yolu ve kod döner, değer yankılanmaz",
+    "Bilinmeyen /v1 yolu zarflı 404 döner",
+    "Her cevap no-store ve sunucu istek kimliği taşır",
+    "Geçici veritabanı hataları 503'e çevrilir",
+    "Modül 429 ve 503 kodları bekleme süresiyle döner",
+    "İşletim kodu istekte 500'e çevrilir",
+    "Kök log veritabanı hatasının nedenini yazar",
+    "İş kuyruğu kodları http değerine göre döner",
+    "Yakalayıcı gelen değeri yankılarsa senaryo kırmızı olur"
+   ],
+   "depends_on": [
+    "D13-P03",
+    "D13-P06",
+    "D13-P07"
+   ],
+   "size": "L",
+   "notes": "apiKur kök kancaları belirtilen sırayla kurar, rotalariKaydet beyanları denetleyip rotaları kaydeder ve tamlık için not eder; index.ts'e rotalariKaydet, apiKur ve hizSinifi satırları eklenir. Ortak adımlar ve deneme eklentisi uygulamayı apiKur ve deneme rotalarıyla kurar, bileşim kökünü beklemez ve sonraki senaryo paketlerinin adım dağarcığını sağlar; hata zarfı senaryoları ve yakalayıcı mutasyonu denetler."
+  },
+  {
+   "id": "D13-P09",
+   "title": "Eşik durumu, GET /v1/surum ve sürüm senaryoları",
+   "files": [
+    "apps/server/src/infra/api/surum/esik-durumu.ts",
+    "apps/server/src/infra/api/surum/surum-ucu.ts",
+    "apps/server/test/steps/api/surum-adimlari.ts",
+    "apps/server/test/features/api/surum.feature",
+    "apps/server/test/features/api/ornekler/yayin-bilgisi/gecerli.json",
+    "packages/contracts/src/ortak/testler/tipler.tip-testi.ts"
+   ],
+   "tables": [],
+   "endpoints": [
+    "GET /v1/surum"
+   ],
+   "jobs": [],
+   "exports": [
+    "enDusukSurumDenetle",
+    "apiEklentisi",
+    "yayinBilgisi",
+    "yayinBilgisiYukle"
+   ],
+   "needs": [
+    "D12.veritabaniKur",
+    "D12.testVeritabaniHazirla",
+    "D12.senaryoOncesiSifirla",
+    "D04.simdi"
+   ],
+   "tests": [
+    "Veritabanı kısıt hatası yalnız kod ve kısıt adıyla loglanır",
+    "Sürüm başlıkları bozuk ya da yokken istek reddedilmez",
+    "En düşük sürümün altındaki istemci reddedilmez",
+    "GET /v1/surum platform ve kanala göre cevap verir",
+    "Kanal kaydı yokken GET /v1/surum 503 döner",
+    "GitHub kademesi aynı kuruluma her gün aynı kararı verir",
+    "Altyapı tipleri D12 ile aynıdır"
+   ],
+   "depends_on": [
+    "D13-P06",
+    "D13-P05",
+    "D13-P08"
+   ],
+   "size": "M",
+   "notes": "Eşik durumu önbelleği ve enDusukSurumDenetle, apiEklentisi ile GET /v1/surum yazılır, index.ts'e sürüm satırları eklenir. Sürüm senaryoları apiKur düzeneği ve atılabilir test veritabanıyla koşar, bileşim kökünü beklemez; altyapı tip testi ApiBagimliliklari ile D12 tiplerinin eşitliğini ve eşik tazelemesinin salt okuma seçeneğini denetler."
+  },
+  {
+   "id": "D13-P10",
+   "title": "Kimlik, köken ve rota beyanı senaryoları",
+   "files": [
+    "apps/server/test/features/api/kimlik-ve-koken.feature",
+    "apps/server/test/features/api/rota-tablosu.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [],
+   "tests": [
+    "Yanlış rol 403 alır, doğru rol geçer",
+    "Değişim bekleyen oturum yalnız izinli rotalara girer",
+    "Panel dışı Origin'le yazma isteği 403 alır",
+    "Origin'siz yazma isteğinde çerez okunmaz",
+    "Bearer varken çerez okunmaz",
+    "Cihaz imzalı rotada geçersiz oturum isteği düşürmez",
+    "Kimlik birleşimleri beyan edildiği gibi işler",
+    "Rota yalnız beyan ettiği kodları döndürür",
+    "Örtük kodlar beyan gerektirmez",
+    "Oluşturma rotası 200 ve 201'i aynı şemayla serileştirir",
+    "Projeksiyon çerezi yalnız projeksiyon kimlikli rotada okunur",
+    "Köken denetimi bozulunca senaryo kırmızı olur",
+    "Çerez Origin'siz okunursa senaryo kırmızı olur",
+    "Kısıtlı oturum denetimi kaldırılınca senaryo kırmızı olur",
+    "Projeksiyon çerezi oturum rotasında okunursa senaryo kırmızı olur"
+   ],
+   "depends_on": [
+    "D13-P08"
+   ],
+   "size": "M",
+   "notes": "Rol ve kısıtlı oturum beyanı, Origin ve çerez kuralları, Bearer önceliği, cihaz imzası, altı kimlik birleşimi, projeksiyon çerezi, beyan dışı ve örtük kodlar ile 200 ve 201 serileştirmesi apiKur düzeneğinin deneme rotalarıyla senaryolaştırılır; senaryolar ile köken, çerez, beyan ve projeksiyon mutasyonları denetler."
+  },
+  {
+   "id": "D13-P11",
+   "title": "Gövde, hız, aşırı yük, saat belgesi ve süre bütçesi senaryoları",
+   "files": [
+    "apps/server/test/features/api/govde-ve-icerik.feature",
+    "apps/server/test/features/api/hiz-siniri.feature",
+    "apps/server/test/features/api/asiri-yuk.feature",
+    "apps/server/test/features/api/saat-belgesi-basligi.feature",
+    "apps/server/test/features/api/sure-butcesi.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [],
+   "tests": [
+    "JSON dışı içerik ve sıkıştırılmış gövde 415 alır",
+    "Gövde sınırı tam değerde geçer, bir bayt üstünde 413 alır",
+    "Yetki ve hız denetimi gövdeden önce çalışır",
+    "Girişsiz uçta IP sınırı aşılınca 429 ve Retry-After döner, başka IP etkilenmez",
+    "Oturum sınıfında sayaç oturuma bağlıdır",
+    "Yalnız kimliksiz biten istek IP sayacına girer",
+    "Sınırı aşmış adresten Bearer püskürtmesi veritabanına gitmez",
+    "Aşırı yükte 503 ve 15 ile 45 saniye arası Retry-After döner",
+    "Aşırı yükte oturum kancası hiç çalışmaz",
+    "Saat belgesi başlığı yalnız koşullar tutunca eklenir",
+    "İstek bütçesi aşılınca kalan öğeler TEKRAR_DENE alır",
+    "Sonuç sınırı aşılınca 422 döner",
+    "Oturum kancası baskıdan önceye alınırsa senaryo kırmızı olur",
+    "Yetki denetimi gövdeden sonraya alınırsa senaryo kırmızı olur",
+    "Kimliksiz sayaç imzalı isteği sayarsa senaryo kırmızı olur"
+   ],
+   "depends_on": [
+    "D13-P08"
+   ],
+   "size": "M",
+   "notes": "İçerik türü ve gövde sınırı, gövdeden önce yetki ve hız, IP ve oturum sayaçları, kimliksiz sayaç, aşırı yük 503, saat belgesi başlığı koşulları ve istek bütçesi ile sonuç sınırı apiKur düzeneğinin deneme rotalarıyla senaryolaştırılır (kimlik senaryolarını beklemez); senaryolar ile kanca sırası, preParsing ve kimliksiz sayaç mutasyonları denetler."
+  },
+  {
+   "id": "D13-P12",
+   "title": "Hız sınıfı ve hata kataloğu sözleşme kuralları",
+   "files": [
+    "packages/contracts/src/ortak/testler/hiz.test.ts",
+    "packages/contracts/src/ortak/testler/hata-katalogu.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D14.IS_KUYRUGU_HATA_KODLARI"
+   ],
+   "tests": [
+    "Hata kataloğu kuralları",
+    "Hız sınıfı kuralları"
+   ],
+   "depends_on": [
+    "D13-P03",
+    "D13-P08",
+    "D13-P09",
+    "D13-P10",
+    "D13-P11"
+   ],
+   "size": "M",
+   "notes": "TUM_HATALAR ve HIZ_SINIFLARI bütün modüllerin dolu sözleşmeleri üstünde taranır; apiKur düzeneğiyle kurulan uygulamanın sayaç tabloları ve her API_ kodunun senaryo kapsaması (hata zarfı, kimlik, gövde ve hız ile sürüm senaryoları) denetlenir, bileşim kökünü beklemez; iki sözleşme testi zemin denetimli sayımlarla denetler."
+  },
+  {
+   "id": "D13-P13",
+   "title": "Bileşim kökü uygulamaKur ve süreç türleri",
+   "files": [
+    "apps/server/src/app.ts",
+    "apps/server/src/infra/api/openapi.ts",
+    "apps/server/test/steps/api/surec-adimlari.ts",
+    "apps/server/test/features/api/surec.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "uygulamaKur",
+    "UygulamaBagimliliklari",
+    "saatOznesiKur"
+   ],
+   "needs": [
+    "D01.kimlikEklentisi",
+    "D01.kimlikDinleyicileriniKur",
+    "D01.kimlikDinleyicileriHazir",
+    "D01.oturumDogrula",
+    "D01.hesapSilindiMi",
+    "D01.hesabiSil",
+    "D02.derslerEklentisi",
+    "D02.derslerKimlikDinleyicisi",
+    "D02.donemArasiMi",
+    "D03.listelerEklentisi",
+    "D04.saatEklentisi",
+    "D04.saatBelgesiVer",
+    "D04.SaatOznesi",
+    "D04.simdi",
+    "D05.yoklamaEklentisi",
+    "D06.esitlemeEklentisi",
+    "D06.esitlemeKimlikDinleyicisi",
+    "D06.ogeTuruKaydet",
+    "D07.dogrulamaEklentisi",
+    "D08.devamEklentisi",
+    "D09.duzeltmelerEklentisi",
+    "D10.raporlarEklentisi",
+    "D11.projeksiyonEklentisi",
+    "D11.projeksiyonKimlikDinleyicisi",
+    "D12.veritabaniEklentisi",
+    "D12.danismaKilidi",
+    "D12.geriYuklemePencereleri",
+    "D12.Islem",
+    "D12.veritabaniKur",
+    "D12.testVeritabaniHazirla",
+    "D12.senaryoOncesiSifirla",
+    "D14.IsKuyrugu",
+    "D14.Eposta",
+    "D15.isletimEklentisi",
+    "D15.kimlikOlayiDinleyicisi",
+    "D15.Ayarlar",
+    "D15.ayarlariYukle"
+   ],
+   "tests": [
+    "HEAD ikizi açılışı durdurmaz",
+    "Süreç türü kurulumu belirler",
+    "Kimlik dinleyicileri eklentilerden önce kurulur",
+    "Ölçü yazıcısı yalnız verilen seçenekle açılır",
+    "Kimlik dinleyicileri eklentilerden sonra kurulursa senaryo kırmızı olur"
+   ],
+   "depends_on": [
+    "D13-P06",
+    "D13-P08",
+    "D13-P09"
+   ],
+   "size": "L",
+   "notes": "app.ts kimlik dinleyicilerini eklentilerden önce kurar, apiKur ve bütün <ad>Eklentisi kayıtlarını süreç tablosuna göre bağlar, açılışta yayın bilgisini ve eşik alımını yapar, belge kipinde openapi.ts ile swagger kaydeder; süreç senaryoları, açılış adım kaydı, HEAD ikizi ve dinleyici sırası mutasyonu denetler. Bütün eklentileri beklediği için yalnız uçtan uca paketler ve süreç girişleri bunu bekler."
+  },
+  {
+   "id": "D13-P14",
+   "title": "Eşik kararı ve açılış alımı senaryoları",
+   "files": [
+    "apps/server/test/features/api/esik-karari.feature",
+    "apps/server/test/features/api/ornekler/yayin-bilgisi/bozuk.json"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [],
+   "tests": [
+    "Dönem içindeki yükseltme ertelenir, dönem arası gelince uygulanır",
+    "Eşik önbelleği tek mekanizmayla tazelenir",
+    "Düşürme dönem içinde de hemen uygulanır",
+    "Küçük sıralı dosya kayıtlı kararı değiştirmez",
+    "Bozuk yayın bilgisi dosyasıyla uygulama açılmaz",
+    "Dönem içi koruma kaldırılınca erteleme senaryosu kırmızı olur"
+   ],
+   "depends_on": [
+    "D13-P09",
+    "D13-P13"
+   ],
+   "size": "S",
+   "notes": "Dönem içi ertelenen yükseltme, hemen inen düşürme, küçük sıralı dosya, tek mekanizmalı önbellek tazelemesi ve bozuk yayın bilgisi dosyası uygulamaKur açılışıyla senaryolaştırılır; senaryolar ve esik-karari.ts dönem koruması mutasyonu denetler."
+  },
+  {
+   "id": "D13-P15",
+   "title": "OpenAPI belgesi üretimi ve saklama işi",
+   "files": [
+    "apps/server/scripts/api/openapi-belgesi-sakla.ts",
+    "apps/server/test/steps/api/sozlesme-adimlari.ts",
+    "apps/server/test/features/api/openapi-belgesi.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [
+    "openapi_belgesi_sakla"
+   ],
+   "exports": [],
+   "needs": [
+    "D15.ayarlariYukle",
+    "D15.log",
+    "D04.simdi"
+   ],
+   "tests": [
+    "Cevap şemalarında enum yok, genişleyen alanlar x-extensible-enum taşıyor",
+    "İstek şemalarında üst sınırlar var",
+    "Cevaplarda isteğe bağlı alan yok",
+    "OpenAPI belgesi kararlı ve eksiksiz",
+    "genisleyenEnum enum üretirse sözleşme testi kırmızı olur"
+   ],
+   "depends_on": [
+    "D13-P13"
+   ],
+   "size": "M",
+   "notes": "openapi-belgesi-sakla.ts uygulamayı belge kipinde sahte altyapıyla kurar, öğe türü bileşenlerini ve yapay /x-oge yollarını ekler, sıralı anahtarlı belgeyi yazar ve denetim ile etiket kiplerini uygular; belge taraması senaryoları ve genisleyenEnum mutasyonu denetler."
+  },
+  {
+   "id": "D13-P16",
+   "title": "oasdiff kırılma kapısı ve sözleşme iş akışı",
+   "files": [
+    "apps/server/scripts/api/oasdiff-kirilma-denetimi.ts",
+    "apps/server/test/features/api/oasdiff.feature",
+    "apps/server/test/features/api/ornekler/oasdiff/taban.json",
+    "apps/server/test/features/api/ornekler/oasdiff/kirici.json",
+    "apps/server/test/features/api/ornekler/oasdiff/ekleyen.json",
+    "apps/server/test/features/api/ornekler/oasdiff/taban-alti.json",
+    "apps/server/test/features/api/ornekler/oasdiff/kirici-giris.json",
+    "apps/server/test/features/api/ornekler/oasdiff/kirici-oge.json",
+    "packages/contracts/openapi/destek.json",
+    "packages/contracts/openapi/kirilma-istisnalari.txt",
+    "packages/contracts/openapi/seviyeler.txt",
+    ".github/workflows/sozlesme.yml"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [
+    "oasdiff_kirilma_denetimi"
+   ],
+   "exports": [],
+   "needs": [],
+   "tests": [
+    "oasdiff kapısı kırılmayı yakalar"
+   ],
+   "depends_on": [
+    "D13-P15"
+   ],
+   "size": "M",
+   "notes": "oasdiff betiği önce örneklerle kendini sınar, tam denetim tabanından ve süzgeçli bütün sürüm koşusuyla karşılaştırır, destek ve istisna dosyaları ile sabitlenmiş sozlesme.yml iş akışı yazılır; kırıcı, ekleyen ve etiketli belge örnekleriyle kapı senaryosu denetler. Kapı senaryosunun adımları sozlesme-adimlari.ts içinde olduğu için OpenAPI paketinden sonra gelir."
+  },
+  {
+   "id": "D13-P17",
+   "title": "Bütünleşik doğrulama",
+   "files": [
+    "apps/server/test/features/api/butunlesik.feature",
+    "apps/server/test/steps/api/butunlesik-adimlari.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D15.TestDunyasi",
+    "D04.saatBelgesiDogrula",
+    "D04.saatSonucu"
+   ],
+   "tests": [
+    "Beklenmeyen hata yalnız sabit mesaj ve istek kimliği döner",
+    "Oturum isteyen her rota kimliksiz istekte 401 alır",
+    "Kısıtlı oturum hesabın verisine ulaşamaz",
+    "Çerez kabul etmeyen rotada panel çerezi 403 alır",
+    "Hocanın saat belgesi kişi kimliği öznesiyle doğrulanır",
+    "Rota tablosu dışı ve eksik kayıt açılışı durdurur",
+    "Ders çıkışı yükünde sınırlar ve aşırı yük doğru davranır",
+    "Saat belgesi öznesi giriş oturumundan kurulursa test kırmızı olur"
+   ],
+   "depends_on": [
+    "D13-P13"
+   ],
+   "size": "M",
+   "notes": "Bütün eklentilerle kurulan uygulamada kısıtlı oturum, her oturumlu rotada 401, çerez kabul etmeyen saat belgesi ucu, hocanın saat belgesi öznesi, öneksiz eklenti yolu, üretim log biçimi ve ders çıkışı yükü D15 test dünyasıyla senaryolaştırılır; senaryolar ve saatOznesiKur mutasyonu denetler."
+  }
+ ]
+}

@@ -1,0 +1,90 @@
+===== D12-P09 | Göç çalıştırıcısı ve test veritabanı | size L
+ tables: ['__drizzle_migrations']
+ endpoints: []
+ jobs: []
+ tests: ['Test veritabanı ulaşılamıyor', 'Test veritabanı ilk açılışta hazır']
+ notes: veritabani:goc adımı (kurulum, oncesi-concurrently dizinleri, geçersiz dizin onarımı, 3 saniyelik kilit ve 10 basamaklı yeniden deneme) ile şablondan işçi başına test veritabanı ve senaryo öncesi sıfırlama yazılır. Öbür modüllerin beklediği test desteği budur ve uygulama bileşimini beklemez: yalnız kurulum adımını, sözleşmeyi ve sifirlama.test.ts'in açtığı havuzlar için veritabaniKur'u kullanır. Spec dosya listesine eklenen sifirlama.test.ts kapalı kümede VERITABANI_TEST_ULASILAMIYOR'u ve 4 işçiyle ilk açılışı ve bağlantı sayısını denetler.
+===== D14-P05 | Gönderim tablosu, adres özeti, kayan pencere sınırı ve e-posta sağlığı | size L
+ tables: ['eposta_gonderimleri']
+ endpoints: []
+ jobs: []
+ tests: ['Kayan pencere sınırı hiçbir aralıkta aşılmaz ve gereksiz reddetmez']
+ notes: eposta_gonderimleri tablosu tabloYardimcilari ve is_kuyrugu göçüyle (kısmi sayım dizini dahil), HMAC adres özeti ve kilit anahtarı, READ COMMITTED denetimli ve D12.danismaKilidi ile alınan sınır mantığı (epostaSiniriDenetle'nin gövdesi) ve epostaSagligi yazılır; saat epostaKur'un verdiği Saat'tir. sinir.test.ts 5.000 rastgele istek dizisinde EPOSTA_SINIRLARI'nın hiçbir pencerede aşılmadığını ve gereksiz ret olmadığını denetler; veritabanı davranışı P10 senaryolarında sınanır. is-kuyrugu/saglik.ts epostaSagligi'yi bu dosyadan doğrudan alır (iki dizin de D14'ün), böylece iş kuyruğu dış yüzü gönderici paketini beklemez.
+===== D14-P06 | pg-boss örneği, iş gönderme, kuyruk politikası, sarmalayıcılar ve hata süzgeci | size L
+ tables: ['pgboss_semasi']
+ endpoints: []
+ jobs: ['pgboss_bakimi']
+ tests: ['İş hatası çıktıya ve loga değer sızdırmaz']
+ notes: pg-boss 12 örneği (API'de fromDrizzle, işçide havuz 2, açık bakım değerleri, şema sürümü denetimi), işlem içi gönderme gövdesi, tanımdan kuyruk ayarı üreten politika, hata süzgeci, tek iş ve parti sarmalayıcıları yazılır; dış yüz bağlaması P07'de, parti.ts'in testleri P08'dedir. Yalnız sözleşmeyi ve D12'nin bağlantı kurucusunu bekler: hata-suzgeci.test.ts D12.veritabaniKur bağlantısında her koşuya özel pg-boss şeması (schema seçeneği) açıp sonunda siler, uygulama göçü ve D12 test veritabanı hazırlığı gerektirmez. Test gerçek pg-boss ile değer taşıyan hatanın iş çıktısına ve yakalanan loga sızmadığını artı denetimle sınar; koruyucu bozma burada denenir: hata süzgeci kaldırılınca kırmızı.
+===== D02-P05 | Okuma yaprağı ve kayıt defterleri | size L
+ tables: []
+ endpoints: []
+ jobs: []
+ tests: ['Oturum okuma süzgeci kesik liste dönmez', 'Denetlenecek dersler ve uygulanmış kilit süzgeci']
+ notes: Öbür modüllerin beklediği on altı okuma işlevi yaprak kuralıyla yalnız tablolar.ts, sözleşme, core takvim kuralları ve D12 işlem tipi kullanılarak yaprak.ts içine, üç kayıt defteri (üretim dinleyicisi, kilit adımı, liste kaynağı) kayitlar.ts içine yazılır; başka alan modülüne bağlanmadığı için şemadan hemen sonra çıkar. yaprak.test.ts satırları tablolar.ts ile atıp işlevleri geçici test veritabanında doğrudan çağırır.
+===== D06-P05 | Sözleşme, tablolar, sürüm yaprağı ve kayıt defteri | size L
+ tables: ['gonderim_defteri', 'kurulumlar', 'degisiklik_sayaci', 'ogrenci_durum_surumleri', 'karar_teslimleri']
+ endpoints: []
+ jobs: []
+ tests: ['Sürüm damgası tek sürümle yazılır']
+ notes: Öbür modüllerin beklediği her şey bu pakettedir ve modülün geri kalanını beklemez. Telefon sözleşmesinin tip, şema, rota ve hata tanımları (IkinciCapaBaglami ve GelenOge D04 sabitlerini ve tiplerini içe aktarır, bu yüzden D04.IKINCI_CAPA_YOK_NEDENLERI gerçek ihtiyaçtır), beş tablo ile göçü, yaprak dış yüzü (sayaç, damga, öğrenci sürümü, son temas, teslim bilgisi) ve öğe türü ile indirme kaynağı kayıt defteri (kayitlar.ts) yazılır. ogeTuruKaydet ve indirmeKaynagiKaydet kayitlar.ts içindedir ve index.ts yanında yaprak.ts üzerinden de dışa verilir: Modül sınırı başka modüle yalnız index.ts ve yaprak.ts kapısını açar, index.ts eklentiyi taşıdığı için geç gelir, yaprak.ts alan modülü içe aktarmadığından kayıt işlevleri burada erken hazırdır. surum-damgasi.feature tek sürümle damgalamayı, surumAl çağrılmadan biten işlemin geri alındığını, geri alınan SAVEPOINT içindeki damganın düştüğünü ve ilk surumAl eşzamanlılığını mutasyonla doğrular. Kayıt defterini P06 dağıtım senaryoları sahte işleyicilerle kullanır; çift kaydın açılışı durdurması, her türün tam bir kez kayıtlı olması ve tablo kısıtlarının sözleşme sabitleriyle aynılığı bütün göçlerin olduğu bileşik uygulamada P17 içinde sınanır.
+===== D13-P03 | Hata kataloğu birleştirmesi ve altyapı dış yüzü: tipler, uygulamaHatasi, yakalayıcı, istek kimliği, süre bütçesi | size L
+ tables: []
+ endpoints: []
+ jobs: []
+ tests: ['Sınır testi içe aktarma kurallarını sıfır ihlalle geçer']
+ notes: Modüllerin en erken beklediği dışa açıklar kancalardan ve apiKur'dan önce, modül sözleşmelerinin hemen ardından teslim edilir. hatalar.ts on beş modülün sözleşme dosyasındaki hata kataloglarını bir kez birleştirir, çift kodu yüklenirken reddeder, ortukKodlar kimlik beyanına göre örtük kodları verir; uygulamaHatasi HataKodu'na bağlı olduğu için bu dosyayla aynı pakettedir. needs listesindeki D01, D02, D04, D05, D07, D08, D09, D10 ve D11 adları hatalar.ts'in içe aktardığı sözleşme dosyalarını o dosyanın bir dışa açığıyla gösterir; D03, D06 ve D12'nin sözleşme dosyalarında (listeler.ts, esitleme.ts, veritabani.ts) adlandırılmış dışa açık olmadığından onları içeren paketler de bundan önce bitmiş olmalıdır. tipler.ts (Fastify istek eklemesi, eklenti ve api bağımlılık tipleri, D12 ve D04'ten yalnız import type), uygulamaHatasi ile kök hata ve bulunamadı yakalayıcıları, istek kimliği kancası, süre bütçesi ve index.ts yazılır. index.ts bu pakette açılır; ona satır ekleyen sonraki paketler (yayın bilgisi, apiKur ve GET /v1/surum paketleri) depends_on ile birbirine sıralıdır ve yalnız kendi dışa açık satırlarını ekler. dependency-cruiser sınır testi infra/api ve modül içe aktarma kurallarını pozitif denetimlerle denetler; yakalayıcının davranışı apiKur paketinin hata zarfı senaryolarında, katalog kuralları sözleşme kuralları paketinde koşar.
+===== D05-P03 | Tablolar, tablo göçü ve test kurucusu | size M
+ tables: ['yoklama_kayitlari', 'makbuz_okutmalari']
+ endpoints: []
+ jobs: []
+ tests: ['İkinci çapa değerleri sözleşmesi', 'CHECK listeleri sözleşmeyle aynı']
+ notes: İki tablo dizinleri, üretilmiş saat_sebebi ve ele_gecmis_anahtar sütunları ve sözleşmeden içe alınan CHECK listeleriyle Drizzle şemasına ve drizzle-kit generate göçüne, kayıt, okutma ve imzalı zarf kurucuları (P01'in zarf üretimiyle) kurucuTanimla ile test desteğine yazılır; D04 değerleriyle CHECK sözleşmesi (23514) ve D12 şema testiyle gerçek veritabanında sınanır. D04'ün saatSonucu işlevini beklemez (saat sütun eşlemesi P05'te); modülün bütün veritabanı testleri bu kurucuyu ve D15 test dünyasını kullanır, bu yüzden erken pakettedir.
+===== D01-P04 | Şema, göç ve yaprak okuyucular | size L
+ tables: ['kisiler', 'personel_rolleri', 'giris_kodlari', 'eposta_giris_durumlari', 'giris_oturumlari', 'ogrenci_hesaplari', 'cihazlar', 'cihaz_anahtarlari', 'cihaz_degisim_talepleri', 'kayit_kodlari', 'hesap_silme_istekleri']
+ endpoints: []
+ jobs: []
+ tests: ['Hesap ile numara arasında toplu geçiş']
+ notes: On bir tablo kısmi tekil dizinleri ve kopya sütunlarıyla tek göç klasöründe kurulur, sekiz yaprak okuyucu (yetkiDenetle yetki.ts'ten yeniden dışa verilir) ile kod ve anahtar özet işlevleri yazılır. yaprak.ts topluTeyitEngeli için yalnız core teyit.ts'i içe aktarır, core dizinini ve servisleri beklemez; D07, D05, D02 ve öbür okuyucular bu paketten sonra başlayabilir. ozetler.test.ts özetleri, timingSafeEqual karşılaştırmasını ve toplu okuyucunun gerçek veritabanında tek sorgu yaptığını denetler.
+===== D07-P02 | Tablolar ve göç | size S
+ tables: ['cihaz_dogrulama_degerleri', 'cihaz_kanitlari', 'app_attest_sayaclari', 'android_iptal_listesi', 'ortak_sinir_sayaclari', 'kayit_karar_gecmisi', 'oturum_isaretleri', 'rastgele_isim_secimleri']
+ endpoints: []
+ jobs: []
+ tests: ["Göç tablo tanımıyla aynı ve olay CHECK'i GECMIS_OLAYLARI'ndan türer"]
+ notes: Sekiz D07 tablosunu kısıt ve dizinleriyle Drizzle'da tanımlar ve tek göç klasörüne üretir (yabancı anahtarlar D01, D02 ve D05 tablolarına bağlanır, olay CHECK'i P01'deki GECMIS_OLAYLARI'ndan türer). Test kurucuları ve saklama işleyicisi ayrıldı (D07-P03): tablolar test dünyasını beklemez, böylece sayaç, işaret ve doğrulama değeri paketleri D15'in test dünyasını beklemeden kurulur. Vitest denetimi göçün anlık görüntüsünü tablo tanımıyla (drizzle-kit check) ve olay CHECK değerlerini GECMIS_OLAYLARI ile karşılaştırır.
+===== D15-P07 | Saat ve makine betikleri, durum dosyası okuyucusu | size L
+ tables: []
+ endpoints: []
+ jobs: ['saat_esitleme_izleme', 'makine_denetimi']
+ tests: ['Saat eşitleme betiği chronyc çıktısını doğru çevirir', 'Makine betiği yeniden başlamayı ve bellek taşmasını bir kez sayar']
+ notes: Ana makinede chronyc çıktısından chrony.json, docker sayaçlarından makine.json yazan betikler ortak.sh, zamanlayıcı birimleri ve chrony.conf ile kurulur, durum-dosyalari.ts saatEsitlemeDurumu ile makine, bakım ve yedek dosyalarını sözleşme şemalarıyla okur, dizini ayarlar().genel.durumDizini'nden alır. durum-dosyalari.test.ts PATH'e konan sahte chronyc ve docker ile senkron, sapma, yeniden başlama ve bellek taşması sayımını ve 1.000 eşzamanlı okumada yarım dosya görülmediğini denetler. Kaydediciyi beklemez.
+===== D04-P07 | Eşitleme durumu, saat belgesi servisi ve dinleyici kayıtları | size M
+ tables: []
+ endpoints: []
+ jobs: []
+ tests: ['Eski kid doğrulanır, yabancı kid ve bozuk MAC reddedilir', 'Ele geçirilmiş anahtarla belge çapa kurmaz']
+ notes: Süreç içi eşitleme durumu (SAGLIKLI ve BOZUK, duvar saati sıçraması denetimi, bekleyen açılış anı, işçide SAAT_SUREC_YANLIS), saat belgesi anahtar halkası ve veritabanına dokunmayan saatBelgesiVer ile saatBelgesiDogrula yazılır; oturumKapandi, kesintiKapandi ve pencereDegisti kayıt defterleri (tek ad kuralı ve olay tipleri, veritabanına dokunmaz) da buradadır, böylece D07, D08 ve D11 kayıt işlevlerini pencere ve kesinti işlerinden önce alır. Durum okumayı kendi küçük tipiyle alır, D15 durum dosyasını okuyan denetim P08'dedir; SAAT_SUREC_YANLIS D13 sözleşmesindeki UygulamaHatasi sınıfıyla kurulur, bu yüzden paket api dış yüzünü beklemez. saat-belgesi.feature kid, eski kid, bozuk MAC ve ele geçirilmiş anahtar senaryolarını servis düzeyinde saatSonucu ile birlikte denetler; uç senaryoları P10'dadır.
+===== D07-P04 | Ortak sınır kuralı ve geçiş yüklemi | size M
+ tables: []
+ endpoints: []
+ jobs: []
+ tests: ['Ortak sınır özelliği', 'Geçiş tablosu']
+ notes: ortakSinirKarari'nı ve izinliGecis yüklemini core'da saf işlev olarak yazar; ikisi de yalnız P01'in kodlarını ve tiplerini içe aktarır. Ortak sınır özelliği fast-check ile (10.000 deneme), geçiş tablosu dört özel satırıyla Vitest'te sınanır. Eskiden geçiş yüklemi D03 ve D04 dış yüzünü bekleyen bağlam dosyasıyla aynı paketteydi; ayrılınca bu saf kurallar en erken aşamada yazılır.
+===== D08-P05 | Çekirdek: telafi eksiği, telefon düzeltmesi ve dış yüz | size M
+ tables: []
+ endpoints: []
+ jobs: []
+ tests: ['Telafi eksiği', 'Telefon yerel düzeltmesi', 'Saat diliminden bağımsız']
+ notes: Telafi eksiğinin tek tanımı, telefonun gönderilmemiş kayıt düzeltmesi, mesaj metinleri ve packages/core/src/devam dış yüzü tamamlanır; taşınma süzgeçli telafi örneği, telefon yerel düzeltmesi ve bütün çekirdek testlerinin TZ=UTC ile TZ=Europe/Istanbul altında aynı sonucu vermesiyle denetlenir.
+===== D09-P03 | Şema ve denetim yaprağı | size M
+ tables: ['duzeltmeler', 'sorun_bildirimleri', 'denetim_kayitlari', 'gunluk_inceleme_partileri']
+ endpoints: []
+ jobs: []
+ tests: ['Uygulama rolü denetim ve düzeltme satırlarını değiştiremez', 'Denetim olayına kayıtlı şema dışında alan yazılamaz', 'Katalog, CHECK ve Zod aynı']
+ notes: Bütün modüllerin beklediği denetimeYaz burada, sözleşmeden hemen sonra; başka modül paketi beklemez. Dört tablo D01, D02, D03 ve D05 tablolarına yabancı anahtarla tek göçte kurulur; yaprak.ts başka modül içe aktarmadan denetim yazma, olay kaydı ve iki okuma işlevini verir. Bütün modüllerin olay türlerini tarayan sözleşme testi D09-P18 paketine taşındı, çünkü öbür modüllerin sözleşme dosyalarını bekler.
+===== D11-P02 | Çekirdek: QR içeriği, doğrulama kodu ve kilit anahtarları | size M
+ tables: []
+ endpoints: []
+ jobs: []
+ tests: ['QR içeriği gidiş dönüş', 'Kilit anahtarları yalnız gerekeni kilitler']
+ notes: 41 rakamlık QR içeriği, 8 baytlık doğrulama kodu, 5 saniyelik dilim hesabı ve qrKilitAnahtarlari saf işlev olarak yazılır (kilit işlevinin girdi tipi yapısaldır, sözleşme paketini beklemez); fast-check gidiş dönüş özelliği ve yalnız gerekeni kilitleyen anahtar özelliğiyle denetlenir.

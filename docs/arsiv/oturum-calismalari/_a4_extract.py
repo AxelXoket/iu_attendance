@@ -1,0 +1,12 @@
+import re,html,sys
+s=open('iu-yoklama-ozet.html',encoding='utf-8').read()
+s=re.sub(r'(?is)<(script|style)[^>]*>.*?</\1>','',s)
+links=re.findall(r'(?is)<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>',s)
+s=re.sub(r'(?i)<(br|/p|/li|/tr|/h\d|/summary|/div|/table|/details)[^>]*>','\n',s)
+s=re.sub(r'(?i)<(td|th)[^>]*>',' | ',s)
+s=re.sub(r'<[^>]+>','',s)
+s=html.unescape(s)
+s=re.sub(r'[ \t]+',' ',s); s=re.sub(r'\n\s*\n+','\n',s)
+open('_a4_text.txt','w',encoding='utf-8').write(s)
+open('_a4_links.txt','w',encoding='utf-8').write('\n'.join(h+' :: '+re.sub('<[^>]+>','',t) for h,t in links))
+print(len(s), len(links))

@@ -1,0 +1,59 @@
+{
+ "id": "D14",
+ "instructions": [
+  {
+   "refs": [
+    "I007",
+    "I036",
+    "I049",
+    "I110",
+    "I054"
+   ],
+   "do": "Çizelge (schedule_plan) düzeltmeleri: 01:55 satırı ekle 'takvim_oturumlarini_yenile (gece onarımı), D02, pg-boss'; 05:15 pencere_beklemede_kesinlestir satırını kaldır ve 'olayla' satırına ekle (D07, yalnız bekleyen_kararlari_coz koyar, stately, tekillikAnahtari oturumId); 'olayla' satırına projeksiyon_bekleyen_yeniden_hesapla (D11, isGonder ile 5 saniye sonraya, stately, tekillikAnahtari oturumId) ekle. Saatler: donem_kilidi 00:05, bekleyen_kayit_kapatma 00:15 (sonra: donem_kilidi), aksis_gun_sonu_anligi güvenlik ağı 00:25 (sonra: donem_kilidi; asıl yol kilit adımının kilit işleminde koyduğu iş), deneme_dersi_oturumlari 00:35, inceleme_hesaplari_kurulumu 00:45; devam_tutarlilik_denetimi 05:35 notundaki 'D08 tasarımı 04:10 yazıyor' ifadesini kaldır (D08 05:35'e geçti). Saatin sahibi işin sahibidir, çizelge onların cron'unu aynen kopyalar."
+  },
+  {
+   "refs": [
+    "I060",
+    "I014"
+   ],
+   "do": "isKuyruguKur Veritabani'nın db alanıyla fromDrizzle(veritabani.db, sql) kurar, gerekirse havuz.query'yi kullanır. worker.ts yoklama_saklama girişiyle havuz 1 olan ikinci bir Veritabani kurup D12.veritabaniIsleri'ne saklamaVeritabani olarak verir ve döndürülen öğeleri isTanimla'dan geçirir. pgboss yetkilerinin tamamı kur adımında (D12 yalnız şema USAGE verir). epostaSiniriDenetle(tx, adres, tur, s?: { ekAnahtarlar?: readonly DanismaAnahtari[] }) adres kilidini elle pg_advisory_xact_lock ile değil D12.danismaKilidi(tx, ['is-kuyrugu:eposta:<adres özeti>', ...ekAnahtarlar]) ile, işlemin ilk çağrısı olarak (katman 1) alır; adres özeti D14 içinde hesaplanır. Makine işlerinin saatleri D12'den aynen: gecelik_pg_dump 02:15, pgbackrest_dogrulama çarşamba 01:30."
+  },
+  {
+   "refs": [
+    "I071",
+    "I076"
+   ],
+   "do": "worker.ts uygulamaKur({ surec: 'isci', ... }) çağırır ve yayinBilgisiYukle'yi ayrıca çağırmaz; kimlik dinleyicilerini de uygulamaKur kurar. IS_KUYRUGU_HATA_KODLARI'nda http değeri koddan koda: API isteğinde de doğabilen kodlar (isGonder başarısızlığı, ör. IS_KUYRUGU_KURULMADI) http 500 ve genel metin, yalnız işçide doğan kodlar http null."
+  },
+  {
+   "refs": [
+    "I079",
+    "I123"
+   ],
+   "do": "contracts.json güncellendi: epostaSiniriDenetle(tx, adres, tur, s?) satırı; reads_from D04 (Saat tipi), D12, D13 (istek kimliği, hataKodlariTanimla) ve worker.ts bileşim kökü için D15; apps/server/test/support/is-kuyrugu* globu D14'ün. isKuyrugunuBosalt ve öbür test yardımcılarını apps/server/test/steps/is-kuyrugu/destek.ts'ten apps/server/test/support/is-kuyrugu.ts'e taşı; spec.files ve export imzalarındaki yolu güncelle. spec.exports'taki birleşik girişleri tek adlara böl (PartiIsi, PartiBaglami, IsSagligi, KuyrukTanimi, IsBaglami, EPOSTA_TURLERI, EpostaVerisi, isKuyruguKur, kuyruklariKur ...; açıklamalar not alanına)."
+  },
+  {
+   "refs": [
+    "I080",
+    "I082"
+   ],
+   "do": "worker.ts: ayarlariYukle({ surec: 'isci' }) ve logOlustur ile açılır; D15.isletimIsleri(bag) tanımlarını isTanimla'ya uyarlar ve isle'nin döndürdüğü küçük nesneyi iş çıktısı olarak yazar. IsSagligi zamanlama girdisine sonCikti (son tamamlanan işin küçük çıktısı; D08 tutarlılık kuralı ve isletim_denetimi'nin retSuSeviyesi için). isletim_ozeti e-posta türü EPOSTA_TURLERI'nde. isKuyrugunuBosalt pg-boss deleteAllJobs ile. Çizelgede ota_yayin_denetimi yoktur (GitHub Actions), haftalik_olcum_ozeti pazartesi 07:10, sertifika_bitis_denetimi 06:35, gunluk_log_arsivi makinede 03:15."
+  },
+  {
+   "refs": [
+    "I073",
+    "I074",
+    "I075",
+    "I077",
+    "I078"
+   ],
+   "do": "spec.requests'teki istekleri karar numaralarıyla sonuçlandı diye işaretle: D01 e-posta sınırı I073, iş sahipleri I074, D12 I075, D13 I076 (http kuralı değişti), D15 I077, D08 I078, mimari satırı I079; açık istek kalmaz."
+  },
+  {
+   "refs": [
+    "A1"
+   ],
+   "do": "eposta_gonderimleri göçü <14 haneli UTC>_is_kuyrugu_<açıklama>/ klasöründedir (apps/server/migrations/??????????????_is_kuyrugu_* globu D14'ün); göç dosyaları spec dosya listesine değil iş paketine yazılır; pgboss şeması pg-boss migrate ile."
+  }
+ ]
+}

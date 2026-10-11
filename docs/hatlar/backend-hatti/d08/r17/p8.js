@@ -1,0 +1,21 @@
+// Align round, part 8: student set and cell ownership of the live results, matched to D10's reading
+// (AKSİS rows are the şube's active rows; a cell belongs to the şube of the row that covers the session;
+// the sum over şubes equals the course-level summary). Exact-once.
+const fs = require('fs'), f = __dirname + '/../build-d08.js';
+let s = fs.readFileSync(f, 'utf8');
+const rep = (a, b) => { const n = s.split(a).length - 1; if (n !== 1) throw new Error('count ' + n + ' for: ' + a.slice(0, 90)); s = s.replace(a, () => b); };
+
+rep(`Satırlar şubede liste satırı olan her öğrenci için, liste sırasıyla (şubede etkinler önce): { satirId (öğrencinin o şubedeki liste satırı: etkin olan, yoksa en son pasifleşen), ogrenciNo, subedeEtkin (satirId satırı etkin mi; false ise öğrenci şubeden ayrılmış ya da listeden çıkmıştır ve AKSİS özetine girmez), ogrenciId | null (numaranın teyitli hesabı),`,
+    `Satırlar şubede etkin liste satırı olan öğrenciler için, liste sırasıyla (sira, sonra satır kimliği; D10 AKSİS satırlarını bu sırayla alır): { satirId (öğrencinin o şubedeki liste satırı: etkin olan, yoksa en son pasifleşen; bu işlevde öğrencinin şubede etkin satırı olduğundan hep etkin olandır), ogrenciNo, ogrenciId | null (numaranın teyitli hesabı),`);
+rep(`Tür sayıları ders düzeyindedir (öğrencinin dersteki bütün kapsamı, şube değişiminden önceki şubenin oturumları dahil); hucreler: true iken her satır bu kapsamın oturum hücrelerini taşır, özet ve hücreler aynı hesaptan, toplamları her an eşit.`,
+    `Tür sayıları ders düzeyindedir (öğrencinin dersteki bütün kapsamı, şube değişiminden önceki şubenin oturumları dahil). Her (öğrenci, oturum) hücresi tam bir şubeye düşer: oturumu kapsayan liste satırının (listeSatiriId) şubesine. hucreler: true iken her satır öğrencinin bu şubeye düşen hücrelerini taşır (oturumSonDurumlari ile birebir); öğrencinin bütün şubelerdeki hücre toplamı, etkin olduğu şubedeki tür sayılarına her an eşittir (şube değiştirmemiş öğrencide tek şubenin toplamı). Özet ve hücreler aynı hesaptandır.`);
+rep(`D10'un ders raporu hücreleri ve anlığı için: dersSonuclari ile aynı saf hesaptan, aynı öğrenci kümesiyle ve aynı repeatable read denetimiyle çağıranın işleminde döner; iş tablosuna yazılan satırların aynısıdır.`,
+    `D10'un ders raporu hücreleri ve anlığı için: dersSonuclari ile aynı saf hesaptan ve aynı repeatable read denetimiyle çağıranın işleminde döner; iş tablosuna yazılan satırların aynısıdır. Bu şubeye düşen bütün hücreleri verir, yani oturumu kapsayan satırı (listeSatiriId) bu şubede olan her öğrencinin; şubeden sonradan ayrılmış öğrencinin önceki hücreleri de gelir.`);
+rep(`Öğrencinin dersteki bütün kapsamındaki oturumlar döner (şube değişiminden önceki şubenin oturumları dahil), böylece tür başına toplam dersSonuclari ile her an birebir.`,
+    `Öğrencinin bütün şubelerdeki hücre toplamı, dersSonuclari'nda etkin olduğu şubedeki tür sayılarıyla her an birebir.`);
+rep(`'Canlı sonuçların her öğrenci satırı ogrenciNo ve satirId taşır; satirId öğrencinin o şubedeki liste satırıdır: etkin olan, yoksa en son pasifleşen.',`,
+    `'Canlı sonuçların her öğrenci satırı ogrenciNo ve satirId taşır; satirId öğrencinin o şubedeki liste satırıdır: etkin olan, yoksa en son pasifleşen. Her (öğrenci, oturum) hücresi oturumu kapsayan satırın şubesine düşer; bir öğrencinin bütün şubelerdeki hücre toplamı, etkin olduğu şubedeki dersSonuclari tür sayılarına eşittir.',`);
+rep(`"dersSonuclari şubede liste satırı olan her öğrenciyi döner; her satır ogrenciNo, satirId ve subedeEtkin taşır: A'dan B'ye geçen öğrenci A'nın sonucunda A'daki pasif satırıyla (subedeEtkin false), B'nin sonucunda B'deki etkin satırıyla gelir; aynı şubede pasif ve etkin iki satırı olan öğrencide satirId etkin olandır, yalnız pasifleri varsa en son pasifleşendir.`,
+    `"dersSonuclari şubenin yalnız etkin liste satırlarının öğrencilerini (sira, satır kimliği) sırasıyla döner, her satır ogrenciNo ve satirId taşır. A'dan B'ye geçen öğrenci dersSonuclari(A)'da yoktur, dersSonuclari(B)'de B'deki etkin satırıyla gelir; oturumSonDurumlari(A) onun A'ya düşen hücrelerini A'daki en son pasifleşen satırın satirId'siyle verir; A ve B hücrelerinin toplamı dersSonuclari(B)'deki tür sayılarına eşittir (pozitif kontrol: A hücreleri dışarıda bırakılınca eşitlik bozulur).`);
+fs.writeFileSync(f, s);
+console.log('p8 ok');

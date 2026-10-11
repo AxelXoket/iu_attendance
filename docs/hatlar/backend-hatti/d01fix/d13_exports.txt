@@ -1,0 +1,64 @@
+[
+  'id',
+  'module',
+  'summary',
+  'tables',
+  'endpoints',
+  'jobs',
+  'state_machines',
+  'invariants',
+  'exports',
+  'files',
+  'tests',
+  'resolved_gaps',
+  'contradictions_resolved',
+  'open_points'
+]
+=== D13 exports[0] rotalariKaydet
+  [signature] function rotalariKaydet(app: FastifyInstance, rotalar: readonly RotaUygulamasi[]): void; type RotaUygulamasi<R extends RotaTanimi = RotaTanimi> = { tanim: R; isleyici: RotaIsleyicisi<R>; oncekiKancalar?: readonly preHandlerAsyncHookHandler[] }
+  [purpose] Modül eklentisi kendi sözleşme dosyasındaki rota tanımlarını işleyicileriyle kaydeder. Tanımın TUM_ROTALAR'da olduğunu, yolun modülün önekiyle başladığını, kimlik, rol, hız sınıfı ve gövde sınırı beyanını açılışta denetler; Fastify yolunu ({dersId} biçiminden :dersId'ye), Zod şemalarını, gövde sınırını kurar ve rotaya sırasıyla modülün kancalarını, kimlik beyanı denetimini ve hız sınıfı kancasını ekler. Kaydedileni tamlık denetimi için not eder.
+=== D13 exports[1] uygulamaHatasi
+  [signature] function uygulamaHatasi<K extends HataKodu>(kod: K, ayrinti?: HataAyrintisi<K>): UygulamaHatasi
+  [purpose] Katalogdaki kodla fırlatılacak hatayı kurar; HTTP durumu ve mesaj katalogdan gelir, ayrinti kodun katalogdaki küçük şemasına uymak zorundadır ve kişisel veri taşımaz. Sınıf packages/contracts/src/ortak/hata.ts'tedir; D12 gibi infra/api'yi içe aktaramayan modüller aynı sınıfı oradan kurar.
+=== D13 exports[2] istekKimligi
+  [signature] function istekKimligi(istek: FastifyRequest): string
+  [purpose] İsteğin sunucuda üretilmiş UUIDv4 kimliği. İşi tetikleyen istek varsa modül iş verisine kaynakIstekKimligi olarak koyar (D14.isGonder), işçi logu aynı kimlikle aranır.
+=== D13 exports[3] hizSinifi
+  [signature] function hizSinifi(ad: HizSinifiAdi): (istek: FastifyRequest, cevap: FastifyReply) => Promise<void>; type HizSinifiAdi = 'girissiz' | 'oturum' | 'agir' | 'gonderim' | 'saat' | 'projeksiyon'
+  [purpose] Adlı hız sınıfını doğrulanmış kimliğe bağlı uygulayan kanca; her sınıfın tek sayaç tablosu vardır. Sınıflar ve başlangıç değerleri: girissiz IP başına dakikada 3000 (onRequest), oturum oturum başına 120, agir oturum başına 20, gonderim cihaz başına 30, saat cihaz ya da oturum başına 30, projeksiyon projeksiyon başına 60. rotalariKaydet her rotaya kendisi ekler; elle çağırmak yalnız kimliği kendi kancasında kuran modül içindir.
+=== D13 exports[4] enDusukSurumDenetle
+  [signature] function enDusukSurumDenetle(istek: FastifyRequest): { durum: 'uygun' | 'altinda' | 'bilinmiyor'; istemciSurumu: string | null; enDusukSurum: string | null }
+  [purpose] İsteğin X-Platform, X-Kanal ve X-Uygulama-Surumu başlıklarını süreç önbelleğindeki geçerli en düşük sürümle karşılaştırır. Hiçbir zaman reddetmez ve veritabanını beklemez (önbellek dakikada bir arka planda tazelenir); sonuç log, ölçüm ve GET /v1/surum için kullanılır. En düşük sürümün altındaki telefonu yeni yoklamadan telefon kendisi alıkoyar (plan.html#dagitim-guncelleme-ilkesi).
+=== D13 exports[5] yayinBilgisi ve yayinBilgisiYukle (ekleme)
+  [signature] function yayinBilgisiYukle(yol: string): Promise<YayinBilgisi>; function yayinBilgisi(): YayinBilgisi
+  [purpose] yayin-bilgisi.json'u okuyup Zod'la doğrular ve süreç belleğinde tutar; bozuksa açılışı durduran hata fırlatır. API sürecinde app.ts, işçi sürecinde worker.ts (D14) açılışta yükler; yüklenmeden yayinBilgisi() çağrılırsa sessizce boş dönmez, hata fırlatır (boş liste hatalı sürüm denetimini görünmeden kapatırdı). D07 hatalı sürüm listesini ve iOS paket sürümlerini buradan okur (D07 notu: hatalı sürüm listesi yayin-bilgisi.json'dan). Dosyayı tek modül okur ve doğrular; contracts.json'daki dış yüz listesine ekleme yoluyla girer.
+=== D13 exports[6] Kimlik ve istek alanları (tip, ekleme)
+  [signature] type Kimlik = { tur: 'ogrenci' | 'personel' | 'cihaz' | 'projeksiyon'; kisiId: string | null; roller: readonly Rol[]; oturumId: string | null; cihazId: string | null; projeksiyonId: string | null; istemci: 'telefon' | 'panel' | 'kursu' }; type Rol = 'ogrenci' | 'hoca' | 'yonetici'; declare module 'fastify' { interface FastifyRequest { kimlik: Kimlik | null; istemci: IstemciBilgisi; panelden: boolean; kimlikBilgisi: { tur: 'bearer' | 'cerez'; anahtar: string } | null; projeksiyonAnahtari: string | null; oturumHatasi: HataKodu | null } }
+  [purpose] Kök kancanın isteğe eklediği alanlar. panelden yalnız Origin panel adresine birebir eşitken true; D01 giriş ucunda çerezi yalnız panelden true iken kurar. D01'in oturumDogrula işlevi kimlikBilgisi'ni okur (çerez ve Origin kuralı D13'te uygulanmış olarak); D06 cihaz imzasını, D11 projeksiyonAnahtari'nı doğruladıktan sonra kimlik'i yazar. Rota beyanındaki personel değeri hoca ya da yonetici rolünden birini kabul eder.
+=== D13 exports[7] apiKur ve eklenti (yalnız app.ts)
+  [signature] function apiKur(app: FastifyInstance, b: ApiBagimliliklari): Promise<void>; const eklenti: FastifyPluginAsync; type ApiBagimliliklari = { ayarlar: { panelAdresi: string; baski: { olayDongusuGecikmesiMs: number; kullanim: number; bellekBayt: number } }; veritabani: NodePgDatabase; islem: <T>(fn: (tx: Islem) => Promise<T>) => Promise<T>; simdi: () => Date; oturumDogrula: (istek: FastifyRequest) => Promise<OturumSonucu>; saatBelgesi: (kimlik: Kimlik, deger: string) => Promise<string | null>; donemArasiMi: (tx: Islem, an: Date) => Promise<boolean>; yayinBilgisiYolu: string | null; deneme?: DenemeSecenekleri }; type Islem = Parameters<Parameters<NodePgDatabase['transaction']>[0]>[0]; type OturumSonucu = { durum: 'yok' } | { durum: 'gecerli'; kimlik: Kimlik } | { durum: 'gecersiz'; kod: HataKodu }
+  [purpose] apiKur kökte şu sırayla kurar: ilk kanca olarak @fastify/under-pressure (eşikler ayarlardan; pressureHandler zarflı 503 ve rastgele Retry-After verir), @fastify/cookie, @fastify/helmet (API başlıkları D15-B05: nosniff, frame-ancestors 'none', HSTS), @fastify/rate-limit (global kapalı), yalnız application/json ayrıştırıcısı, veritabanına dokunmayan kök kancalar, oturum kancası, onSend kancaları, yakalayıcılar ve rota bekçisi; böylece aşırı yükte istek veritabanına gitmeden düşer. eklenti GET /v1/surum'u kaydeder. Tipler drizzle-orm kütüphanesinden gelir, D12 içe aktarılmaz; app.ts D01'in işlevi fırlatırsa da OturumSonucu biçimine çevirir. Başka modül kullanmaz.
+=== D13 exports[8] rotaTanimla ve RotaTanimi (packages/contracts/src/ortak/rota.ts)
+  [signature] function rotaTanimla<const R extends RotaTanimi>(tanim: R): R; interface RotaTanimi { modul: ModulAdi; ad: string; yontem: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; yol: string; kimlik: readonly ('girissiz' | 'oturum' | 'cihazImzasi' | 'projeksiyon')[]; roller?: readonly ('ogrenci' | 'personel' | 'hoca' | 'yonetici')[]; hiz: HizSinifiAdi; govdeSiniri?: number; istek: { yol?: z.ZodObject; sorgu?: z.ZodObject; govde?: z.ZodType; baslik?: z.ZodObject }; cevap: { durum: 200 | 201 | 204; sema: z.ZodType | null }; hatalar: readonly string[]; saatBelgesi?: boolean; istemciCevapDenetimi?: boolean; baskiDisi?: boolean; ozet: string }
+  [purpose] Her modül kendi sözleşme dosyasında rotalarını bununla tanımlar; tanım anında yol biçimini, önek kuralını ve beyanların varlığını denetler. Aynı nesne sunucuda rotalariKaydet'e, istemcide istemci.cagir'a verilir: yöntem, yol ve şemalar tek kaynaktan gelir.
+=== D13 exports[9] hataKodlariTanimla, UygulamaHatasi, hataZarfiSemasi (packages/contracts/src/ortak/hata.ts)
+  [signature] function hataKodlariTanimla<const K extends Record<string, HataTanimi>>(modul: ModulAdi, kodlar: K): K; type HataTanimi = { http: 400 | 401 | 403 | 404 | 409 | 413 | 415 | 422 | 429 | 500 | 503; hoca: string; ogrenci: string; ayrinti?: z.ZodType }; class UygulamaHatasi extends Error { readonly kod: string; readonly ayrinti: unknown }; const hataZarfiSemasi: z.ZodObject
+  [purpose] Modül kataloğunu tanımlar: her kod modül adının büyük harfli önekiyle başlar (is-kuyrugu için IS_KUYRUGU_), HTTP durumu izinli kümededir, iki metin doludur. hatalar.ts bütün katalogları TUM_HATALAR'da birleştirir ve çift kodu yüklenirken reddeder. UygulamaHatasi markayla tanınır (instanceof'a dayanmaz).
+=== D13 exports[10] API_HATALARI ve API_ROTALARI (packages/contracts/src/api.ts)
+  [signature] const API_HATALARI: { API_ISTEK_GECERSIZ: 400; API_JSON_BOZUK: 400; API_KIMLIK_GEREKLI: 401; API_ROL_YETKISIZ: 403; API_KOKEN_GECERSIZ: 403; API_UC_BULUNAMADI: 404; API_GOVDE_COK_BUYUK: 413; API_ICERIK_TURU: 415; API_SONUC_COK_BUYUK: 422; API_HIZ_SINIRI: 429; API_SUNUCU_HATASI: 500; API_SUNUCU_YOGUN: 503; API_SORGU_ZAMAN_ASIMI: 503; API_SURUM_BILGISI_YOK: 503 }; const API_ROTALARI: readonly [RotaTanimi]
+  [purpose] D13'ün kendi kodları her rotada örtük geçerlidir (rotanın hatalar listesine yazılmaz). API_ROTALARI yalnız GET /v1/surum'dur. Aynı dosyada PLATFORMLAR, KANALLAR, ESIK_KARARLARI listeleri, yayinBilgisiSemasi ve surumCevabiSemasi durur.
+=== D13 exports[11] genisleyenEnum (packages/contracts/src/ortak/enum.ts)
+  [signature] function genisleyenEnum<const T extends readonly [string, ...string[]]>(degerler: T): z.ZodType<T[number] | (string & {})>
+  [purpose] Cevaptaki büyüyebilen değer: çalışma anında z.string().max(64), belgede x-extensible-enum (enum anahtarı yok); tip bilinen değerleri önerir ama bilinmeyeni de kabul eder, istemci varsayılan dalı yazmak zorunda kalır. İstek şemalarında kapalı z.enum kullanılır.
+=== D13 exports[12] Ortak şemalar (packages/contracts/src/ortak/)
+  [signature] anSemasi; gunSemasi; dersSaatiSemasi; sureMsSemasi; bindeSemasi; buyukSayiSemasi; kimlikSemasi<const A extends string>(ad: A): z.ZodType<string & { readonly __kimlik: A }>; istemciKimligiSemasi; ogrenciNoSemasi; beklenenSurumSemasi; sayfaSemasi<T extends z.ZodType>(oge: T); sayfaSorgusuSemasi; ogeSonuclariSemasi<const S extends readonly [string, ...string[]]>(sonuclar: S); imzaliMetinSemasi(s: { metinEnCok: number; imzaEnCok: number; imzaTurleri: readonly [string, ...string[]] }); surumSemasi; surumAyristir(metin: string): readonly [number, number, number] | null; surumKarsilastir(a: string, b: string): -1 | 0 | 1; MODULLER; BASLIKLAR; CEREZLER
+  [purpose] Zaman, sayı, kimlik, sayfalama, toplu sonuç, imzalı metin ve sürüm biçimlerinin tek tanımı (D13-B12, B13, B15, B28, B32); başlık ve çerez adlarının tek listesi. Bütün modül sözleşme dosyaları ve iki istemci bunları kullanır, kendi biçimini yazmaz.
+=== D13 exports[13] istemciKur ve sonucSinifi (packages/contracts/src/istemci.ts)
+  [signature] function istemciKur(s: { temelAdres: string; kimlikBilgisi: 'omit' | 'same-origin'; basliklar: (rota: RotaTanimi) => Record<string, string> | Promise<Record<string, string>>; zamanAsimiMs?: number; fetch?: typeof fetch }): { cagir<R extends RotaTanimi>(rota: R, girdi: RotaGirdisi<R>, s?: { arkaPlan?: boolean; sinyal?: AbortSignal }): Promise<IstekSonucu<R>> }; function sonucSinifi(durum: number): 'basari' | 'gecici' | 'bol' | 'dur'
+  [purpose] Telefonla panelin ortak fetch yardımcısı: girdiyi istek şemasıyla göndermeden denetler, zaman aşımını AbortController ile kurar (varsayılan 30 saniye), beklenmeyen biçimi geçici sayar, sonucu teknik.html#telefon-gonderme-protokolu tablosuna göre sınıflar, X-Saat-Belgesi, X-Istek-Kimligi ve Retry-After'ı sonuca koyar. Yeniden denemez.
+=== D13 exports[14] TUM_ROTALAR ve TUM_HATALAR (packages/contracts/src/rotalar.ts, hatalar.ts)
+  [signature] const TUM_ROTALAR: readonly RotaTanimi[]; const TUM_HATALAR: Readonly<Record<HataKodu, HataTanimi>>; type HataKodu = keyof typeof TUM_HATALAR
+  [purpose] On beş modülün rota ve hata listelerini yalnız birleştirir; iskelette bir kez yazılır, sonra değişmez (her modül iskelette kendi boş sözleşme dosyasını açar). Yüklenirken çift (yöntem, yol), çift (modül, ad) ve çift kodu reddeder.
+=== D13 exports[15] yayinBilgisiSemasi (packages/contracts/src/api.ts)
+  [signature] const yayinBilgisiSemasi: z.ZodObject<{ bicim: z.ZodLiteral<1>; sira: z.ZodNumber; olusturmaAni: typeof anSemasi; kanallar: z.ZodArray<KanalGirdisi>; hataliSurumler: z.ZodArray<HataliSurum>; iosPaketSurumleri: z.ZodArray<z.ZodString> }>
+  [purpose] CI'nın yazdığı (D15), sunucunun yalnız okuduğu dosyanın şeması. kanallar dört platform ve kanal çiftinin her birini tam bir kez taşır: {platform, kanal, enSonSurum, enDusukSurum (en son sürümden büyük olamaz), magazaBaglantisi (https), gecisBaglantisi (yalnız testflight, öteki kanalda null), kademeler (yalnız github; en çok 10, başlangıçlar artan, yüzdeler azalmayan)}. hataliSurumler: [{platform, surum, guncellemeKimligi ya da null, baslangic, neden}] en çok 100 (D07); iosPaketSurumleri en çok 500 (D07).

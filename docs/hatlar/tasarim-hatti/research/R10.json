@@ -1,0 +1,1173 @@
+{
+  "id": "R10",
+  "angle": "Platform kuralları ve sistem arayüzleri (iOS, Android, web), Ekim 2026 itibarıyla",
+  "summary": "Ekim 2026 itibarıyla güncel sürümler iOS 27 (14 Eylül 2026), Android 17 (API 37, 16 Haziran 2026), Chrome 154, Edge 154, Firefox 157 ve Safari 27. iOS'ta Liquid Glass'tan çıkış anahtarı (UIDesignRequiresCompatibility) iOS 27 SDK ile derlenince yok sayılıyor; çubuklar, sheet'ler, popover'lar, menüler, uyarılar ve kontroller camı kendiliğinden alıyor ve camın tonunu kullanıcının yeni kaydırıcısı belirliyor. Apple içerik katmanında cam kullanılmamasını ve kapsayıcıyla eş merkezli yuvarlak köşeleri öneriyor; köşeli kırık beyaz tasarımımız bu yüzden bilinçli bir sapma ve ancak sistem katmanı ile kendi içerik katmanımız net ayrılırsa tutarlı görünür. Expo SDK 57 tarafında yerel yığın UINavigationController ve Fragment kullanıyor, yerel başlıkta yalnız arka plan rengi ayarlanabiliyor; yerel sekmeler iOS'ta yuvarlak cam, Android'de Material görünümünde. Bu yüzden başlığı ve alt sekme çubuğunu JS ile köşeli ve opak çizip yerel yığının geçişlerini korumayı öneriyoruz (mimari karar, sahibin onayı gerekir). Android 16 hedefleyen uygulamalarda kenardan kenara düzen zorunlu ve Expo'da kapatılamıyor; predictive back Expo'da varsayılan kapalı ve react-native-screens uygulama içi önizleme vermiyor. Açılış ekranı iki platformda da düz zemin ve ortada işaretten ibaret; varsayılan #ffffff zemin kırık beyazla flaş yapacağı için açılış ekranı, kök arka plan ve ilk ekran aynı renk olmalı. Simgelerin dış şeklini sistem yuvarlatıyor; köşeli kimlik işaretin içinde taşınmalı ve tek renkli katman verilmeli. Web panelinde aynı belge View Transitions, @starting-style, transition-behavior, popover, dialog ve linear() dört tarayıcıda kullanılabilir; interpolate-size yalnız Chromium'da, belgeler arası geçiş Firefox'ta, dialog closedby Safari'de yok.",
+  "findings": [
+    {
+      "id": "R10-F01",
+      "title": "Güncel iOS sürümü iOS 27, Liquid Glass okunabilirlik için revize edildi",
+      "claim": "iOS 27, 8 Haziran 2026'da WWDC'de duyuruldu ve 14 Eylül 2026'da yayımlandı; son ara sürüm 27.0.1 (28 Eylül 2026). iOS 26 ile gelen Liquid Glass okunabilirlik için revize edildi, kullanıcıya saydamlık ayarı eklendi ve uygulama simgeleri katmanlı cam görünümüne geçti.",
+      "evidence": "Wikipedia iOS 27 sayfası: duyuru 8 Haziran 2026, genel yayın 14 Eylül 2026, son sürüm 27.0.1 (28 Eylül 2026); 'Apple revised the Liquid Glass design introduced in iOS 26 to improve readability'; saydamlığı ayarlayan bir kaydırıcı eklendi; 'App icons were redesigned to include layers of liquid glass in them'. MDN uyumluluk verisi (browser-compat-data 8.1.4) Safari 27 ve iOS Safari 27 için çıkış tarihini 2026-09-14 olarak veriyor; bu da yayın tarihini doğruluyor.",
+      "implication": "Tasarımı iOS 26 değil iOS 27 görünümüne göre yaparız. Sistem parçalarının (çubuklar, sayfalar, uyarılar) cam görünümü artık kullanıcı ayarına bağlı, değişken bir zemin; bizim köşeli kırık beyaz yüzeylerimiz bunun yanında sabit ve tutarlı kalmalı.",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/IOS_27",
+          "title": "iOS 27",
+          "publisher": "Wikipedia",
+          "date": ""
+        },
+        {
+          "url": "https://unpkg.com/@mdn/browser-compat-data@8.1.4/data.json",
+          "title": "@mdn/browser-compat-data data.json (8.1.4)",
+          "publisher": "MDN",
+          "date": "2026-10-01"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F02",
+      "title": "Liquid Glass kaydırıcısı uygulamaları kod değişmeden etkiliyor",
+      "claim": "WWDC26'da Apple, Liquid Glass'ın yenilenmiş görünümünün uygulamalara kod değişikliği olmadan geldiğini ve sistem camının yeni Liquid Glass kaydırıcısına göre tonunu kendiliğinden ayarladığını söyledi.",
+      "evidence": "'What's new in SwiftUI' oturumu: uygulama derlenip çalıştırılınca Liquid Glass görünümünün kendiliğinden geldiği, bunun için tek satır kod değiştirmek gerekmediği ve Liquid Glass'ın tonunu yeni Liquid Glass kaydırıcısına göre kendiliğinden ayarladığı anlatılıyor. Aynı oturumda iPad ve Mac menü çubuklarında varsayılan olarak az simge ve yeni 'prominent' sekme rolü anlatılıyor.",
+      "implication": "Sistem çubuklarının ne kadar saydam ya da renkli görüneceğini biz değil kullanıcı seçiyor. Ekranları kaydırıcının iki ucunda (en saydam ve en renkli) test etmeliyiz; kendi yüzeylerimizi bu değişkenliğe bağlamamalıyız.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/videos/play/wwdc2026/269/",
+          "title": "What's new in SwiftUI (WWDC26)",
+          "publisher": "Apple Developer",
+          "date": "2026-06"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F03",
+      "title": "Liquid Glass'tan çıkış anahtarı iOS 27 SDK ile yok sayılıyor",
+      "claim": "UIDesignRequiresCompatibility anahtarı iOS 26.0 ile geldi ve geçici kullanım için tasarlandı; uygulama iOS 27 veya sonrası için derlendiğinde sistem bu anahtarı yok sayıyor. Expo SDK 57 değişiklik notu, Xcode 27 ve iOS 27 SDK ile derlemeyi SDK 58'in konusu olarak anıyor.",
+      "evidence": "Apple belgesi: anahtarın yalnız arayüz en yeni SDK'lardaki tasarıma göre gözden geçirilirken geçici olarak kullanılması gerektiği ve iOS, iPadOS, Mac Catalyst, macOS ya da tvOS 27 ve sonrası için derlenince sistemin anahtarı yok saydığı yazıyor. Platform bilgisi: iOS 26.0'da tanıtıldı. Expo SDK 57 notu React Native 0.85'ten 0.86'ya geçişi ve React 19.2'yi veriyor; 'Building with Xcode 27 and the iOS 27 SDK' konusunu SDK 58 için ileride ele alınacak konu olarak anıyor.",
+      "implication": "Eski (iOS 18) görünüme kaçış yolu yok. Uygulama ilk sürümden itibaren Liquid Glass sistem parçalarıyla birlikte yaşayacak şekilde tasarlanmalı; bu anahtarı hiç eklememeliyiz.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/bundleresources/information-property-list/uidesignrequirescompatibility.json",
+          "title": "UIDesignRequiresCompatibility",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        },
+        {
+          "url": "https://expo.dev/changelog/sdk-57",
+          "title": "Expo SDK 57",
+          "publisher": "Expo",
+          "date": "2026"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F04",
+      "title": "Liquid Glass'ı kendiliğinden alan sistem bileşenleri",
+      "claim": "Güncel SDK ile derlenen uygulamalarda standart çubuklar (sekme, gezinme, araç çubuğu), sayfalar (sheet), açılır pencereler (popover), menüler ve kontroller Liquid Glass görünümünü kendiliğinden alıyor; kaydırıcı ve anahtar gibi kontrollerin topuzu etkileşim sırasında cama dönüşüyor; uyarılar düzenli (regular) cam varyantını kullanıyor.",
+      "evidence": "Apple 'Adopting Liquid Glass': sistem çatılarında çubuk, sayfa (sheet), açılır pencere ve denetim gibi standart bileşenler bu malzemeyi kendiliğinden alıyor; 'Key navigation elements like tab bars and sidebars float in this Liquid Glass layer'; 'Menus have a refreshed look across platforms. They adopt Liquid Glass'; 'For controls like sliders and toggles, the knob transforms into Liquid Glass during interaction.' HIG Materials: regular varyant çok metin içeren 'alerts, sidebars, or popovers' gibi bileşenler için kullanılıyor ve 'Most system components use this variant.'",
+      "implication": "React Native'in yerel (native) çizdiği her parça (yerel başlık, yerel sekme, Alert, işlem sayfası, menüler, tarih seçici, paylaşım sayfası) bu cam görünümünü taşıyacak. JS ile çizdiğimiz View, Pressable ve Text tabanlı parçalar camı almaz; köşeli tasarım yalnız bu katmanda tamamen bizim kontrolümüzde.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/technologyoverviews/adopting-liquid-glass.json",
+          "title": "Adopting Liquid Glass",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/materials.json",
+          "title": "Materials (Human Interface Guidelines)",
+          "publisher": "Apple",
+          "date": "2025-09-09"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F05",
+      "title": "Apple, çubuk ve kontrollerde özel arka planları azaltmayı istiyor",
+      "claim": "Apple, gezinme öğeleri ve kontrollere verilen özel arka planların Liquid Glass ile ve kaydırma kenarı efektiyle çakışabileceğini söylüyor; sheet ve popover arka planlarının da denetlenmesini istiyor.",
+      "evidence": "Denetimlerde ve gezinme öğelerinde özel zemin kullanımı azaltılmalı; bu öğelerdeki özel zemin ve görünümler Liquid Glass'ın ya da kaydırma kenarı etkisi gibi sistem etkilerinin üstüne binebilir ya da onlarla çakışabilir. ve 'Audit the backgrounds of sheets and popovers.'",
+      "implication": "Yerel başlık ya da yerel sekme çubuğu kullanırsak üstüne opak kırık beyaz zemin boyamak Apple yönergesine ters düşer ve kaydırma kenarı efektiyle çakışır. Ya yerel parçayı olduğu gibi kabul ederiz ya da o parçayı tamamen kendimiz (JS) çizeriz; yarı özelleştirilmiş yerel çubuk en zayıf sonuç.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/technologyoverviews/adopting-liquid-glass.json",
+          "title": "Adopting Liquid Glass",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F06",
+      "title": "Apple'ın eş merkezli yuvarlak köşe kuralı köşeli tasarımla çelişiyor",
+      "claim": "Apple, iç içe arayüz öğelerinin köşe eğrisinin donanımın eğrisini izlemesini ve kapsayıcısıyla eş merkezli yuvarlak şekiller kullanılmasını öneriyor; bunun için ConcentricRectangle ve UICornerConfiguration gibi API'ler sunuyor.",
+      "evidence": "Apple platformlarında donanımın şekli denetim, sayfa, açılır pencere ve pencere gibi iç içe öğelerin eğriliğini, boyunu ve şeklini belirler; görsel süreklilik için kabıyla eş merkezli yuvarlak şekiller şu API'lerle kullanılmalı: SwiftUI için Shape.rect(corners:isUniform:) ve ConcentricRectangle, UIKit için UIView.cornerConfiguration ve UICornerConfiguration.",
+      "implication": "Köşeli yapı bilinçli bir sapma. Sistem kapsayıcıları (sheet, uyarı, menü) yuvarlak kalacak ve bunları köşelileştiremeyiz. Köşeli öğelerimizi sistemin yuvarlak kapsayıcılarının içine koymamalı, kendi içeriğimiz için tek bir köşe kuralını her yerde aynı uygulamalıyız ki fark kaza değil tercih gibi okunsun.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/technologyoverviews/adopting-liquid-glass.json",
+          "title": "Adopting Liquid Glass",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F07",
+      "title": "Özel vurgu rengi için açık, koyu ve artırılmış kontrast varyantı isteniyor",
+      "claim": "Apple, kontrol ve gezinme öğelerinde rengin ölçülü kullanılmasını, özel renk tanımlanırsa açık ve koyu varyantı ile her biri için artırılmış kontrast seçeneği verilmesini istiyor.",
+      "evidence": "Okunur kalsınlar diye denetimlerde ve gezinmede renk ölçülü kullanılmalı; renk verilecekse sistem renkleri kullanılmalı ya da açık ve koyu çeşidi olan, her çeşidin artırılmış kontrast seçeneği de bulunan özel bir renk tanımlanmalı.",
+      "implication": "Gece mavisi alt ton tek bir hex olarak değil, dört varyantlı bir renk olarak tanımlanmalı (açık, koyu, açık için artırılmış kontrast, koyu için artırılmış kontrast). Bu, plan.html'deki 'uygulama telefonun ayarlarını izler' kararıyla da uyumlu: iOS'ta Artırılmış Kontrast açılınca bizim rengimiz de değişmeli.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/technologyoverviews/adopting-liquid-glass.json",
+          "title": "Adopting Liquid Glass",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F08",
+      "title": "İçerik katmanında Liquid Glass kullanılmamalı",
+      "claim": "HIG'e göre Liquid Glass içeriğin üstünde yüzen kontrol ve gezinme katmanı içindir; uygulama arka planı gibi içerik katmanı öğelerinde standart malzemeler kullanılmalı, cam efektleri özel kontrollerde idareli kullanılmalı.",
+      "evidence": "HIG Materials: 'Don't use Liquid Glass in the content layer.'; 'Instead, use standard materials for elements in the content layer, such as app backgrounds.'; 'Use Liquid Glass effects sparingly.' Varyantlar: regular (çoğu sistem bileşeni) ve clear ('Only use clear Liquid Glass for components that appear over visually rich backgrounds.'); parlak içerik üstündeki clear cam için 'a dark dimming layer of 35% opacity' öneriliyor. Sayfanın son değişikliği 9 Eylül 2025: 'Updated guidance for Liquid Glass.'",
+      "implication": "Kırık beyaz ve gri içerik yüzeylerimiz opak ve düz kalmalı; kartlara, panellere ya da kendi butonlarımıza cam (bulanıklık, saydamlık) eklememeliyiz. Bu hem Apple yönergesine uyar hem de orta ve alt seviye Android telefonlarda bulanıklık maliyetini ortadan kaldırır.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/materials.json",
+          "title": "Materials (Human Interface Guidelines)",
+          "publisher": "Apple",
+          "date": "2025-09-09"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F09",
+      "title": "Apple hareket ilkeleri: amaçlı, kısa, iptal edilebilir ve isteğe bağlı",
+      "claim": "HIG Motion, hareketin amaçlı eklenmesini, isteğe bağlı olmasını (bilgiyi yalnız hareketle vermemeyi), geri bildirim animasyonlarının kısa ve kesin olmasını, sık yapılan etkileşimlerde gereksiz hareketten kaçınılmasını ve kullanıcının hareketi iptal edebilmesini istiyor.",
+      "evidence": "'Add motion purposefully, supporting the experience without overshadowing it.'; 'Make motion optional.'; 'Aim for brevity and precision in feedback animations.'; 'In apps, generally avoid adding motion to UI interactions that occur frequently.'; 'Let people cancel motion.' ve 'don't make people wait for an animation to complete before they can do anything'. Değişiklik kaydı: 9 Eylül 2025 'Added guidance for Liquid Glass.' Sayfa süre ya da eğri değeri vermiyor.",
+      "implication": "Sahibin 'etkileşilen her şey yumuşak animasyonlu olsun' isteği bu ilkelerle uyumlu uygulanmalı: sık basılan öğelerde (liste satırı, sekme) kısa ve sade geri bildirim, panellerde daha belirgin geçiş; her animasyon yarıda kesilebilmeli ve Hareketi Azalt açıkken sadeleşmeli. Süre ve eğri değerleri bu sayfadan değil hareket araştırmasından gelmeli.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/motion.json",
+          "title": "Motion (Human Interface Guidelines)",
+          "publisher": "Apple",
+          "date": "2025-09-09"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F10",
+      "title": "iOS simgesi: katmanlı tasarım, Icon Composer ve altı görünüm",
+      "claim": "iOS simgeleri bir arka plan ve bir ya da daha çok ön plan katmanından oluşuyor, cam efektlerini sistem uyguluyor; simge 1024x1024 px kare katmanlarla hazırlanıyor ve köşeleri sistem maskeliyor. iOS görünümleri: default, dark, clear light, clear dark, tinted light, tinted dark. Expo app.json'da ios.icon Icon Composer'ın .icon klasörünü kabul ediyor.",
+      "evidence": "HIG App icons: 'These icons take on Liquid Glass attributes like specular highlights, refraction, and translucency.'; 'provide square layers so the system can apply rounded corners'; 'Prefer a simple background, such as a solid color or gradient'; içe aktarılan arka plan katmanı 'full-bleed and opaque' olmalı; iOS düzen boyutu 1024x1024 px. Değişiklik kaydı 8 Haziran 2026: 'Refined guidance for Liquid Glass.' Expo app config: ios.icon için '.icon' klasör yolu ya da light, dark, tinted alanları olan nesne. Expo SDK 54 notu: Icon Composer ile yapılan Liquid Glass simgelerine destek eklendi.",
+      "implication": "Simgenin dış şekli her durumda yuvarlak olacak; köşeli kimlik simgenin içindeki işarette (keskin, geometrik bir glif) taşınmalı. İşaret tinted ve clear görünümlerde tek renge indirildiğinde de okunmalı; arka plan düz renk olmalı.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/app-icons.json",
+          "title": "App icons (Human Interface Guidelines)",
+          "publisher": "Apple",
+          "date": "2026-06-08"
+        },
+        {
+          "url": "https://docs.expo.dev/versions/latest/config/app/",
+          "title": "app.json / app.config.js",
+          "publisher": "Expo",
+          "date": ""
+        },
+        {
+          "url": "https://expo.dev/changelog/sdk-54",
+          "title": "Expo SDK 54",
+          "publisher": "Expo",
+          "date": "2025"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F11",
+      "title": "iOS 27'de iPhone uygulamaları yeniden boyutlanabilir",
+      "claim": "WWDC26'ya göre iOS 27'de iPhone uygulamaları yeniden boyutlanabiliyor (iPhone Yansıtma ve iPad'de iPhone uygulaması); Apple görünüm boyutları için cihaz türü yerine boyut sınıflarını (size class) kullanmayı öneriyor.",
+      "evidence": "'And on iOS 27, our iPhone app becomes resizable too.' ve ekran geometrisinin doğru belirlenmesi, görünüm boyutunda idiom yerine boyut sınıflarının kullanılması ve arayüz yönü değişimine yanıt verilmesi anlatılıyor. Xcode 27 canlı önizlemelerinde yeniden boyutlama tutamaçları var.",
+      "implication": "Ekranlar sabit genişlik varsayımıyla değil, akışkan düzenle (esnek satırlar, en büyük genişlik) çizilmeli; QR ekranı ve listeler farklı genişliklerde test edilmeli.",
+      "sources": [
+        {
+          "url": "https://developer.apple.com/videos/play/wwdc2026/269/",
+          "title": "What's new in SwiftUI (WWDC26)",
+          "publisher": "Apple Developer",
+          "date": "2026-06"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F12",
+      "title": "Yerel yığın başlığı UINavigationController ve Fragment kullanıyor, stil seçenekleri dar",
+      "claim": "React Navigation native stack iOS'ta UINavigationController, Android'de Fragment kullanıyor; başlık stilinde yalnız backgroundColor ayarlanabiliyor, iOS 26 ve sonrasında başlık butonları ortak cam arka plan paylaşabiliyor; geçiş süresi yalnız iOS'ta ve yalnız bazı geçişlerde değiştirilebiliyor.",
+      "evidence": "Native Stack gezgini iOS'ta UINavigationController, Android'de Fragment yerel API'lerini kullanır. headerStyle yalnız backgroundColor destekliyor; saydam başlık için headerTransparent ve headerBlurEffect var. iOS 26+ için unstable_headerRightItems ve unstable_headerLeftItems ile hidesSharedBackground ve sharesBackground cam arka planı yönetiyor. Geçiş değerleri: default, fade, fade_from_bottom, flip, simple_push, slide_from_bottom, slide_from_right, slide_from_left, none. animationDuration, iOS'ta slide_from_bottom, fade_from_bottom, fade ve simple_push geçişlerinin süresini milisaniye olarak değiştirir; varsayılan 350.",
+      "implication": "Expo Router'daki Stack bu gezgine dayanır. Yerel başlığı kullanırsak başlık yazısı, geri butonu ve iOS 26+ cam kapsülleri sistemin olur; köşeli ve opak bir başlık elde edemeyiz. Yerel yığını geçişler ve iOS'taki kenardan kaydırarak geri dönme için tutup başlığı gizlemek (headerShown: false) ve kendi başlığımızı JS ile çizmek köşeli tasarımı korur.",
+      "sources": [
+        {
+          "url": "https://reactnavigation.org/docs/native-stack-navigator",
+          "title": "Native Stack Navigator",
+          "publisher": "React Navigation",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F13",
+      "title": "Expo Router yerel sekmeleri: iOS'ta cam sekme çubuğu, Android'de Material alt gezinme",
+      "claim": "NativeTabs iOS'ta UITabBarController ile çiziliyor ve iOS 26'da sekme çubuğu Liquid Glass ile, arka planını arkasındaki içerikten alarak çiziliyor; Android'de Material alt gezinme kullanılıyor ve en fazla 5 sekme var. SDK 54 ile 57 arasında içe aktarma yolu expo-router/unstable-native-tabs.",
+      "evidence": "Expo belgesi: 'native tabs use the native system tab bar'; iOS 26'da sistem sekme çubuğunu Liquid Glass ile çiziyor ve zeminini arkasındaki içerikten alıyor; kaydırırken küçülme ('the tab bar is minimized when scrolling down') ve ayrı arama sekmesi var. Android: sekme çubuğunda en çok 5 sekme olabiliyor. Stil seçenekleri: backgroundColor, blurEffect, shadowColor (yalnız iOS 18 ve öncesi), tintColor, iconColor, labelStyle. Sınırlar: iç içe yerel sekme yok, çalışma anında sekme eklenip çıkarılamıyor, sekme çubuğu yüksekliği programla ölçülemiyor. SDK 58+ 'expo-router/native-tabs', SDK 54 ile 57 'expo-router/unstable-native-tabs'.",
+      "implication": "Yerel sekmeler iOS'ta yuvarlak, yüzen cam bir çubuk, Android'de M3 hap göstergesi demek; köşeli tasarımla en görünür dikiş burada oluşur. JS ile çizilen bir sekme çubuğu köşeli ve opak olabilir, animasyonu bizim olur; bedeli sistemin cam davranışından (küçülme, arama sekmesi) vazgeçmektir.",
+      "sources": [
+        {
+          "url": "https://docs.expo.dev/router/advanced/native-tabs/",
+          "title": "Native tabs",
+          "publisher": "Expo",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F14",
+      "title": "Expo UI: SwiftUI ve Jetpack Compose bileşenleri birebir yerel",
+      "claim": "Expo UI, SwiftUI ve Jetpack Compose bileşenlerini React Native'e birebir eşleyen bir paket; iOS'ta Alert, BottomSheet, ConfirmationDialog, ContextMenu, DatePicker, Menu, Popover gibi, Android'de AlertDialog, DateTimePicker, ModalBottomSheet, NavigationBar, SegmentedButton gibi bileşenler var. Compose tarafında Material 3 ve 'Material 3 Dynamic Colors' anılıyor.",
+      "evidence": "Expo UI belgesi (SDK 57.0.0): Jetpack Compose ve SwiftUI ile tamamen yerel arayüz kurmayı sağlayan yerel girdi bileşenleri; '1-to-1 mapping'; 'Included in Expo Go'. Belgede açık bir alfa, beta ya da kararlı etiketi yok. Expo SDK 54 notu: Expo uygulamasına SwiftUI yapı taşlarını getiren iOS için Expo UI beta aşamasına geçti.",
+      "implication": "Expo UI ile çizilen her şey platformun görünümünü (iOS'ta cam ve yuvarlak, Android'de M3) taşır; köşeli butonlarımız için uygun değil. Tarih seçici ve bağlam menüsü gibi kullanıcının sistemden tanıdığı parçalar için yerinde, çünkü erişilebilirlik ve davranış hazır gelir.",
+      "sources": [
+        {
+          "url": "https://docs.expo.dev/versions/latest/sdk/ui/",
+          "title": "Expo UI",
+          "publisher": "Expo",
+          "date": ""
+        },
+        {
+          "url": "https://expo.dev/changelog/sdk-54",
+          "title": "Expo SDK 54",
+          "publisher": "Expo",
+          "date": "2025"
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F15",
+      "title": "Bizim yığında sistemin çizdiği ve JS'in çizdiği parçalar",
+      "claim": "İÜ Yoklama'nın yığınında yerel yığın geçişleri ve başlığı, yerel sekmeler, Expo UI bileşenleri, sistem uyarıları, sheet ve popover'lar ile menüler işletim sistemi tarafından çiziliyor ve iOS 26+ cam görünümünü alıyor; View, Text ve Pressable ile kurulan ekranlar, kartlar, butonlar ve kendi diyaloglarımız JS katmanında bizim tarafımızdan çiziliyor.",
+      "evidence": "Native stack: 'uses the native APIs UINavigationController on iOS and Fragment on Android'. NativeTabs: 'native tabs use the native system tab bar'. Apple: 'standard components like bars, sheets, popovers, and controls automatically adopt this material' ve menüler 'adopt Liquid Glass'. Expo UI listesi iOS'ta Alert, ConfirmationDialog, DatePicker, Popover, Menu; Android'de AlertDialog, DateTimePicker, ModalBottomSheet içeriyor.",
+      "implication": "Tasarım belgesinde her ekran parçası için 'sistemden kabul' ya da 'biz çizeriz' etiketi olmalı. İzin pencereleri, paylaşım sayfası, klavye ve tarih seçici sistemden kabul edilir; QR ekranı, yoklama listesi, makbuz, devamsızlık uyarıları ve akış içi onay pencereleri bizim çizdiğimiz köşeli katmanda kalır.",
+      "sources": [
+        {
+          "url": "https://reactnavigation.org/docs/native-stack-navigator",
+          "title": "Native Stack Navigator",
+          "publisher": "React Navigation",
+          "date": ""
+        },
+        {
+          "url": "https://docs.expo.dev/router/advanced/native-tabs/",
+          "title": "Native tabs",
+          "publisher": "Expo",
+          "date": ""
+        },
+        {
+          "url": "https://developer.apple.com/tutorials/data/documentation/technologyoverviews/adopting-liquid-glass.json",
+          "title": "Adopting Liquid Glass",
+          "publisher": "Apple Developer Documentation",
+          "date": ""
+        },
+        {
+          "url": "https://docs.expo.dev/versions/latest/sdk/ui/",
+          "title": "Expo UI",
+          "publisher": "Expo",
+          "date": ""
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F16",
+      "title": "Güncel Android sürümü Android 17 (API 37)",
+      "claim": "Android 17 kararlı sürümü 16 Haziran 2026'da yayımlandı, API seviyesi 37. Sistem arayüzünde buzlu cam efekti daha fazla panele yayıldı ve kullanıcılar karanlık modu desteklemeyen üçüncü taraf uygulamalara karanlık modu tek tek zorlayabiliyor.",
+      "evidence": "Wikipedia Android 17: kararlı sürüm 16 Haziran 2026, 17.0.0 (CP2A.260605.016); 'The API level has been increased to 37.'; buzlu cam etkisi sistemin ses düzeyi kaydırıcısı gibi daha çok panele yayıldı; kullanıcılar koyu modu kendisi desteklemeyen üçüncü taraf uygulamalarda sistemin koyu modunu tek tek seçip zorlayabiliyor. Android Developers Android 17 sayfası API 37'yi ve QPR2 Beta'yı (API 37.2) gösteriyor.",
+      "implication": "Yalnız açık temalı bir uygulama Android 17'de kullanıcı tarafından zorla karartılabilir; kırık beyaz ve gece mavisi paletin bu durumda nasıl göründüğü cihazda denenmeli. Sistem panellerindeki cam ve bulanıklık bizim içerik katmanımızı bağlamaz.",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Android_17",
+          "title": "Android 17",
+          "publisher": "Wikipedia",
+          "date": ""
+        },
+        {
+          "url": "https://developer.android.com/about/versions/17",
+          "title": "Android 17",
+          "publisher": "Android Developers",
+          "date": "2026-07-01"
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F17",
+      "title": "Android 16 hedefleyen uygulamalarda kenardan kenara zorunlu, predictive back varsayılan açık",
+      "claim": "targetSdk 36 (Android 16) olan uygulamalar kenardan kenara (edge-to-edge) düzenden çıkamıyor; Android 16 cihazlarda predictive back sistem animasyonları (eve dönüş, görevler arası, etkinlikler arası) varsayılan açık, onBackPressed çağrılmıyor ve KEYCODE_BACK iletilmiyor. Geçici çıkış için android:enableOnBackInvokedCallback false yapılabiliyor.",
+      "evidence": "Android 16 davranış değişiklikleri: Android 16'yı (API 36) hedefleyen uygulamada R.attr#windowOptOutEdgeToEdgeEnforcement'ın kullanımdan kalktığı ve devre dışı olduğu, uygulamanın kenardan kenara düzenden çıkamayacağı ve öngörülü geri sistem animasyonlarının (ana ekrana, görevler arası ve etkinlikler arası) varsayılan olarak açık olduğu, onBackPressed'in artık çağrılmadığı ve KeyEvent.KEYCODE_BACK'in gönderilmediği yazıyor. En küçük genişliği 600dp ve üstü ekranlarda yön ve en boy kısıtları uygulanmıyor; geçici çıkış 'won't apply when targeting API level 37'. Predictive back belgesi: false yapmak 'Disables the predictive back gesture system animation.' ve 'Ignores OnBackInvokedCallback, but OnBackPressedCallback calls continue to work.' React Native 0.81: 'Predictive back gesture is now enabled by default for apps targeting Android 16.' ve 'The BackHandler API should continue to work as before for most use cases.'",
+      "implication": "Uygulama Android'de her zaman durum çubuğunun ve gezinme çubuğunun arkasına çizilecek; üst ve alt boşluklar (inset) tasarımın parçası olmalı. Tablet ve katlanabilirlerde dikey kilit çalışmayacağı için ekranlar yatayda da kırılmamalı.",
+      "sources": [
+        {
+          "url": "https://developer.android.com/about/versions/16/behavior-changes-16",
+          "title": "Behavior changes: Apps targeting Android 16 or higher",
+          "publisher": "Android Developers",
+          "date": ""
+        },
+        {
+          "url": "https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture",
+          "title": "Add support for the predictive back gesture",
+          "publisher": "Android Developers",
+          "date": ""
+        },
+        {
+          "url": "https://reactnative.dev/blog/2025/08/12/react-native-0.81",
+          "title": "React Native 0.81 - Android 16 support, faster iOS builds, and more",
+          "publisher": "React Native",
+          "date": "2025-08-12"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F18",
+      "title": "Expo'da kenardan kenara her zaman açık, predictive back varsayılan kapalı",
+      "claim": "Expo SDK 54'ten beri tüm Android uygulamalarında kenardan kenara düzen açık ve kapatılamıyor; predictive back ise varsayılan kapalı ve app.json'da android.predictiveBackGestureEnabled ile açılıyor. Güncel (SDK 57) belgelerde bu ayarın varsayılanı hâlâ false.",
+      "evidence": "Expo SDK 54 notu: 'Edge-to-edge will be enabled in all Android apps, and cannot be disabled.'; SDK 54'te Android öngörülü geri hareketi bütün projelerde varsayılan olarak kapalı; SDK 55 ya da 56'da varsayılan açılması bekleniyordu. Güncel app config: android.predictiveBackGestureEnabled varsayılan false, ayar açılınca uygulama Android 13 (API 33) ve sonrasında öngörülü geri hareketini kullanır. Expo SDK 57 notu React Native 0.86'nın Android kenardan kenara desteğinde düzeltmeler getirdiğini söylüyor.",
+      "implication": "Expo SDK 57 uygulamamızda ayarı açmadıkça kullanıcı geri hareketinde ana ekrana dönüş önizlemesini görmez; geri hareketi uygulama içi yığın animasyonumuzla çalışır. Bu animasyonu Android'in varsayılan geçişiyle uyumlu ve kısa tasarlamak gerekir.",
+      "sources": [
+        {
+          "url": "https://expo.dev/changelog/sdk-54",
+          "title": "Expo SDK 54",
+          "publisher": "Expo",
+          "date": "2025"
+        },
+        {
+          "url": "https://docs.expo.dev/versions/latest/config/app/",
+          "title": "app.json / app.config.js",
+          "publisher": "Expo",
+          "date": ""
+        },
+        {
+          "url": "https://expo.dev/changelog/sdk-57",
+          "title": "Expo SDK 57",
+          "publisher": "Expo",
+          "date": "2026"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F19",
+      "title": "react-native-screens uygulama içi predictive back desteği vermiyor (2025 durumu)",
+      "claim": "react-native-screens bakımcısı, Fragment düzeyinde predictive back için FragmentManager geri yığınının gerektiğini, bunun v4'te büyük olasılıkla hiç yapılmayacağını ve bir sonraki büyük sürüm için araştırıldığını söyledi.",
+      "evidence": "GitHub tartışması #2540, 11 Temmuz 2025, bakımcı kkafar: Android'de Fragment düzeyinde öngörülü geri hareketinin FragmentManager'ın geri yığınını gerektirdiğini, bunun eşzamanlı fragment işlemlerini engellediğini, bu yüzden react-native-screens v4'te büyük olasılıkla hiç yapılmayacağını ('highly likely this won't be ever done') yazıyor ve bir sonraki ana sürüm için araştırdığını, belki denenebileceğini ama aylar uzakta olduğunu ekliyor.",
+      "implication": "Android'de ekranlar arası geri dönüş parmağı izleyen bir önizleme göstermeyecek; geri dönüş animasyonunu biz tasarlarız ve kısa tutarız. Bilgi 2025 tarihli, 2026 sürümlerinde değişmiş olabilir.",
+      "sources": [
+        {
+          "url": "https://github.com/software-mansion/react-native-screens/discussions/2540",
+          "title": "Predictive back gesture support on Android",
+          "publisher": "GitHub (software-mansion/react-native-screens)",
+          "date": "2025-07-11"
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F20",
+      "title": "Material 3 Expressive Pixel sistem arayüzüne Eylül 2025'te geldi",
+      "claim": "Material 3 Expressive Android 16'nın ilk sürümünde yoktu; Eylül 2025'te Pixel 6 ve sonrası ile Pixel Tablet'e dağıtılmaya başladı ve daha fazla animasyon, renk ve bulanıklık getirdi.",
+      "evidence": "Wikipedia Android 16: 'Material 3 Expressive was not included in the initial release of Android 16.'; Eylül 2025'te Pixel telefonlara (Pixel 6 ve sonrası) ve Pixel Tablet'e dağıtılmaya başlandı; değişiklik 'increased use of animation, colors, and blur' olarak özetleniyor. Android 16 genel sürümü 10 Haziran 2025.",
+      "implication": "Pixel kullanıcılarının sistem arayüzü yuvarlak, renkli ve hareketli. Bunu taklit etmek yerine sistem katmanı ile kendi köşeli içerik katmanımızı net ayırmak doğru.",
+      "sources": [
+        {
+          "url": "https://en.wikipedia.org/wiki/Android_16",
+          "title": "Android 16",
+          "publisher": "Wikipedia",
+          "date": ""
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F21",
+      "title": "Dinamik renk Android 12+ özelliği ve uygulamanın tercihine bağlı",
+      "claim": "Material You dinamik rengi Android 12 (API 31) ve sonrasında duvar kağıdından ton paletleri üretir; uygulamanın bunu kendi temasında kullanması bir tercihtir ve markalama gerekçesiyle birincil renk sabitlenebilir.",
+      "evidence": "Google codelab 'Adding dynamic color to your app': Android 12+ sistemlerde kullanıcının duvar kağıdı incelenerek birkaç ton paleti üretiliyor; bu paletler Android 12'ye (API 31) özgü olduğu için ilgili dosyalar -v31 ekli klasörlere konmalı; örnek: marka gibi bir nedenle birincil tonların kırmızı olması gerektiği varsayılıyor. Expo UI belgesi Compose bileşenleri için 'Material 3 Dynamic Colors' anıyor.",
+      "implication": "React Native ile çizdiğimiz arayüz dinamik rengi kendiliğinden almaz; gece mavisi marka tonu sabit kalabilir. Expo UI Compose bileşenlerini kullanırsak varsayılan renk kaynağının dinamik renk olup olmadığı kontrol edilmeli, yoksa duvar kağıdından gelen renkler arayüze sızar.",
+      "sources": [
+        {
+          "url": "https://codelabs.developers.google.com/codelabs/apply-dynamic-color?hl=en",
+          "title": "Adding dynamic color to your app",
+          "publisher": "Google Codelabs",
+          "date": ""
+        },
+        {
+          "url": "https://docs.expo.dev/versions/latest/sdk/ui/",
+          "title": "Expo UI",
+          "publisher": "Expo",
+          "date": ""
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F22",
+      "title": "Samsung One UI 9 Android 17 tabanlı, görsel değişiklik sınırlı",
+      "claim": "One UI 9 Android 17 tabanlı; beta 12 Mayıs 2026'da Galaxy S26 serisi için açıldı, ilk cihazlar Galaxy Z Fold 8 ve Z Flip 8. Görsel değişiklikler sınırlı: daha kalın parlaklık ve ses kaydırıcıları, dairesel medya butonları; One UI 8.5 büyük arayüz değişiklikleri getirmişti.",
+      "evidence": "SamMobile (28 Temmuz 2026): beta 12 Mayıs 2026 (ABD, Birleşik Krallık, Polonya, Almanya, Güney Kore, Hindistan); 'Display brightness and volume sliders thicker'; medya kontrolleri 'circular buttons'; ileriki betalarda 'more glassy UI effects' olasılığı; One UI 8.5 'major UI design changes' getirdi; Galaxy S26 ve S25 serileri uygun cihazlar arasında.",
+      "implication": "Bağlam belgesine göre kullanıcıların çoğu Android'de ve çok sayıda orta ve alt seviye telefon var; Samsung payı bu kaynakta yok. Test matrisinde en az bir One UI 8.5 ya da 9 cihazı bulunmalı; One UI'ın yuvarlak ve iri kontrolleri ile köşeli tasarımımızın yan yana duruşu orada görülmeli.",
+      "sources": [
+        {
+          "url": "https://www.sammobile.com/news/samsung-one-ui-9-everything-to-know/",
+          "title": "Samsung One UI 9: everything to know",
+          "publisher": "SamMobile",
+          "date": "2026-07-28"
+        }
+      ],
+      "confidence": "orta",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F23",
+      "title": "Kenardan kenara düzende sistem çubuklarının varsayılanı",
+      "claim": "enableEdgeToEdge ile durum çubuğu ve hareketle gezinme çubuğu saydam olur; 3 tuşlu gezinmede gezinme çubuğuna yarı saydam bir perde (scrim) konur; simge ve perde renkleri sistemin açık ya da koyu temasına göre ayarlanır. React Native 0.81'de yerleşik SafeAreaView kenardan kenara düzenle uyumsuz olduğu için kullanımdan kaldırıldı.",
+      "evidence": "Android belgesi: enableEdgeToEdge() varsayılan olarak sistem çubuklarını saydam yapar, yalnız 3 tuşlu gezinmede gezinme çubuğuna yarı saydam bir perde konur; sistem simgelerinin ve perdenin rengi sistemin açık ya da koyu temasına göre ayarlanır. setNavigationBarContrastEnforced(false) ile 3 tuşlu çubuk saydam yapılabiliyor; simge rengi isAppearanceLightStatusBars ile seçiliyor. Expo navigation-bar: enforceContrast, gezinme düğmeleri ile uygulama içeriği arasında kontrast için gezinme çubuğunun yarı saydam kalıp kalmayacağını belirler ve setStyle() etkisi enforceContrast false olmasına bağlı. React Native 0.81: SafeAreaView 'is not compatible with edge-to-edge rendering on Android' ve kullanımdan kaldırıldı. Kaynaklar perdenin renk ve opaklık değerini vermiyor.",
+      "implication": "Uygulama hep açık temalı olacaksa, 3 tuşlu gezinmede ve koyu sistem temasında perde koyu tonda gelebilir ve kırık beyaz alt kenarla çatışabilir. enforceContrast'ı kapatıp alt kenarı kendi opak kırık beyaz yüzeyimizle doldurmak ve boşlukları react-native-safe-area-context ile vermek tutarlılığı korur.",
+      "sources": [
+        {
+          "url": "https://developer.android.com/develop/ui/views/layout/edge-to-edge",
+          "title": "Display content edge-to-edge in views",
+          "publisher": "Android Developers",
+          "date": ""
+        },
+        {
+          "url": "https://docs.expo.dev/versions/latest/sdk/navigation-bar/",
+          "title": "NavigationBar",
+          "publisher": "Expo",
+          "date": ""
+        },
+        {
+          "url": "https://reactnative.dev/blog/2025/08/12/react-native-0.81",
+          "title": "React Native 0.81 - Android 16 support, faster iOS builds, and more",
+          "publisher": "React Native",
+          "date": "2025-08-12"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F24",
+      "title": "Expo'da açık arayüz kilidi, kök arka plan rengi ve durum çubuğu stili",
+      "claim": "Expo app config'de userInterfaceStyle (light, dark, automatic) varsayılanı light ve Android'de expo-system-ui gerektiriyor; kök görünüm arka planı backgroundColor varsayılanı #ffffff ve iOS'ta expo-system-ui gerektiriyor; expo-status-bar'ın style değeri varsayılan 'auto' ve etkin renk şemasına göre seçiliyor; androidStatusBar ayarı kullanımdan kaldırıldı.",
+      "evidence": "App config: userInterfaceStyle uygulamayı hep açık ya da koyu görünümde tutar ya da sistem tercihine kendiliğinden uydurur. Varsayılan light. backgroundColor: uygulamanın bütün React görünümlerinin arkasındaki zemin rengi; kök görünüm zemin rengi olarak da bilinir. Varsayılan #ffffff. androidStatusBar: 'Use the expo-status-bar plugin configuration instead'; barStyle varsayılan dark-content, translucent varsayılan true. expo-status-bar: style değerleri 'auto' | 'inverted' | 'light' | 'dark'; 'auto' için 'if your app is dark mode, the style will be light'.",
+      "implication": "Kırık beyaz zemin kök görünümde de tanımlanmazsa ekran geçişlerinde ve klavye açılırken saf beyaz (#ffffff) alanlar görünebilir. Uygulama yalnız açık temalı olacaksa userInterfaceStyle 'light' kalmalı; böylece sistem uyarıları, seçiciler ve klavye de açık görünür ve dikişler azalır.",
+      "sources": [
+        {
+          "url": "https://docs.expo.dev/versions/latest/config/app/",
+          "title": "app.json / app.config.js",
+          "publisher": "Expo",
+          "date": ""
+        },
+        {
+          "url": "https://docs.expo.dev/versions/latest/sdk/status-bar/",
+          "title": "StatusBar",
+          "publisher": "Expo",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F25",
+      "title": "Android 12+ açılış ekranı ölçüleri ve Expo splash varsayılanları",
+      "claim": "Android 12 SplashScreen düz arka plan ve ortada bir simge gösterir; simge arka planlı ise 240×240 dp olup 160 dp çaplı daireye, arka plansız ise 288×288 dp olup 192 dp çaplı daireye sığmalı. Expo splash'ta backgroundColor varsayılanı #ffffff, imageWidth varsayılanı 100, kapanış solma süresi 400 ms.",
+      "evidence": "Android belgesi: simge zeminli uygulama simgesi 240×240 dp olmalı ve 160 dp çaplı bir daireye sığmalı; simge zeminsiz uygulama simgesi 288×288 dp olmalı ve 192 dp çaplı bir daireye sığmalı; 'Branded image: this must be 200×80 dp.'; animasyon için 'we recommend not exceeding 1,000 milliseconds'; 'You can use a delayed start, but this can't be longer than 166 ms.'; 'The splash screen is dismissed as soon as your app draws its first frame.'; SplashScreen, temadaki windowBackground tek renkse varsayılan olarak onu kullanır. Expo: backgroundColor varsayılan #ffffff, imageWidth varsayılan 100, resizeMode 'contain' | 'cover' | 'native', dark nesnesi, enableFullScreenImage_legacy yalnız iOS ve varsayılan false; setOptions duration varsayılan 400 ms, fade yalnız iOS ve varsayılan false; SDK 52'den beri Expo Go ve geliştirme derlemeleri gerçek açılış ekranını birebir göstermiyor.",
+      "implication": "Açılış ekranı kırık beyaz düz zemin ve ortada köşeli işaretten ibaret olmalı; tam ekran görsel Android'de mümkün değil. Varsayılan #ffffff bırakılırsa saf beyazdan kırık beyaza geçişte flaş oluşur; açılış zemini, kök arka plan ve ilk ekran zemini aynı hex olmalı. Gerçek görünüm yalnız bağımsız derlemede test edilebilir.",
+      "sources": [
+        {
+          "url": "https://developer.android.com/develop/ui/views/launch/splash-screen",
+          "title": "Splash screens",
+          "publisher": "Android Developers",
+          "date": ""
+        },
+        {
+          "url": "https://docs.expo.dev/versions/latest/sdk/splash-screen/",
+          "title": "SplashScreen",
+          "publisher": "Expo",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F26",
+      "title": "Android uyarlanabilir ve temalı simge kuralları",
+      "claim": "Uyarlanabilir simge katmanları 108x108 dp; maskelenmeyen güvenli alan 66x66 dp, her kenarda 18 dp ayrılmış. Android 13'ten beri kullanıcılar simgeleri temalayabiliyor; tek renkli (monochrome) katman verilmezse Android 16 QPR 2'den itibaren sistem simgeyi kendisi temalıyor.",
+      "evidence": "Android belgesi: 108x108 dp katman, 66x66 dp güvenli alan, dört kenarda 18 dp; 'starting with Android 13 (API level 33), users can theme their adaptive icons'; Android 16 QPR 2'den başlayarak Android, kendi temalı simgesini vermeyen uygulamaların simgesini kendiliğinden temalandırır; tema rengi 'the coloring of the user's chosen wallpaper and theme' ile belirleniyor. Expo app config: adaptiveIcon.backgroundColor varsayılan #FFFFFF; monochromeImage Android 13+ tek renkli simge için.",
+      "implication": "Kendi tek renkli katmanımızı vermezsek sistemin otomatik ürettiği temalı simge markayı bozabilir. Köşeli işaret 66 dp güvenli alanın içinde ve yuvarlak, kare ya da damla maskelerin hepsinde okunur olmalı; adaptiveIcon arka planı açıkça bizim rengimizle verilmeli.",
+      "sources": [
+        {
+          "url": "https://developer.android.com/develop/ui/views/launch/icon_design_adaptive",
+          "title": "Adaptive icons",
+          "publisher": "Android Developers",
+          "date": ""
+        },
+        {
+          "url": "https://docs.expo.dev/versions/latest/config/app/",
+          "title": "app.json / app.config.js",
+          "publisher": "Expo",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F27",
+      "title": "Web: aynı belge View Transitions dört tarayıcıda, belgeler arası Firefox'ta yok",
+      "claim": "Ekim 2026 itibarıyla aynı belge View Transitions (document.startViewTransition) Chrome ve Edge 111, Firefox 144, Safari 18 ile Baseline 'yeni kullanılabilir' (14 Ekim 2025'ten beri); belgeler arası (@view-transition) Chrome ve Edge 126 ile Safari 18.2'de var, Firefox'ta yok, Baseline değil. Güncel sürümler: Chrome 154, Edge 154, Firefox 157, Safari 27.",
+      "evidence": "MDN browser-compat-data 8.1.4 (zaman damgası 2026-10-01T10:12:15.059Z): api.Document.startViewTransition chrome=111 edge=111 firefox=144 safari=18 safari_ios=18; css.at-rules.view-transition chrome=126 edge=126 firefox=false safari=18.2; css.properties.view-transition-class chrome=125 firefox=144 safari=18.2. web-features 3.40.1: view-transitions baseline 'low', tarih 2025-10-14; cross-document-view-transitions baseline false; view-transition-class baseline 'low', 2025-10-14. Güncel sürümler: chrome 154 (2026-09-22), edge 154 (2026-09-24), firefox 157 (2026-09-29), safari 27 (2026-09-14).",
+      "implication": "Web paneli tek sayfa uygulama (TanStack Router) olduğu için yalnız aynı belge geçişleri gerekiyor ve dört tarayıcıda da çalışıyor. Sayfa ve panel geçişleri View Transitions ile yapılabilir; desteklemeyen eski sürümlerde geçiş anında olur, işlev bozulmaz.",
+      "sources": [
+        {
+          "url": "https://unpkg.com/@mdn/browser-compat-data@8.1.4/data.json",
+          "title": "@mdn/browser-compat-data data.json (8.1.4)",
+          "publisher": "MDN",
+          "date": "2026-10-01"
+        },
+        {
+          "url": "https://unpkg.com/web-features@3.40.1/data.json",
+          "title": "web-features data.json (3.40.1)",
+          "publisher": "W3C WebDX Community Group",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F28",
+      "title": "Web: @starting-style, transition-behavior, popover ve dialog ile CSS'te aç kapa animasyonu",
+      "claim": "@starting-style ve transition-behavior (allow-discrete) 6 Ağustos 2024'ten, popover 27 Ocak 2025'ten beri Baseline; dialog geniş kullanılabilir. dialog closedby Safari'de yok (yalnız önizleme), requestClose Safari 18.4'ten beri var.",
+      "evidence": "BCD 8.1.4: css.at-rules.starting-style chrome=117 firefox=129 safari=17.5; css.properties.transition-behavior chrome=117 firefox=129 safari=17.4; html.global_attributes.popover chrome=114 firefox=125 safari=17 safari_ios=17; html.elements.dialog chrome=37 firefox=98 safari=15.4; html.elements.dialog.closedby chrome=134 firefox=141 safari=preview safari_ios=false; api.HTMLDialogElement.requestClose chrome=134 firefox=139 safari=18.4; css.selectors.backdrop safari=15.4. web-features 3.40.1: starting-style ve transition-behavior baseline 'low' 2024-08-06; popover 'low' 2025-01-27 (destek chrome 116, safari_ios 18.3); dialog 'high' 2024-09-14; dialog-closedby baseline false.",
+      "implication": "Panel, menü ve diyalogların açılış ve kapanış animasyonları JavaScript animasyon kütüphanesi olmadan, display değişimi dahil CSS ile yapılabilir. Dışarı tıklayınca kapanma için closedby'a güvenmeyip küçük bir JS kapanış yolu eklemek gerekir.",
+      "sources": [
+        {
+          "url": "https://unpkg.com/@mdn/browser-compat-data@8.1.4/data.json",
+          "title": "@mdn/browser-compat-data data.json (8.1.4)",
+          "publisher": "MDN",
+          "date": "2026-10-01"
+        },
+        {
+          "url": "https://unpkg.com/web-features@3.40.1/data.json",
+          "title": "web-features data.json (3.40.1)",
+          "publisher": "W3C WebDX Community Group",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": true
+    },
+    {
+      "id": "R10-F29",
+      "title": "Web: interpolate-size ve calc-size yalnız Chromium'da",
+      "claim": "height: auto gibi iç boyutlara animasyon sağlayan interpolate-size ve calc-size yalnız Chrome, Edge ve Android Chrome 129'da var; Firefox ve Safari'de yok, Baseline değil.",
+      "evidence": "BCD 8.1.4: css.properties.interpolate-size chrome=129 edge=129 firefox=false safari=false safari_ios=false, deneysel (experimental=true). web-features 3.40.1: interpolate-size ve calc-size baseline false, destek yalnız chrome, chrome_android ve edge 129.",
+      "implication": "Akordeon ve açılır panel yüksekliği animasyonu yalnız Chromium'da yumuşak olur; Safari ve Firefox'ta anında açılır. Ya farkı kabul edip ilerleyici iyileştirme olarak kullanırız ya da grid satırı veya ölçüm tabanlı bir yöntem seçeriz; seçim hareket araştırmasıyla birlikte yapılmalı.",
+      "sources": [
+        {
+          "url": "https://unpkg.com/@mdn/browser-compat-data@8.1.4/data.json",
+          "title": "@mdn/browser-compat-data data.json (8.1.4)",
+          "publisher": "MDN",
+          "date": "2026-10-01"
+        },
+        {
+          "url": "https://unpkg.com/web-features@3.40.1/data.json",
+          "title": "web-features data.json (3.40.1)",
+          "publisher": "W3C WebDX Community Group",
+          "date": ""
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    },
+    {
+      "id": "R10-F30",
+      "title": "Web: linear() yumuşatma, erişilebilirlik medya sorguları ve oklch geniş destekli",
+      "claim": "linear() yumuşatma fonksiyonu 11 Haziran 2026'dan beri Baseline geniş kullanılabilir; prefers-reduced-motion, prefers-contrast, forced-colors ve oklch renkleri de geniş kullanılabilir; prefers-reduced-transparency ise Safari'de yok.",
+      "evidence": "web-features 3.40.1: linear-easing 'high', low 2023-12-11, high 2026-06-11 (chrome 113, firefox 112, safari 17.2); prefers-reduced-motion 'high' 2022-07-15; prefers-contrast 'high' 2024-11-30; forced-colors 'high' 2025-03-12; oklab (oklch dahil) 'high' 2025-11-09. BCD 8.1.4: css.at-rules.media.prefers-reduced-transparency chrome=118 firefox=113 (bayrak arkasında) safari=false.",
+      "implication": "Yay benzeri eğriler CSS linear() ile tüm tarayıcılarda yazılabilir. Hareketi azaltma ve yüksek kontrast tercihleri güvenle karşılanabilir; renk belirteçleri doğrudan oklch() ile yazılabilir. Zorlanmış renk modunda gölge ve arka planlar sistem renklerine döndüğü için panel sınırları kenarlıkla da verilmeli.",
+      "sources": [
+        {
+          "url": "https://unpkg.com/web-features@3.40.1/data.json",
+          "title": "web-features data.json (3.40.1)",
+          "publisher": "W3C WebDX Community Group",
+          "date": ""
+        },
+        {
+          "url": "https://unpkg.com/@mdn/browser-compat-data@8.1.4/data.json",
+          "title": "@mdn/browser-compat-data data.json (8.1.4)",
+          "publisher": "MDN",
+          "date": "2026-10-01"
+        }
+      ],
+      "confidence": "yüksek",
+      "load_bearing": false
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "R10-K01",
+      "topic": "iOS: sistem katmanı ile içerik katmanını ayırma",
+      "recommendation": "Liquid Glass'tan çıkmaya çalışmayalım ve kendi parçalarımıza cam eklemeyelim. Sistemin çizdiği her şeyi (uyarılar, sheet, popover, menüler, izin pencereleri, paylaşım sayfası, klavye, tarih seçici) olduğu gibi kabul edelim; kendi içerik katmanımızı (ekran zemini, kartlar, listeler, butonlar, kendi diyaloglarımız) opak kırık beyaz ve köşeli çizelim. Ekranları Liquid Glass kaydırıcısının iki ucunda test edelim.",
+      "values": [
+        {
+          "name": "UIDesignRequiresCompatibility",
+          "value": "eklenmez",
+          "note": "iOS 27 veya sonrası için derlemede sistem bu anahtarı yok sayar"
+        },
+        {
+          "name": "glassEffect / UIGlassEffect / expo-glass-effect",
+          "value": "içerik katmanında kullanılmaz"
+        },
+        {
+          "name": "Görsel test",
+          "value": "Liquid Glass kaydırıcısının en saydam ve en renkli ucu"
+        }
+      ],
+      "reasons": "Çıkış anahtarı iOS 27 SDK ile çalışmıyor; Apple içerik katmanında cam kullanılmamasını istiyor; sistem camının tonu kullanıcı ayarına bağlı olduğu için kendi yüzeylerimizi sabit ve opak tutmak tek tutarlı yol.",
+      "alternatives": [
+        {
+          "option": "UIDesignRequiresCompatibility ile eski görünüm",
+          "why_not": "iOS 27 veya sonrası için derlenince yok sayılıyor; Apple onu geçici anahtar olarak tanımlıyor"
+        },
+        {
+          "option": "Kendi butonlarımıza da cam efekti vermek",
+          "why_not": "HIG içerik katmanında camı istemiyor; köşeli kırık beyaz kimliği bulanıklaştırır ve Android'de karşılığı yok"
+        }
+      ],
+      "based_on": [
+        "R10-F01",
+        "R10-F02",
+        "R10-F03",
+        "R10-F04",
+        "R10-F08"
+      ]
+    },
+    {
+      "id": "R10-K02",
+      "topic": "Gezinme yığını ve başlık",
+      "recommendation": "Ekran geçişleri ve iOS'taki kenardan kaydırarak geri dönme için yerel yığını (native stack) tutalım, ama yerel başlığı gizleyip başlığı JS ile köşeli ve opak çizelim. Geçiş türü için platform varsayılanını kullanalım; kendi animasyonlarımızı ekranın içindeki öğelere ayıralım.",
+      "values": [
+        {
+          "name": "headerShown",
+          "value": "false"
+        },
+        {
+          "name": "animation",
+          "value": "default",
+          "note": "platformun kendi itme geçişi"
+        },
+        {
+          "name": "animationDuration",
+          "value": "350",
+          "note": "varsayılan ms; yalnız iOS'ta ve yalnız slide_from_bottom, fade_from_bottom, fade, simple_push için değişir"
+        }
+      ],
+      "reasons": "Yerel başlıkta yalnız backgroundColor ayarlanabiliyor; iOS 26+ başlık butonları cam kapsül alıyor; Apple çubuklara özel arka plan verilmesini istemiyor. Başlığı tamamen bizim çizmemiz yarı özelleştirilmiş yerel çubuktan daha tutarlı.",
+      "alternatives": [
+        {
+          "option": "Yerel başlığı olduğu gibi kullanmak",
+          "why_not": "başlık yazısı, geri butonu ve cam kapsüller sistemin olur; köşeli ve opak başlık olmaz"
+        },
+        {
+          "option": "Tamamen JS ile yazılmış yığın",
+          "why_not": "iOS'taki yerel geri kaydırma hissi ve yerel geçiş performansı kaybolur"
+        }
+      ],
+      "based_on": [
+        "R10-F05",
+        "R10-F12",
+        "R10-F15"
+      ]
+    },
+    {
+      "id": "R10-K03",
+      "topic": "Alt sekme çubuğu",
+      "recommendation": "Öğrenci ve öğretmen modlarının alt sekmelerini JS ile çizilen köşeli, opak bir sekme çubuğuyla yapalım; yerel sekmeleri (NativeTabs) kullanmayalım. Bu bir mimari seçim, sahibin onayı gerekir.",
+      "values": [
+        {
+          "name": "NativeTabs içe aktarma yolu (SDK 57)",
+          "value": "expo-router/unstable-native-tabs",
+          "note": "SDK 58+ için expo-router/native-tabs"
+        },
+        {
+          "name": "Android yerel sekme üst sınırı",
+          "value": "5"
+        }
+      ],
+      "reasons": "Yerel sekmeler iOS'ta yuvarlak, yüzen cam bir çubuk ve Android'de M3 göstergesi getiriyor; stil seçenekleri sınırlı ve çubuk yüksekliği ölçülemiyor. Köşeli tasarımla en görünür dikiş sekme çubuğunda oluşur.",
+      "alternatives": [
+        {
+          "option": "NativeTabs",
+          "why_not": "cam ve yuvarlak görünüm köşeli kimlikle çatışır; SDK 57'de unstable yolundan alınıyor; yükseklik ölçülemiyor"
+        },
+        {
+          "option": "Karma (iOS yerel, Android JS)",
+          "why_not": "iki platformda iki ayrı kimlik oluşur ve bakım yükü artar"
+        }
+      ],
+      "based_on": [
+        "R10-F04",
+        "R10-F13"
+      ]
+    },
+    {
+      "id": "R10-K04",
+      "topic": "Sistem pencereleri ve seçiciler",
+      "recommendation": "İzin pencereleri, paylaşım sayfası, klavye ve tarih/saat seçici sistemden kabul edilsin. Yoklama akışının içindeki onaylar (yoklamayı bitir, kaydı sil gibi) sistem Alert'i yerine kendi köşeli diyalog ya da alt sayfamızla çizilsin; sistem Alert'i beklenmeyen hata gibi seyrek durumlarda kalsın.",
+      "values": [
+        {
+          "name": "Tarih ve saat seçici",
+          "value": "Expo UI DatePicker (iOS) ve DateTimePicker (Android)",
+          "note": "sistem görünümü kabul edilir"
+        }
+      ],
+      "reasons": "Sistem parçaları iOS'ta cam ve yuvarlak, Android'de M3 görünür ve değiştirilemez. Akış içindeki sık pencereleri kendimiz çizersek animasyon ve köşe dili bizde kalır; seyrek sistem pencereleri ise sistemin konuştuğu yer olarak doğal okunur.",
+      "alternatives": [
+        {
+          "option": "Tüm onaylar için sistem Alert'i",
+          "why_not": "akışın ortasında yuvarlak cam pencere köşeli dili sık sık böler"
+        },
+        {
+          "option": "Tarih seçiciyi de JS ile çizmek",
+          "why_not": "erişilebilirlik ve yerel davranışı yeniden yazmak gerekir, kazanç küçük"
+        }
+      ],
+      "based_on": [
+        "R10-F04",
+        "R10-F14",
+        "R10-F15"
+      ]
+    },
+    {
+      "id": "R10-K05",
+      "topic": "Vurgu rengi (gece mavisi) varyantları ve dinamik renk",
+      "recommendation": "Gece mavisi alt tonu tek hex yerine açık, koyu ve her biri için artırılmış kontrast varyantı olan bir renk olarak tanımlayalım. Android'de dinamik rengi (Material You) marka renklerine uygulamayalım.",
+      "values": [
+        {
+          "name": "Vurgu rengi varyant sayısı",
+          "value": "4",
+          "note": "açık, koyu, açık için artırılmış kontrast, koyu için artırılmış kontrast"
+        },
+        {
+          "name": "Dinamik renk",
+          "value": "kullanılmaz",
+          "note": "marka renkleri sabit kalır"
+        }
+      ],
+      "reasons": "Apple özel renkler için bu varyantları istiyor ve plan telefonun ayarlarını izleme kararı aldı. Dinamik renk uygulamanın tercihine bağlı ve markayı duvar kağıdına bırakır.",
+      "alternatives": [
+        {
+          "option": "Dinamik renge uymak",
+          "why_not": "gece mavisi kimlik her telefonda başka bir renge döner"
+        },
+        {
+          "option": "Tek hex",
+          "why_not": "Artırılmış Kontrast ve koyu görünümde ayar yapılamaz"
+        }
+      ],
+      "based_on": [
+        "R10-F07",
+        "R10-F21"
+      ]
+    },
+    {
+      "id": "R10-K06",
+      "topic": "Köşe dili ve sistem kapsayıcılarıyla dikiş",
+      "recommendation": "Kendi içerik katmanımızda tek bir köşe kuralını her yerde uygulayalım ve eş merkezli köşe API'lerini kullanmayalım. Köşeli içeriğimizi sistemin yuvarlak kapsayıcılarının (sistem sheet, Alert, menü) içine koymayalım; köşeli içerik gerekiyorsa kapsayıcıyı da biz çizelim. Yüzey sınırını gölge yerine ince kenarlık ve ton farkıyla verelim.",
+      "values": [
+        {
+          "name": "ConcentricRectangle / UICornerConfiguration",
+          "value": "kullanılmaz"
+        }
+      ],
+      "reasons": "Apple iç içe öğelerin kapsayıcıyla eş merkezli yuvarlak olmasını istiyor; bizim tercihimiz bilinçli bir sapma. Sapma ancak tutarlıysa kaza değil tercih gibi okunur; köşeli bir öğenin yuvarlak sistem kabının içinde durması en zayıf görüntüyü verir. Kenarlık, web'de zorlanmış renk modunda da sınırı korur.",
+      "alternatives": [
+        {
+          "option": "Sistemin köşe eğrisini taklit etmek",
+          "why_not": "köşeli ama zarif kimlik kaybolur"
+        },
+        {
+          "option": "Platforma göre farklı köşe",
+          "why_not": "iki ayrı kimlik ve iki kat tasarım işi"
+        }
+      ],
+      "based_on": [
+        "R10-F04",
+        "R10-F06",
+        "R10-F08",
+        "R10-F30"
+      ]
+    },
+    {
+      "id": "R10-K07",
+      "topic": "Animasyonların platform ilkelerine oturtulması",
+      "recommendation": "Etkileşilen her öğe animasyonlu olsun, ama sık etkileşimlerde (liste satırı, sekme, buton basma) kısa ve sade geri bildirim, panel ve sayfa geçişlerinde daha belirgin hareket olsun. Her animasyon yarıda kesilebilsin; iOS Hareketi Azalt, Android'de animasyonları kaldırma ayarı ve web prefers-reduced-motion açıkken hareket sadeleşsin. Ekran geçişini sistem yapsın, biz ekranın içini canlandıralım.",
+      "values": [
+        {
+          "name": "iOS yerel yığın geçişi",
+          "value": "350 ms",
+          "note": "animationDuration varsayılanı"
+        },
+        {
+          "name": "Expo splash kapanış solması",
+          "value": "400 ms",
+          "note": "setOptions duration varsayılanı; fade yalnız iOS"
+        },
+        {
+          "name": "Android splash animasyonu önerilen üst sınır",
+          "value": "1,000 ms"
+        },
+        {
+          "name": "Android splash gecikmeli başlangıç üst sınırı",
+          "value": "166 ms"
+        }
+      ],
+      "reasons": "HIG amaçlı, kısa, iptal edilebilir ve isteğe bağlı hareket istiyor ve sık etkileşimlerde gereksiz hareketten kaçınmayı öneriyor. Bu, sahibin 'her şey yumuşak' isteğini bozmadan sınır çizer.",
+      "alternatives": [
+        {
+          "option": "Her etkileşime aynı belirgin animasyon",
+          "why_not": "sık kullanılan öğelerde yavaşlık hissi verir ve HIG'e ters düşer"
+        }
+      ],
+      "based_on": [
+        "R10-F09",
+        "R10-F12",
+        "R10-F25",
+        "R10-F30"
+      ]
+    },
+    {
+      "id": "R10-K08",
+      "topic": "Android geri hareketi (predictive back)",
+      "recommendation": "Expo SDK 57'de android.predictiveBackGestureEnabled'ı şimdilik varsayılan false değerinde bırakalım; geri işlemlerini BackHandler ve gezgin üzerinden yapalım, onBackPressed'e dayanan yerel kod yazmayalım. react-native-screens uygulama içi desteği geldiğinde ayarı ayrı bir derlemede açıp test edelim. Uygulama içi geri geçişimizi Android'in varsayılan geçişiyle uyumlu ve kısa tutalım.",
+      "values": [
+        {
+          "name": "android.predictiveBackGestureEnabled",
+          "value": "false",
+          "note": "Expo varsayılanı"
+        }
+      ],
+      "reasons": "Android 16 hedefleyen uygulamada sistem animasyonları varsayılan açık ve onBackPressed çağrılmıyor; Expo bunu varsayılan kapatıyor; react-native-screens uygulama içi önizleme vermiyor, yani açınca yalnız ana ekrana dönüş önizlemesi gelir, ekranlar arası gelmez.",
+      "alternatives": [
+        {
+          "option": "Hemen true yapmak",
+          "why_not": "ana ekrana dönüş önizlemesi gelir ama ekranlar arası geri önizleme olmaz; iki geri davranışı arasında tutarsızlık doğar"
+        }
+      ],
+      "based_on": [
+        "R10-F17",
+        "R10-F18",
+        "R10-F19"
+      ]
+    },
+    {
+      "id": "R10-K09",
+      "topic": "Android sistem çubukları ve boşluklar",
+      "recommendation": "Durum çubuğu ve gezinme çubuğu saydam kalsın, simgeler koyu olsun; üst ve alt boşlukları react-native-safe-area-context ile verelim. 3 tuşlu gezinmede perde oluşmaması için enforceContrast'ı kapatıp alt kenarı kendi opak kırık beyaz yüzeyimizle dolduralım.",
+      "values": [
+        {
+          "name": "expo-status-bar style",
+          "value": "dark"
+        },
+        {
+          "name": "androidNavigationBar.enforceContrast",
+          "value": "false"
+        },
+        {
+          "name": "react-native SafeAreaView",
+          "value": "kullanılmaz",
+          "note": "0.81'de kullanımdan kaldırıldı"
+        }
+      ],
+      "reasons": "Kenardan kenara düzen Expo'da kapatılamıyor; 3 tuşlu gezinme perdesinin rengi sistem temasına göre değişiyor ve açık temalı uygulamamızla çatışabilir; setStyle ancak enforceContrast false iken etkili.",
+      "alternatives": [
+        {
+          "option": "Varsayılan perdeyi bırakmak",
+          "why_not": "koyu sistem temasında alt kenarda koyu bir şerit oluşabilir"
+        },
+        {
+          "option": "androidStatusBar.backgroundColor ile renk vermek",
+          "why_not": "ayar kullanımdan kaldırıldı; kenardan kenara düzende saydam çubuk esas"
+        }
+      ],
+      "based_on": [
+        "R10-F17",
+        "R10-F18",
+        "R10-F23",
+        "R10-F24"
+      ]
+    },
+    {
+      "id": "R10-K10",
+      "topic": "Açık tema kilidi ve kök arka plan",
+      "recommendation": "Karanlık tema planlanmıyorsa userInterfaceStyle 'light' kalsın ve expo-system-ui kurulsun; kök arka plan rengi (backgroundColor) kırık beyaz zemin belirteciyle aynı hex olsun. Android 17'nin uygulamaya karanlık modu zorlama özelliğiyle uygulamanın görünümü cihazda denensin.",
+      "values": [
+        {
+          "name": "userInterfaceStyle",
+          "value": "light",
+          "note": "varsayılan light; Android'de expo-system-ui gerekir"
+        },
+        {
+          "name": "backgroundColor (kök görünüm)",
+          "value": "kırık beyaz zemin belirteciyle aynı hex",
+          "note": "varsayılan #ffffff bırakılmaz; iOS'ta expo-system-ui gerekir"
+        }
+      ],
+      "reasons": "Kök arka plan geçişlerde ve klavye açılırken görünebilir; saf beyaz kalırsa kırık beyazla dikiş verir. Açık arayüz kilidi sistem parçalarının da açık görünmesini sağlar.",
+      "alternatives": [
+        {
+          "option": "automatic",
+          "why_not": "karanlık palet tanımlanmadan sistem parçaları koyu, içerik açık kalır ve dikiş büyür"
+        }
+      ],
+      "based_on": [
+        "R10-F16",
+        "R10-F24"
+      ]
+    },
+    {
+      "id": "R10-K11",
+      "topic": "Açılış ekranı (splash)",
+      "recommendation": "Açılış ekranı kırık beyaz düz zemin ve ortada köşeli işaretten oluşsun; markalı alt görsel ve tam ekran görsel kullanılmasın. Zemin rengi kök arka plan ve ilk ekranla aynı olsun; kapanış kısa bir solma ile ilk ekrana bağlansın.",
+      "values": [
+        {
+          "name": "Android simge (arka plansız)",
+          "value": "288×288 dp, 192 dp çaplı daire içinde"
+        },
+        {
+          "name": "Android simge (arka planlı)",
+          "value": "240×240 dp, 160 dp çaplı daire içinde"
+        },
+        {
+          "name": "expo-splash-screen backgroundColor",
+          "value": "kırık beyaz zemin belirteci",
+          "note": "varsayılan #ffffff"
+        },
+        {
+          "name": "expo-splash-screen imageWidth",
+          "value": "100",
+          "note": "varsayılan"
+        },
+        {
+          "name": "SplashScreen.setOptions duration",
+          "value": "400",
+          "note": "varsayılan ms; fade yalnız iOS"
+        }
+      ],
+      "reasons": "Android 12+ yalnız düz zemin ve ortada simge gösteriyor; varsayılan saf beyaz, kırık beyaz uygulamaya geçişte flaş yapar.",
+      "alternatives": [
+        {
+          "option": "Tam ekran görsel",
+          "why_not": "Android 12+ SplashScreen API'si desteklemiyor; enableFullScreenImage_legacy yalnız iOS"
+        }
+      ],
+      "based_on": [
+        "R10-F24",
+        "R10-F25"
+      ]
+    },
+    {
+      "id": "R10-K12",
+      "topic": "Uygulama simgesi",
+      "recommendation": "Simgeyi düz renk opak arka plan ve köşeli, geometrik tek bir işaret olarak tasarlayalım. iOS için Icon Composer ile katmanlı .icon dosyası, Android için kendi tek renkli (monochrome) katmanımızı verelim; işaret tinted, clear ve temalı görünümlerde tek renge inince de okunmalı.",
+      "values": [
+        {
+          "name": "iOS düzen boyutu",
+          "value": "1024x1024 px"
+        },
+        {
+          "name": "iOS görünümleri",
+          "value": "default, dark, clear light, clear dark, tinted light, tinted dark"
+        },
+        {
+          "name": "Android uyarlanabilir katman",
+          "value": "108x108 dp"
+        },
+        {
+          "name": "Android güvenli alan",
+          "value": "66x66 dp"
+        },
+        {
+          "name": "android.adaptiveIcon.backgroundColor",
+          "value": "marka arka plan rengi",
+          "note": "varsayılan #FFFFFF"
+        }
+      ],
+      "reasons": "Sistem iki platformda da dış şekli maskeliyor ve yuvarlıyor; köşeli kimlik ancak işaretin içinde yaşar. Tek renkli katman verilmezse Android 16 QPR 2 ve sonrası otomatik temalı simge üretiyor.",
+      "alternatives": [
+        {
+          "option": "Kare görünümlü simge hazırlamak",
+          "why_not": "sistem kare katmanı yuvarlak maskeliyor, köşeler kesilir"
+        }
+      ],
+      "based_on": [
+        "R10-F10",
+        "R10-F26"
+      ]
+    },
+    {
+      "id": "R10-K13",
+      "topic": "Web paneli animasyon tabanı",
+      "recommendation": "Sayfa ve panel geçişlerinde aynı belge View Transitions'ı ilerleyici iyileştirme olarak kullanalım; diyalog, popover ve menülerin aç kapa animasyonlarını @starting-style ve transition-behavior: allow-discrete ile CSS'te yapalım; yay benzeri eğrileri linear() ile yazalım. interpolate-size'ı yalnız ek iyileştirme olarak kullanalım, closedby'a güvenmeyelim; prefers-reduced-motion, prefers-contrast ve forced-colors için ayrı kurallar yazalım.",
+      "values": [
+        {
+          "name": "View Transitions (aynı belge)",
+          "value": "Chrome/Edge 111, Firefox 144, Safari 18"
+        },
+        {
+          "name": "@starting-style",
+          "value": "Chrome 117, Firefox 129, Safari 17.5"
+        },
+        {
+          "name": "transition-behavior",
+          "value": "Chrome 117, Firefox 129, Safari 17.4"
+        },
+        {
+          "name": "linear()",
+          "value": "Chrome 113, Firefox 112, Safari 17.2"
+        },
+        {
+          "name": "interpolate-size",
+          "value": "yalnız Chrome/Edge 129"
+        },
+        {
+          "name": "dialog closedby",
+          "value": "Chrome 134, Firefox 141, Safari yok"
+        }
+      ],
+      "reasons": "Ekim 2026 itibarıyla bu özelliklerin çoğu dört tarayıcıda var; belgeler arası geçiş ve interpolate-size eksik; panel tek sayfa uygulama olduğu için aynı belge geçişi yeterli.",
+      "alternatives": [
+        {
+          "option": "Belgeler arası View Transitions",
+          "why_not": "Firefox'ta yok ve tek sayfa uygulamada gerek yok"
+        },
+        {
+          "option": "Her şeyi JS animasyon kütüphanesiyle yapmak",
+          "why_not": "CSS ile karşılanabilen işe paket yükü ekler"
+        }
+      ],
+      "based_on": [
+        "R10-F27",
+        "R10-F28",
+        "R10-F29",
+        "R10-F30"
+      ]
+    },
+    {
+      "id": "R10-K14",
+      "topic": "Android cihaz çeşitliliği ve test matrisi",
+      "recommendation": "Material 3 Expressive'i ya da One UI'ı taklit etmeyelim; kendi köşeli dilimizi koruyalım ve sistem parçalarıyla yan yana duruşu gerçek cihazlarda görelim. Test matrisi: Pixel (Android 16 ya da 17, M3 Expressive), Samsung (One UI 8.5 ya da 9), bir orta ve bir alt seviye cihaz; hareketle ve 3 tuşlu gezinme; açık ve koyu sistem teması; Android 17'de zorla karanlık mod; temalı simge açık.",
+      "values": [
+        {
+          "name": "Test eksenleri",
+          "value": "cihaz (Pixel, Samsung, alt seviye), gezinme (hareket, 3 tuş), sistem teması (açık, koyu), zorla karanlık, temalı simge"
+        }
+      ],
+      "reasons": "Pixel'de M3 Expressive, Samsung'da One UI farklı yuvarlaklık ve hareket getiriyor; bizim katmanımız sabit, sistem katmanı değişken. Dikişler ancak bu eksenlerde görülür.",
+      "alternatives": [
+        {
+          "option": "Yalnız emülatörde test",
+          "why_not": "One UI ve üretici farkları emülatörde görünmez"
+        }
+      ],
+      "based_on": [
+        "R10-F16",
+        "R10-F20",
+        "R10-F22",
+        "R10-F23",
+        "R10-F26"
+      ]
+    },
+    {
+      "id": "R10-K15",
+      "topic": "Akışkan düzen (iOS 27 yeniden boyutlanma ve büyük ekranlar)",
+      "recommendation": "Ekranları sabit genişlik varsayımıyla çizmeyelim; içerik için en büyük genişlik ve esnek satırlar kullanalım; QR ekranını ve listeleri dar, geniş ve yatay boyutlarda test edelim.",
+      "values": [
+        {
+          "name": "Yön kilidinin yok sayıldığı ekran",
+          "value": "en küçük genişlik 600dp ve üstü",
+          "note": "Android 16 hedefleyen uygulamalar; geçici çıkış API 37 hedefinde kalkıyor"
+        }
+      ],
+      "reasons": "iOS 27'de iPhone uygulamaları yeniden boyutlanabiliyor; Android 16 hedefleyen uygulamalarda büyük ekranlarda yön kilidi çalışmıyor.",
+      "alternatives": [
+        {
+          "option": "Dikey kilit ile sabit düzen",
+          "why_not": "Android büyük ekranlarda kilidi yok sayıyor, iOS 27'de pencere boyutu değişebiliyor"
+        }
+      ],
+      "based_on": [
+        "R10-F11",
+        "R10-F17"
+      ]
+    }
+  ],
+  "signals": [],
+  "benchmarks": [],
+  "open_questions": [
+    "Karanlık tema olacak mı? Olmayacaksa userInterfaceStyle 'light' ile sistem parçaları açık kalır; ama Android 17'de kullanıcı uygulamaya karanlık modu zorlayabiliyor ve bunun paletimize etkisi cihazda denenmeli.",
+    "Alt sekme çubuğu ve başlık JS ile mi yerel mi çizilecek? Bu bir mimari seçim, sahibin onayı gerekiyor (önerimiz yerel yığını koruyup başlığı ve sekmeleri JS ile çizmek).",
+    "react-native-screens'in 2026 sürümlerinde uygulama içi predictive back desteği geldi mi? Elimizdeki bakımcı açıklaması Temmuz 2025 tarihli.",
+    "Expo SDK 57'nin Android targetSdk değeri ve Google Play'in hedef API takvimi bu araştırmada açılan bir kaynakla doğrulanmadı.",
+    "Expo SDK 58'in Xcode 27 ve iOS 27 SDK ile derleme tarihi ve App Store'un iOS 27 SDK zorunluluğu tarihi doğrulanmadı; bu tarihten sonra UIDesignRequiresCompatibility hiçbir derlemede işe yaramaz.",
+    "iOS'ta sistem uyarıları, tarih seçici ve menülerdeki vurgu rengini Expo projesinde gece mavisine çekmenin yolu (örneğin AccentColor) prebuild ile doğrulanmalı.",
+    "Expo UI Jetpack Compose bileşenleri varsayılan olarak dinamik renk mi kullanıyor? Belgede 'Material 3 Dynamic Colors' anılıyor, varsayılan doğrulanmadı.",
+    "Android 3 tuşlu gezinme perdesinin (scrim) renk ve opaklık değeri kaynaklarda verilmiyor.",
+    "Türkiye'de Samsung ve diğer üreticilerin pazar payı bu araştırmada kaynaklanmadı; test cihazı seçimi için gerekli."
+  ]
+}

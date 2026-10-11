@@ -1,0 +1,392 @@
+===== D08-P07
+{
+ "id": "D08-P07",
+ "title": "Hesap işi yaprağı",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "devamHesaplaIsiKoy"
+ ],
+ "needs": [
+  "D14.isGonder",
+  "D14.KuyrukTanimi",
+  "D14.kuyruktakiIsler"
+ ],
+ "tests": [
+  "Veritabanı kısıtları kuralı korur",
+  "Geri dönüş noktasında iş kaybolmaz"
+ ],
+ "depends_on": [
+  "D08-P06"
+ ],
+ "size": "S",
+ "notes": "yaprak.ts devamHesaplaKuyrugu tanımını ve devamHesaplaIsiKoy işlevini yazar, yalnız infra/is-kuyrugu ve sözleşmeyi içe aktarır. Paket yalnız sözleşmeyi ve D14.isGonder'i bekler; dinleyiciler, hesap, uçlar ve işler burada değildir, böylece D02, D05 ve D09 yalnız bu yaprağı bekler. sozlesme.feature D12 şema adımlarıyla hak formülüne, saat toplamına, seviye tabanına ve muaf kararına aykırı yazımın kısıt adıyla reddedildiğini, D14.kuyruktakiIsler okumasıyla da geri dönüş noktasına dönülüp yeniden çağrılınca kuyrukta tam bir iş kaldığını denetler; iki işin işçide birleşmesi D08-P17'deki Parti işleyicisi testindedir."
+}
+===== D03-P10
+{
+ "id": "D03-P10",
+ "title": "Yazma servisi, deneme listesi ve denetim yazıcısı",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "muafIsaretle",
+  "denemeListesiniKur"
+ ],
+ "needs": [
+  "D02.subeGetir",
+  "D02.dersGetir",
+  "D02.kilitDurumu",
+  "D02.oturumlariGetir",
+  "D02.OTURUM_DURUMLARI",
+  "D02.OTURUM_TURLERI",
+  "D02.IPTAL_NEDENLERI",
+  "D06.surumAl",
+  "D09.denetimeYaz",
+  "D12.Islem"
+ ],
+ "tests": [
+  "Modül sınırı: servis.ts, deneme.ts ve denetim-olaylari.ts yalnız D02, D06 ve D09 dış yüzlerini, D12 dış yüzünü ve sözleşmeyi içe aktarır, uç katmanına bağlı değildir"
+ ],
+ "depends_on": [
+  "D03-P01",
+  "D03-P03",
+  "D03-P04",
+  "D03-P08",
+  "D03-P09"
+ ],
+ "size": "L",
+ "notes": "Önizleme, uygulama, elle ekleme, satır düzenleme ve muafIsaretle servisi, denemeListesiniKur ve denetim olayı yazıcısı (D09.denetimeYaz) yazılır, index.ts'e eklenir. Fark, fark özeti, satır denetimi ve numara core'un kendi dosyalarından doğrudan alınır. Servis beklenen retleri (onay, sürüm, kilit, sınır, meşgul) LISTELER_ kodlu sonuç birliği olarak döner, muafIsaretle gibi fırlatmaz; HTTP hatasına P12'deki rotalar.ts çevirir. Böylece D08'in muaf ucu ve D01'in inceleme hesapları işi rota ve eklenti katmanını beklemez. Davranışı P13, P14 ve P16 senaryoları sınar."
+}
+===== D04-P08
+{
+ "id": "D04-P08",
+ "title": "Eşitleme denetimi ve kesinti kaydı",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [
+  "saat_esitleme_denetimi"
+ ],
+ "exports": [
+  "kesintiAraliklari"
+ ],
+ "needs": [
+  "D12.Islem",
+  "D12.islem",
+  "D14.isGonder",
+  "D14.KuyrukTanimi",
+  "D15.saatEsitlemeDurumu",
+  "D15.log",
+  "D15.TestDunyasi"
+ ],
+ "tests": [
+  "Bozuk süreç varken kesinti kapanmaz",
+  "Tek süreçte kesinti sonraki sağlıklı okumada kapanır",
+  "Yazılamayan açılış kaybolmaz",
+  "Kesinti sonrası güvenilirlik bilgisi"
+ ],
+ "depends_on": [
+  "D04-P01",
+  "D04-P06",
+  "D04-P07"
+ ],
+ "size": "L",
+ "notes": "kesintiAraliklari ve tek güvenilirlik formülü, LEAST ile açılan tek açık kesinti satırı, 15 saniye kuralıyla koşullu kapanış ve aynı işlemde yeniden değerlendirme işini kuyruğa koyma, iki kuyruk tanımı ve api sürecindeki 5 saniyelik denetim yazılır; denetim D15 durum dosyasını okuyup P07'deki eşitleme durumunu günceller. esitleme-kesintisi.feature iki sahte API süreci ve sahte chrony dosyasıyla atılabilir veritabanında denetler; bileşik uygulama beklenmez."
+}
+===== D07-P09
+{
+ "id": "D07-P09",
+ "title": "Kafa sayısı karşılaştırması ve oturum işaretleri",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "oturumIsaretleri",
+  "isaretIncelendi"
+ ],
+ "needs": [
+  "D02.oturumGetir",
+  "D02.dersGetir",
+  "D02.dersYetkisi",
+  "D02.birimDonemiGetir",
+  "D06.gondermeSuresiSonu",
+  "D09.duzeltmeleriGetir",
+  "D13.uygulamaHatasi",
+  "D04.simdi"
+ ],
+ "tests": [
+  "Kafa sayısı eşiği"
+ ],
+ "depends_on": [
+  "D07-P01",
+  "D07-P02",
+  "D07-P08"
+ ],
+ "size": "L",
+ "notes": "kafaSayisiKarsilastir eşiğini core'da, sunucu tarafında liste satırını bir kez sayan karşılaştırmayı (kayit_karar_gecmisi ve D09'un Elle eklendi düzeltmeleri), karşılaştırma ucunun okuma yolunu, işaret açma ve kesinleştirmeyi, oturumIsaretleri ve isaretIncelendi'yi kafa-sayisi.ts'te yazar. kafaSayisiOgesi yeniden değerlendirmeyi çağırdığı için olay dinleyicileriyle birlikte dinleyiciler.ts'e taşındı (D07-P13); böylece D09'un beklediği iki işaret işlevi karar ve yeniden değerlendirmeyi beklemez, karar yazıcısı (D07-P10) işaret yenilemesini bu dosyadan çağırır. BigInt eşik özelliği kapı şeridinde, tam tarama gece koşar."
+}
+===== D11-P05
+{
+ "id": "D11-P05",
+ "title": "Çekirdek: yedek kod, Bluetooth ve konum",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Konum karşılaştırması ve imkânsız yer değiştirme"
+ ],
+ "depends_on": [
+  "D11-P02"
+ ],
+ "size": "M",
+ "notes": "Amaç baytı ayrı 6 rakamlık yedek kod ve 16 onaltılık Bluetooth kodu türetimi (mac.ts üstüne) ile yarıçap sınırı, 50 metre pay ve saatte 300 km imkânsız hız kuralını uygulayan konum karşılaştırması yazılır; birim testleri ve fast-check konum özelliğiyle denetlenir."
+}
+===== D13-P08
+{
+ "id": "D13-P08",
+ "title": "apiKur, rota kaydı ve senaryo düzeneği ile hata zarfı senaryoları",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "rotalariKaydet",
+  "apiKur",
+  "hizSinifi"
+ ],
+ "needs": [
+  "D04.simdi",
+  "D14.IS_KUYRUGU_HATA_KODLARI"
+ ],
+ "tests": [
+  "Bozuk JSON gövdesi tek zarfla 400 alır",
+  "Şemaya uymayan istekte yalnız alan yolu ve kod döner, değer yankılanmaz",
+  "Bilinmeyen /v1 yolu zarflı 404 döner",
+  "Her cevap no-store ve sunucu istek kimliği taşır",
+  "Geçici veritabanı hataları 503'e çevrilir",
+  "Modül 429 ve 503 kodları bekleme süresiyle döner",
+  "İşletim kodu istekte 500'e çevrilir",
+  "Kök log veritabanı hatasının nedenini yazar",
+  "İş kuyruğu kodları http değerine göre döner",
+  "Yakalayıcı gelen değeri yankılarsa senaryo kırmızı olur"
+ ],
+ "depends_on": [
+  "D13-P03",
+  "D13-P04",
+  "D13-P07",
+  "D13-P06"
+ ],
+ "size": "L",
+ "notes": "apiKur kök kancaları belirtilen sırayla kurar, rotalariKaydet beyanları TUM_ROTALAR ve örtük kodlarla denetleyip rotaları kaydeder ve tamlık için not eder; index.ts'e rotalariKaydet, apiKur ve hizSinifi satırları eklenir (yayın bilgisi paketine bağlılığı yalnız index.ts satırlarının sırasıdır, aynı aşamada iki paket o dosyaya yazmaz). Ortak adımlar ve deneme eklentisi uygulamayı apiKur ve deneme rotalarıyla kurar, bileşim kökünü beklemez ve sonraki senaryo paketlerinin adım dağarcığını sağlar; hata zarfı senaryoları ve yakalayıcı mutasyonu denetler."
+}
+===== D15-P06
+{
+ "id": "D15-P06",
+ "title": "İşletim tabloları, uyarı defteri ve kuralları",
+ "tables": [
+  "telefon_sayaclari",
+  "hoca_ekran_sureleri",
+  "isletim_uyarilari"
+ ],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "uyariAc"
+ ],
+ "needs": [
+  "D12.Islem",
+  "D12.tabloYardimcilari",
+  "D12.kisitAdi",
+  "D14.IsSagligi"
+ ],
+ "tests": [
+  "Uyarı kuralları sınırlarda doğru karar verir"
+ ],
+ "depends_on": [
+  "D15-P03"
+ ],
+ "size": "L",
+ "notes": "Üç tablo tabloYardimcilari ile tanımlanıp _isletim_ göçüyle açılır (komşu tabloya yabancı anahtar yok), uyariAc çağıranın işleminde (tur, anahtar) başına tek açık satırı numara maskesi ve uzunluk kesmesiyle yazar, kurallar.ts saf uyarı kararlarını ISLETIM_ESIKLERI, YEDEK_ESIKLERI ve D14 IsSagligi tipiyle üretir. Kaydedici ve ayar beklemez: uyariAc log yazmaz, kurallar saftır; bu yüzden uyariAc'ı bekleyen D01, D04, D07 ve D11 paketleri yalnız sözleşmeyi bekler. kurallar.test.ts her eşiği bir altı, eşiti ve bir üstüyle tablo testinde sınar; uyariAc'ın birikme ve maskeleme davranışı uyarı senaryolarında koşar."
+}
+===== D01-P03
+{
+ "id": "D01-P03",
+ "title": "Saf kurallar: bekleme, oturum seçimi ve cihaz etiketi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D14.EPOSTA_TURLERI"
+ ],
+ "tests": [
+  "Bekleme süresi tekdüze ve sınırlı",
+  "Kapatılacak oturumun seçimi",
+  "Cihaz etiketi D14 kümesinde kalır"
+ ],
+ "depends_on": [
+  "D01-P01",
+  "D01-P02"
+ ],
+ "size": "M",
+ "notes": "KIMLIK_SABITLERI'ni sözleşmeden alan üç saf işlev (uzayan bekleme, kapatılacak oturumun seçimi, cihaz etiketi) ve altı dosyayı dışa veren core dizini yazılır. fast-check testleri sabitleri sözleşmeden içe alır; cihaz etiketi testi çıktıyı D14'ün giris_bildirimi şemasından geçirir."
+}
+===== D07-P03
+{
+ "id": "D07-P03",
+ "title": "Test kurucuları ve saklama işleyicisi",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D15.kurucuTanimla",
+  "D15.TestDunyasi",
+  "D12.saklamaIsleyicisiniCalistir"
+ ],
+ "tests": [
+  "Saklama işleyicisi"
+ ],
+ "depends_on": [
+  "D07-P02"
+ ],
+ "size": "M",
+ "notes": "D07 senaryolarının kullandığı veri kurucularını (kurucuTanimla ile, KurucuHaritasi genişletilerek) ve dogrulama.donem_verisi saklama işleyicisini yazar; işleyicinin D12'ye kaydı eklentidedir (D07-P19), burada yalnız işleyicinin kendisi vardır. saklama.feature D12.saklamaIsleyicisiniCalistir ile süresi dolan dönemin silindiğini, dolmayanın kaldığını ve D07 dışı tabloya dokunulmadığını kendi modülü ve atılır test veritabanıyla gösterir, bileşik uygulamayı beklemez."
+}
+===== D07-P06
+{
+ "id": "D07-P06",
+ "title": "Meydan okuma, seri numarası ve örnek kanıtlar",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Meydan okuma ve bağlama metni bayt bayt sabit",
+  "Seri numarası biçimi"
+ ],
+ "depends_on": [
+  "D07-P01"
+ ],
+ "size": "M",
+ "notes": "meydanOkumaMetni ve baglamaMetni'nin altı satırlık bayt düzenini ve seriNoNormallestir'i saf işlev olarak yazar, telefon testlerinin de koştuğu kayıtlı örnekleri (üç meydan okuma örneği, Android zincirleri, App Attest nesneleri) ornek-kanitlar.json'da dondurur. İki test de aynı kayıtlı örnek dosyasını okur: meydan-okuma.test.ts baytları ve SHA-256'yı onaltılık olarak birebir, seri-no.test.ts kayıtlı zincirin seri numarasını Google listesindeki yazımla karşılaştırır."
+}
+===== D10-P05
+{
+ "id": "D10-P05",
+ "title": "Geçicilik kuralı ve kanonik özet içeriği",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Kanonik özet içeriği kararlıdır"
+ ],
+ "depends_on": [
+  "D10-P01"
+ ],
+ "size": "M",
+ "notes": "Geçici nedenlerinin sabit sırası ve kilitten sonra yaşayan nedenler süzgeci ile biçim 1 kanonik özet içeriği ve SHA-256 özeti saf işlev olarak yazılır; fast-check alan alan değişimi, içerik dışı alanların etkisizliğini, NFC ve NFD eşitliğini ve depodaki altın metinle bayt eşitliğini denetler."
+}
+===== D14-P04
+{
+ "id": "D14-P04",
+ "title": "E-posta şablonları",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Şablonlarda bağlantı olmaz, son paragraf sabit cümledir"
+ ],
+ "depends_on": [
+  "D14-P02",
+  "D14-P03"
+ ],
+ "size": "M",
+ "notes": "Yedi türün düz metin şablonları sabit son paragraf, bağlantı denetimi ve cihaz etiketi kuralıyla yazılır; yalnız türleri, sabit metinleri, biçimi ve bağlantı denetimini içe alır. sablonlar.test.ts fast-check ile 2.000 geçerli veride ürün metninde bağlantı olmadığını, son paragrafın SABIT_UYARI_CUMLESI olduğunu, işletim metinlerinde belirtecin [adres] olduğunu ve 'isletim.wal_arsivi' ile 'chrony.json' satırlarının değişmediğini denetler."
+}
+===== D02-P07
+{
+ "id": "D02-P07",
+ "title": "Oran yazıcısı",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "oranlariYaz"
+ ],
+ "needs": [
+  "D06.surumDamgasiIste",
+  "D12.Islem"
+ ],
+ "tests": [
+  "oranlariYaz kilitli ve arşivdeki derste yazmaz, değişince ders satırına surumDamgasiIste ile damga bırakır ve surumAl çağırmaz"
+ ],
+ "depends_on": [
+  "D02-P04",
+  "D02-P05"
+ ],
+ "size": "S",
+ "notes": "D08'in oran ucunun kendi işleminde çağırdığı oranlariYaz (ders satırı FOR UPDATE, kilitDurumu ile aynı an, sonuç kodu, damga) yazım hattını ve D08'in iş kuyruğunu beklemesin diye ayrı dosyada yazılır; test dosyası sayaç casusuyla geçici test veritabanında koşar."
+}
+===== D01-P07
+{
+ "id": "D01-P07",
+ "title": "Kişi bağı saklaması, veri kurucuları ve öğrenci adımları",
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D12.saklamaIsleyicisiniCalistir",
+  "D15.kurucuTanimla"
+ ],
+ "tests": [
+  "kimlik.kisi_bagi işleyicisi anonimleştirir"
+ ],
+ "depends_on": [
+  "D01-P01",
+  "D01-P04"
+ ],
+ "size": "L",
+ "notes": "kimlik.kisi_bagi işleyicisi silinmiş, kapanmış ve reddedilmiş öğrenci hesaplarında numarayı ve girilen ismi partiler halinde siler. Öbür modüllerin ve D01 senaryolarının kullandığı kimlik veri kurucuları (hoca, yönetici, her durumda öğrenci hesabı, cihaz ve bilinen anahtarlı oturum) yalnız tablolar ve özetlerle yazılır, servis içe aktarmaz; ogrenci.steps.ts bu kurucularla hesap adımlarını ve öğrencinin, hocanın teyit, ret, kayıt, çıkış ve kayıt kodu isteklerini sözleşmedeki rota tanımlarıyla kurar. saklama.feature sınır anından önceki ve sonraki hesapları bu adımlarla kurar ve denetler."
+}
+===== D11-P09
+{
+ "id": "D11-P09",
+ "title": "Şema: sekiz tablo ve ilk göç",
+ "tables": [
+  "projeksiyon_tarayicilari",
+  "projeksiyon_eslestirme_kodlari",
+  "projeksiyon_baglantilari",
+  "eslestirme_yanlis_denemeleri",
+  "qr_anahtar_yuvalari",
+  "qr_anahtar_indirmeleri",
+  "gosterim_kayitlari",
+  "yoklama_kanitlari"
+ ],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D04.ILK_CAPA_DURUMLARI",
+  "D04.IKINCI_CAPA_DURUMLARI",
+  "D04.ILK_CAPA_TELEFON_BILDIRIMLERI",
+  "D04.IKINCI_CAPA_YOK_NEDENLERI",
+  "D12.tabloYardimcilari"
+ ],
+ "tests": [
+  "Çapa sütunları D04 sabitleriyle aynı"
+ ],
+ "depends_on": [
+  "D11-P01"
+ ],
+ "size": "L",
+ "notes": "tablolar.ts sekiz tabloyu, kısmi tekil dizinleri ve CHECK listelerini D04 sabitlerinden ve kendi sözlüklerinden (D11-P01) üretir, göç drizzle-kit generate ile çıkar ve kisiler, oturumlar, dersler ve yoklama_kayitlari tablolarına yabancı anahtar verdiğinden D01, D02 ve D05 şemaları ana dalda olunca birleşir; çapa CHECK listelerinin D04 sabitleriyle aynı kaldığını gösteren sözleşme testiyle denetlenir."
+}

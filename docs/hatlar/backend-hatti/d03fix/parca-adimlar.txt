@@ -1,0 +1,15 @@
+H.push('<p><strong>Uygula işlemi adım adım</strong> (satirlar, PATCH ve denemeListesiniKur aynı iskeleti kullanır)</p>');
+H.push(ol([
+  `Kökte şema (400), oturum ve rol (D01 kancası); şube ve ders D02'den; dersin hocası değilse 404. Satır denetimi core ${c('satir-denetimi.ts')} ile kilit almadan: HATA varsa 400 LISTELER_HATALI_SATIR.`,
+  `${c('D12.islem')} içinde ${c("SET LOCAL lock_timeout = '3s'")}; dersin bütün şubelerinin ${c('sube_listeleri')} satırları kimlik sırasıyla açılır (${c('INSERT ... ON CONFLICT DO NOTHING')}) ve ${c('FOR UPDATE')} kilitlenir: aynı dersin yazanları burada sıraya girer.`,
+  `Şube ve ders satırları D02'den paylaşımlı kilitle okunur (${c("kilitle: 'paylasimli'")}, D03-A07); işlem anı saat arayüzünden bir kez okunur.`,
+  `Şubenin satırları ve gelen numaraların aynı dersteki öbür satırları tek deyimle okunur; fark ${c('fark.ts')}, kırpılacaklar ${c('aralik.ts')}, özet ${c('fark-ozeti.ts')} ile hesaplanır.`,
+  `Fark boşsa 200 ZATEN_UYGULANMIS ve çıkış (kilitli dönemde de). Değilse sırayla: kilit (dönem kilidi, arşiv, pasif şube, deneme dersi) 409 LISTELER_KILITLI; özet beklenenFarkOzeti'nden farklıysa 409 LISTELER_SURUM_DEGISTI; onaylar (UYARI, büyük değişiklik, şube değişikliği) 409 LISTELER_ONAY_GEREKLI; etkin satır sınırı 409 LISTELER_SATIR_SINIRI.`,
+  `Üyeliği ya da adı değişecek numaraların kovaları (${c('kovaNo')}) artan sırayla ${c('pg_advisory_xact_lock(3, kova)')}; en çok 256 kilit. Yalnız seçim değişiyorsa bu adım yoktur.`,
+  `${c('liste_yuklemeleri')} satırı; sırayla pasif yapma (başka şubedekiler dahil), canlandırma, kırpma, ekleme (muaf ve seçim dersin satırlarından), ad, sıra ve kaynak; ${c('degisiklik_surumu')} ve ${c('uyelik_surumu')} işlem içinde geçici 0.`,
+  `Yazılan her şubenin ${c('sube_listeleri.liste_surumu')} değeri tam 1 artar (şube değişiminde iki şube).`,
+  `${c('D09.denetimeYaz')} olayları, geçiş başına (D03-B20; numara ve ad yok).`,
+  `Dinleyiciler basamak sırasıyla: ESLESTIRME (D01, yalnız değişikliğin numaraları), KARAR (D07, yeniden değerlendirme işi kuyruğa), HESAP (D08 devam işi).`,
+  `Son adım: ${c('D06.surumAl(tx)')}; inen sütunu değişen satırlara ${c('degisiklik_surumu')}, üyeliği değişenlere ayrıca ${c('uyelik_surumu')} bu değerle; commit. Kilit beklemesi aşılırsa (55P03) işlem geri alınır, 503 LISTELER_MESGUL.`
+]));
+H.push(`<p>Kilit sırası her yazmada aynıdır: dersin şube satırları, D02 şube ve ders satırı (paylaşımlı), öğrenci kovaları artan sırayla, liste satırları, dinleyicilerin kilitleri ve iş kuyruğu, en son sayaç. Öğrenci kaydı (numaraIleEslestir) ve gönderimin ret yolu (uyelikDenetle) yalnız kendi numarasının kovasını paylaşımlı alır; yazma kovayı yalnız yazım ve eşleştirme süresince tutar, karar yenileme kilidin dışındadır. Kilitlenme olursa D12'nin bir kez yeniden deneme kuralı (D12-B08) devreye girer; ortak sıra önerisi D03-A10'da.</p>`);

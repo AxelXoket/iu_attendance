@@ -1,0 +1,521 @@
+===== D14-P07
+{
+ "id": "D14-P07",
+ "title": "İş kuyruğu dış yüzü, iş sağlığı ve test kuyruğu yardımcıları",
+ "files": [
+  "apps/server/src/infra/is-kuyrugu/index.ts",
+  "apps/server/src/infra/is-kuyrugu/saglik.ts",
+  "apps/server/test/support/is-kuyrugu.ts",
+  "apps/server/test/steps/is-kuyrugu/test-kuyruklari.ts",
+  "apps/server/test/support/is-kuyrugu.test.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "isGonder",
+  "isTanimla",
+  "isSagligi",
+  "isKuyruguKur",
+  "isKuyrugunuBosalt",
+  "isiCalistirVeBekle",
+  "kuyruktakiIsler",
+  "zamanlamaliOrnekAc"
+ ],
+ "needs": [
+  "D12.Islem",
+  "D12.veritabaniKur",
+  "D12.testVeritabaniHazirla",
+  "D12.testVeritabaniAdi",
+  "D13.UygulamaHatasi",
+  "D04.simdi"
+ ],
+ "tests": [
+  "Test kuyruğu yardımcıları ortak işçiyi bozmaz"
+ ],
+ "depends_on": [
+  "D14-P01",
+  "D14-P05",
+  "D14-P06"
+ ],
+ "size": "L",
+ "notes": "isKuyruguKur (rol, şema sürümü ve tanım denetimi, dış yüz bağlama, isleriBaslat, durdur, ikinci kurulum hatası), isGonder ve isSagligi dış yüz işlevleri, isTanimla'nın dış yüzden verilmesi, tek sorguluk isSagligi ve test kuyruğu yardımcıları (isKuyrugunuBosalt, isiCalistirVeBekle, kuyruktakiIsler, zamanlamaliOrnekAc; test kuyruklarını politika ile açar, kur.ts'i beklemez) ile test kuyruğu tanımları yazılır. Spec dosya listesine eklenen test/support/is-kuyrugu.test.ts D12 test veritabanında 3 işlik zeminle boşaltmayı, ayrı zamanlamalı örneğin ortak örneği bozmadığını ve 'completed' ile 'failed' sonuçlarını denetler. Modüller isGonder, isTanimla ve test yardımcılarını bu paketten alır; uygulamanın tamamını ve D14 senaryolarını beklemez."
+}
+===== D03-P09
+{
+ "id": "D03-P09",
+ "title": "Kilit sırası ve okuma işlevleri",
+ "files": [
+  "apps/server/src/modules/listeler/kilitler.ts",
+  "apps/server/src/modules/listeler/sorgular.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "listeSatirlari",
+  "satirGetir",
+  "uyelikDenetle",
+  "numaraIleEslestir",
+  "ogrencininEtkinSatirlari",
+  "ogrencininSatirlari"
+ ],
+ "needs": [
+  "D12.Islem",
+  "D12.danismaKilidi",
+  "D12.danismaKilidiDene",
+  "D07.dogrulamaListeAnahtari",
+  "D02.subeGetir",
+  "D02.dersGetir",
+  "D02.dersSubeleri",
+  "D02.kilitDurumu"
+ ],
+ "tests": [
+  "Modül sınırı: kilitler.ts dogrulamaListeAnahtari'nı packages/contracts/src/dogrulama.ts'ten alır, listeler D01, D07 ve D08 modüllerini içe aktarmaz"
+ ],
+ "depends_on": [
+  "D03-P01",
+  "D03-P02",
+  "D03-P08"
+ ],
+ "size": "L",
+ "notes": "Yazma kilit sırası ('dogrulama:liste' anahtarları, şube satırları, D02 paylaşımlı okuma, kova anahtarları) ile işlem başına kova kümesi ve altı okuma işlevi (uyelikDenetle'nin paylaşımlı kova anahtarlı yeniden okuması ve numaraIleEslestir dahil) yazılır, index.ts'e eklenir; core'dan yalnız isim.ts ve kova.ts doğrudan içe aktarılır, panelin dosya okuma zinciri beklenmez. Kilit alınamazsa kilitler.ts fırlatmaz, MESGUL sonucu döner; 503 LISTELER_MESGUL'a P12'deki rotalar.ts çevirir, bu yüzden paket D13 api dış yüzünü beklemez. D07, D01, D05, D08, D09 ve D10'un beklediği okuma dış yüzü burada çıkar; davranışı P13, P14, P15 ve P18 senaryoları sınar."
+}
+===== D04-P06
+{
+ "id": "D04-P06",
+ "title": "Saat tabloları ve pencere servisi",
+ "files": [
+  "apps/server/src/modules/saat/tablolar.ts",
+  "apps/server/migrations/20261020100000_saat_pencere_tablolari/migration.sql",
+  "apps/server/migrations/20261020100000_saat_pencere_tablolari/snapshot.json",
+  "apps/server/src/modules/saat/pencere-servisi.ts",
+  "apps/server/src/modules/saat/pencere-kilidi.ts",
+  "apps/server/src/modules/saat/surum-damgasi.ts",
+  "apps/server/test/features/saat/pencere-plani.feature",
+  "apps/server/test/steps/saat/pencere-adimlari.ts"
+ ],
+ "tables": [
+  "oturum_pencereleri",
+  "pencere_degisiklikleri",
+  "saat_esitleme_kesintileri"
+ ],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "pencereleriHesapla",
+  "pencereGetir",
+  "pencereSonucu"
+ ],
+ "needs": [
+  "D12.tabloYardimcilari",
+  "D12.kisitAdi",
+  "D12.Islem",
+  "D02.dersGetir",
+  "D02.oturumGetir",
+  "D02.OturumUretimOlayi",
+  "D02.OTURUM_DURUMLARI",
+  "D06.surumDamgasiIste",
+  "D06.surumAl",
+  "D15.TestDunyasi"
+ ],
+ "tests": [
+  "Oturum üretimi pencere açar",
+  "Bileşik yabancı anahtar dönemi korur",
+  "D02 olayındaki oturum baştan hesaplanır"
+ ],
+ "depends_on": [
+  "D04-P01",
+  "D04-P02",
+  "D04-P04"
+ ],
+ "size": "L",
+ "notes": "Üç tablonun Drizzle tanımı ve göçü (bileşik yabancı anahtarlar, sözleşme sabitlerinden CHECK listeleri; göç klasörü oturumlar (D02) ve kisiler (D01) göçlerinden sonraki zaman damgasını taşır), pencere kilidi, sürüm damgası, pencereleriHesapla, pencereGetir ve FOR KEY SHARE ile okuyan pencereSonucu yazılır. D05, D07 ve D11'in beklediği pencere dışa verimleri burada hazır olur; paket belge, eşitleme ve eklenti beklemez. pencere-plani.feature D15 test dünyasında atılabilir veritabanıyla denetler; pencere adımları sonraki paketlerin senaryolarınca da kullanılır, ama yalnız bu pakette yazılır: sonraki paketler kendi koduna bağlı adımları kendi adım dosyalarına yazar, aynı aşamadaki paketler ortak dosyaya dokunmaz."
+}
+===== D13-P07
+{
+ "id": "D13-P07",
+ "title": "Kök kancalar, hız sınıfları, saatli depo ve aşırı yük",
+ "files": [
+  "apps/server/src/infra/api/kancalar/istemci-basliklari.ts",
+  "apps/server/src/infra/api/kancalar/koken.ts",
+  "apps/server/src/infra/api/kancalar/kimlik.ts",
+  "apps/server/src/infra/api/kancalar/beyan-denetimi.ts",
+  "apps/server/src/infra/api/kancalar/kimliksiz-sayac.ts",
+  "apps/server/src/infra/api/kancalar/cevap-basliklari.ts",
+  "apps/server/src/infra/api/kancalar/saat-belgesi.ts",
+  "apps/server/src/infra/api/kancalar/istek-logu.ts",
+  "apps/server/src/infra/api/hiz-siniflari.ts",
+  "apps/server/src/infra/api/saatli-depo.ts",
+  "apps/server/src/infra/api/asiri-yuk.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D04.simdi"
+ ],
+ "tests": [
+  "İstemci başlık ayrıştırıcısı hiçbir girdide fırlatmaz"
+ ],
+ "depends_on": [
+  "D13-P01",
+  "D13-P02",
+  "D13-P03"
+ ],
+ "size": "L",
+ "notes": "İstemci başlıkları, köken, oturum, beyan denetimi, kimliksiz sayaç, cevap başlıkları, saat belgesi ve istek logu kancaları, hız sınıfları, saatli depo ve aşırı yük yazılır; hepsi tipler.ts ve uygulamaHatasi üstüne kurulur, oturum ve saat belgesi işlevleri ApiBagimliliklari ile içeri verilir, index.ts'e dokunmaz. İstemci başlık ayrıştırıcısının fast-check özelliği denetler; kancaların davranışı apiKur paketi ve senaryo paketlerinde koşar."
+}
+===== D07-P08
+{
+ "id": "D07-P08",
+ "title": "App Attest sayacı ve danışma kilitleri",
+ "files": [
+  "packages/core/src/dogrulama/sayac.ts",
+  "packages/core/src/dogrulama/sayac.test.ts",
+  "apps/server/src/modules/dogrulama/sayac.ts",
+  "apps/server/src/modules/dogrulama/kilitler.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "appAttestSayaciniDenetle"
+ ],
+ "needs": [
+  "D12.danismaKilidi",
+  "D12.danismaKilidiDene"
+ ],
+ "tests": [
+  "App Attest sayacı sıra numarasına göre"
+ ],
+ "depends_on": [
+  "D07-P01",
+  "D07-P02"
+ ],
+ "size": "M",
+ "notes": "Sıra numarasına göre sayaç kuralını saf sayacDenetle ile, appAttestSayaciniDenetle'yi dogrulama:sayac anahtarı ve app_attest_sayaclari satırıyla, bağlam, işaret ve sayaç anahtarlarını katman sırasıyla alan yardımcıları kilitler.ts'te yazar. Yalnız P01'in anahtar işlevlerini, P02'nin tablosunu ve D12'nin danışma kilidini içe aktarır; sayaç özelliği varış permütasyonları, boşluklu dizi ve aynı sıranın başka sayaçla tekrarı üzerinde fast-check ile sınanır."
+}
+===== D12-P08
+{
+ "id": "D12-P08",
+ "title": "Saklama kaydı, çalıştırıcısı ve D12 tabloları",
+ "files": [
+  "apps/server/src/infra/veritabani/tablolar.ts",
+  "apps/server/src/infra/veritabani/saklama/kayit.ts",
+  "apps/server/src/infra/veritabani/saklama/calistir.ts",
+  "apps/server/src/infra/veritabani/saklama/kayit.test.ts",
+  "apps/server/migrations/20261013090000_veritabani_baslangic/migration.sql",
+  "apps/server/migrations/20261013090000_veritabani_baslangic/snapshot.json"
+ ],
+ "tables": [
+  "geri_yukleme_kayitlari",
+  "saklama_islemleri"
+ ],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "saklamaIsleyicisiKaydet",
+  "saklamaIsleyicisiniCalistir"
+ ],
+ "needs": [
+  "D13.UygulamaHatasi"
+ ],
+ "tests": [
+  "Saklama: katalog ve kayıt denetimi"
+ ],
+ "depends_on": [
+  "D12-P01",
+  "D12-P04",
+  "D12-P05",
+  "D12-P06"
+ ],
+ "size": "M",
+ "notes": "İki D12 tablosu ve başlangıç göçü, saklama işleyicisi kaydı ve yoklama_saklama girişiyle bölüm kaldırma, parti ve kanıt döngüsünü işle aynı yoldan koşan saklamaIsleyicisiniCalistir yazılır, dışa açma satırları index.ts'e eklenir. Gece işleri ayrı pakette (P10) olduğundan modüllerin beklediği iki saklama dış yüzü işleri beklemez. Katalog ve kayıt denetimi kayit.test.ts ile, çalıştırma davranışı P16'nın senaryolarıyla denetlenir."
+}
+===== D13-P04
+{
+ "id": "D13-P04",
+ "title": "Rota tablosu ve öğe türleri birleştirmesi",
+ "files": [
+  "packages/contracts/src/rotalar.ts",
+  "packages/contracts/src/ortak/testler/rota-tablosu.test.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "TUM_ROTALAR",
+  "TUM_OGE_TURLERI"
+ ],
+ "needs": [
+  "D04.SAAT_ROTALARI",
+  "D04.PENCERE_SURESI_OGESI",
+  "D04.ERKEN_KAPATMA_OGESI",
+  "D09.elleEklemeOgeTuru",
+  "D09.sorunBildirimiOgeTuru",
+  "D15.ISLETIM_ROTALARI"
+ ],
+ "tests": [
+  "Rota tablosu kuralları"
+ ],
+ "depends_on": [
+  "D13-P01",
+  "D13-P02",
+  "D13-P03"
+ ],
+ "size": "M",
+ "notes": "rotalar.ts on beş modülün sözleşme dosyalarındaki rota listelerini ve öğe türlerini bir kez birleştirir, çift rota ve çift tür yüklenirken reddedilir. Rota tablosu sözleşme testi yalnız sözleşme verisini taradığı için burada koşar: tekil yol ve ad, önek, kimlik birleşimi, hız sınıfı, gövde sınırı, hatalar listesindeki her kodun TUM_HATALAR'da olması ve değişim bekleyen rotalar zemin denetimli sayımlarla denetlenir (bu yüzden hata kataloğu paketinden sonra gelir)."
+}
+===== D13-P06
+{
+ "id": "D13-P06",
+ "title": "Sürüm eşiği tablosu, yayın bilgisi okuyucusu ve eşik karar işlevleri",
+ "files": [
+  "apps/server/src/infra/api/tablolar.ts",
+  "apps/server/migrations/20261012090000_api_istemci_surum_esikleri/migration.sql",
+  "apps/server/migrations/20261012090000_api_istemci_surum_esikleri/snapshot.json",
+  "apps/server/src/infra/api/surum/yayin-bilgisi.ts",
+  "apps/server/src/infra/api/surum/esik-karari.ts",
+  "apps/server/src/infra/api/surum/esik-deposu.ts",
+  "apps/server/src/infra/api/surum/kova.ts"
+ ],
+ "tables": [
+  "istemci_surum_esikleri"
+ ],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "yayinBilgisi",
+  "yayinBilgisiYukle"
+ ],
+ "needs": [
+  "D12.tabloYardimcilari",
+  "D12.kisitAdi",
+  "D12.Islem",
+  "D04.simdi"
+ ],
+ "tests": [
+  "Kurulum kovası kararlı ve düzgün dağılır",
+  "Eşik karar işlevi dönem içinde yükseltmez"
+ ],
+ "depends_on": [
+  "D13-P01",
+  "D13-P02",
+  "D13-P03"
+ ],
+ "size": "M",
+ "notes": "istemci_surum_esikleri tablosu ve api göçü, yayın bilgisi okuyucusu ve süreç önbelleği, saf eşik karar işlevi, eşik deposu ve kurulum kovası yazılır, yayinBilgisi ve yayinBilgisiYukle satırları index.ts'e eklenir; kancaları ve apiKur'u beklemez, yalnız sözleşmedeki yayın bilgisi şemasını, D12 tablo yardımcılarını ve D04 saatini kullanır (hata kataloğu paketine bağlılığı index.ts'in açılmış olmasıdır). Kova ve karar işlevinin fast-check özellikleri denetler; okuyucu ve depo GET /v1/surum paketinin senaryolarında veritabanıyla, açılış alımı eşik kararı senaryolarında koşar."
+}
+===== D06-P04
+{
+ "id": "D06-P04",
+ "title": "Çekirdek: gönderme süresi ve dizin",
+ "files": [
+  "packages/core/src/esitleme/gonderme-suresi.ts",
+  "packages/core/src/esitleme/gonderme-suresi.test.ts",
+  "packages/core/src/esitleme/index.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "gondermeSuresiSonu"
+ ],
+ "needs": [],
+ "tests": [
+  "Gönderme süresi sonu",
+  "Çekirdek kuralların mutasyon testi"
+ ],
+ "depends_on": [
+  "D06-P01",
+  "D06-P02",
+  "D06-P03"
+ ],
+ "size": "S",
+ "notes": "Gönderme süresinin dışlayıcı sonu ve packages/core/src/esitleme dizini eklenir; D04, D07, D09 ve D10 gondermeSuresiSonu işlevini bu dizinden alır, D06 sunucu dosyaları da çekirdeği buradan içe aktarır. Tablo testi TZ=UTC ve TZ=Europe/Istanbul altında aynı sonucu, Stryker işi bütün çekirdek mutantlarının öldürüldüğünü gösterir; bu yüzden üç çekirdek paketini bekler."
+}
+===== D14-P03
+{
+ "id": "D14-P03",
+ "title": "Türkçe saat biçimi ve bağlantı denetimi",
+ "files": [
+  "apps/server/src/infra/eposta/bicim.ts",
+  "apps/server/src/infra/eposta/baglanti-denetimi.ts",
+  "apps/server/src/infra/eposta/bicim.test.ts",
+  "apps/server/src/infra/eposta/baglanti-denetimi.test.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "baglantiDenetle"
+ ],
+ "needs": [],
+ "tests": [
+  "Saat eki bütün dakikalarda doğru",
+  "Bağlantı denetimi örnek tablosunda doğru karar verir"
+ ],
+ "depends_on": [],
+ "size": "M",
+ "notes": "İstanbul saatini Türkçe yazan biçim ve baglantiDenetle saf olarak yazılır, hiçbir paketi beklemez. bicim.test.ts 1.440 dakikanın saat ekini bağımsız türetimle, baglanti-denetimi.test.ts örnek tablosunu içe alarak geçen ve yakalanan belirteçleri denetler; ürün türünde ret ve ürün dışı türde [adres] kararı gönderici senaryolarında (P09, P11) yeniden sınanır."
+}
+===== D01-P05
+{
+ "id": "D01-P05",
+ "title": "Olay yayını, cihaz satırı ve ortak sorgular",
+ "files": [
+  "apps/server/src/modules/kimlik/olaylar.ts",
+  "apps/server/src/modules/kimlik/olaylar.test.ts",
+  "apps/server/src/modules/kimlik/cihaz-servisi.ts",
+  "apps/server/src/modules/kimlik/sorgular.ts",
+  "apps/server/src/modules/kimlik/inceleme.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "kimlikDinleyicileriniKur",
+  "kimlikDinleyicileriHazir",
+  "cihazDogrulamaSonucunuYaz"
+ ],
+ "needs": [
+  "D09.denetimeYaz",
+  "D15.log",
+  "D15.ayarlar",
+  "D04.simdi",
+  "D12.Islem"
+ ],
+ "tests": [
+  "Sonradan değişen doğrulama sonucu cihaz satırına yazılır"
+ ],
+ "depends_on": [
+  "D01-P01",
+  "D01-P04"
+ ],
+ "size": "L",
+ "notes": "Dört aboneye sabit sırayla olay veren kayıt ve yapısal olay log satırı; D07 çağırmayan cihaz satırı işlemleri (bağlama, kapatma, doğrulama sonucu yazma, değişim talebi satırı ve QR değeri özeti); ortak kilit sorguları (kişi satırı, numaranın satırları kisi_id sırasıyla, numaranın öbür teyitsiz hesaplarını reddedip kimliklerini dönen satır işlemi) ve inceleme kuralları yazılır. D07 ve D06 çağrılarını ve oturum kapatmayı çağıran servis yapar, böylece teyit, kayıt, değişim ve silme servisleri birbirini içe aktarmaz. olaylar.test.ts abone sırasını, eksik abonede KIMLIK_DINLEYICI_EKSIK hatasını ve aynı sonuçla ikinci cihazDogrulamaSonucunuYaz çağrısının denetim satırı eklemediğini denetler."
+}
+===== D07-P05
+{
+ "id": "D07-P05",
+ "title": "Saf karar motoru ve eşlemeler",
+ "files": [
+  "packages/core/src/dogrulama/karar.ts",
+  "packages/core/src/dogrulama/etiketler.ts",
+  "packages/core/src/dogrulama/karar-tablosu.ts",
+  "packages/core/src/dogrulama/karar.test.ts",
+  "packages/core/src/dogrulama/eslemeler.test.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [
+  "D11.DOGRULAMA",
+  "D11.GECIKME",
+  "D04.PENCERE_SONUCLARI"
+ ],
+ "tests": [
+  "Karar tablosu: her satır beklenen karar, gerekçe ve etiketleri verir",
+  "Öncelik özelliği",
+  "Kural saat okumaz",
+  "Pencere sonucu eşlemesi",
+  "QR sonuç eşlemesi tam"
+ ],
+ "depends_on": [
+  "D07-P01",
+  "D07-P04"
+ ],
+ "size": "L",
+ "notes": "kararVer'i, etiket hesabını, pencereEslemesi ve qrEslemesi'ni ve telefonla panelin de koştuğu tek karar tablosunu core'da saf işlev olarak yazar; kararVer ortak sınır sonucunu P04'ün ortakSinirKarari'ndan alır. karar.test.ts tablonun her satırını, öncelik özelliğini ve sistem saati ile saat diliminden bağımsızlığı, eslemeler.test.ts D04.PENCERE_SONUCLARI ile D11'in DOGRULAMA ve GECIKME listelerinin her değerinin eşlemede satırı olduğunu sınar (eşleme testi, eşlemeyi tutan bu pakete taşındı)."
+}
+===== D10-P02
+{
+ "id": "D10-P02",
+ "title": "Anlık tabloları, göç ve taban okuması",
+ "files": [
+  "apps/server/src/modules/raporlar/tablolar.ts",
+  "apps/server/migrations/20261010090000_raporlar_aksis_ozet_anliklari/migration.sql",
+  "apps/server/migrations/20261010090000_raporlar_aksis_ozet_anliklari/snapshot.json",
+  "apps/server/src/modules/raporlar/yaprak.ts",
+  "apps/server/test/steps/raporlar/anlik-adimlari.ts",
+  "apps/server/test/features/raporlar/anlik-saklama.feature"
+ ],
+ "tables": [
+  "aksis_ozet_anliklari",
+  "aksis_ozet_anligi_satirlari"
+ ],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "aksisAnligiGetir"
+ ],
+ "needs": [
+  "D12.tabloYardimcilari",
+  "D12.kisitAdi",
+  "D12.Islem"
+ ],
+ "tests": [
+  "Şema kuralları iki tabloda tutar",
+  "aksisAnligiGetir sözleşmesi",
+  "Taban kuralı dış yüzden doğru anlığı verir"
+ ],
+ "depends_on": [
+  "D10-P01",
+  "D10-P07"
+ ],
+ "size": "L",
+ "notes": "İki anlık tablosu tablolar.ts ve tek göç klasörüyle (içe aktarılan sabitlerden CHECK listeleri, GUN_SONU kısmi tekil dizini, @yalniz-ekleme yorumu, UPDATE ve DELETE yetkisinin geri alınması) kurulur, yaprak.ts yalnız ./tablolar.ts içe aktararak aksisAnligiGetir taban kuralını verir; anlik-saklama.feature şema kurallarını, taban kuralını ve dış yüz sözleşmesini anlik-adimlari.ts adımlarıyla denetler, taban senaryolarının anlıkları bu adımlarla doğrudan yazılır. saklama.ts ve yalnız ekleme yetkisi senaryosu D12.saklamaIsleyicisiniCalistir istediği için D10-P14 içindedir; böylece D09 aksisAnligiGetir için D12 saklama mekanizmasını beklemez."
+}
+===== D11-P03
+{
+ "id": "D11-P03",
+ "title": "Çekirdek: gecikme kuralı ve hoca saati",
+ "files": [
+  "packages/core/src/projeksiyon/gecikme.ts",
+  "packages/core/src/projeksiyon/hoca-saati.ts",
+  "packages/core/src/projeksiyon/gecikme.test.ts",
+  "packages/core/src/projeksiyon/hoca-saati.test.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Gecikme kuralı plan cümlesiyle aynı",
+  "Hoca saati iki çapadan payı küçük olanı kullanır"
+ ],
+ "depends_on": [
+  "D11-P02"
+ ],
+ "size": "M",
+ "notes": "Planın 10, 20 ve 30 saniye sınırları, projeksiyon toleransı, öğrenci ve hoca payı ile iki çapadan payı küçük olanı seçen hoca saati saf işlev olarak yazılır (sabitler.ts ve dilim.ts içe aktarılır); kanıt ayrıştırma ve yeniden hesap aynı işlevleri kullanır. 20.000 ve 5.000 koşulu fast-check özellikleriyle denetlenir."
+}
+===== D11-P04
+{
+ "id": "D11-P04",
+ "title": "Çekirdek: kod penceresi ve kürsü durumu",
+ "files": [
+  "packages/core/src/projeksiyon/kod-penceresi.ts",
+  "packages/core/src/projeksiyon/kursu-durumu.ts",
+  "packages/core/src/projeksiyon/kod-penceresi.test.ts",
+  "packages/core/src/projeksiyon/kursu-durumu.test.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Kod penceresi 30 saniye ve pencere sınırı",
+  "Kürsü durumu tek değerli ve makine eksiksiz"
+ ],
+ "depends_on": [
+  "D11-P02"
+ ],
+ "size": "M",
+ "notes": "Şimdi artı 30 saniye ve pencere kapanışıyla sınırlı en çok 7 ardışık dilim, son_dilim formülü (ortak kapatma, açık bağlantının üst sınırı ve kanıttaki gösterim dışı denetimi bu tek formülü kullanır) ve yedi durumlu kursuDurumu işlevi yazılır; fast-check pencere özelliği ve belgedeki durum makinesiyle karşılaştıran tablo testiyle denetlenir."
+}

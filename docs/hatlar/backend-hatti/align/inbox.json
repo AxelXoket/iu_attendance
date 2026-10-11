@@ -1,0 +1,894 @@
+[
+ {
+  "from": "D01",
+  "kind": "open_point",
+  "ref": "D01-A15",
+  "text": "Öğrenci kimliğinin anlamı: kayıt, karar, düzeltme ve devam tablolarındaki ogrenci_id hesap (kişi satırı) kimliğidir; öğrencinin kalıcı kimliği listedeki numaradır. D05, D08, D09 ve D10 bunu aynı okumalı.",
+  "proposal": "Devam, rapor ve AKSİS özeti liste satırı (numara) üzerinden toplar; bir numaranın bütün hesapları ogrenciHesabiGetir({ numaralar }) ile bulunur (silinmiş hesabın kayıtları da sayılır). Çift anadalda ikinci numara gelirse (D03-B09) hesap ile numara arasına bağ tablosu eklenir.",
+  "n": "I001"
+ },
+ {
+  "from": "D01",
+  "kind": "open_point",
+  "ref": "D01-A16",
+  "text": "Değişim talebi girişsiz açılabildiği için, açık talep süresince eski cihazın kayıtlarını Beklemede tutmak (D07-B13) başkasının numarasıyla talep açarak gerçek öğrencinin kayıtlarını bekletmeye açıktır.",
+  "proposal": "D07 eski cihazın kaydını talep açıkken bekletmesin; yalnız onaydan sonra gelen ve saati etkinlik bitişinden sonra olan kaydı ret ya da İncelemede alsın. Gerçek öğrenci açık talepleri /ben'de görür ve etkin cihazından reddeder (POST /v1/kimlik/cihaz-degisimi/{talepId}/ret); talep 72 saatte kendiliğinden düşer.",
+  "n": "I002"
+ },
+ {
+  "from": "D01",
+  "kind": "open_point",
+  "ref": "D01-A17",
+  "text": "Deneme dersinin sahibi ve listesi kimde? İnceleme öğrencisi deneme dersinin listesinde olmalı; D01 liste satırı yazamaz.",
+  "proposal": "Kapandı: D01'in inceleme_hesaplari_kurulumu işi aynı işlemde hocayı kurar, D02.denemeDersiniKur(tx, hocaKisiId) ile dersi kurdurur ya da yeni hocaya devrettirir ve dönen şubeye D03.denemeListesiniKur(tx, subeId, numara, ad) ile tek satırı kurdurur (D02-A13, D03-A07). D02'nin deneme_dersi_oturumlari işi yalnız oturumları üretir. incelemeHesaplari dış yüzü tüketicisi kalmadığı için kaldırıldı.",
+  "n": "I003"
+ },
+ {
+  "from": "D02",
+  "kind": "open_point",
+  "ref": "D02-A12",
+  "text": "Sözleşme eki: çakışma ucu ve şube pasifleştirme liste satırlarını ister, ama contracts.json'da D02 D03'ü okumaz. Liste verisi D02'ye nasıl gelir?",
+  "proposal": "D02 dış yüzüne listeKaynagiKaydet(kaynak) eklenir; D03 kendi eklentisinde yalnız etkinSatirlar işleviyle kaydolur (kayıt deseni: alt modül dinleyici kaydı açar; pasiflesenSatirlar yok, indirme kapsamı D06'dadır). contracts.json'daki D02 dış yüz listesine ve D03 notlarına yazılmalı; D02 uygulama hazır olurken kaydı denetler.",
+  "n": "I004"
+ },
+ {
+  "from": "D02",
+  "kind": "open_point",
+  "ref": "D02-A13",
+  "text": "Sözleşme eki: deneme dersini kim kurar ve deneme listesi şubeyi nereden bulur?",
+  "proposal": "Çekme modeli: D02'nin deneme_dersi_oturumlari işi D01.incelemeHesaplari'ndaki hocayı okuyup dönemi, dersi ve şubeyi kendisi kurar; D01 D02'yi çağırmaz (D01-A17), denemeDersiniKur dış yüzü yoktur. D02 dış yüzüne denemeDersi(tx): Promise<{ dersId, subeId } | null> eklenir; D03'ün deneme listesi kurulumu (D03-A07) şube kimliğini buradan okur. contracts.json güncellenmeli.",
+  "n": "I005"
+ },
+ {
+  "from": "D02",
+  "kind": "open_point",
+  "ref": "D02-A14",
+  "text": "Sözleşme eki: \"dönem arası\" bilgisini en düşük sürüm koruması (D13-B17) ve yayın penceresi istiyor; D13 ve D15 D02'yi okumuyor.",
+  "proposal": "D02 dış yüzüne donemArasiMi(tx, an?) eklenir (etkin ve deneme dışı dersi olan birim dönemlerine bakar, birimin pasifliğine bakmaz); app.ts (D13) bu işlevi en düşük sürüm denetimine parametre olarak verir, D15 de aynı yoldan alır. contracts.json güncellenmeli.",
+  "n": "I006"
+ },
+ {
+  "from": "D02",
+  "kind": "open_point",
+  "ref": "D02-A15",
+  "text": "Komşu eki (D14): takvim_oturumlarini_yenile işinin gece çalışması D14'ün çizelgesinde yok.",
+  "proposal": "D14 schedule_plan'a \"01:55 takvim_oturumlarini_yenile (gece onarımı), D02, pg-boss\" satırı eklenir; 01:55 03:00 ile 05:00 yasak penceresinin dışında ve öbür günlük işlerden en az 5 dakika uzakta. donem_kilidi 00:05 ve deneme_dersi_oturumlari 00:35 çizelgedeki yerlerindedir. D02'nin sözleşme testi isler dizisini D14'ün doğrulayıcısından geçirir.",
+  "n": "I007"
+ },
+ {
+  "from": "D02",
+  "kind": "open_point",
+  "ref": "D02-A16",
+  "text": "Komşu eki (D04): pencereleriHesapla üretim dinleyicisinin içinde D06.surumAl çağırıyor ve OturumPlani[] alıyor; D02 olayı ve tek sürüm kuralı bununla uyuşmuyor.",
+  "proposal": "D04 kaydını (tx, olay) => pencereleriHesapla(tx, olay.oturumlar, olay.surumleDamgala) uyarlayıcısıyla yapar (OturumUretimOgesi OturumPlani'nın üst kümesidir, durum ve onceki ESKI_PROGRAM kararı için de gelir); dinleyici yolunda surumAl çağırmaz, pencere satırlarının sürümünü surumleDamgala ile bıraktığı damgayla D02'nin tek sürümünden alır. D04 doğrudan kendi işleminde (D02 dışı) çağırdığı yerde surumAl'ı kendisi almaya devam eder.",
+  "n": "I008"
+ },
+ {
+  "from": "D02",
+  "kind": "open_point",
+  "ref": "D02-A17",
+  "text": "Komşu eki (D07, D08, D09, D10, D13 ve D01): komşuların beklediği adlar ve biçimler D02'ninkiyle uyuşmuyor.",
+  "proposal": "D08: dersYetkisi değeri 'hoca' değil 'sahip'tir (D11 de bunu kullanır); oturum türü ve durumu OTURUM_TURLERI ve OTURUM_DURUMLARI sabitlerinden içe aktarılır (normal, telafi; büyük harf kopyası yok); D02 neden olarak DEVAM_NEDENLERI'ni içe aktarır. D10: oturumlariGetir tarih süzgeçleri tarihten ve tarihe adındadır. D07: donemKilidiKararKapanisi için calistir imzasına uyan sarmalayıcı kaydeder ve kafaSayisiniYaz'ı kafaSayisiOgesi'nin son adımı yapar; bitiş aralığı ve kafaSayisiVar süzgeci hazırdır, büyük taramada oturumSayfasi kullanır. D09: 'yalnız kendi dersleri' uçları hocaninDersleri ile süzer. D13 ve D01: Kimlik'e rol kapsamı (roller: { rol, kapsamBirimId }[]) eklenirse dersYetkisi'nin yoneticiKapsami parametresi düşer; o zamana kadar çağıran D01.personelRolleri'nden kurar.",
+  "n": "I009"
+ },
+ {
+  "from": "D02",
+  "kind": "open_point",
+  "ref": "D02-A18",
+  "text": "Komşu eki (D03): öğrenci kapsamı, liste kaynağı kaydı ve şube kilidi D03 tarafında karşılık ister.",
+  "proposal": "D03'ün öğrenci kapsam kaynağı (D06) pasif liste satırının şubesini kapsamda tutar (D03-B13, D06-B15) ve kapsam.dersler ile kapsam.birimler'i D02.subeGetir ve dersGetir ile doldurur; D03'ün D02'ye kaydı yalnız etkinSatirlar'dır; D03 bir şubeye liste satırı yazmadan önce subeler satırını SELECT ... FOR SHARE ile kilitler, böylece D02'nin pasifleştirme denetimiyle yarışıp pasif şubede etkin öğrenci bırakamaz; deneme listesinin şubesi denemeDersi(tx)'ten okunur.",
+  "n": "I010"
+ },
+ {
+  "from": "D03",
+  "kind": "open_point",
+  "ref": "D03-A07",
+  "text": "Sözleşme ekleri: contracts.json ve karşı spec'lerde hangi yalnız ekleyen değişiklikler gerekir?",
+  "proposal": "Bütünleştirici ekler (hepsi yalnız ekleme, paylaşılan kural 20): (1) D03 dış yüzüne denemeListesiniKur(tx, subeId, ogrenciNo, adSoyad) ve ogrencininSatirlari(tx, ogrenciNo, s?); muafIsaretle'nin dördüncü parametresi ve sonuç birliği (D08 sonucu kendi kodlarına çevirir). (2) D02 dış yüz listesine listeKaynagiKaydet ve D03 notlarına 'D03 eklentisinde D02.listeKaynagiKaydet ile kaydolur'. (3) D02 subeGetir ve dersGetir'e kilitle?: 'paylasimli' seçeneği (SELECT ... FOR SHARE); D02'nin şube pasifleştirme ve arşiv işlemleri aynı satırları FOR UPDATE alır ve liste kaynağını kilitten sonra sorar. (4) D02 dersGetir açıklamasındaki 'D03 devirde sahipAtamaSurumu okur' notu kalkar (devir D06'nın personel kapsamıyla). (5) D01-B19 eşleşme kuralı 'açık dönemlerdeki bütün etkin satırlar eşleşmeli' olur. Eklenene kadar deneme öğrencisinin listesi kurulamaz ve yazma çarpıklığı D02 tarafında açık kalır.",
+  "n": "I011"
+ },
+ {
+  "from": "D03",
+  "kind": "open_point",
+  "ref": "D03-A08",
+  "text": "Öğrenci modüller arasında hangi kimlikle anılır? D03 satırı numarayla tutar (bkz. D03-B08); D05, D07, D08 ve D09 kişi kimliği (ogrenci_id) kullanıyor; hesabı olmayan (telefonsuz) öğrencinin elle eklemesi, muafı ve devam hesabı kişi kimliği olmadan yürümez.",
+  "proposal": "Ders içindeki öğrenci için iç kimlik liste satırı kimliği (satirId), hesaplar arası birleştirme numarayla: D08 ve D10 devamı ve özeti (ders, numara) üzerinden toplar, iş verisine ve yola satirId konur (D08 muaf yolunu {satirId} yaptı, D08-A09); kayıtlar ogrenci_id taşır ve numaraya D01'in dış yüzüyle bağlanır. D03 dinleyici olayında satirId ile ogrenciNo'yu birlikte verir. Bütünleştirici D05, D08, D09 ve D10 ile birlikte kesinleştirir.",
+  "n": "I012"
+ },
+ {
+  "from": "D03",
+  "kind": "open_point",
+  "ref": "D03-A09",
+  "text": "Öğrenci kapsam kaynağını kim kaydeder ve teyit değişince öğrencinin adı nasıl iner?",
+  "proposal": "D03 kaydeder ('ogrenci_liste_kapsami', D03-B27): D06 spec'i kapsam kaynaklarını 'D03 (öğrenci) ve D02 (personel)' diye dağıtıyor, veri ve uyelik_surumu D03'ün; D02 üzerinden kurmak D03'ün satırını D02'nin içinden okuyan ikinci bir yol açar. Bütünleştirici D06'nın önerisiyle D02'yi seçerse D03 kapsam-kaynagi.ts kaydını kaldırır, D02 aynı kuralı listeKaynagiKaydet'in etkinSatirlar ve pasiflesenSatirlar işlevleriyle kurar; uyelik_surumu ikisine de yeter. Teyit: D03 teyidi bilmez (degistiMi'ye teyit gelmez); D06 imleçteki hesap özetine teyit durumunu katar, teyit değişince baştan indirme olur ve ad o indirmede iner. İki spec'e (D06 ve D03) aynı cümleyle yazılmalı.",
+  "n": "I013"
+ },
+ {
+  "from": "D03",
+  "kind": "open_point",
+  "ref": "D03-A10",
+  "text": "Liste işlemleriyle kesişen işlemlerde kilit ve adım sırası nasıl ortak kurala bağlanır?",
+  "proposal": "Ortak kurallara eklenmesi önerilen sıra: (1) öğrenci kova kilidi (numaraIleEslestir; birden çok numarada artan kovaNo sırasıyla) işlemin ilk kilididir; (2) D03 yazmasında dersin sube_listeleri satırları kimlik sırasıyla, D02 şube ve ders satırları FOR SHARE, kova kilitleri artan sırayla; (3) satır yazımları; (4) iş kuyruğu (D14.isGonder); (5) en son sayaç sürümü (D06.surumAl). D08'in muaf işleminde muafIsaretle iş kuyruğundan önce çağrılır; uyelikDenetle (ret yolu kilidiyle) kayıt ve iş kuyruğu adımından önce çağrılır; liste dinleyicileri genel sayaç sürümü almaz; D12'nin saklama işi her saklama işleyicisini ayrı işlemde çağırır. Bu sıra bozulursa pg-boss tekil anahtarlı iş ekleme beklemesi ile satır, kova ya da sayaç kilidi arasında döngü kurulur; D12'nin bir kez yeniden deneme kuralı (D12-B08) yalnız son güvencedir. Senaryolar: 'Kayıt ile liste aynı anda kilitlenme kurmaz', 'Gönderim ile canlanma yarışı ret bırakmaz'.",
+  "n": "I014"
+ },
+ {
+  "from": "D03",
+  "kind": "open_point",
+  "ref": "D03-A11",
+  "text": "Liste değişikliği dinleyicilerinin uyarlayıcıları karşı modüllerde nasıl kurulur?",
+  "proposal": "Her uyarlayıcı kendi modülünün eklenti.ts'inde: D01 ESLESTIRME: değişikliğin ayrık subeId'leri için bekleyenKayitlariEslestir, ama yalnız değişikliğin numaralarıyla (D01'e numara süzgeci eklenir; D03 yazmasının kova kümesi dışındaki numara iç hata verir, kilit döngüsü kurmaz). D07 KARAR: kayıtları liste kilidi içinde değerlendirmez; aynı işlemde yeniden değerlendirme işi koyar (iş verisi { dersId, satirIdleri }, numara yok), iş satirGetir ile numarayı çözer ve yenidenDegerlendir(tx, { dersId, subeIdleri, ogrenciNolari }, 'LISTE_DEGISTI') çağırır; D07'nin YenidenNeden'ine LISTE_DEGISTI eklenir, iş numaraları kovaNo sırasıyla işler. Doğruluk uyelikDenetle'nin ret yolu kilidinden gelir, gecikme (startAfter) gerekmez. D08 HESAP: devamHesaplaIsiKoy(tx, dersId, null, 'LISTE', { tur: 'LISTE_SATIRI', id, donemId }). Üç modülün spec'i bu eşlemeyle güncellenir.",
+  "n": "I015"
+ },
+ {
+  "from": "D04",
+  "kind": "open_point",
+  "ref": "D04-A05",
+  "text": "contracts.json güncellemeleri bütünleştirmede işlensin mi?",
+  "proposal": "D04 dış yüzüne pencereDegistiDinleyicisiKaydet, infra/saat İstanbul yardımcıları ve saatEklentisi eklenir; dış yüz imzalarında anlar Date (D02 ve D06 tipleriyle aynı), çekirdekte UTC milisaniye. D04 reads_from listesinden D03 çıkar (indirme kapsamı D06 Kapsam'dan gelir). notes'taki oturumKapandi dinleyici listesinden D08 çıkar; D08 kayıt açarsa geri girer. canonical_tables'ta oturum_pencereleri amacındaki 'kesinleşti bilgisi' kalkar (D04-B03: kesinleşmeyi D07 izler); amaca taşıma anı ve şubeler eklenir.",
+  "n": "I016"
+ },
+ {
+  "from": "D04",
+  "kind": "open_point",
+  "ref": "D04-A06",
+  "text": "Göç klasörünün dosya sahipliği tutarsız: migration_dir D04'e <UTC zaman>_saat_<açıklama> alt klasörünü veriyor, file_ownership ise apps/server/migrations/* globunu yalnız D12'ye veriyor.",
+  "proposal": "file_ownership tablosuna her modül için apps/server/migrations/*_<modül>_* globu eklenir; D12 klasörün ve CI denetiminin sahibi kalır. Bu yüzden göç dosyası bu belgenin files listesinde yok, yeri Amaç ve sınırlar satırında yazılı.",
+  "n": "I017"
+ },
+ {
+  "from": "D04",
+  "kind": "open_point",
+  "ref": "D04-A09",
+  "text": "Komşu modüllerden beklenenler bütünleştirmede işlensin mi?",
+  "proposal": "D02: OturumUretimOlayi.oturumlar'a subeIdleri, onceki'ye yoklamaSuresiDk ve an (oturum_degisiklikleri satırındaki anla aynı); oturumGetir().degisiklikler'e oncekiYoklamaSuresiDk. D05: kayıt satırına saatSonucu alanları (ilk ve ikinci çapa durumu, kayit_ani_alt, kayit_ani_ust, pay_ms, saat_kaynagi, esitleme_bozukken_ulasti, pencere_sonucu); CHECK listeleri D04 sabitlerinden içe aktarılır (KURULMADI yerine OKUTMA_YOLU ve BASKA_CIHAZ_GONDERDI; pencere_sonucu ICINDE, DEGISIM_DILIMI, ESKI_PROGRAM, DISINDA); saat_sebebi ayrı liste olmadan iki çapa durumundan türetilir ya da kalkar; kayıt işleyicisi pencereSonucu'nu kayıt ve öğrenci kilitlerinden önce, gruptaki oturumlar için oturum kimliği sırasıyla çağırır. D06: GelenOge'ye ulasmaAni ile aynı anda okunan esitlemeSaglikli; IkinciCapaBaglami.yokNedeni D04 sabitlerinden (BÜYÜK_HARF, BASKA_CIHAZ_GONDERDI ve OKUTMA_YOLU dahil); gondermeSuresiSonu birim dönemi null kabul eder (ders bitişi + 7 gün); işlem sonu sürüm damgası (D04-A10); ikinci çapa imza doğrulama yardımcısı belge ucunun cihaz imzası kancası için yaprak dış yüz olur. D07: pencereSonucu'nun yeni biçimi (D07-A05 ile aynı adlar ve kayitAnindaSureSecildi); yenidenDegerlendir'e adet ve imleç; kesintiKapandi dinleyicisi partili imzayla; işçide eşitleme bilgisi kayıttaki esitleme_bozukken_ulasti bayrağından; Kendi beyanı D07-B20 ile tek kural. D11: D04 kodlarını sabitlerden alır (yazım artık aynı, BÜYÜK_HARF); D11-B14 hocada kişi kimliğine göre düzeltilir. D13: başlıklar X-Saat-Istegi ve X-Saat-Belgesi adıyla; kancada özne istekteki kimlikten (tur cihaz ise imzalayan cihaz). D15: saat_belgesi kidleri 1 ile 8 karakter [a-z0-9-]; ayar şemasına SAAT_ESITLEME_ESIK_MS (100), SAAT_ESITLEME_DOSYA_YASI_MS (120000), SAAT_ESITLEME_DENETIM_ARALIGI_MS (5000), SAAT_ESITLEME_KAPANIS_ESIGI_MS (15000, aralığın en az üç katı); uyarı kataloğuna saat.pencere_kapanamadi.",
+  "n": "I018"
+ },
+ {
+  "from": "D04",
+  "kind": "open_point",
+  "ref": "D04-A10",
+  "text": "Telefona inen pencere satırının sürümü işlemin son adımında tek sürümle nasıl alınsın (D06)?",
+  "proposal": "D06 bir damga kaydı verir: surumDamgasiIste(tx, damga: (surum: bigint) => Promise<void>) işlemde bekleyen damgaları toplar; işlemin sahibi son adımında surumAl(tx) çağırınca sayaç bir kez artar ve bekleyen her damga aynı sürümle çağrılır. Gönderimde sahibi D06'dır (paket sonunda, bütün gruplardan sonra; aynı kayıt PaketBaglami üzerinden de verilebilir), D02 üretiminde D02'dir (dinleyicileri sürüm almadan önce çağırdığı için D04'ün damgası onun surumAl çağrısıyla yazılır). Damga yalnız işlemde zaten kilitli satırları günceller, sayaçtan sonra yeni satır kilidi almaz (D06-B19); damga bekleyen işlem surumAl çağırmadan biterse D06 hata verir ve işlem geri alınır. Böylece tek sayaç satırı D07'nin yeniden değerlendirmesi ve öbür yazmalar boyunca kilitli kalmaz, lock_timeout 2 saniyede ders çıkışında TEKRAR_DENE yağmaz.",
+  "n": "I019"
+ },
+ {
+  "from": "D05",
+  "kind": "open_point",
+  "ref": "D05-A02",
+  "text": "Kanıt komutu için apps/server/src/cli/yoklama-kaniti* dosyası D05'in dosya haritasına, kanitCikar ve kayitlariKilitle de contracts.json'daki D05 dış yüz listesine eklensin mi? ogrencininKayitlari'nın imzası da (tx, ogrenciId, { surumden, surumeKadar }) olarak güncellensin mi?",
+  "proposal": "Evet. Komut D01'in yonetici-ekle komutuyla aynı yolu izler (teknik.html#sunucu-ilk-yonetici); işlevler modülde hazır ve testli, komut yalnız ince bir sarmalayıcıdır. kayitlariKilitle D07'nin karar yollarıyla ekleme yolunu aynı kilit sırasına sokar (D05-A10).",
+  "n": "I020"
+ },
+ {
+  "from": "D05",
+  "kind": "open_point",
+  "ref": "D05-A03",
+  "text": "D07 ile çağrı ve tip sözleşmesi kabul ediliyor mu? (1) D07 KararBaglami ve KararSonucu { karar, gerekceKodu, ekGerekceler, etiketler, gecGeldi, kararSurumu } tiplerini sözleşmesinde yayımlar, KayitTaslagi'nı D05'ten alır (Tipler); (2) kararHesapla yalnız okur ve kilitler, karar geçmişi kayıt eklendikten sonra kararGecmisineYaz ile yazılır (sira 1 = karar_surumu 1), sonraki her değişiklikte kararSutunlariniYaz'a yeni sira kararSurumu olarak verilir; (3) appAttestSayaciniDenetle sonucu KayitTaslagi.appAttest.sayac'tır, yazısı kayıt eklenmese de geçerlidir (onay gerçektir); (4) iOS 27 uzantıları KayitTaslagi.appAttest.iosUzantilari ile gelir, D07 yayin-bilgisi.json ile karşılaştırır ve beklenmeyeni D09.denetimeYaz ile gerekçeli yazar, etiket ve karar değişmez; (5) HESAP_SILINMIS kuralı ogrenciSilinmeAni ile her kayıtta uygulanır (D12-B18); (6) D07 D05'ten yalnız modules/yoklama/yaprak.ts'i içe aktarır.",
+  "proposal": "Kabul edilsin; eklemeyen yarışta geri alınacak yan etki kalmaz, onay tarafındaki iOS 27 alanının sahibi kalmaz sorunu kapanır ve D05 ile D07 arasındaki dosya düzeyindeki iki yönlü bağımlılık kalkar (dependency-cruiser no-circular, 'Modül sınırı' testi).",
+  "n": "I021"
+ },
+ {
+  "from": "D05",
+  "kind": "open_point",
+  "ref": "D05-A05",
+  "text": "D06 ile öğe sözleşmesi kabul ediliyor mu? (1) ogrenciDurumuDegisti öğrencinin yeni sürümünü (bigint) döner; (2) D05 iki türü OgeIsleyici olarak isleToplu ile kaydeder: yoklama_kaydi { roller ['OGRENCI'], oturumGerekli false, govdeEnBuyukBayt 2048 }, makbuz_okutmasi { roller ['PERSONEL'], oturumGerekli true, govdeEnBuyukBayt 2048 }; (3) PaketBaglami'na kök kancanın kişi nesnesi (kimlik) eklenir mi; gelene kadar D05 D02.dersYetkisi'ne PaketBaglami'ndan kurduğu { kisiId, rol } nesnesini verir; (4) beklenenler listesindeki 'kayıt metnindeki sıra öğe sırasıyla aynıdır' beklentisi kalkar (yedekten dönen kayıt yeni telefonun sırasıyla gelir), öğe kimliğinin metindeki kimlikle aynılığını D05 denetler; (5) yan etki belleği isleToplu çağrısına yereldir, D06 parçayı geri alıp öğeleri tek tek verince her çağrı yeni bellekle başlar, ayrı parça bağlamı gerekmez; (6) D06 karar_teslimleri için saklama sınıfını 'esitleme.karar_teslimleri' adıyla kaydeder (bugünkü 'yoklama_kayitlari' adı D05'in sınıfıyla çakışır, D12 aynı sınıfa ikinci işleyiciyi açılışta reddeder).",
+  "proposal": "Kabul edilsin; D06-B01, D06-B04, D06-B06, D06-B07 ve D06-B10 ile uyumludur ve D06'nın OgeIsleyici, OgeSonucu ve OgrenciKaynagi tiplerine birebir uyar.",
+  "n": "I022"
+ },
+ {
+  "from": "D05",
+  "kind": "open_point",
+  "ref": "D05-A09",
+  "text": "D04 şunları sağlar mı? (1) IkinciCapaDurumu sabitine ve saatSonucu'nun yokNedeni birleşimine 'baska_cihaz' değeri (paketi kaydın cihazı göndermedi); (2) saatBelgesiVer'in amacına 'yalnız saat çapası içindir; ulaşma kanıtı ya da makbuz olarak kullanılamaz' cümlesi; (3) D04'ün saklama sınıfı 'saat.pencere_degisiklikleri' adını alır (bugünkü 'yoklama_kayitlari' adı D05'in sınıfıyla çakışır); (4) saatSonucu'nda tahminMs yalnız kaynak 'yok' iken boştur.",
+  "proposal": "Evet. (1) eklenene kadar CHECK değeri tanımaz ve yedekten dönen kayıt saklanamaz; 'İkinci çapa değerleri sözleşmesi' testi kırmızı kalır, boşluk görünür olur. (4) D05'in saat sütunlarından SaatSonucu'nu kayıpsız geri kurmasının dayanağıdır; gidiş dönüş testi bu eşliği her koşuda sınar.",
+  "n": "I023"
+ },
+ {
+  "from": "D05",
+  "kind": "open_point",
+  "ref": "D05-A10",
+  "text": "D07.kararDegistir ve yenidenDegerlendir hedef kayıtların çift kilitlerini, sayaç satırlarına ve kendi kayıt anahtarı kilidine dokunmadan önce D05.kayitlariKilitle ile tek çağrıda, sıralı alır mı?",
+  "proposal": "Evet. Ekleme yolu da önce bütün çift kilitlerini alıp sonra D07'nin sayaç ve anahtar kilitlerine geçtiğinden iki yol aynı sırayla kilitler; bugünkü sırada kararDegistir kendi kilidini ve sayaçları kararSutunlariniYaz'ın çift kilidinden önce alıyor, ekleme yolunun tersi. Parçalar arası ve işlemler arası kalan kilitlenme (ör. öğrenci durum satırını tutan iki paket) D06'nın parça yolunda TEKRAR_DENE ESITLEME_GECICI_CAKISMA olur; sayısı ders çıkışı yük testinde yazılır.",
+  "n": "I024"
+ },
+ {
+  "from": "D05",
+  "kind": "open_point",
+  "ref": "D05-A11",
+  "text": "Kayda başvuran saklama sınıfları şu adlarla kaydolur mu: esitleme.karar_teslimleri (D06), dogrulama.kayit_karar_gecmisi (D07), duzeltmeler.duzeltmeler, duzeltmeler.sorun_bildirimleri, duzeltmeler.denetim_kayitlari ve duzeltmeler.gunluk_inceleme_partileri (D09), projeksiyon.kanitlar (D11)? D05'in yoklama.yoklama_kayitlari sınıfı bunları ve yoklama.makbuz_okutmalari'nı oncekiSiniflar'ında sayar; D12'nin bağımlılık sırası testine bu kenarlar girer.",
+  "proposal": "Evet; adlar D12'nin '<modül>.<sınıf>' kuralına uyar. D12 kuralı yön değiştirip başvuran sınıfın kendi sırasını bildirmesine geçerse liste o sınıflara taşınır; D05'te değişen yalnız saklama.ts'teki kayıt çağrısıdır. Hesap silmede silinmeyen kayıtlar (plan.html#kararlar-hesap-silme) bu sınıflara girmez.",
+  "n": "I025"
+ },
+ {
+  "from": "D05",
+  "kind": "open_point",
+  "ref": "D05-A12",
+  "text": "D08.devamHesaplaIsiKoy'un 'aynı işlemde aynı (ders, öğrenci) için ikinci çağrı iş eklemez' kümesi işlem nesnesine bağlı; D06 bir parçayı SAVEPOINT'e geri alınca kuyruğa eklenen iş gider ama küme 'eklendi' der, tek tek yeniden denemede iş hiç eklenmez. D08 kümeyi SAVEPOINT'e duyarlı kapsamla (ör. D12'nin işlem nesnesindeki geri dönüş noktası sayacı) ya da pg-boss'un singletonKey'iyle mi tekilleştirir?",
+  "proposal": "pg-boss singletonKey (ders, öğrenci, neden) ile tekilleştirsin, bellek kümesi kalksın: veritabanında duran tekillik geri alınan işle birlikte gider. D05 kendi yan etki belleğini isleToplu çağrısına yerel tutar; 'Yan etki belleği parça geri alınınca' testi iki tarafı birlikte sınar.",
+  "n": "I026"
+ },
+ {
+  "from": "D05",
+  "kind": "open_point",
+  "ref": "D05-A13",
+  "text": "D02, dersin sahiplik geçmişini devir anlarıyla verir mi (ör. dersGetir'de oncekiSahipler: { kisiId, devirAni }[])? Okutma yolunda önceki sahibin, devirden önce yaptığı okutma kabul edilir (D05-B09).",
+  "proposal": "Evet; D11'in QR kuralı da önceki sahipleri kabul ediyor, ikisi aynı alanı okur. Alan gelene kadar D05 önceki sahibi kabul etmez; 'Devirden önce okutulan makbuz' senaryosu bekler.",
+  "n": "I027"
+ },
+ {
+  "from": "D05",
+  "kind": "open_point",
+  "ref": "D05-A14",
+  "text": "D09 sorun_bildirimi gövdesindeki kararSurumu '64 bit metin' yerine tam sayı (number, en az 1) olur mu? Değer karar_surumu sütunudur (integer) ve D06.kararTeslimAni(kayıt, kararSurumu) number alır.",
+  "proposal": "Evet; üç taraf aynı tipi kullanır, dönüştürme kodu ve onun hatası kalmaz.",
+  "n": "I028"
+ },
+ {
+  "from": "D07",
+  "kind": "open_point",
+  "ref": "D07-A04",
+  "text": "D05 hizalaması: kayıt satırının karar sütunları, çağrı sırası, kilit sırası ve sayıların gizlenmesi.",
+  "proposal": "D05-A03'teki öneri kabul edildi ve iki tarafta aynı yazılır: kararHesapla yalnız okur ve kilitler (ortak sınır satırı FOR UPDATE) ve ortakSinirKullanilacak döner; hak ve ilk geçmiş satırı, D05 satırı gerçekten eklediyse kararGecmisineYaz ile yazılır; appAttestSayaciniDenetle'nin satırı kayıt eklenmese de kalır; kayıt başına SAVEPOINT yoktur. D05'ten istenenler: (1) karar_surumu sütunu ve kararSutunlariniYaz'a kararSurumu girdisi (kararDegistir yeni sira'yı verir; ilk eklemede KararSonucu.kararSurumu 1), indirilen kayıtta bu alan; (2) kararSutunlariniYaz'ın onay girdisini D07 doldurur ve boşaltır, onay bekleyen yüklemi etiket_kendi_beyani ve karar VAR ve onay_ani boş; (3) (oturum, öğrenci) çift kilidinin anahtar işlevi packages/contracts/src/yoklama.ts'den dışa açılsın, D07 yeniden yazmasın; (4) çok öğeli pakette D06.ogrenciDurumuDegisti öğrenci başına bir kez, o öğrencinin bütün çift kilitlerinden sonra çağrılsın (D07'nin kilit sırasında sürüm satırı en sondadır; öğe başına çağrı aynı öğrencide yeniden değerlendirmeyle kilitlenme kurar); (5) kararHesapla'nın { tekrarDene: 'DOGRULAMA_BAGLAM_DEGISIYOR' } sonucu öğeyi TEKRAR_DENE (2 saniye) yapsın; (6) esitleme_bozukken_ulasti, oturum başlangıç ve bitişi kararGecmisineYaz'a kayıttan kopyalanır (KayitTaslagi ve oturumOzeti zaten taşır); (7) D05'in yoklama saklama sınıfı oncekiSiniflar'ında dogrulama.karar_gecmisi dursun (kayit_karar_gecmisi yoklama_kayitlari'na yabancı anahtarla bağlıdır, önce silinmeli). D05 yoklama_kayitlari'nda karar, gerekce_kodu, karar_ani, yedi etiket_* sütunu ve gec_geldi'yi yalnız D07'nin verdiği değerle yazar; CHECK listeleri kodlar.ts'den türer. Görünürlük yüklemi D05, D07 ve D09'da tektir: kafa sayısı boş değil ya da yapildi boş değil.",
+  "n": "I029"
+ },
+ {
+  "from": "D07",
+  "kind": "open_point",
+  "ref": "D07-A05",
+  "text": "D04 hizalaması: pencere sonucu, dinleyiciler ve kesinti bilgisi.",
+  "proposal": "D07 D04'ün dış yüzünü olduğu gibi kullanır: pencereSonucu'nun icinde, dilimde ve disinda değerleri ile Pencere.sureSecildi; eski program penceresini D07 kendisi kurar (D07-B15), D04'ten ESKI_PROGRAM ya da degisiklikVar istenmez, önceki istek geri çekildi. contracts.json D04 dış yüzüne pencereDegistiDinleyicisiKaydet eklenmeli (D04-A05 ile aynı istek); D07 ona { ad: 'dogrulama.pencere_degisti', calistir } ile kaydolur ve kararı aynı işlemde verir. oturumKapandi ve kesintiKapandi kayıtları D04'ün tek olaylı { ad, calistir } biçimindedir; D04'ün oturumKapandi açıklamasındaki \"D07 (pencere_beklemede_kesinlestir ...)\" ifadesi \"D07 (güvenlik ağı yeniden değerlendirme, iş koymaz)\" olsun. kesintiAraliklari'nın dönüşüne ulasmaAnlariGuvenilir alanı eklensin; sonraki olaylarda bağlamı kuran D07 kapanmış kesintinin hükmünü buradan okur (alan gelene kadar enBuyukSapmaMs boş değil ve sapma eşiğinin altındaysa güvenilir sayılır).",
+  "n": "I030"
+ },
+ {
+  "from": "D07",
+  "kind": "open_point",
+  "ref": "D07-A06",
+  "text": "D13 ve D15 hizalaması: yayin-bilgisi.json alanları, ayarlar, uyarı türleri ve dışarı çıkış.",
+  "proposal": "D07 dosyayı yalnız D13.yayinBilgisi() ile okur, kendi okuyucusu yoktur; alan adları D13'ünkilerdir (hataliSurumler: platform, surum, guncellemeKimligi, baslangic, neden; iosPaketSurumleri). D13'ten yayinBilgisiSemasi'na iosDagitimTurleri eklenmesi istenir (o gelene kadar BEKLENMEYEN_DAGITIM_TURU üretilmez). D15'ten: CI yazarı hatalı sürüm girdisinde baslangic'i ilanın canlıya çıktığı andan önceye yazmasın (D07 aksi durumda açılışta dogrulama.hatali_surum_gec_yuklendi uyarısını açar); uyarı kataloğunun \"başka modül\" satırına dogrulama.app_attest_yenileme_sik (eşik 24 saatte 2'den çok yenileme, anahtar esik-2-24s) ve dogrulama.hatali_surum_gec_yuklendi örnek olarak eklensin; dogrulama.kanit_reddedildi log satırı ölçüme alınsın. D15-A12'nin 5. maddesinin cevabı: KID_BILINMIYOR için yeni gerekçe yoktur, belge çapa kurmaz ve kayıt Saat doğrulanamadı yolundan gider (D07-B19). Ayarlar (D15.ayarlar): androidPaketAdi, androidImzaOzetleri, appAttestUygulamaKimligi, iptalListesiAdresi. Google iptal listesi adresi sunucunun dışarı çıkış listesine girer (D15-B10). packages/contracts/src/dogrulama.ts kod listelerini packages/core/src/dogrulama/kodlar.ts'den alır; paket bağımlılığı D15'in.",
+  "n": "I031"
+ },
+ {
+  "from": "D07",
+  "kind": "open_point",
+  "ref": "D07-A07",
+  "text": "D01 hizalaması: meydan okuma ve bağlama metni, sonuç alanları, bağlam kilidi, yeniden değerlendirme nedenleri ve hesap silmede kanıt ayrıntıları.",
+  "proposal": "Kayıt, değişim ve yenileme istekleri değeri, öğrenci numarasını, isSystemUser'ı (Android), Secure Enclave açık anahtarını (iPhone) ve bağlama imzasını taşır; cihaz kimliği meydan okumaya ve bağlama metnine girmez, bayt düzeni meydan-okuma.ts'dedir (Uç noktalar, POST /v1/dogrulama/deger). D01 önce dogrulamaDegeriniTuket, sonra cihaz ve anahtar satırlarını yazar, sonra cihazKanitiniDogrula'yı çağırır; bağlama imzasını D07 doğrular. reddedildi'de D01 403 ile geri alır, değer yanmaz. Sonucu cihazDogrulamaSonucunuYaz ile yazar; KanitSonucu alanları o işlevin girdisiyle aynıdır, dogrulanmisAcilis VERIFIED için true. D01'den istenenler: (1) cihazDogrulamaSonucunuYaz'ın neden listesine 'onay_alani' (kayıt onayında gelen iOS 27 alanları cihaz satırındakinden farklıysa; teknik.html bu alanların cihaz kaydına yazılmasını istiyor); iptal listesi iptal_listesi, askı kalkması yeniden_dogrulama kullanır; (2) ogrenciTeyitEt, ogrenciTeyidiniReddet, hesap silme ve bekleyen_kayit_kapatma 'dogrulama:teyit:<ogrenciId>' anahtarında dışlayıcı kilidi (D12.danismaKilidi, anahtar işlevi packages/contracts/src/dogrulama.ts'den) yazmadan önce alsın (D07-B32); (3) yenidenDegerlendir'i YenidenNeden sabitleriyle çağırsın: TEYIT_VERILDI, TEYIT_REDDEDILDI, CIHAZ_DEGISIMI_ONAYLANDI, CIHAZ_DEGISIMI_REDDEDILDI, DEGISIM_IPTAL, HESAP_SILINDI, HESAP_KAPANDI (bekleme_bitti), CIHAZ_KAPANDI (çıkış). D12-B20 (sahip) kanıt ayrıntılarının hesap silmede silinmesini kabul ederse D07 dış yüzüne eklemeyle cihazKanitAyrintilariniSil(tx, cihazId) eklenir ve D01'in silme işlemi aynı işlemde çağırır; karar gelene kadar ayrıntılar saklama süresine kadar kalır (Saklama süresi (plan.html#acik-saklama-suresi)).",
+  "n": "I032"
+ },
+ {
+  "from": "D07",
+  "kind": "open_point",
+  "ref": "D07-A08",
+  "text": "D11 hizalaması (Aşama 2): gösterim kaydı gelince QR kayıtlarının yeniden değerlendirilmesi ve Doğrulanmış etiketi.",
+  "proposal": "D07 D11'i okur (qrSonucu, gosterimAraliklari); D11'in D07'yi çağırması sözleşmede olmayan iki yönlü bir çift olurdu. D11 dış yüzüne eklemeyle gosterimKaydiDinleyicisiKaydet(dinleyici) eklenir; D07 kaydolur ve oturumun QR kayıtları için yenidenDegerlendir'i QR_GOSTERIM_KAYDI nedeniyle çağırır. Doğrulanmış etiketi plandaki tanımıyla gelişte konur (QR kodu geçerli, yedek kod değil); D11'in \"Sonucun D07 kataloğuna eşlemesi\" tablosundaki \"gecikme NORMAL ise Doğrulanmış\" notu buna göre düzeltilsin: gecikme yalnız kararı etkiler.",
+  "n": "I033"
+ },
+ {
+  "from": "D07",
+  "kind": "open_point",
+  "ref": "D07-A09",
+  "text": "D02 hizalaması: oturum alanları, sorgu ve kilit adımı.",
+  "proposal": "oturumGetir: dersId, donemId, birimId, durum (iptal dahil), tarih, baslangicAni, bitisAni, kafaSayisi, kafaSayisiAni, yapildi, subeIdleri, degisiklikler (oncekiBaslangicAni, oncekiBitisAni; eski program penceresi için) ve Aşama 2'de QR ayarı; bunlar D02'de zaten var. D07 oturumlariGetir'den yeni süzgeç istemez: gece işi baslangicAni gün aralıklarıyla sayfa sayfa okur ve kafa sayısını bellekte süzer. Kilit adımı { ad: 'dogrulama.karar_kapanisi', sira: 10 } ile kaydolur; D02'nin arşiv ve devam adımlarından önce çalışması istenir. D02'nin oturum saklama sınıfı oncekiSiniflar'ında dogrulama.oturum_verisi ve dogrulama.karar_gecmisi yer alsın (yabancı anahtar).",
+  "n": "I034"
+ },
+ {
+  "from": "D07",
+  "kind": "open_point",
+  "ref": "D07-A10",
+  "text": "D03 hizalaması: üyelik anı ve liste kilidi.",
+  "proposal": "uyelikDenetle'nin anını D07 seçer ve bu artık öneri değil sözleşmedir: kaydın hesaplanan saati (SaatSonucu.aralik üst ucu, pay öğrenci lehine), saat kurulamadıysa oturum başlangıcı; ulaşma anı hiç. D03'ün uyelikDenetle açıklamasındaki \"öneri\" sözcüğünün bu sözleşmeyle değiştirilmesi istenir. Ortak davranış testi D07'nin features klasöründe: 09:00 oturumu, 09:10 ekleme, 09:12 kayıt Var ve D08 oturumu T'ye katar. D03'ten ayrıca: liste uygulaması değişen şubelerin her biri için 'dogrulama:liste:<subeId>' anahtarında dışlayıcı kilidi (sıralı, D12.danismaKilidi) satırları yazmadan önce alsın (D07-B32); D07'nin dinleyicisi { ad: 'dogrulama', basamak: 'KARAR', isle } biçimindedir.",
+  "n": "I035"
+ },
+ {
+  "from": "D07",
+  "kind": "open_point",
+  "ref": "D07-A11",
+  "text": "D09, D12, D14 ve sözleşme hizalaması: hoca olayları, döngü, kilit kipi, saklama, çizelge ve contracts.json dış yüz satırları.",
+  "proposal": "D09'dan: kararDegistir'e { karar, beklenenKarar } ve KararKaynagi { tur: HOCA, kisiId, olay, islemId } versin; olay adlarını KARAR_OLAYLARI'ndan içe aktarsın; 200 öğelik istekte bütün kayıtların (oturum, öğrenci) çift kilitlerini işlemin başında D05'in anahtar işleviyle sıralı alsın, öğe SAVEPOINT'leri ondan sonra açılsın (D07-B32; öğe öğe kilit almak aynı oturumda liste yeniden değerlendirmesiyle ters sıralı bekleme kurar); gerekçeyi D07 türetir ve INCELEME_RET'in kodu HOCA_REDDETTI'dir (INCELEME_REDDEDILDI yok). duzeltmeleriGetir yalnız okuduğu için modules/duzeltmeler/yaprak.ts'e taşınabilir; taşınana kadar D07 onu bileşim kökünden eklenti seçeneğiyle alır (D07-B36). D12'den: danismaKilidi'ye denemeli paylaşımlı kip (pg_try_advisory_xact_lock_shared, sonuç boolean) eklensin; bağlam yarışı onu kullanır. D12 saklama kayıtlarında üç sınıf: dogrulama.karar_gecmisi (D05'in yoklama sınıfı oncekiSiniflar'ında), dogrulama.oturum_verisi (D02'nin oturum sınıfında), dogrulama.app_attest_sayaclari (D01'in anahtar sınıfında). D14'ten: çizelgedeki 05:15 pencere_beklemede_kesinlestir satırı düşsün (gecelik süpürme bekleyen_kararlari_coz'un 2. adımıdır); kuyruk stately ve tekillikAnahtari oturumId. contracts.json'daki D07 dış yüz satırları imzayla hizalansın: dogrulamaDegeriniTuket(tx, deger, beklenenAmac) ve kafaSayisiOgesi(tx, oge, baglam).",
+  "n": "I036"
+ },
+ {
+  "from": "D08",
+  "kind": "open_point",
+  "ref": "D08-A07",
+  "text": "D08 kayıtların ve düzeltmelerin kişi kimliğini öğrenci numarasına nasıl çevirir?",
+  "proposal": "Mimar contracts.json D08.reads_from listesine D01'i parçalama aşamasından önce ekler (D01 D08'i okumadığından yeni iki yönlü çift ve döngü doğmaz). D08'in tek D01 çağrısı ogrenciHesabiGetir'dir: hesap işi, canlı uçlar ve dersSonuclari dersin bütün liste numaraları için { numaralar } biçimiyle tek toplu çağrı yapar (kişi kimliği, numara, teyit durumu), kişi kimliği başına arama yapmaz; yalnız öğrencinin kendi indirmesi ve ogrenciDevamDurumu { kisiId } biçimiyle tek çağrı yapar. Numara anahtarı hesapsız, şube değiştiren ve yeniden kaydolan öğrenciyi tek satırda tutar (D01-B33 ile D12-B19 hangisi seçilirse seçilsin).",
+  "n": "I037"
+ },
+ {
+  "from": "D08",
+  "kind": "open_point",
+  "ref": "D08-A08",
+  "text": "Öbür modüllerden beklenen tetik çağrıları, toplu okumalar ve alanlar sahiplerinin speclerinde var mı?",
+  "proposal": "D02: kafa sayısı ve \"Ders yapıldı mı?\" yazımında devamHesaplaIsiKoy(tx, dersId, null, YAPILDI); oturumlariGetir oturumda şube kimlikleri, tür, iptal nedeni, telafi_edilen_oturum_id, yapildi, saatler; gece denetimi için yalnız ekleme bir işlev: denetlenecekDersler(tx, { an, kilittenSonraGun: 30 }) kilidi uygulanmamış ya da 30 günden yeni kilitli birim dönemlerinin deneme dışı ders kimlikleri (arşiv dahil). D03: şube değişiminde ya da yeniden eklemede aynı derste aynı numaranın satırı varsa yeni satıra muaf değerini kopyalar (D05 ve D10 tek satırdan okuduğunda da ders düzeyi muaf görünsün); saklama işleyicisi kaydında oncekiSiniflar listesine devam.sonuclar'ı ekler ve liste sınıfıyla aynı süreyi kullanır, böylece öğrenci numarası D08'de D03'ten uzun kalmaz. D05: sayılan işareti ya da kararı değişen her kayıt yazımında aynı işlemde devamHesaplaIsiKoy(tx, dersId, ogrenciId, KAYIT ya da KARAR); sayilanKayitlar(tx, { donemId, oturumIdler }) toplu; kayıtta gerekceKodu ve ulasmaAni; oturum ekranında muaf satırın son durum hücresini MUAF gösterir (D10'un M hücresiyle aynı). D06: D08'in kullandığı alanlar D06'nın verdiği { sonTemasAni, bekleyenOgeSayisi }, ders başına bekleyen istenmez; canlı hesapta sorgu sayısı sabit kalsın diye yalnız ekleme toplu işlev kurulumSonTemaslari(tx, kisiIdler): Map<kisiId, { sonTemasAni, bekleyenOgeSayisi }>. D09: eklentide devamGirdiKaynagiKaydet ile duzeltmeler ({ dersId } süzgeci; düzeltme liste_satiri_id ile anahtarlı olduğundan öğrenci süzgeci istenmez) ve ders başına toplu acikSorunBildirimleri okuyucularını kaydeder, böylece D08 D09 index.ts'ini içe aktarmaz; düzeltme ve sorun bildirimi açılış ve kapanışında devamHesaplaIsiKoy; gece sıralaması sonucuDegistirebilirMi'yi kip DONEM_ORTASI ve çalışmanın tek anıyla, sonradan değişenler AKSIS ve isteğin anıyla çağırır ve kaydı olmayan bildirimde kendi kalan hak formülü (D09-B20) yerine (oturum, öğrenci) biçimini kullanır; gece_inceleme_siralamasi 05:50 ve sonra listesinde devam_tutarlilik_denetimi (D14 çizelgesi; D09 spec'i hâlâ 05:10 yazıyor). D15: ayar şemasına DEVAM_SAYIM_TABANI (ilk sürümde yalnız YAPILAN); isletim_denetimi uyarısı farkSayisi > 0 için açılır, kuralYenidenHesapSayisi uyarı açmaz; ders çıkışı yük testi öğrenci indirmesinin D08 bölümünü kapsar.",
+  "n": "I038"
+ },
+ {
+  "from": "D08",
+  "kind": "open_point",
+  "ref": "D08-A09",
+  "text": "Muaf ucunun yol parametresi neyi taşır?",
+  "proposal": "contracts.json'daki {ogrenciId} adı {satirId} olur: hesabı olmayan öğrenci de muaf işaretlenebilsin (tekrarlayan öğrenci uygulamayı hiç kurmayabilir); değer D03.muafIsaretle'nin aldığı liste satırı kimliği. Yolun biçimi (ogrenciler/{x}/muaf) aynı kalır.",
+  "n": "I039"
+ },
+ {
+  "from": "D08",
+  "kind": "open_point",
+  "ref": "D08-A10",
+  "text": "Son hafta hatırlatması için birimin son günü telefona hangi yoldan iner? (D08-B23)",
+  "proposal": "D08'in sunucu hesabı son güne ihtiyaç duymaz. D02-B32 (ders satırında son gün) ile D06-B16 (son oturumdan çıkarım) ayrışıyor; öneri D02-B32, çünkü gönderme süresi en geç son gündür ve son gün son ders gününden sonra olabilir (Dönem sonu (plan.html#devam-donem-sonu)).",
+  "n": "I040"
+ },
+ {
+  "from": "D08",
+  "kind": "open_point",
+  "ref": "D08-A12",
+  "text": "D10 ile arayüz: özet, hücre ve anlık aynı kaynaktan nasıl gelir?",
+  "proposal": "D10 özet, ders raporu hücreleri ve gün sonu anlığı için saklanan oturum_son_durumlari'nı okumaz; dersSonuclari(tx, subeId, { an, hucreler: true }) ya da oturumSonDurumlari(tx, subeId, { an }) ile aynı işlemde canlı alır (D10-B24 bu yönde değişir). Değerler canlı olduğundan D10-A10'daki hesapBekliyor alanı, HESAP_SURUYOR engeli ve anlık işinin şube atlama kuralı gerekmez; aksis_gun_sonu_anligi'nin kilidin koyduğu devam_hesapla işlerini beklemesi de gerekmez (PROGRESS madde 5). KARAR BEKLİYOR nedeni dizidir (ACIK_ISARET, BAGLANTI_YOK birlikte olabilir): D10 anlıkta karar_bekliyor_nedeni'ni text[] yapar; geçici nedenlerin sayıları satırdaki acikIsaretler'den gelir. Muaf değeri D08 satırından (ders düzeyi) okunur. Telafi eksiği D08'in telafiEksigi alanından okunur ya da D10-B19 aynı tanıma (taşınma ve onu karşılayan telafi dışarıda) çekilir.",
+  "n": "I041"
+ },
+ {
+  "from": "D08",
+  "kind": "open_point",
+  "ref": "D08-A14",
+  "text": "Oran ucunun yolu yönetici yol kuralına uyuyor mu?",
+  "proposal": "Hayır: contracts.json shared_rules yönetici uçlarını /v1/<modül>/yonetim/ altına koyar ve D13 ikinci rol denetimini bu yol kalıbıyla yapar. Öneri: PUT /v1/devam/yonetim/dersler/{dersId}/oranlar; mimar contracts.json'da D08 owns_endpoints satırını ve \"Oran ve muaf\" kararının metnini değiştirir, D02.oranlariYaz amacındaki yol da güncellenir; muaf ucu hocanın olduğu için yerinde kalır. contracts.json değişene kadar spec sözleşmedeki yolu taşır, çünkü D08 sözleşmeyi kendisi değiştiremez.",
+  "n": "I042"
+ },
+ {
+  "from": "D08",
+  "kind": "open_point",
+  "ref": "D08-A15",
+  "text": "D05'in oturum ekranı D08 katmanının iki kuralını nasıl görür?",
+  "proposal": "D09.sonDurumOnceligi girdisine yalnız ekleme iki alan: SonDurumKaydi.sayimDisi (ulaşma anı kilit anından sonra ya da gerekçe SON_GUNDEN_SONRA) ve SonDurumOturumu.kilitli (donan açık karar Yok, gecici false). Böylece D05, D10 ve telefon aynı işlevle aynı sonucu verir ve D08 katmanı yalnız kapsam ile MUAF örtüsü kalır. Ek gelene kadar D08 bu iki kuralı oturum-katmani.ts'te uygular ve D05'in ekranı son günden sonra gelen ya da kilitte donan kayıtta hücreyi boş (açık) gösterir.",
+  "n": "I043"
+ },
+ {
+  "from": "D09",
+  "kind": "open_point",
+  "ref": "D09-A08",
+  "text": "Hesabı olmayan öğrencinin (telefonsuz, hiç kaydolmamış) devam ve AKSİS satırları hangi öğrenci anahtarıyla tutulur?",
+  "proposal": "Ortak öğrenci anahtarı liste satırı (ya da öğrenci numarası) olsun; D09 düzeltmeyi liste satırıyla yazar. Hesapsız öğrencide D09 hesap işini ders düzeyinde koyar (devamHesaplaIsiKoy(tx, dersId, null, neden)); D08 ve D10 aynı anahtarı seçmeli.",
+  "n": "I044"
+ },
+ {
+  "from": "D09",
+  "kind": "open_point",
+  "ref": "D09-A09",
+  "text": "D09'un çağırdığı dış yüzlerde hangi süzgeç, alan ve davranış gerekir?",
+  "proposal": "Sahipleri yalnız ekleyerek sağlar. D01: ogrenciTeyitEt ve ogrenciTeyidiniReddet isteğine islemId (kimlik.teyit ve kimlik.teyit_ret olayına yazılır); OgrenciHesabi'na girilenAdSoyad; toplu kuralın saf yüklemi topluTeyitUygunMu (packages/core/src/kimlik). D03: ogrencininSatirlari(tx, ogrenciNo) pasifler dahil bütün satırlar. D05: kayitGetir dönüşünde güncel karar sürümü; sayilanKayitlar süzgecinde dersIdler, kararlar, etiket, onaysız ve ulaşma aralığı. D07: KararKaynagi, YeniKarar ve KararDegisimi biçimi D09-B12'deki gibi (kayıt sayilan bayrağıyla döner); 'Hoca kendi kararını değiştirdi' geçişinde islem KARAR_DEGISTIR. D08: devam_hesapla işinin öğrenci satırlarını D09-B32'deki kanonik sırayla kilitlemesi; oturumSaatleri ve kapsam yükleminin packages/core/src/devam'dan dışa açık olması. D13: ogeSonuclariSemasi öğesine modülün yalnız ekleme alanları (duzeltme, yeniKarar, sayilan). D06 öğe zarfında çapalar (var). D10.aksisAnligiGetir (var). D15 ayarlarında DUZELTMELER_PARTI_BOYU. D12 saklamada kayda başvuran D09 satırlarının kayıtlardan önce silinmesi. Bütün modüller: dersId taşıyan denetim olayında birimId ve sözleşme dosyasında <MODÜL>_DENETIM_OLAYLARI.",
+  "n": "I045"
+ },
+ {
+  "from": "D10",
+  "kind": "open_point",
+  "ref": "D10-A10",
+  "text": "D08 ve D02 ile arayüz: dersSonuclari eşlemesi, canlı hücre okuması, telafi tanımı ve D10 hesap beklemesine dair başka modüllerde kalan metinler.",
+  "proposal": "dersSonuclari'nın yayımlanan imzası özet için yeterlidir, eşleme D10-B06'da; hesap bekleme bayrağı istenmez, gün sonu anlığı ve çıktı ucu bekleyen işe bakmaz (canlı hesap kilit işlemindeki D07 kapanışını içerir). D08'den istenenler: (1) canlı oturumSonDurumlari(tx, { subeId, oturumIdler }): oturum_son_durumlari satırlarının aynısını liste satırı kimliğiyle, dersSonuclari ile aynı işlemde canlı hesaplar; gelince hücreler oradan okunur ve toplam eşitliği her an geçerli olur (D10-B24), gelene kadar eşitlik D08 kuyruğu boşken iddia edilir ve cevap hucreHesapAni taşır. (2) D08-B15 telafi kuralı D10-B19'daki tanıma çekilir (taşıma borca girer, kapatan yalnız yapılan TELAFI). Başka sahiplerin metninden kaldırılacaklar: contracts.json'daki D10 notu (\"aksis_gun_sonu_anligi, kilit işleminin kuyruğa koyduğu devam_hesapla işleri bitmeden anlık almaz\") ve D02 donem_kilidi metnindeki \"(D10'un gün sonu anlığı bu işleri bekler)\" cümlesi; yerine \"D10'un kilit adımı gün sonu anlığı işini kuyruğa koyar\" yazılmalı.",
+  "n": "I046"
+ },
+ {
+  "from": "D10",
+  "kind": "open_point",
+  "ref": "D10-A11",
+  "text": "Ders içinde öğrencinin kimliği nedir: hesabı olmayan ya da hesabını silip yeniden kaydolan listedeki öğrenci raporda ve anlıkta nasıl anılır?",
+  "proposal": "Ders içi kimlik liste satırıdır (D03-B08: liste satırı numarayla tutulur, devam ve rapor numara üzerinden toplar). D10 anlık satırlarını, ders raporunu ve AKSİS özetini liste_satiri_id ile anahtarlar; GET /v1/raporlar/ogrenciler/{ogrenciId} yolundaki kimlik liste satırı kimliğidir. D08 ve D09'un öğrenci başına satırları liste satırına bağlanabilmeli (liste_satiri_id sütunu ya da hesaptan numaraya tek eşleme); D01, D03, D08 ve D09 ile birlikte kesinleşir.",
+  "n": "I047"
+ },
+ {
+  "from": "D10",
+  "kind": "open_point",
+  "ref": "D10-A12",
+  "text": "Haksız devamsız sınıflaması D09'un sonradan değişenler listesiyle aynı fonksiyondan mı gelir?",
+  "proposal": "Evet: packages/core/src/raporlar/degisim-sinifi.ts (taban sonucu, şimdiki sonuç ve tabandan sonraki değişimler: düzeltmenin Haksız sayılır ve mazeretli işaretleri D09 sebep kodu kataloğundan, geç ulaşan sayılan kayıt) tek saf fonksiyondur; D09 da listesinde aynısını kullanır. contracts.json'da D10 dış yüzüne bu çekirdek fonksiyon eklenir, D09'un okuduğu modüllerde D10 zaten var.",
+  "n": "I048"
+ },
+ {
+  "from": "D10",
+  "kind": "open_point",
+  "ref": "D10-A13",
+  "text": "D10 bu tasarımda hangi sözleşme düzeltmelerini başka sahiplerden ve contracts.json'dan bekliyor?",
+  "proposal": "(a) contracts.json owns_endpoints'te dönem sonu raporu yolu GET /v1/raporlar/yonetim/donem-sonu olmalı: yönetici uçları /v1/<modül>/yonetim/ altındadır ve D13 rol denetimini yol kalıbından ikinci kez ancak orada uygular (D13-B14); spec yolu aynı değişiklikte taşınır, bugün spec contracts.json ile birebir kalmak zorunda olduğundan eski yolda. (b) D14 çizelgesindeki donem_kilidi 00:05 ve aksis_gun_sonu_anligi 00:25 satırları D02'nin 00:20'si ve D10'un 00:40'ı ile eşitlenmeli (00:25, 00:20'den sonraki 10 dakika kuralını bozar). (c) D12.islem'e yalitim: 'repeatable_read' seçeneği. (d) D03 liste satırı saklama kaydına oncekiSiniflar: ['raporlar.aksis_ozet_anliklari'] ve D12 sureler.ts'te anlık süresinin liste satırı süresinden uzun olmaması kuralı. (e) D02.kilitliBirimDonemleri'ne isteğe bağlı { uygulanmis: true } süzgeci; gelene kadar D10 sonucu kilitUygulandiAni dolu olanlara kendisi süzer. (f) D02'nin kilit adımları listesinde 'raporlar.gun_sonu_anligi' adımının D07'den sonraki sıra numarası.",
+  "n": "I049"
+ },
+ {
+  "from": "D11",
+  "kind": "open_point",
+  "ref": "D11-A07",
+  "text": "Hoca giriş oturumu kapanınca ya da yenilenince QR anahtar yuvası nasıl iptal edilir ya da devredilir?",
+  "proposal": "D01'in spec'indeki kimlikDinleyicileriniKur aboneliği (D01-A14) contracts.json D01 dış yüzüne, projeksiyonKimlikDinleyicisi de D11 dış yüzüne eklensin (yalnız ekleme, sözleşme kararı 24'teki dinleyici deseni). Bileşim kökleri (API, işçi, D12 ve D15 komutları) bu modülün dinleyicisini projeksiyon adıyla verir: giris_oturumu_yenilendi etkin yuvayı yeni oturuma taşır; giris_oturumu_kapandi neden cikis, kendisi_kapatti, yonetici, en_eski, pasif, olay_komutu, geri_yukleme ya da inceleme_bitti ise yuvayı olay anıyla iptal eder; hesap_durumu_degisti pasif ve hesap_silindi hocanın bütün etkin yuvalarını iptal eder; doğal süre bitişinde ve yenilendi nedeninde dokunmaz. Eklenene kadar iptal çalışmaz ve planın kabul ettiği 5 günlük açık pencere (plan.html#hile-ikinci-profil) geçerlidir; yenilenen oturum yeni rakam alır (9 rakam bunu taşır).",
+  "n": "I050"
+ },
+ {
+  "from": "D11",
+  "kind": "open_point",
+  "ref": "D11-A08",
+  "text": "Gösterim kaydı geldiğinde o oturumun bekleyen QR kayıtlarının kararı aynı işlemde ve kilitlenmeden nasıl yeniden verilir?",
+  "proposal": "contracts.json D11 dış yüzüne gosterimKaydiDinleyicisiKaydet iki aşamalı biçimiyle eklensin (D07-A08 ile aynı öneri, anahtar aşaması eklenerek). D07 anahtarlar aşamasında kilitsiz okur ve o oturumlarda kararı gösterim bekleyen kayıtları ve onların D05 (oturum, öğrenci) anahtarlarını döner (anahtar biçimi D05'ten, ör. D05'in kayitlariKilitle'sinin kilitsiz anahtar üreten eşi); bu modül onları kendi gösterim anahtarlarıyla D12 kuralı gereği tek danismaKilidi çağrısında alır. calistir aşamasında D07 danismaKilidi çağırmaz, satırları FOR UPDATE ile okur ve yenidenDegerlendir'i QR_GOSTERIM_KAYDI nedeniyle yapar. Böylece bütün yollar anahtarlarını tek sıralı çağrıda alır, 40P01 doğmaz. Eklenmezse kararlar D07'nin gece işine kalır ve kararların ilgili olayın işleminde verilmesi kuralı (plan.html#kararlar-supheli-kayit) QR kayıtlarında tutmaz.",
+  "n": "I051"
+ },
+ {
+  "from": "D11",
+  "kind": "open_point",
+  "ref": "D11-A10",
+  "text": "Ortak altyapı bu modülün beklediklerini sağlıyor mu: kürsü kimliği, istemci adresi, ayarlar, saklama sırası?",
+  "proposal": "D13: rota kimliği projeksiyon olan uçlarda ve kimliği ['girissiz', 'projeksiyon'] beyan eden eşleştirme kodu ucunda istek.panelden iken kök kanca oturum aramaz, istek.projeksiyonAnahtari'nı çerezden doldurur; doğrulamayı bu modülün kimlik kancası yapar ve girissiz beyanlı uçta tanınmayan ya da kapanmış çerezi hata değil yeni tarayıcı sayar. Oturum rotasında projeksiyon çerezi kimlik sayılmaz (401 API_KIMLIK_GEREKLI). Adres başına yeni tarayıcı sınırı istek.ip'yi (D13'ün trustProxy ayarı, girissiz sınıfıyla aynı kaynak) yalnız süreç belleğindeki sayaçta kullanır. D15: doğrulanmış ayarlara isteğe bağlı projeksiyon bölümü eklensin (şeması packages/contracts/src/projeksiyon.ts'teki projeksiyonAyarSemasi: 10, 20 ve 30 sn sınırları, 1 sn tolerans, 5 dk kod süresi, 15 dk onay öncesi, 10 dk'da 5 yanlış, adres başına 10 dk'da 100 yeni tarayıcı, 200.000 depolama tavanı, 60 sn önceki çerez kabulü, yedek kod sınırları, Bluetooth ve konum değerleri) ve Aşama 2 QR bayrağı D02 ile ortak tek ayar olsun; QR anahtar kaynağının amacı qr_anahtar_kaynagi, kid deseni D15'in ^[a-z0-9-]{1,8}$ deseni (bu modül genişletme istemez). D15 kid döndürmesinde kopyalar sırayla yeniden başladığından, yeni kid'i henüz görmeyen kopya yeni kid'le üretilmiş eşleştirme kodunu bulamaz ve yanlış deneme sayar; dönem arası döndürmede ders olmadığından etkisi yok, ele geçirilme döndürmesinde birkaç dakikalık bu sınır kabul edilir. D12 ve D05: katalogdaki projeksiyon.donem_verisi sınıfı yoklama.donem_verisi'nden önce işlenir (D12-B22'deki oncesinde listesi, zaten öyle) ve sureler.ts'te yoklama.donem_verisi'nin süresi projeksiyon.donem_verisi'ninkinden kısa olmasın (kanıt satırı kayda başvurur); D12'nin süre denetimi bunu açılışta sınasın.",
+  "n": "I052"
+ },
+ {
+  "from": "D11",
+  "kind": "open_point",
+  "ref": "D11-A11",
+  "text": "D12 bu modülün iki ihtiyacını dış yüzünde verecek mi: paylaşımlı danışma kilidi ve geri yükleme kayıp penceresi?",
+  "proposal": "D12 danismaKilidi'ne anahtar başına kip eklesin: danismaKilidi(tx, anahtarlar: readonly (string | { anahtar: string; kip: 'paylasimli' })[]); paylaşımlı anahtar pg_advisory_xact_lock_shared ile aynı hashtextextended biçimini kullanır, tek ve sıralı çağrı kuralı değişmez. Öğrenci kayıtları gösterim anahtarını paylaşımlı alırsa hoca telefonu dersinde aynı oturumun öğrencileri birbirini beklemez; hoca yolu özel kipte kalır. Eklenene kadar bu modül özel kipi kullanır (D12 elle kilit yazmayı yasaklıyor): yalnız gösterim bekleyebilecek kayıtlar anahtar alır, projeksiyonlu derste bekleme yoktur, hoca telefonu dersindeki bekleme yük testinde ölçülür. Ayrıca geriYuklemePencereleri(tx): Promise<readonly { hedefAni: Date; kayipPencereSonu: Date }[]> okuma işlevi (geri_yukleme_kayitlari'ndan) eklensin; eklenene kadar kayıp pencere bilinmez ve indirme satırı olmayan ama doğrulama kodu tutan her kayıt INDIRME_KAYDI_YOK ile İncelemede kalır (ret almaz), gösterim kaydı yine kabul edilir.",
+  "n": "I053"
+ },
+ {
+  "from": "D11",
+  "kind": "open_point",
+  "ref": "D11-A13",
+  "text": "Gösterim yarışı ve atlanan satırlar için birkaç saniye sonraki yeniden hesap işi eklensin mi?",
+  "proposal": "contracts.json D11 iş listesine projeksiyon_bekleyen_yeniden_hesapla eklensin: gösterim kaydı ve öğrenci kaydı işlemi yeniden_hesap_bekliyor satırı bıraktığında D14.isGonder ile 5 saniye sonraya, tekillikAnahtari oturum kimliği, kuyruk politikası stately; iş hoca yolunun kilit sırasıyla satırları tamamlar. Kilit düzeni yarışı zaten kapattığından bu iş yalnız kilitli satırın atlandığı nadir durumu saniyeler içinde kapatır; eklenene kadar gece 02:35 güvenlik ağı (projeksiyon_eslestirme_temizle) D07'nin 05:25 işinden önce aynı işi yapar.",
+  "n": "I054"
+ },
+ {
+  "from": "D11",
+  "kind": "open_point",
+  "ref": "D11-A14",
+  "text": "D02 ders sahipliğinin geçmişini anlarıyla verecek mi?",
+  "proposal": "D02.dersGetir DersBilgisi'ne sahiplikGecmisi: readonly { kisiId; baslangicAni: Date; bitisAni: Date | null }[] eklesin (devir işlemi zaten anı biliyor). Bu modül QR, yedek kod, Bluetooth ve gösterim kaydı için önceki sahibi yalnız dilim başı onun bitisAni'sinden önceyse aday sayar, sonrası ANAHTAR_BULUNAMADI. Eklenene kadar oncekiSahipKisiIdleri kullanılır ve önceki sahip eşleşmesi ANAHTAR_IPTAL ile İncelemede kalır: devirden sonra çıkarılan hocanın kodu kendiliğinden Doğrulanmış olmaz, devirden önceki meşru kayıt ret almaz.",
+  "n": "I055"
+ },
+ {
+  "from": "D11",
+  "kind": "open_point",
+  "ref": "D11-A15",
+  "text": "D07 bu modülün sözlüğündeki yeni değerleri ve eşlemeyi üstlenecek mi?",
+  "proposal": "D07 karar.ts'i sınıf ve gerekçe eşlemesini tek başına tutsun (D07-A02) ve iki yeni doğrulama değerini eşlesin: ANAHTAR_ELE_GECIRILDI İncelemede (öneri: yeni gerekçe QR_ANAHTAR_ELE_GECIRILDI, olmazsa QR_ANAHTAR_IPTAL), INDIRME_KAYDI_YOK İncelemede (öneri: QR_ANAHTAR_IPTAL; geçerli kanıt var ama anahtarın verilişi kanıtlanamıyor). Önerilen eşlemenin tamamı Durumlar ve kurallar bölümündeki tabloda; D07'nin testi DOGRULAMA ve GECIKME listelerini içe alıp her değerin eşlendiğini sınasın. Bu modülün sözleşme dosyası dogrulama.ts'i içe aktarmaz.",
+  "n": "I056"
+ },
+ {
+  "from": "D11",
+  "kind": "open_point",
+  "ref": "D11-A17",
+  "text": "Gönderim işleminde bu modülün danışma anahtarları D12'nin işlem başına tek çağrı kuralına nasıl katılır?",
+  "proposal": "D05: yoklama_kaydi ve makbuz_okutmasi işleyicileri parçanın tek danismaKilidi çağrısını yapmadan önce her kayıt için D11.qrKilitAnahtarlari'nı çağırıp dönen anahtarları kendi (oturum, öğrenci) anahtarlarıyla aynı çağrıya katsın; qrKanitiniAyristir bu anahtarların tutulduğunu varsayar. D06: OgeIsleyici'ye isteğe bağlı kilitAnahtarlari(tx, ogeler, baglam) kancası eklensin ve D06 paketin bütün gruplarının anahtarlarını (kendi kurulum anahtarı dahil) toplayıp işlem başına tek çağrı yapsın; bugün her grup kendi çağrısını yaptığından birden çok grup taşıyan pakette D12'nin ikinci çağrı denetimi tetiklenir. Kanca gelene kadar gosterimKaydiOgesi grubunun anahtarlarıyla tek çağrıyı kendisi yapar; kanca gelince aynı anahtar listesini kancadan verir, davranış değişmez. D06'nın beklenenler listesindeki D11 kaydı da isleToplu ve ilkCapaVar: true olarak düzeltilsin (grubun anahtarları tek çağrıda toplanabilsin diye isle yerine isleToplu).",
+  "n": "I057"
+ },
+ {
+  "from": "D12",
+  "kind": "request",
+  "to": "contracts.json",
+  "text": "D12 exports'ta 'veritabani: Drizzle bağlantısı ve havuz' girişi 'veritabani: Veritabani { islem, semaDurumu, kapat, db, havuz } ve Islem tipi' olur; reads_from'a yalnız giriş noktası cli/geri-yukleme için D01 notu. file_ownership'e her modül için apps/server/migrations/??????????????_<belirteç>_* globu (14 haneli UTC önekle sabitlenir; ör. _api_ > D13, _is_kuyrugu_ > D14), klasör kuralı D12'de kalır.",
+  "n": "I058"
+ },
+ {
+  "from": "D12",
+  "kind": "request",
+  "to": "D13",
+  "text": "server.ts ApiBagimliliklari.veritabani'ya Veritabani.db'yi, islem'e Veritabani.islem'i verir; Islem tipi D12'nin index.ts'inden alınabilir (aynı ifade). ApiBagimliliklari.islem secenek'i (saltOkunur, yalitim, zamanAsimiMs, yenidenDene) aynen iletsin. SQLSTATE tablosuna 55P03, 25P03, 57P01, 57P02 ve 08 sınıfı API_SUNUCU_YOGUN olarak eklensin; islem bunları zaten çevirir, tablo ikinci güvencedir. Kök log cause alanındaki { neden, sqlstate, kisit, tablo } bilgisini yazsın. veritabaniEklentisi öneksiz kaydedilsin. Kendi göçündeki hedefsiz ON CONFLICT DO NOTHING hedefli yazılsın.",
+  "n": "I059"
+ },
+ {
+  "from": "D12",
+  "kind": "request",
+  "to": "D14",
+  "text": "isKuyruguKur Veritabani'nın db alanıyla fromDrizzle(veritabani.db, sql) kurar, gerekirse havuz.query'yi kullanır. worker.ts, yoklama_saklama girişiyle havuz 1 olan ikinci bir Veritabani kurup veritabaniIsleri'ne saklamaVeritabani olarak versin ve döndürülen öğeleri isTanimla'dan geçirsin. pgboss yetkilerinin tamamı kur adımında kalsın (D12 yalnız şema USAGE verir). epostaSiniriDenetle adres kilidini danismaKilidi ile alsın ve çağıranın ek anahtarlarını aynı çağrıya katacak seçenek sunsun. Çizelgede gecelik_pg_dump 02:15, pgbackrest_dogrulama çarşamba 01:30 olarak D12'den aynen alınsın.",
+  "n": "I060"
+ },
+ {
+  "from": "D12",
+  "kind": "request",
+  "to": "D15",
+  "text": "compose.yaml'da goc servisine veritabani ağında ipv4_address 172.30.12.20; işçiye ve göç servisine yoklama_saklama_parolasi sırrı. compose.gelistirme.yaml geliştirme komutuna eklensin (sunucuya kopyalanmaz). Yayın akışında göç eski işçi açıkken çalışır; merdiven bunu karşılar, akış metnine not. isletim.yedek_eski kuralında pgbackrest_tam_yedek'in eşiği 8 gün (haftalık), atlandi sonucu sonBasariAni taşındığı için eskime kuralına düşer. Biome yapılandırmasına infra/veritabani/kurallar/*.grit eklentileri.",
+  "n": "I061"
+ },
+ {
+  "from": "D12",
+  "kind": "request",
+  "to": "D01",
+  "text": "Her kimlik olayı (hesap_silindi, giris_oturumu_kapandi, cihaz_kapandi, hesap_durumu_degisti) yalnız iç kimlik, olay türü ve anla yapısal log satırı olarak da yazılsın; cli/geri-yukleme iptaller bunu okur. kimlik.kisi_bagi sınıfının işleyicisi (ogrenci_hesaplari'nda numara ve isim) yoklama_saklama ile yazılsın.",
+  "n": "I062"
+ },
+ {
+  "from": "D12",
+  "kind": "request",
+  "to": "D02",
+  "text": "Kısıt adları kisitAdi'nın ek biçimine geçsin (oturumlar_ders_id_tarih_deneme_uq, oturumlar_degismez_tg). Bölme yapıldığında dönem açılırken donemBolumuAc çağrılsın.",
+  "n": "I063"
+ },
+ {
+  "from": "D12",
+  "kind": "request",
+  "to": "D04, D05, D06, D07, D08, D09, D10, D11, D03",
+  "text": "Saklama işleyicileri SAKLAMA_VERI_SINIFLARI'ndaki kendi sınıflarıyla kaydolsun (ör. saat.donem_verisi, yoklama.donem_verisi, esitleme.donem_verisi, raporlar.donem_verisi); 'yoklama_kayitlari', 'hesap_silme' ve 'aksis_ozet_anliklari' gibi öneksiz adlar kalksın. İşleyiciler 'sahip rolle' değil yoklama_saklama ile çalışır ve saklamaIsleyicisiniCalistir ile bugün denenir. Gönderim paketi gibi çok kaynaklı işlemlerde danışma anahtarları önceden toplanıp tek çağrıda alınsın (D06 öğe işleyicisi kaydına anahtar bildirimi).",
+  "n": "I064"
+ },
+ {
+  "from": "D12",
+  "kind": "request",
+  "to": "D05, D07, D08, D11",
+  "text": "Zaman sütun adları kurala uysun: telefon_saati ve hoca_telefon_saati (D05, D11), hesaplandigi_an ve an (D08) _ani sonekli olsun (ör. telefon_ani, hesaplanma_ani); D07'nin ani sütunu kurala uyar. Hassasiyet tabloYardimcilari.an ile 3.",
+  "n": "I065"
+ },
+ {
+  "from": "D12",
+  "kind": "request",
+  "to": "D06",
+  "text": "Hesaba bağlı satırları silme D01'in hesap_silindi kimlik olayı dinleyicisiyle yapılsın (saklama sınıfı değil). degisiklik_sayaci satırı göçte değil ilk kullanımda INSERT ... ON CONFLICT (id) DO NOTHING ile açılsın.",
+  "n": "I066"
+ },
+ {
+  "from": "D12",
+  "kind": "request",
+  "to": "D08, D10",
+  "text": "dersSonuclari, sonucuDegistirebilirMi, karar bekleyenler, rapor uçları ve anlık yazımı islem'i yalitim: 'repeatable_read' ile açsın; çağrılan işlev current_setting('transaction_isolation') ile denetleyebilir.",
+  "n": "I067"
+ },
+ {
+  "from": "D13",
+  "kind": "open_point",
+  "ref": "D13-A04",
+  "text": "D12 geçici veritabanı hatalarını hangi kodla ve bekleme kuralıyla bildirir, süre bütçesine nasıl uyar?",
+  "proposal": "D12'nin islem'i packages/contracts/src/ortak/hata.ts GECICI_SQLSTATELER sabitini kullansın ve türü kendi koduna çevirsin: kilitlenme (40P01 ve 40001 bir yeniden denemeden sonra, 55P03) VERITABANI_KILITLENME, havuz (53300 ve 2 saniyelik havuz beklemesi) VERITABANI_HAVUZ_DOLU, erişilemez (57P01, 57P02, 57P03, 25P03, 08 sınıfı) VERITABANI_ERISILEMEZ, zaman aşımı (57014) VERITABANI_ZAMAN_ASIMI; bunlar ve VERITABANI_NESIL_BELIRSIZ http 503 ve bekleme { aralik: [15, 45] } ile yazılsın (veritabanı hatası eşlemesi tablosu; iki belgede aynı, kaynak tek sabit). Bu kodlar ortukKodlar'a girer, rotalar yazmaz. İşletim kodları (VERITABANI_YEDEK_BASARISIZ, VERITABANI_GOC_KILIT_ZAMAN_ASIMI gibi) http null yazılsın. islem'in zamanAsimiMs üst sınırı agir rotalarda 15000 olsun ve kalanSureMs ile küçülsün; D12-B06'daki 'Fastify'ın 25 saniyelik istek süresi' cümlesi 'D13'ün 20 saniyelik işleyici bütçesi' olarak düzeltilsin (D13-B26). Yapılmazsa ham SQLSTATE kök yakalayıcıda 503 API_SUNUCU_YOGUN olur: telefon yine bekler ama hata kodundan neden ayırt edilemez.",
+  "n": "I068"
+ },
+ {
+  "from": "D13",
+  "kind": "open_point",
+  "ref": "D13-A05",
+  "text": "D15 tarafında hangi eşleşmeler gerekiyor?",
+  "proposal": "Ayar şemasına PANEL_ADRESI (Origin karşılaştırması), GUVENILEN_VEKIL_ADRESI (trustProxy, Caddy'nin sabit iç adresi), YAYIN_BILGISI_YOLU ve under-pressure eşikleri (olay döngüsü gecikmesi milisaniye, kullanım binde tam sayı, kap sınırının altında bellek bayt) eklensin. server.ts 5. adımda uygulamaKur({ surec: 'api', ayarlar, log, veritabani, islem, saat, isKuyrugu, eposta }) çağırıp sonra listen etsin; test dünyası aynı kurucuyu deneme seçenekleriyle çağırsın. İşletim modülünün /health/live ve /v1/durum tanımları baskiDisi: true taşısın (aşırı yükte de cevap versinler, teknik.html#sunucu-ayarlar); ISLETIM_KAPANIYOR'un bekleme kuralı yazılsın (öneri { sabit: 5 }); süreç düzeyindeki ISLETIM_ kodları http null. Caddy'de istek gövdesi sınırı 2 MiB'tan büyük, response_header_timeout 25 saniye, üst akış boşta bağlantı süresi 72 saniyeden kısa olsun; yük dağıtımında X-Kurulum-Kimligi başlığının özeti, başlık yoksa (girişten önce) istemci adresi kullanılsın (D15-B42). Yayın akışı yayin-bilgisi.json'u artan sira ve iosDagitimTurleri dahil üretip imaja koysun. Telefon yayın iş akışı ikiliyi yalnız sozlesme işinin etiket kipi o etikette yeşilken derlesin. Eski sürüm istek örnekleri (D15-B32) gönderim ve hepSurumYollari örneklerini bütün saklı sürümler için oynatsın. packages/contracts imajda tsconfig.build.json ile derlensin; imaj açılış denetimi derlenmiş paketi koşulsuz içe aktarsın; geliştirme ve testte node --conditions=kaynak kullanılsın. dependency-cruiser no-circular kuralı yapılandırmada kalsın. Ortak test kancası her cevabı beyan edilen durumun şemasıyla, her 4xx ve 5xx gövdesini hataZarfiSemasi ile denetlesin; yük testi hız sınıfı değerlerini HIZ_SINIFLARI'ndan alıp ölçsün.",
+  "n": "I069"
+ },
+ {
+  "from": "D13",
+  "kind": "open_point",
+  "ref": "D13-A07",
+  "text": "Bütün modüllerin uyması gereken birleşim kuralları contracts.json'a işlenecek mi?",
+  "proposal": "Evet: her modülün index.ts'i eklenti adlı bir Fastify eklentisi ve EklentiTemelSecenekleri'ni ({ surec }) genişleten seçenek tipini dışa verir; eklenti ihtiyaç duyduğu altyapıyı seçenekten alır, kayıt sırasında veritabanına dokunmaz, zamanlayıcıyı yalnız surec api'de kurar, dinleyici kayıtlarını her süreçte yapar. Rotalar yalnız rotalariKaydet ile kaydedilir; modüller setErrorHandler ve setNotFoundHandler kullanmaz. D01'in oturumDogrula işlevi OturumGirdisi alır ve OturumSonucu döner (fırlatırsa app.ts çevirir), giriş ucunda çerezi yalnız istek.panelden true iken kurar; D06 ve D11 kimlikKancasi ile istek.kimlik'i yazar. Kod öneki modül adının büyük harfidir (LISTE_ değil LISTELER_); kaynak düzeyi red 404 <MODÜL>_BULUNAMADI (D01-B49'daki kaynak_disi 403 yerine). __Host- öneki Path=/ istediğinden projeksiyon çerezi panel çerezinden adla ayrılır (D11-B06'daki ayrı yol yerine). Dört iki yönlü çift iki yönlü çiftler tablosundaki gibi bağlanır: ters yön öbür modülün index.ts'ini içe aktarmaz, app.ts işlevi eklenti seçeneğiyle verir. İskelet adımında her modül kendi boş sözleşme dosyasını açar, rotalar.ts ve hatalar.ts bir kez yazılır.",
+  "n": "I070"
+ },
+ {
+  "from": "D13",
+  "kind": "open_point",
+  "ref": "D13-A08",
+  "text": "Bu tasarımla öteki modüllerin belgelerinde hangi eşleşmeler gerekiyor?",
+  "proposal": "D01: oturumDogrula ortak Kimlik tipini döndürsün (girisOturumuId, oturumKapsami, kaynak, roller [{rol, kapsamBirimId}], incelemeHesabi); 'hizSinifi girisli' yerine oturum; DEGISIM_BEKLEYEN_ROTALARI'ndaki dört rotada degisimBekleyenKabul: true; POST /v1/kimlik/giris ve POST /v1/kimlik/cihaz-degisimi kimlik [girissiz, oturum] ve hiz { kimliksiz: 'girissiz', kimlikli: 'oturum' }; öğrencinin girişsiz uçlarında kitle: 'ogrenci'; rota düzeyindeki rol reddi API_ROL_YETKISIZ, yetkiDenetle modül içi kapsam için; oturum çerezinin adı CEREZLER'deki __Host-yoklama-oturum. D02: dersYetkisi OturumKisisi yerine Kimlik alsın; beklenen sürüm ortak beklenenSurumNoSemasi'ndan; POST /v1/dersler durumlar [201, 200]. D04: POST /v1/saat/belge hiz saat, kimlik [oturum], kimlikKaynaklari ['bearer']; SAAT_ESITLEME_BOZUK bekleme { sabit: 60 }; belge ucu özneyi app.ts'in verdiği saatOznesiKur'dan alsın. D06: gönderim kimliği ['cihazImzasi', 'oturum'] (tireli yazım değil), hiz gonderim (anahtar doğrulanmış cihaz, yoksa giriş oturumu; X-Kurulum-Kimligi değil); GET /v1/esitleme/degisiklikler defterYazar: true ve kimlikKaynaklari ['bearer']; işleme bütçesi 25 yerine kalanSureMs ile 20 saniye; kısıtlı oturum oturumHatasi KIMLIK_KAPSAM_SINIRLI ile oturumsuz sayılır; ESITLEME_KURULUM_MESGUL bekleme { sabit: 5 }; ikinciCapa imzaliMetinSemasi ile. D04, D05, D07, D09, D11, D15: kuyruk öğesi gövde şemalarını ogeTuruTanimla ile kendi sözleşme dosyasında dışa versinler. D07: modules/dogrulama/yayin-bilgisi.ts okuyucusunu ve yayinBilgisiYolu ayarını silsin, yalnız yayinBilgisi() kullansın. D09: 200'ü aşan öğe 413 yerine 400 API_ISTEK_GECERSIZ. D10: /v1/raporlar/ rotaları hiz agir; POST /v1/raporlar/subeler/{subeId}/aksis-ozeti/ciktilar durumlar [201, 200]; deyim süresi min(15000, kalanSureMs). D11: PROJEKSIYON_DENEME_SINIRI bekleme 'cagiran', PROJEKSIYON_YENI_TARAYICI_SINIRI { sabit: 60 }; projeksiyon rotaları kimlikKancasi ile; POST /v1/projeksiyon/onay durumlar [201, 200]. D14: worker.ts uygulamaKur({ surec: 'isci' }) çağırsın ve yayinBilgisiYukle'yi ayrıca çağırmasın; IS_KUYRUGU_ kodları http null. D12 için D13-A04, D15 için D13-A05.",
+  "n": "I071"
+ },
+ {
+  "from": "D13",
+  "kind": "open_point",
+  "ref": "D13-A09",
+  "text": "İki CI betiği apps/server/src/jobs/api/ altında mı kalmalı?",
+  "proposal": "Hayır: teknik.html#kod jobs/'ı iş kuyruğu görevleri diye tanımlıyor ve jobs/api/index.ts yalnız bu yerleşim yüzünden worker.ts'e boş liste veriyor. openapi-belgesi-sakla.ts ve oasdiff-kirilma-denetimi.ts apps/server/scripts/api/ altına taşınsın, jobs/api/index.ts kaldırılsın. Bu, contracts.json dosya haritasına apps/server/scripts/api/* globunun D13 adına eklenmesini istiyor (mimarın haritası; D13 kendi belgesinde ekleyemez, harita dışı dosya planlanamaz). Glob eklenene kadar betikler bugünkü yerinde kalır.",
+  "n": "I072"
+ },
+ {
+  "from": "D14",
+  "kind": "request",
+  "to": "D01",
+  "text": "Kod (giris), başvuru kodu, başvuru silme kodu (basvuru_silme_kodu) ve onay bekliyor e-postasından önce, kod üretmeden ve adresle ilgili başka kilitten önce, kendi READ COMMITTED işleminde epostaSiniriDenetle(tx, normalAdres, tur); izin yoksa kod üretmez, cevap aynı. İşlem bitip cevap gittikten sonra (onResponse) epostaGonder; giris_bildirimi BASARISIZ dönerse D09.denetimeYaz ile bildirim_gonderilemedi. Adres D01'in tek normalleştirme fonksiyonundan geçmiş olur. Cihaz etiketi tarayıcı ya da telefon ailesi ve işletim sisteminden oluşan sabit listeden üretilir. inceleme_hesaplari_kurulumu tanımına acilistaBirKez: true (yayında bir kez).",
+  "n": "I073"
+ },
+ {
+  "from": "D14",
+  "kind": "request",
+  "to": "İş sahibi modüller",
+  "text": "Her pg-boss işi jobs/<modül>/index.ts'teki export const isler dizisinde isTanimla ile; kuyruk sözleşmesi modules/<ad>/ içinde KuyrukTanimi nesnesi; zamanlama çizelge kurallarına uyar; her işin 'aynı veriyle iki kez çalışırsa' senaryosu D14'ün adımıyla yazılır. Çok işli kuyruk partiIsleyici ve parti ayarıyla; zamanlamalı iş ölçüsünü çıktı şemasıyla döndürebilir.",
+  "n": "I074"
+ },
+ {
+  "from": "D14",
+  "kind": "request",
+  "to": "D12",
+  "text": "PostgreSQL timezone 'UTC'; yoklama_sahip, yoklama_api, yoklama_isci rolleri; db:migrate sırası Drizzle göçleri, pg-boss migrate, worker.ts kur; test sıfırlaması pgboss şemasına yalnız D14'ün isKuyrugunuBosalt'ı (deleteAllJobs) üzerinden dokunur; eposta_gonderimleri göçü tabloYardimcilari ile ve tablo haritası denetiminden geçer; veritabaniIsleri tanımına isteğe bağlı sureAsimiSaniye (yoksa D14 1.800 saniye kullanır); bağlantı bütçesinde işçi satırı 'pg-boss 2 + Drizzle 3, Drizzle'ın 2'si devam_hesapla partileri'.",
+  "n": "I075"
+ },
+ {
+  "from": "D14",
+  "kind": "request",
+  "to": "D13",
+  "text": "app.ts kurucusu dinleme açmadan ve süreç türüyle (api ya da isci) çağrılabilsin; yalnız API'de çalışacak zamanlayıcılar bunu okusun. IS_KUYRUGU_HATA_KODLARI hataKodlariTanimla biçiminde (http 500, genel metin) hatalar.ts birleştirmesine girsin.",
+  "n": "I076"
+ },
+ {
+  "from": "D14",
+  "kind": "request",
+  "to": "D15",
+  "text": "compose.yaml: API, işçi ve göç kaplarında TZ=UTC; işçide stop_grace_period 40 saniye; smtp_parolasi ve eposta_ozeti anahtarı API kopyalarına ve işçiye koşulsuz (işçi isletim_uyarisi ve isletim_ozeti gönderir; e-posta ayarı eksikse işçi açılmaz). apps/server/package.json: pg-boss 12 tam sabit (en az 12.36.0), nodemailer tam sabit, cron-parser tam sabit (pg-boss'un kullandığı sürüm), tlds tam sabit (bağlantı denetiminin IANA listesi); db:migrate'e kur adımı. Biome noRestrictedImports: pg-boss ve nodemailer yalnız infra/is-kuyrugu ve infra/eposta içinde. Ayar şeması: EPOSTA_SMTP_SUNUCU, EPOSTA_SMTP_PORT, EPOSTA_SMTP_GUVENLIK, EPOSTA_SMTP_KULLANICI, EPOSTA_GONDEREN_ADRES, EPOSTA_GONDEREN_AD, EPOSTA_URUN_ADI, EPOSTA_GUNLUK_SINIR, işçi ve sahip bağlantı adresleri. server.ts açılışta isKuyruguKur({ rol: 'api', saat }) ve epostaKur({ saat, ... })'u app.ts'ten önce çağırır; saat D04'ün Saat nesnesidir, uyarlayıcı gerekmez; kapanış sırası app.close, eposta.kapat(10 sn), iş kuyruğu durdur, havuz kapat. Bağlantı bütçesi satırı: işçi 5 = pg-boss 2 + Drizzle 3, Drizzle'ın 2'si devam_hesapla partileri. isletim.devam_tutarlilik_farki kuralı IsSagligi'nda devam_tutarlilik_denetimi kuyruğunun zamanlama.sonCikti.farkSayisi > 0 koşulunu okur; haftalık özet isletim_ozeti türüyle gider. Test dünyası kancası her senaryodan önce isKuyrugunuBosalt'ı çağırır.",
+  "n": "I077"
+ },
+ {
+  "from": "D14",
+  "kind": "request",
+  "to": "D08",
+  "text": "devam_hesapla tanımı partiIsleyici ve parti { boyut: 50, esZamanli: 2 } ile, sureAsimiSaniye bütün parti için; devam_tutarlilik_denetimi kuyruğuna çıktı şeması { dersSayisi, ogrenciSayisi, farkSayisi: açık sınırlı z.int; farkTurleri: z.enum dizisi } ve işleyici bu nesneyi döndürür; çizelge kuralı gereği 04:10 yerine 03:00-05:00 dışında bir saat (D14 önerisi 05:35, D09'un sıralamasından önce).",
+  "n": "I078"
+ },
+ {
+  "from": "D14",
+  "kind": "request",
+  "to": "Mimari (contracts.json)",
+  "text": "D14 dış yüz satırı 'epostaSiniriDenetle(tx, adres, tur)' olsun (adresOzeti değil; özet D14 içinde hesaplanır); D14 reads_from listesine D04 (Saat tipi) ve D13 (istek kimliği, hataKodlariTanimla) eklensin; worker.ts bileşim kökü olarak D15'i (ayarlariYukle, logOlustur, gizliAnahtar, isletimIsleri), D13'ü (app.ts kurucusu, yayinBilgisiYukle) ve D12'yi (veritabaniKur, veritabaniIsleri) bağlar. Dosya haritasına apps/server/test/support/is-kuyrugu* D14'e eklenirse destek.ts oraya taşınır.",
+  "n": "I079"
+ },
+ {
+  "from": "D15",
+  "kind": "open_point",
+  "ref": "D15-A12",
+  "text": "contracts.json ve dosya haritasına hangi eklemeler gerekiyor (mimari kararı)?",
+  "proposal": "Hepsi yalnız ekleme: (1) D15 dış yüzüne gizliAnahtarSeti, logOlustur, ayarlariYukle, isletimEklentisi, isletimIsleri, kimlikOlayiDinleyicisi, kapanisiBaslat, TestDunyasi ve kurucuTanimla; telefonSayaciOgesi D06'nın işleyici biçiminde, hesapSilindiMi ve saatle kurulan işlev olarak. (2) D15'in okuduklarına bileşim kökü yoluyla D01 (kimlikOlayiDinleyicisiKaydet, oturumlariKapat; D01-A14; hesapSilindiMi okuyucusu), D03 (LISTELER_GIZLI_ALANLAR, sözleşme sabiti), D04 (saat arayüzü simdi ve test saati) ve D07 (yenidenDegerlendir, yalnız anahtar-uret ele-gecirildi) eklensin; infra/izleme bunları içe aktarmaz. (3) D14: IsSagligi zamanlama girdisine sonCikti (son tamamlanan işin küçük çıktısı; D08 tutarlılık kuralı ve D15'in ret kodu su seviyesi için), isTanimla uyarlamasında isle'nin döndürdüğü nesnenin iş çıktısı olarak yazılması, isletim_ozeti e-posta türü, deleteAllJobs test yardımcısı, worker.ts'in isletimIsleri(bag)'i isTanimla'ya uyarlaması, çizelgede ota_yayin_denetimi'nin çıkması, haftalik_olcum_ozeti 07:10, sertifika_bitis_denetimi 06:35, gunluk_log_arsivi makinede 03:15. (4) D06: PaketBaglami'na alan eklenmez (önceki hesapSilinmis isteği geri çekildi); silinmiş hesap D01 okuyucusuyla app.ts'ten denetlenir. (5) D07: KID_BILINMIYOR için 'anahtar emekli' gerekçesi; YenidenSuzgec'e belgeKid ({ amac: 'saat_belgesi' | 'qr_anahtar_kaynagi'; kid }) ve YenidenNeden'e anahtar_ele_gecirildi. (6) D12: olcum_ önekli görünüm göçleri D15'indir ve başka tabloları okuyabilir (göç sahiplik denetimi istisnası), durum dosyası dizini /var/lib/iu-yoklama/durum/veritabani işçiye /durum/veritabani salt okunur bağlanır, YedekIsDurumu alanları ve geri yükleme denemesinde xprem ana anahtarı (istekler tablosu). (7) D01: hesapSilindiMi(tx, kisiId) okuyucusu (kişi satırını FOR SHARE ile okur); inceleme_hesaplari_kurulumu sabit kodun varlığını kimlik.incelemeSabitKoduVar'dan okur. (8) D13: app.ts kurucusuna olcumYazici seçeneği (varsayılan false, yalnız server.ts true); isletimEklentisi'ne D01'in hesapSilindiMi'si ve D12'nin danismaKilidi'si; derslerEklentisi'ne ve D11 eklentisine ayarlar().asama2.qrAcik ve ayarlar().projeksiyon. (9) Dosya haritası: .node-version ve kök .gitignore D15'e; makine tarafı betikler için docker/isletim/* (bugün infra/izleme/makine altında); olay komutları için apps/server/src/cli/olay* (bugün anahtar-uret alt komutu ve makine/anahtar.sh).",
+  "n": "I080"
+ },
+ {
+  "from": "D15",
+  "kind": "request",
+  "to": "D13",
+  "text": "app.ts isletimEklentisi'ni rotalariKaydet, D06.ogeTuruKaydet, D01.kimlikOlayiDinleyicisiKaydet, D01'in hesapSilindiMi okuyucusu, D12.danismaKilidi, veritabani, saat ve surec ile kaydeder; app.ts kurucusu olcumYazici seçeneğini (varsayılan false) alıp eklentiye geçirir, yalnız server.ts true verir, test dünyası ve openapi_belgesi_sakla vermez; logger olarak D15'in log'unu (logOlustur sonucu) verir; apiKur ayarlarını D15 ayarlarından eşler (panelAdresi, baski, guvenilenVekilAdresi, yayinBilgisiYolu); derslerEklentisi'ne qrDersAyariAcik olarak ve D11 eklentisine ayarlar().asama2.qrAcik ile ayarlar().projeksiyon'u verir.",
+  "n": "I081"
+ },
+ {
+  "from": "D15",
+  "kind": "request",
+  "to": "D14",
+  "text": "worker.ts: ayarlariYukle({ surec: 'isci' }), logOlustur, isletimIsleri(bag) tanımlarını isTanimla'ya uyarlar ve isle'nin döndürdüğü küçük nesneyi iş çıktısı olarak yazar; IsSagligi zamanlama girdisine sonCikti (isletim_denetimi'nin retSuSeviyesi dahil); isletim_ozeti e-posta türü; testte deleteAllJobs yardımcısı; çizelge güncellemesi (D15-A12).",
+  "n": "I082"
+ },
+ {
+  "from": "D15",
+  "kind": "request",
+  "to": "D12",
+  "text": "olcum_ önekli görünüm göçleri D15 adıyla (<UTC>_isletim_<açıklama>) ve başka tabloları okuyabilir; yoklama_isci pg_monitor üyesi (kararlı); YedekIsDurumu dosyası her makine işi için /var/lib/iu-yoklama/durum/veritabani/<iş adı>.json (gecelik_pg_dump, xprem_birimi_yedegi, pgbackrest_tam_yedek, pgbackrest_fark_yedek, pgbackrest_dogrulama, geri_yukleme_denemesi) ve şemada son sonuç ile son başarı ayrı: { bicim, is, sonCalismaAni, sonSonuc: basarili | basarisiz | atlandi, sonBasariAni | null, ardisikAtlanan, hataKodu | null }; geri_yukleme_denemesi xprem ana anahtarını canlı env dosyasından değil, son döndürmede çevrimdışı arşivden çıkarılıp ayrı dosyaya (/opt/iu-yoklama/deneme/xprem-ana-anahtar, 0400) konan kopyadan alsın, böylece 'xprem güncellemesi iniyor' adımı yedekteki anahtarı da sınar; D12'nin systemd zamanlayıcıları da OnCalendar'da Europe/Istanbul'u açıkça yazsın (makinenin saat dilimi varsayılmaz).",
+  "n": "I083"
+ },
+ {
+  "from": "D15",
+  "kind": "request",
+  "to": "D06",
+  "text": "PaketBaglami'na alan gerekmez (önceki hesapSilinmis isteği geri çekildi; silinmiş hesap D01 okuyucusuyla denetlenir); telefon_sayaci için govdeEnBuyukBayt 49152 ve ilkCapaVar false.",
+  "n": "I084"
+ },
+ {
+  "from": "D15",
+  "kind": "request",
+  "to": "D01",
+  "text": "kimlikOlayiDinleyicisiKaydet ve oturumlariKapat dış yüzleri (D01-A14); hesapSilindiMi(tx, kisiId): Promise<boolean> okuyucusu (kisiler satırını FOR SHARE ile okur, silinme_ani doluysa true; hesabiSil aynı satırı güncellediğinden eşzamanlı öğe işlemiyle sıralanır); inceleme_hesaplari_kurulumu işçide sabit kodun varlığını ayarlar().kimlik.incelemeSabitKoduVar'dan okusun (işçide değer yoktur; bu seçim D01 iş tanımına yazılsın); olcum_telefonda_kayip cihazlar.kapanma_nedeni, kapanma_ani, platform ve kisiler.silinme_ani sütunlarını okur, kaldırılacaksa önce görünüm güncellenir.",
+  "n": "I085"
+ },
+ {
+  "from": "D15",
+  "kind": "request",
+  "to": "D07",
+  "text": "KID_BILINMIYOR için 'anahtar emekli' gerekçesi; iptal listesi ve App Attest yenileme uyarılarında uyariAc türleri dogrulama.* önekiyle; yenidenDegerlendir süzgecine belgeKid ({ amac: 'saat_belgesi' | 'qr_anahtar_kaynagi'; kid }) ve nedenlere anahtar_ele_gecirildi (anahtar-uret ele-gecirildi'nin son adımı, şüphe anından işaret anına kadar ulaşan kayıtlar); olcum_isaretsiz_kabul ve olcum_kafa_sayisi_asimi oturum_isaretleri.gecerli ve kesinlesti_ani sütunlarını okur.",
+  "n": "I086"
+ },
+ {
+  "from": "D15",
+  "kind": "request",
+  "to": "D09",
+  "text": "olcum_telefonda_kayip duzeltmeler.tur, sebep_kodu ve olusturma_ani sütunlarını okur (BEYANA_DAYALI sayısı); sütunlar ya da sebep kodu adı değişecekse önce görünüm güncellenir.",
+  "n": "I087"
+ },
+ {
+  "from": "D15",
+  "kind": "request",
+  "to": "D11",
+  "text": "Ders çıkışı yük testindeki projeksiyon senaryosu D15'in dosyasındadır (apps/server/test/yuk/ortak/kursu.ts, ders-cikisi.ts); D11 kürsü tarayıcısını eşleştiren kurucuyu (support/kurucular) ve kodlar ucunun istek biçimini verir. Ayarlar'daki projeksiyon bölümü ve ASAMA2_QR_ACIK D15'te hazır.",
+  "n": "I088"
+ },
+ {
+  "from": "D15",
+  "kind": "request",
+  "to": "D05",
+  "text": "olcum_ görünümleri ilk_kesin_karar, etiket_* ve hesaplanan_ani sütunlarını okur; bu sütunlar kaldırılacaksa önce görünüm güncellenir (önce genişlet, sonra daralt).",
+  "n": "I089"
+ },
+ {
+  "from": "D15",
+  "kind": "request",
+  "to": "Telefon uygulaması (harita dışı)",
+  "text": "telefon_sayaci gövde kuralları (gün yalnız sözleşmedeki gunAtlanirMi true dönünce gönderilmez; haftada en az bir paket; çok oturumlu ekranda eşit bölme; 60 saniye boşta durma); her uygulama yayınında eski sürüm istek örnekleri (D15-B32).",
+  "n": "I090"
+ },
+ {
+  "from": "D15",
+  "kind": "request",
+  "to": "Panel (harita dışı)",
+  "text": "Ekran süreleri birikmiş toplamla, en çok 5 dakikada bir ve sayfa gizlenirken; istemciKimligi yerel depoda.",
+  "n": "I091"
+ },
+ {
+  "from": "D02",
+  "kind": "fixer_note",
+  "text": "Partial (OturumUretimOlayi ordering finding): event frozen in packages/contracts with ISO string instants, dersId, durum and onceki per item, and listeners must not call surumAl. But listeners are called after D02's rows and before the audit row and isGonder, not after them as the finding asked, so the shared order rows, queue, counter (D03-A10) holds. The single version reaches listeners through an olay.surumleDamgala callback after D02's one surumAl, not as an event field. D04 must adapt pencereleriHesapla (open point D02-A16).",
+  "n": "I092"
+ },
+ {
+  "from": "D02",
+  "kind": "fixer_note",
+  "text": "Partial (cancel, past start and overlap finding, item b): PATCH that moves a not-started session to a start at or before now is rejected with DERSLER_OTURUM_BASLAMIS as asked. A weekly program PUT instead leaves that session untouched with warning BUGUNKU_OTURUM_KORUNDU rather than rejecting the whole save. Items a and c are fixed as specified.",
+  "n": "I093"
+ },
+ {
+  "from": "D02",
+  "kind": "fixer_note",
+  "text": "Partial (D06 finding asking D02 to register both student and staff KapsamKaynagi): D02 registers only KapsamKaynagi('PERSONEL'). D06's own exports name D03 as owner of the OGRENCI scope source, and the D02-origin finding agrees, so the student source stays with D03 (open point D02-A18). All other parts are fixed: rows only in (surumden, surumeKadar], kapsamdanCikti and the 'surume bakilmadan' path removed, the passive-row test now asserts the course stays on the phone.",
+  "n": "I094"
+ },
+ {
+  "from": "D03",
+  "kind": "fixer_note",
+  "text": "Nothing is left unfixed on D03's side. The items below are D03 work that still waits on another module, logged as open points because I could only edit D03's own two files.",
+  "n": "I095"
+ },
+ {
+  "from": "D03",
+  "kind": "fixer_note",
+  "text": "D03-A07: contracts.json and other specs still need additive changes: D03 exports denemeListesiniKur and ogrencininSatirlari plus the new muafIsaretle signature; D02 listeKaynagiKaydet added to contracts.json; a kilitle:'paylasimli' option (FOR SHARE) on D02 subeGetir and dersGetir, with D02's passivate and archive paths taking FOR UPDATE first; the D02 dersGetir note about sahipAtamaSurumu removed; and D01-B19's matching rule aligned. Until D02 adds the FOR SHARE option, the race where a section is made passive while a list upload commits stays open on D02's side.",
+  "n": "I096"
+ },
+ {
+  "from": "D03",
+  "kind": "fixer_note",
+  "text": "D03-A09: D03 now registers the student scope source 'ogrenci_liste_kapsami', which matches D06's current spec. D06's finding prefers D02 as the owner, so the integrator has to choose one. A student's name only reaches the phone after confirmation if D06 adds the confirmation state to the cursor's account hash. D03 has no access to confirmation state.",
+  "n": "I097"
+ },
+ {
+  "from": "D03",
+  "kind": "fixer_note",
+  "text": "D03-A11: the listener adapters live in other modules. D01 must match only the numbers in the change, or it hits D03's new internal-error guard. D07 must add LISTE_DEGISTI and move KARAR to a queued job. D08 must use the reason 'LISTE'.",
+  "n": "I098"
+ },
+ {
+  "from": "D03",
+  "kind": "fixer_note",
+  "text": "F15 (D13 2,000-row cap): passive rows are paged through a query parameter (bolum=PASIF with imlec and adet) on the existing GET, not through a separate pasif-satirlar endpoint. The validator requires D03's endpoint set to match contracts.json exactly, so a new endpoint would fail it.",
+  "n": "I099"
+ },
+ {
+  "from": "D07",
+  "kind": "fixer_note",
+  "text": "Partly outside D07's two files, so recorded as alignment open points instead of edited: contracts.json changes (add D04 pencereDegistiDinleyicisiKaydet; update the D07 export rows to dogrulamaDegeriniTuket(tx, deger, ...) and kafaSayisiOgesi(tx, oge, baglam)) are in D07-A05 and D07-A11. Counterpart changes in other modules are also listed there: D01 exclusive teyit lock and neden 'onay_alani' (A07); D03 liste lock and the uyelikDenetle wording (A10); D04 ulasmaAnlariGuvenilir in kesintiAraliklari (A05); D05 karar_surumu, tekrarDene mapping, once-per-student version bump and oncekiSiniflar (A04); D09 call shape, KARAR_OLAYLARI and upfront sorted pair locks (A11); D12 try-shared lock mode (A11); D13 iosDagitimTurleri and D15 CI baslangic rule plus catalog entries (A06); D14 dropping the 05:15 row (A11); D11 Doğrulanmış note (A08).",
+  "n": "I100"
+ },
+ {
+  "from": "D07",
+  "kind": "fixer_note",
+  "text": "Three deliberate deviations from a suggested fix, each with its reason written into the spec. Context race (D07-B32): kararHesapla tries pg_try_advisory_xact_lock_shared and does not wait. If it cannot get the lock it returns TEKRAR_DENE, because a blocking shared lock taken after the pair lock would deadlock with the teyit writer. App Attest renewal alert (D07-B28): it is counted inside the renewal transaction, not in a nightly job. iOS 27 audit dedupe: one event per change of the value stored on the device row, which is stricter than once per (device, value, day).",
+  "n": "I101"
+ },
+ {
+  "from": "D08",
+  "kind": "fixer_note",
+  "text": "MEDIUM yonetim path (PUT /v1/devam/dersler/{dersId}/oranlar -> /v1/devam/yonetim/dersler/{dersId}/oranlar): contracts.json owns_endpoints still lists the old path and spec-validate.js rejects any spec endpoint not in it, so the path cannot change in D08's own two files. Recorded as open point D08-A14 (architect updates contracts.json owns_endpoints, the 'Oran ve muaf' decision text and D02.oranlariYaz purpose); the endpoint auth text points to it.",
+  "n": "I102"
+ },
+ {
+  "from": "D08",
+  "kind": "fixer_note",
+  "text": "MEDIUM D01 missing from contracts.json D08.reads_from: the D08 side is done (D08-A07 names ogrenciHesabiGetir({ numaralar }) as the single batch call for job, live endpoints and dersSonuclari, { kisiId } only for the student's own download and ogrenciDevamDurumu; 'Okuduğu dış yüzler' lists D01). Adding D01 to reads_from is a contracts.json edit for the architect before the breakdown stage.",
+  "n": "I103"
+ },
+ {
+  "from": "D09",
+  "kind": "fixer_note",
+  "text": "DEVIATION (addressed differently, validator-bound): the job-header fix asked for a new table gunluk_inceleme_partisi_basliklari, but spec-validate rejects tables not owned in contracts.json. The header is a sira 0 BASLIK row in gunluk_inceleme_partileri with oge_sayisi. It is inserted first with ON CONFLICT DO NOTHING RETURNING, items are written only if it was inserted (0 items too), and a CHECK enforces the shape (D09-B08, D09-B20, job idempotency).",
+  "n": "I104"
+ },
+ {
+  "from": "D09",
+  "kind": "fixer_note",
+  "text": "DEVIATION (addressed differently, validator-bound): the karar-degistir fix asked for a new endpoint POST /v1/duzeltmeler/kararlar/degistir, but endpoints must match contracts.json. It is baglam KARAR_DEGISTIR on the existing POST /v1/duzeltmeler/incelemeler/kararlar, with the event duzeltmeler.karar_degistirildi, the code DUZELTMELER_KARAR_DEGISTIRILEMEZ and a reject, undo, onayli Var scenario (D09-B34).",
+  "n": "I105"
+ },
+ {
+  "from": "D09",
+  "kind": "fixer_note",
+  "text": "DEPENDS on other owners (written in D09, listed in open point D09-A09): D01 must add islemId to ogrenciTeyitEt and ogrenciTeyidiniReddet, add OgrenciHesabi.girilenAdSoyad and export a pure topluTeyitUygunMu. D03 must add ogrencininSatirlari(tx, ogrenciNo) covering passive rows. D05 must return the current karar surumu from kayitGetir. D07 must adopt the KararKaynagi, YeniKarar and KararDegisimi shapes in D09-B12, where the record comes back with its sayilan flag. D08 must lock student rows in the canonical order of D09-B32 and expose oturumSaatleri and the kapsam predicate. D13 must allow added fields on ogeSonuclariSemasi items. Every module that writes a denetim event carrying dersId must pass birimId.",
+  "n": "I106"
+ },
+ {
+  "from": "D09",
+  "kind": "fixer_note",
+  "text": "Note: the D09 generator sources (d09work/*.js, synced from d09fix/) now reproduce spec/D09.json and frag/D09.html byte for byte (md5 verified). Originals are backed up in d09fix/bak/.",
+  "n": "I107"
+ },
+ {
+  "from": "D10",
+  "kind": "fixer_note",
+  "text": "F20 (LOW), partly done: the dönem sonu endpoint is still at GET /v1/raporlar/donem-sonu. spec-validate.js requires the spec endpoints to match contracts.json owns_endpoints exactly, so the move to /v1/raporlar/yonetim/donem-sonu needs a contracts.json change first. It is logged as open point D10-A13(a) and noted in the endpoint's auth text. The rest of F20 is done: the yuzdeBinde and mazeretliDonusOraniBinde names, the RAPORLAR_KIMLIK_CAKISMASI code, the 20 s attribution, and hoca plus öğrenci texts for every code.",
+  "n": "I108"
+ },
+ {
+  "from": "D10",
+  "kind": "fixer_note",
+  "text": "F2, cross-module part: the D10 note in contracts.json and the sentence in D02 donem_kilidi '(D10'un gün sonu anlığı bu işleri bekler)' are still wrong, and I cannot edit those files. The exact replacement text is in D10-A10. Everything F2 asked of D10 is removed: the hesap-wait field, the engel value, the error code, the BEKLIYOR state, the hesap-based 15-minute repeat and the two tests.",
+  "n": "I109"
+ },
+ {
+  "from": "D10",
+  "kind": "fixer_note",
+  "text": "F6, cross-module part: D14 schedule_plan still lists donem_kilidi at 00:05 and aksis_gun_sonu_anligi at 00:25, while D02 runs at 00:20. D10 now runs at 00:40 with sonra ['donem_kilidi'], which is valid against either D02 time. The D14 row change is requested in D10-A13(b). Design choice: the kilit step puts the per-birim job on the queue inside the kilit transaction; it does not write snapshots inside that transaction. The finding lists this as its fallback. Reasons, in D10-B28: a long kilit transaction, and one şube's error would roll back the whole kilit. The small remaining window (corrections made between kilit anı and the snapshot) is covered by a recommendation to D09 in D10-A07.",
+  "n": "I110"
+ },
+ {
+  "from": "D10",
+  "kind": "fixer_note",
+  "text": "F3: D08 does not publish a live oturumSonDurumlari, so the finding's fallback is applied. The sum invariant is narrowed to 'D08 kuyruğu boşken', ders raporu and öğrenci raporu carry hucreHesapAni, and oturum_son_durumlari stays in the read exception. The live function is requested in D10-A10; once it exists, cells move to it and the invariant widens back.",
+  "n": "I111"
+ },
+ {
+  "from": "D10",
+  "kind": "fixer_note",
+  "text": "F19 deviation: D09.SON_DURUMLAR has five letters (VAR, YOK, GOREVLI, BELGELI_DUZELTME, ELLE_EKLENDI) and no MUAF. harfler.ts therefore imports V, Y, G, B and E and defines M itself plus the four extra codes.",
+  "n": "I112"
+ },
+ {
+  "from": "D10",
+  "kind": "fixer_note",
+  "text": "F12 deviation: the KuyrukTanimi object is in apps/server/src/modules/raporlar/kuyruk.ts, following D14's placement rule that the owner module writes it in modules/<ad>/. Only the veri Zod schema is exported from packages/contracts/src/raporlar.ts. Policy stately, sureAsimiSaniye 1800, kalpAtisiSaniye 60, tekillikAnahtari and baslamaAni are as the finding asked.",
+  "n": "I113"
+ },
+ {
+  "from": "D10",
+  "kind": "fixer_note",
+  "text": "Owned by other modules and listed in D10-A13 and D10-A10: D12.islem yalitim option (until it exists, the first statement of fn sets REPEATABLE READ); D03 oncekiSiniflar ['raporlar.aksis_ozet_anliklari'] and the sureler.ts length rule; an optional D02 kilitliBirimDonemleri { uygulanmis } filter (D10 filters the result itself today); D08-B15 telafi rule aligned to D10-B19 (taşıma counts as debt).",
+  "n": "I114"
+ },
+ {
+  "from": "D11",
+  "kind": "fixer_note",
+  "text": "Partly fixed, F2 safety-net job: spec-validate allows only the jobs listed for D11 in contracts.json, so no separate projeksiyon_bekleyen_yeniden_hesapla job was added. The safety net runs inside projeksiyon_eslestirme_temizle at 02:35, before D12 saklama at 05:00 and D07 bekleyen_kararlari_coz at 05:25. Open point D11-A13 asks for the separate job.",
+  "n": "I115"
+ },
+ {
+  "from": "D11",
+  "kind": "fixer_note",
+  "text": "Partly fixed, F4 rotate endpoint: POST /v1/projeksiyon/tarayici/yenile is not in contracts.json, so cookie rotation was added to the existing POST /v1/projeksiyon/eslestirme-kodu as { gizliYenile: true } (GET kodlar returns gizliYenilenmeli). Open point D11-A12 (owner) holds the remaining risk, the separate endpoint and the DevTools policy for D15.",
+  "n": "I116"
+ },
+ {
+  "from": "D11",
+  "kind": "fixer_note",
+  "text": "Changed from the suggested fix, F3: a record with no download row but a valid MAC, outside the restore window, gets INDIRME_KAYDI_YOK (in review) instead of the suggested ANAHTAR_BULUNAMADI (reject). This decides whether the student is blamed, so it is open point D11-A16 for the owner.",
+  "n": "I117"
+ },
+ {
+  "from": "D11",
+  "kind": "fixer_note",
+  "text": "Constraint from neighbors, F2/F19: D12 now allows one exclusive danismaKilidi call per transaction and no hand-written advisory locks. The student path adds its keys through D11.qrKilitAnahtarlari into D05's single call (D11-A17). In hoca-phone classes, students of the same session wait on the session's display key; the load test measures this. Open point D11-A11 asks D12 for a shared mode.",
+  "n": "I118"
+ },
+ {
+  "from": "D11",
+  "kind": "fixer_note",
+  "text": "Neighbors changed during the fix and D11 now follows their current text: D04 values are upper case; D06 uses PaketBaglami.oturum.girisOturumuId, ilkCapaVar and GelenOge<T>; D01 uses kimlikDinleyicileriniKur (D11 exports projeksiyonKimlikDinleyicisi); D12 has one retention catalog class, projeksiyon.donem_verisi; D07 runs at 05:25. build.js checks these against the neighbor specs and fails if they drift again. D06's expected registration for D11 still says isle, while D11 uses isleToplu (D11-A17).",
+  "n": "I119"
+ },
+ {
+  "from": "D12",
+  "kind": "fixer_note",
+  "text": "Partly outside D12's files, done as requests instead: some fixes need changes in neighbour files that D12 does not own (contracts.json exports, reads_from and file_ownership globs; D13 forwarding islem options and the extra SQLSTATEs; D14 worker.ts wiring for saklamaVeritabani and isTanimla, the pgboss grants, the address lock through danismaKilidi, and copying the machine-job times; D15 goc ipv4_address 172.30.12.20, the yoklama_saklama secret, the dev override and the 8-day full-backup threshold; D01 structured identity-event log lines; renames in D02, D05, D07, D08 and D11; retention classes and yoklama_saklama role in D03 to D11; D06 account-deletion listener and the degisiklik_sayaci migration row). D12's side of each is written in the D12 spec, and the neighbour change is listed in the new spec.requests and in the frag section 'Başka modüllerden istekler'.",
+  "n": "I120"
+ },
+ {
+  "from": "D12",
+  "kind": "fixer_note",
+  "text": "No product decision changed. D12-A05 (whether hocas see the lost window, redoing device changes, closing phone sessions in bulk) stays an open point with an updated recommendation. Closing panel sessions and re-applying revocations are now decided.",
+  "n": "I121"
+ },
+ {
+  "from": "D13",
+  "kind": "fixer_note",
+  "text": "LOW, scripts location (move the CI scripts from apps/server/src/jobs/api/ to apps/server/scripts/api/ and drop jobs/api/index.ts): not fixed. D13's file globs in contracts.json don't include apps/server/scripts/api/, and spec-validate rejects planned files outside them. This needs the architect to change the ownership map. It is recorded as open point D13-A09 with the recommendation. The scripts stay where they are until the glob is added.",
+  "n": "I122"
+ },
+ {
+  "from": "D14",
+  "kind": "fixer_note",
+  "text": "Finding 14 (LOW, from D14) is only partly fixed. contracts.json belongs to the architect, not to D14, so it was not edited. The D14 side is done: isKuyruguKur and epostaKur now take saat: Saat (D04); the 'Okuduğu modül' row in the fragment lists D04, D12, D13 and the composition-root dependencies; spec.requests now has a 'Mimari (contracts.json)' entry giving the replacement lines (epostaSiniriDenetle(tx, adres, tur), reads_from adds D04 and D13). The architect still has to make the contracts.json change.",
+  "n": "I123"
+ }
+]

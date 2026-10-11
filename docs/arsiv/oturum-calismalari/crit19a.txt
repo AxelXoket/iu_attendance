@@ -1,0 +1,148 @@
+===== D14-P16
+{
+ "id": "D14-P16",
+ "title": "worker.ts bileşim kökü, altyapı uyarlayıcısı ve işçi süreci senaryoları",
+ "files": [
+  "apps/server/src/worker.ts",
+  "apps/server/src/infra/is-kuyrugu/altyapi-uyarlayici.ts",
+  "apps/server/src/infra/is-kuyrugu/altyapi-uyarlayici.test.ts",
+  "apps/server/src/infra/is-kuyrugu/zamanlama.test.ts",
+  "apps/server/test/features/is-kuyrugu/isci-sureci.feature",
+  "apps/server/test/steps/is-kuyrugu/isci-adimlari.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [
+  "altyapiIsleriniUyarla"
+ ],
+ "needs": [
+  "D15.ayarlariYukle",
+  "D15.logOlustur",
+  "D15.gizliAnahtar",
+  "D15.isletimIsleri",
+  "D15.TestDunyasi",
+  "D12.veritabaniKur",
+  "D12.veritabaniIsleri",
+  "D12.testVeritabaniHazirla",
+  "D12.testVeritabaniAdi",
+  "D13.uygulamaKur",
+  "D04.simdi"
+ ],
+ "tests": [
+  "Kayıtlı iş tanımları ad ve veri kurallarına uyar",
+  "Zamanlama kuralları bütün kayıtta tutar",
+  "Altyapı iş fabrikaları isTanimla'ya uyarlanır",
+  "İşçi açılış sırası ve çıkış kodları",
+  "İşçi kapanışında e-posta önce kapanır, uyarı iki kez gitmez",
+  "Koruyucu testler kasıtlı bozmada kırmızıya döner"
+ ],
+ "depends_on": [
+  "D14-P01",
+  "D14-P02",
+  "D14-P03",
+  "D14-P04",
+  "D14-P05",
+  "D14-P06",
+  "D14-P07",
+  "D14-P08",
+  "D14-P09",
+  "D14-P10",
+  "D14-P11",
+  "D14-P12",
+  "D14-P13",
+  "D14-P14",
+  "D14-P15"
+ ],
+ "size": "L",
+ "notes": "D15 tanımlarını isTanimla biçimine çeviren uyarlayıcı ve 11 adımlı açılış, kapanış ve kur alt komutunu taşıyan worker.ts yazılır; D14'te uygulamanın tamamını bekleyen tek pakettir ve arkasında D14 paketi yoktur. zamanlama.test.ts ve altyapi-uyarlayici.test.ts worker.ts'in topladığı gerçek kayıtta ad ve veri kurallarını, 14 günlük İstanbul zamanlama kurallarını ve uyarlanan işleri; isci-sureci.feature ve eklenen isci-adimlari.ts açılış sırasını, çıkış kodlarını ve kapanış sırasını denetler. Koruyucu testler: işçi bozmaları (isleriBaslat sırası, eposta.kapat sırası, ALTYAPI_CIKTI_SEMASI) burada denenir; öbür on beş bozma kendi paketlerinde denenmiştir ve bu paket on sekiz bozmanın hepsini tek betikle son kez koşar, her dosyanın md5'i geri yazımdan sonra denetlenir."
+}
+===== D15-P11
+{
+ "id": "D15-P11",
+ "title": "Kalite ve güvenlik iş akışları, OTA denetimi",
+ "files": [
+  ".github/workflows/kalite.yml",
+  ".github/workflows/guvenlik.yml",
+  ".github/dependabot.yml",
+  "apps/server/src/infra/izleme/ota-denetimi.ts",
+  "apps/server/src/infra/izleme/ota-denetimi.test.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [
+  "ci_kalite_kapilari",
+  "ci_gecelik_guvenlik_denetimi",
+  "dependabot_guncellemeleri",
+  "ota_yayin_denetimi"
+ ],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "OTA denetimi küçük yüzdeli yayını kaçırmaz"
+ ],
+ "depends_on": [
+  "D15-P01"
+ ],
+ "size": "L",
+ "notes": "kalite.yml her çekme isteğinde biome, tip, birim, senaryo, göç ve Compose kapılarını, guvenlik.yml gece pnpm audit ve OTA denetimini, dependabot.yml gruplu güncellemeleri tanımlar, ota-denetimi.ts bütün kovaları kapsayan sabit kimliklerle etiketsiz güncellemeyi arar; ota-denetimi.test.ts sahte xprem yalnız yüzde 1 kovaya etiketsiz güncelleme verince kırmızı, bütün güncellemeler etiketliyken yeşil bitişi denetler. İş akışı dosyaları Compose testini adıyla çağırır, Compose dosyasını içe aktarmaz; OTA denetimi yalnız sahte xprem'le koşar, bu yüzden yalnız iskeleti bekler."
+}
+===== D15-P13
+{
+ "id": "D15-P13",
+ "title": "Haftalık iş, yayın akışları ve mutasyon eşikleri",
+ "files": [
+  ".github/workflows/haftalik.yml",
+  ".github/workflows/yayin-sunucu.yml",
+  ".github/workflows/yayin-ota.yml",
+  ".github/workflows/yayin-telefon.yml",
+  "packages/core/stryker.config.json",
+  "packages/core/stryker-esikler.json",
+  "packages/core/stryker-esik-denetimi.ts",
+  "docker/isletim/kur.sh"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [
+  "ci_haftalik_is"
+ ],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Telefon yayın iş akışı sözleşme kapısını bekler",
+  "Ortak kurallar paketinin haftalık mutasyon testi"
+ ],
+ "depends_on": [
+  "D15-P01"
+ ],
+ "size": "L",
+ "notes": "Haftalık iş Stryker mutasyonu ve imaj derlemesiyle, sunucu, OTA ve telefon yayın iş akışları imza ve onay adımlarıyla, kur.sh ana makine kurulumuyla yazılır; yayin-telefon.yml ayrıştırılıp derleme işinin sözleşme kapısına bağlı olduğu ve kapının sahte GitHub API cevabında failure için 1, success için 0 verdiği, eşik betiğinin sahte düşük raporda kırmızı, yüksekte yeşil bittiği denetlenir. Testler yalnız kendi dosyalarını ve sahte raporları okur; imajın derlenmesini sunucu imajı paketi sınar, bu yüzden server.ts, betikler ve öbür iş akışları beklenmez."
+}
+===== D03-P07
+{
+ "id": "D03-P07",
+ "title": "Dosya okuma ve core dizini",
+ "files": [
+  "packages/core/src/listeler/okuma.ts",
+  "packages/core/src/listeler/okuma.test.ts",
+  "packages/core/src/listeler/index.ts"
+ ],
+ "tables": [],
+ "endpoints": [],
+ "jobs": [],
+ "exports": [],
+ "needs": [],
+ "tests": [
+  "Örnek dosyalar okunur",
+  "Ortak kurallar mutasyon eşiği"
+ ],
+ "depends_on": [
+  "D03-P02",
+  "D03-P03",
+  "D03-P04",
+  "D03-P05",
+  "D03-P06"
+ ],
+ "size": "M",
+ "notes": "Satırları numara ve ada eşleyen okuma işlevi (dosya türü, kodlama, CSV, başlık ve numara katmanlarının üstünde) ve bütün core listeler işlevlerini veren index.ts yazılır; dizini panel kullanır, sunucu yalnız gerektiği core dosyalarını (isim, kova, fark, fark özeti, satır denetimi, numara) doğrudan içe aktarır ve bu paketi beklemez. Örnek dosya testi ve D15'in haftalık Stryker eşiği doğrular."
+}

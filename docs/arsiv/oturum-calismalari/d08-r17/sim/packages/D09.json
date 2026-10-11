@@ -1,0 +1,708 @@
+{
+ "id": "D09",
+ "packages": [
+  {
+   "id": "D09-P01",
+   "title": "Ortak saf kurallar",
+   "files": [
+    "packages/core/src/duzeltmeler/index.ts",
+    "packages/core/src/duzeltmeler/katalog.ts",
+    "packages/core/src/duzeltmeler/son-durum.ts",
+    "packages/core/src/duzeltmeler/zincir.ts",
+    "packages/core/src/duzeltmeler/belge-no.ts",
+    "packages/core/src/duzeltmeler/istek-ozeti.ts",
+    "packages/core/src/duzeltmeler/sorun-suresi.ts",
+    "packages/core/src/duzeltmeler/parti.ts",
+    "packages/core/src/duzeltmeler/katalog.test.ts",
+    "packages/core/src/duzeltmeler/son-durum.test.ts",
+    "packages/core/src/duzeltmeler/zincir.test.ts",
+    "packages/core/src/duzeltmeler/belge-no.test.ts",
+    "packages/core/src/duzeltmeler/istek-ozeti.test.ts",
+    "packages/core/src/duzeltmeler/sorun-suresi.test.ts",
+    "packages/core/src/duzeltmeler/parti.test.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "sonDurumOnceligi",
+    "SEBEP_KODLARI",
+    "NEDEN_KODLARI",
+    "SON_DURUMLAR"
+   ],
+   "needs": [],
+   "tests": [
+    "Son durum önceliği tek ve tam",
+    "Düzeltme zinciri doğrusal kalır",
+    "Belge numarası normalleştirmesi",
+    "İstek özeti belirlenimli",
+    "Sorun bildirimi süresi sınırı",
+    "Parti seçimi belirlenimli",
+    "Ortak kurallar mutasyon testi"
+   ],
+   "depends_on": [],
+   "size": "L",
+   "notes": "Bağımlılığı yok, ilk aşamada başlar; D08, D10, D05 ve sözleşme dosyası buradaki dört dışa açık değeri bekler. Sebep ve neden kodu kataloğu, son durum önceliği, düzeltme zinciri, belge numarası, istek özeti, sorun süresi ve parti seçimi Intl kullanmayan saf işlevlerdir; index.ts yedi dosyanın hepsini dışa verir. fast-check özellik testleri TZ=UTC ve TZ=Europe/Istanbul koşularında, Stryker yüzde 80 kırma eşiğiyle doğrulanır. Tek Stryker yapılandırması ve tek dışa açık giriş dosyası olduğu için bölünmedi."
+  },
+  {
+   "id": "D09-P02",
+   "title": "Düzeltme sözleşmesi",
+   "files": [
+    "packages/contracts/src/duzeltmeler.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "elleEklemeOgeTuru",
+    "sorunBildirimiOgeTuru"
+   ],
+   "needs": [
+    "D13.rotaTanimla",
+    "D13.hataKodlariTanimla",
+    "D13.ogeTuruTanimla",
+    "D13.ogeSonuclariSemasi",
+    "D13.sayfaSemasi",
+    "D13.sayfaSorgusuSemasi",
+    "D13.genisleyenEnum"
+   ],
+   "tests": [
+    "Rota listesi contracts.json ile birebir"
+   ],
+   "depends_on": [
+    "D09-P01"
+   ],
+   "size": "M",
+   "notes": "Yalnız sözleşme dosyası: 16 rota tanımı, DUZELTMELER_ hata kataloğu, DenetimOlayiGirdisi ile DUZELTMELER_DENETIM_OLAYLARI, iki kuyruk öğesi gövdesi (D13 TUM_OGE_TURLERI bunları bekler) ve cevap tipleri; SebepKodu ve NedenKodu şemaları çekirdek katalogdan türer. Sunucu dosyası içe aktarmaz; rota listesi contracts.json ile yöntem, yol, kimlik ve hız sınıfı düzeyinde birebir karşılaştırılır."
+  },
+  {
+   "id": "D09-P03",
+   "title": "Şema ve denetim yaprağı",
+   "files": [
+    "apps/server/src/modules/duzeltmeler/tablolar.ts",
+    "apps/server/src/modules/duzeltmeler/yaprak.ts",
+    "apps/server/src/modules/duzeltmeler/denetim-ayrinti.ts",
+    "apps/server/src/modules/duzeltmeler/denetim-ayrinti.test.ts",
+    "apps/server/migrations/20261012080000_duzeltmeler_tablolar/migration.sql",
+    "apps/server/migrations/20261012080000_duzeltmeler_tablolar/snapshot.json"
+   ],
+   "tables": [
+    "duzeltmeler",
+    "sorun_bildirimleri",
+    "denetim_kayitlari",
+    "gunluk_inceleme_partileri"
+   ],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "denetimeYaz",
+    "denetimOlaylariniKaydet",
+    "duzeltmeleriGetir",
+    "acikSorunBildirimleri"
+   ],
+   "needs": [
+    "D12.tabloYardimcilari",
+    "D12.kisitAdi",
+    "D12.Islem"
+   ],
+   "tests": [
+    "Uygulama rolü denetim ve düzeltme satırlarını değiştiremez",
+    "Denetim olayına kayıtlı şema dışında alan yazılamaz",
+    "Katalog, CHECK ve Zod aynı"
+   ],
+   "depends_on": [
+    "D09-P01",
+    "D09-P02"
+   ],
+   "size": "M",
+   "notes": "Bütün modüllerin beklediği denetimeYaz burada, sözleşmeden hemen sonra; başka modül paketi beklemez. Dört tablo D01, D02, D03 ve D05 tablolarına yabancı anahtarla tek göçte kurulur; yaprak.ts başka modül içe aktarmadan denetim yazma, olay kaydı ve iki okuma işlevini verir. Bütün modüllerin olay türlerini tarayan sözleşme testi D09-P18 paketine taşındı, çünkü öbür modüllerin sözleşme dosyalarını bekler."
+  },
+  {
+   "id": "D09-P04",
+   "title": "Yetki, imleç, toplu işleyici ve test desteği",
+   "files": [
+    "apps/server/src/modules/duzeltmeler/yetki.ts",
+    "apps/server/src/modules/duzeltmeler/imlec.ts",
+    "apps/server/src/modules/duzeltmeler/toplu-isleyici.ts",
+    "apps/server/src/modules/duzeltmeler/toplu-isleyici.test.ts",
+    "apps/server/test/support/kurucular/duzeltmeler.ts",
+    "apps/server/test/steps/duzeltmeler/denetim-adimlari.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D02.dersYetkisi",
+    "D02.hocaninDersleri",
+    "D12.danismaKilidi",
+    "D12.Islem",
+    "D13.uygulamaHatasi",
+    "D15.kurucuTanimla",
+    "D15.TestDunyasi"
+   ],
+   "tests": [
+    "Toplu işleyici kanonik sırayla işler, anahtarları baştan tek çağrıda alır ve 40P01'de öğeyi bir kez yeniden dener"
+   ],
+   "depends_on": [
+    "D09-P02",
+    "D09-P03"
+   ],
+   "size": "M",
+   "notes": "Her uç paketinin ortak parçaları tek erken pakette: yetki.ts sahip ve yönetici kapsam kuralı, imlec.ts opak keyset imleci, toplu-isleyici.ts kanonik sıra, baştan danışma anahtarları, öğe SAVEPOINT'i ve tek yeniden deneme ile zincir anahtarı üreteci (duzeltmeler:zincir:<oturumId>:<listeSatiriId>, sorun bildirimi öğesi de kullanır); kurucular D09 satır kurucularını, denetim-adimlari ortak denetim adımlarını verir. Düzeltme ve karar paketleri birbirini beklemesin diye toplu işleyici düzeltme servisinden ayrıldı; sahte işlemle (sahte 40P01 dahil) birim testi veritabanı istemez."
+  },
+  {
+   "id": "D09-P05",
+   "title": "Denetim okuma uçları ve öğrenci indirme kaynakları",
+   "files": [
+    "apps/server/src/modules/duzeltmeler/denetim-sorgulari.ts",
+    "apps/server/src/modules/duzeltmeler/indirme-kaynaklari.ts",
+    "apps/server/test/features/duzeltmeler/denetim-kaydi.feature"
+   ],
+   "tables": [],
+   "endpoints": [
+    "GET /v1/duzeltmeler",
+    "GET /v1/duzeltmeler/denetim"
+   ],
+   "jobs": [],
+   "exports": [
+    "ogrencininDuzeltmeleri",
+    "ogrencininSorunBildirimleri"
+   ],
+   "needs": [
+    "D01.kisiGetir",
+    "D01.ogrenciHesabiGetir",
+    "D02.dersSubeleri",
+    "D02.oturumlariGetir",
+    "D02.kilitDurumu",
+    "D03.listeSatirlari",
+    "D03.ogrencininSatirlari",
+    "D13.uygulamaHatasi"
+   ],
+   "tests": [
+    "Denetim okuma yetkisi, birim kapsamı ve sayfalama"
+   ],
+   "depends_on": [
+    "D09-P01",
+    "D09-P02",
+    "D09-P03",
+    "D09-P04"
+   ],
+   "size": "M",
+   "notes": "Yalnız okuyan iki uç ve iki öğrenci kaynağı; hiçbir yazma servisini beklemez. GET /v1/duzeltmeler ad soyadı liste satırından (D03), oturum başlangıcını ve kilit sonrası bilgisini D02'den, denetim ucu yapanın adını D01.kisiGetir'den alır. Kaynaklar duzeltmeleriGetir ve sorun_bildirimleri'nden tam liste kurar, etkin ve harf çekirdek son durum işleviyle; OgrenciKaynagi tipi D06 sözleşmesinden gelir, kaydı eklentidedir. Eşitleme indirmesi senaryosu düzeltme ve bildirim yazımı ister, D09-P16'dadır."
+  },
+  {
+   "id": "D09-P06",
+   "title": "Düzeltme girişi, geri alma ve elle ekleme öğesi",
+   "files": [
+    "apps/server/src/modules/duzeltmeler/zincir-deposu.ts",
+    "apps/server/src/modules/duzeltmeler/duzeltme-servisi.ts",
+    "apps/server/src/modules/duzeltmeler/elle-ekleme-ogesi.ts",
+    "apps/server/test/steps/duzeltmeler/duzeltme-adimlari.ts",
+    "apps/server/test/features/duzeltmeler/duzeltme.feature",
+    "apps/server/test/features/duzeltmeler/geri-alma.feature"
+   ],
+   "tables": [],
+   "endpoints": [
+    "POST /v1/duzeltmeler",
+    "POST /v1/duzeltmeler/{id}/geri-al"
+   ],
+   "jobs": [],
+   "exports": [
+    "elleEklemeOgesi"
+   ],
+   "needs": [
+    "D01.ogrenciHesabiGetir",
+    "D02.dersGetir",
+    "D02.dersSubeleri",
+    "D02.oturumGetir",
+    "D02.oturumSubeleri",
+    "D02.kilitDurumu",
+    "D03.satirGetir",
+    "D03.ogrencininSatirlari",
+    "D04.saatSonucu",
+    "D05.kayitGetir",
+    "D06.ogrenciDurumuDegisti",
+    "D07.oturumIsaretleri",
+    "D08.devamHesaplaIsiKoy",
+    "D08.oturumSaatleri",
+    "D08.kapsamdaMi",
+    "D10.aksisAnligiGetir",
+    "D12.danismaKilidi",
+    "D12.kisitAdi",
+    "D12.kisitIhlali",
+    "D13.uygulamaHatasi",
+    "D15.TestDunyasi"
+   ],
+   "tests": [
+    "Görevli düzeltmesi belge numarasıyla girilir",
+    "Belgesiz Görevli ve belgeli beyana dayalı düzeltme reddedilir",
+    "Öğrenci işleri yazısında uygulama saati seçilemez",
+    "Saat sınırı ve blok ders",
+    "Aynı öğe kimliği iki kez gelince tek satır",
+    "Değiştirme ve geri alma zinciri",
+    "Eşzamanlı iki değiştirmeden biri kazanır",
+    "Etkin düzeltme varken oncekiDuzeltmeId'siz düzeltme reddedilir",
+    "İptal edilen ve kapsam dışı oturuma düzeltme yazılmaz",
+    "Hesabı olmayan öğrencinin düzeltmesi ders düzeyinde hesap işi koyar",
+    "Aynı numaranın iki liste satırı tek öğrencidir",
+    "Katalog saat türü kuralı"
+   ],
+   "depends_on": [
+    "D09-P01",
+    "D09-P02",
+    "D09-P03",
+    "D09-P04"
+   ],
+   "size": "L",
+   "notes": "Zincir deposu ve düzeltme servisi panelden düzeltme, değiştirme ve geri almayı denetim olayı, devam işi ve öğrenci sürümüyle aynı işlemde yazar; sorunBildirimiId taşıyan düzeltme bildirimi kapatır, geri alma yeniden açar. elle_ekleme öğesi bu servisi kullandığı için aynı pakette (ayrı paket eklentiyi bir aşama daha geciktirirdi); OgeIsleyici tipi D06 sözleşmesinden, kaydı eklentidedir; kuyruk senaryoları D09-P14'te. Servis FastifyRequest görmez: istek kimliğini rotalar.ts parametre olarak verir. Başka uç paketini beklemez."
+  },
+  {
+   "id": "D09-P07",
+   "title": "Sorun bildirimi",
+   "files": [
+    "apps/server/src/modules/duzeltmeler/sorun-bildirimi-ogesi.ts",
+    "apps/server/src/modules/duzeltmeler/sorun-bildirimi-servisi.ts",
+    "apps/server/test/steps/duzeltmeler/sorun-bildirimi-adimlari.ts",
+    "apps/server/test/features/duzeltmeler/sorun-bildirimi.feature"
+   ],
+   "tables": [],
+   "endpoints": [
+    "GET /v1/duzeltmeler/sorun-bildirimleri",
+    "POST /v1/duzeltmeler/sorun-bildirimleri/{id}/kapat"
+   ],
+   "jobs": [],
+   "exports": [
+    "sorunBildirimiOgesi"
+   ],
+   "needs": [
+    "D01.ogrenciHesabiGetir",
+    "D02.dersGetir",
+    "D02.oturumGetir",
+    "D02.oturumSubeleri",
+    "D03.satirGetir",
+    "D03.ogrencininSatirlari",
+    "D03.uyelikDenetle",
+    "D03.listeKovaAnahtari",
+    "D04.saatSonucu",
+    "D05.kayitGetir",
+    "D06.kararTeslimAni",
+    "D06.ogrenciDurumuDegisti",
+    "D08.devamHesaplaIsiKoy",
+    "D12.danismaKilidi",
+    "D13.uygulamaHatasi",
+    "D15.TestDunyasi"
+   ],
+   "tests": [
+    "Süre dışı sorun bildirimi saklanır, listeye düşmez",
+    "Süre istemcinin karar sürümüne bağlı değil",
+    "Kayıtsız bildirimde süre ders bitişinden başlar",
+    "Bağı olmayan oturuma bildirim reddedilir",
+    "Öğrencinin ikinci açık bildirimi ve kapanıştan sonraki tekrar",
+    "Bildirim değişiklik yapmadan kapanır"
+   ],
+   "depends_on": [
+    "D09-P01",
+    "D09-P02",
+    "D09-P03",
+    "D09-P04"
+   ],
+   "size": "L",
+   "notes": "sorun_bildirimi öğesi bağ, 72 saatlik süre ve tekrar kurallarıyla açılır; zincir anahtarını D09-P04'ün üretecinden alır, düzeltme servisini beklemez. Hoca listesi BUGUN, ACIK, KAPALI ve SURE_DISI görünümleriyle okunur, kapat ucu bildirimi değişiklik yapmadan kapatır. Düzeltmeyle kapanma ve eşitleme indirmesi senaryoları D09-P16'da."
+  },
+  {
+   "id": "D09-P08",
+   "title": "Onay listeleri, özet ve teyit adayları",
+   "files": [
+    "apps/server/src/modules/duzeltmeler/onay-listeleri.ts",
+    "apps/server/test/steps/duzeltmeler/onay-adimlari.ts",
+    "apps/server/test/features/duzeltmeler/onay-ozeti.feature"
+   ],
+   "tables": [],
+   "endpoints": [
+    "GET /v1/duzeltmeler/onaylar/ozet",
+    "GET /v1/duzeltmeler/kendi-beyani",
+    "GET /v1/duzeltmeler/incelemeler",
+    "GET /v1/duzeltmeler/isaretli-oturumlar"
+   ],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D01.ogrenciHesabiGetir",
+    "D01.topluTeyitUygunMu",
+    "D02.dersSubeleri",
+    "D02.oturumlariGetir",
+    "D03.listeSatirlari",
+    "D05.sayilanKayitlar",
+    "D07.oturumIsaretleri",
+    "D13.uygulamaHatasi",
+    "D15.TestDunyasi"
+   ],
+   "tests": [
+    "Onay özeti menü sayısını verir"
+   ],
+   "depends_on": [
+    "D09-P02",
+    "D09-P03",
+    "D09-P04"
+   ],
+   "size": "L",
+   "notes": "Kendi beyanı, İncelemede ve işaretli oturum listeleri ile menü özeti kafa sayısı bekleyen oturumları ve kilitli birim dönemlerini dışarıda bırakarak, BUGUN görünümünü gunluk_inceleme_partileri'nden okuyarak kurulur. Teyit adaylarının sorgusu ve dört grup sayımı (D01 topluTeyitUygunMu ile) da burada; özet onu sayar, teyit servisi listeyi ondan kurar. Böylece özet geç gelen D01.ogrenciTeyitEt'i beklemez. Karar ve kilitli dönem senaryoları D09-P15 ve D09-P17'de."
+  },
+  {
+   "id": "D09-P09",
+   "title": "İlk kayıt teyidi",
+   "files": [
+    "apps/server/src/modules/duzeltmeler/teyit-servisi.ts",
+    "apps/server/test/features/duzeltmeler/ilk-kayit-teyidi.feature"
+   ],
+   "tables": [],
+   "endpoints": [
+    "GET /v1/duzeltmeler/teyitler",
+    "POST /v1/duzeltmeler/teyitler/kararlar"
+   ],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D01.ogrenciTeyitEt",
+    "D01.ogrenciTeyidiniReddet",
+    "D06.ogrenciDurumuDegisti",
+    "D07.dogrulamaTeyitAnahtari",
+    "D12.islem",
+    "D13.uygulamaHatasi"
+   ],
+   "tests": [
+    "İlk kayıt teyidi grupları, eşleme ve tekrar",
+    "Teyit reddi gerekçeyle D01'e gider",
+    "Toplu teyit öğe başına ayrı işlemle yürür"
+   ],
+   "depends_on": [
+    "D09-P02",
+    "D09-P03",
+    "D09-P04",
+    "D09-P08"
+   ],
+   "size": "M",
+   "notes": "Teyit listesi D09-P08'in aday sorgusundan dört gruba ayrılır; kararlar öğe başına ayrı işlemde D01.ogrenciTeyitEt ve ogrenciTeyidiniReddet'e islemId ile gider, sonuç öğe koduna eşlenir. Grup, gerekçeli ret, tekrar ve 200 öğelik sıra denetimi senaryolarıyla doğrulanır."
+  },
+  {
+   "id": "D09-P10",
+   "title": "Hoca kararları",
+   "files": [
+    "apps/server/src/modules/duzeltmeler/karar-servisi.ts",
+    "apps/server/test/features/duzeltmeler/inceleme.feature",
+    "apps/server/test/features/duzeltmeler/karar-degistirme.feature",
+    "apps/server/test/features/duzeltmeler/toplu-istek.feature"
+   ],
+   "tables": [],
+   "endpoints": [
+    "POST /v1/duzeltmeler/kendi-beyani/kararlar",
+    "POST /v1/duzeltmeler/incelemeler/kararlar",
+    "POST /v1/duzeltmeler/isaretli-oturumlar/{oturumId}/incelendi"
+   ],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D02.oturumGetir",
+    "D05.kayitGetir",
+    "D06.ogrenciDurumuDegisti",
+    "D07.kararAnahtarlari",
+    "D07.kararDegistir",
+    "D07.isaretIncelendi",
+    "D07.oturumIsaretleri",
+    "D08.devamHesaplaIsiKoy",
+    "D12.danismaKilidi",
+    "D13.uygulamaHatasi"
+   ],
+   "tests": [
+    "İncelemede kayıt onayı ve sayılan seçimi",
+    "Hoca kendi kararını geri çevirir",
+    "Toplu istekler kilitlenmez",
+    "Toplu karar isteği danışma anahtarlarını baştan alır"
+   ],
+   "depends_on": [
+    "D09-P02",
+    "D09-P03",
+    "D09-P04"
+   ],
+   "size": "L",
+   "notes": "Kendi beyanı ve İncelemede kararları ile KARAR_DEGISTIR bağlamı D09-P04'ün toplu işleyicisiyle yürür: D07.kararAnahtarlari'nın anahtarları öğe SAVEPOINT'lerinden önce alınır, D07.kararDegistir'e birleşik biçim verilir; incelendi ucu D07.isaretIncelendi'yi çağırır. Düzeltme servisini ve onay listelerini beklemez; listeyle birlikte yürüyen Kendi beyanı ve işaretli oturum senaryoları D09-P15 ve D09-P17'de."
+  },
+  {
+   "id": "D09-P11",
+   "title": "Sonradan değişenler",
+   "files": [
+    "apps/server/src/modules/duzeltmeler/sonradan-degisenler.ts",
+    "apps/server/test/features/duzeltmeler/sonradan-degisenler.feature"
+   ],
+   "tables": [],
+   "endpoints": [
+    "GET /v1/duzeltmeler/sonradan-degisenler"
+   ],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D02.birimDonemiGetir",
+    "D02.dersSubeleri",
+    "D02.kilitDurumu",
+    "D02.oturumlariGetir",
+    "D03.listeSatirlari",
+    "D05.sayilanKayitlar",
+    "D06.gondermeSuresiSonu",
+    "D08.dersSonuclari",
+    "D08.sonucuDegistirebilirMi",
+    "D10.aksisAnligiGetir",
+    "D10.degisimSinifi",
+    "D12.islem",
+    "D13.uygulamaHatasi"
+   ],
+   "tests": [
+    "Sonradan değişenler üç bölümü doğru kurar ve sayfalar"
+   ],
+   "depends_on": [
+    "D09-P01",
+    "D09-P02",
+    "D09-P03",
+    "D09-P04"
+   ],
+   "size": "M",
+   "notes": "GEC_ULASAN, SONUCU_DEGISEN ve SAYILIRSA_DEGISECEK bölümleri repeatable read işleminde D08 ve D10 işlevleriyle sorgu anında kurulur ve tek keyset akışıyla sayfalanır. Senaryonun kilit sonrası düzeltmesi D09 kurucusuyla yazılır, düzeltme servisini beklemez; kilit sonrası anlık bekleme senaryosu D09-P17'de."
+  },
+  {
+   "id": "D09-P12",
+   "title": "Eklenti, rotalar ve saklama",
+   "files": [
+    "apps/server/src/modules/duzeltmeler/index.ts",
+    "apps/server/src/modules/duzeltmeler/eklenti.ts",
+    "apps/server/src/modules/duzeltmeler/rotalar.ts",
+    "apps/server/src/modules/duzeltmeler/saklama.ts"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [
+    "duzeltmelerEklentisi"
+   ],
+   "needs": [
+    "D06.ogeTuruKaydet",
+    "D06.indirmeKaynagiKaydet",
+    "D12.saklamaIsleyicisiKaydet",
+    "D13.rotalariKaydet",
+    "D13.EklentiTemelSecenekleri",
+    "D13.istekKimligi",
+    "D13.TUM_OGE_TURLERI"
+   ],
+   "tests": [
+    "Toplu sonuç ve kuyruk işleyicileri ortak sözleşmeye uyar"
+   ],
+   "depends_on": [
+    "D09-P02",
+    "D09-P03",
+    "D09-P05",
+    "D09-P06",
+    "D09-P07",
+    "D09-P08",
+    "D09-P09",
+    "D09-P10",
+    "D09-P11"
+   ],
+   "size": "M",
+   "notes": "uygulamaKur'un beklediği eklenti yalnız kod paketlerini bekler, senaryo paketlerini beklemez. 16 rotayı rotalariKaydet ile, iki kuyruk öğesini, iki indirme kaynağını, duzeltmeler.donem_verisi saklama işleyicisini ve denetim olaylarını kayıt sırasında veritabanına dokunmadan kaydeder; rotalar.ts isteği servis çağrısına çevirir (kimlik, istekKimligi ve gövde parametre olur). Saklama ve hesap silme senaryoları tam bileşim ister, D09-P18'de."
+  },
+  {
+   "id": "D09-P13",
+   "title": "Gece inceleme sıralaması",
+   "files": [
+    "apps/server/src/modules/duzeltmeler/kuyruklar.ts",
+    "apps/server/src/jobs/duzeltmeler/index.ts",
+    "apps/server/src/jobs/duzeltmeler/gece-inceleme-siralamasi.ts",
+    "apps/server/test/steps/duzeltmeler/gece-isi-adimlari.ts",
+    "apps/server/test/features/duzeltmeler/gece-inceleme-siralamasi.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [
+    "gece_inceleme_siralamasi"
+   ],
+   "exports": [],
+   "needs": [
+    "D02.dersGetir",
+    "D04.istanbulTarihi",
+    "D05.sayilanKayitlar",
+    "D07.oturumIsaretleri",
+    "D08.sonucuDegistirebilirMi",
+    "D12.islem",
+    "D14.isTanimla",
+    "D14.KuyrukTanimi",
+    "D14.isiCalistirVeBekle",
+    "D15.TestDunyasi"
+   ],
+   "tests": [
+    "Gece sıralaması kritikleri önce, sonra en eskileri koyar",
+    "Gece işi aynı veriyle iki kez çalışınca partiyi değiştirmez",
+    "Gece işinin günü tetikleme anından gelir",
+    "Bugün görünümü işten önce dünkü partiyi gösterir",
+    "Gece işi hiçbir kararı, bildirimi ve düzeltmeyi değiştirmez",
+    "Gece işi süre bütçesi",
+    "Kafa sayısı gelmemiş oturumun kayıtları görünmez"
+   ],
+   "depends_on": [
+    "D09-P01",
+    "D09-P03",
+    "D09-P04",
+    "D09-P07",
+    "D09-P08",
+    "D09-P10",
+    "D09-P12"
+   ],
+   "size": "L",
+   "notes": "gece_inceleme_siralamasi 05:50 İstanbul tetiklemesinin gününde her hocaya sira 0 başlık satırlı, kritikleri önde parti yazar, 30 günden eski partiyi siler ve hiçbir kararı değiştirmez; parti boyunu modül index.ts'inden okur. Hiçbir paket bunu beklemez. Bugün görünümü ve kafa sayısı senaryoları için onay listelerini, bildirim listesini ve karar ucunu bekler."
+  },
+  {
+   "id": "D09-P14",
+   "title": "Kuyruktan elle ekleme senaryoları",
+   "files": [
+    "apps/server/test/features/duzeltmeler/elle-ekleme.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [],
+   "tests": [
+    "Hocanın internetsiz elle eklemesi kuyrukla gelir",
+    "Kuyruk öğesi yeniden gönderilince olay yazılmaz",
+    "Etkin düzeltmesi olan öğrenciye kuyruktan elle ekleme yazılmaz",
+    "Kuyruk ve panel aynı öğrenciye aynı anda yazar",
+    "Kuyruk öğeleri zincir anahtarını D06'nın paket çağrısına verir"
+   ],
+   "depends_on": [
+    "D09-P04",
+    "D09-P06",
+    "D09-P07"
+   ],
+   "size": "M",
+   "notes": "elle_ekleme öğesinin gönderim yolu senaryoları: tekrar, etkin düzeltme reddi, panelle eşzamanlı yazım ve D06 paketinde zincir ile kova anahtarı. Hiçbir paket bunu beklemez."
+  },
+  {
+   "id": "D09-P15",
+   "title": "Uç yetkisi, toplu istek sınırı ve Kendi beyanı senaryoları",
+   "files": [
+    "apps/server/test/features/duzeltmeler/yetki.feature",
+    "apps/server/test/features/duzeltmeler/kendi-beyani.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [],
+   "tests": [
+    "İki rollü kişi sahibi olmadığı derse yazamaz",
+    "Başka hocanın dersi görülmez ve düzeltilmez",
+    "Öğrenci ve yönetici düzeltme yazamaz",
+    "201 öğeli toplu istek 400 alır",
+    "Kendi beyanı toplu onayı yalnız görülen ve bekleyen kayıtları işler",
+    "Kendi beyanı reddi kaydı Ret ve son durumu Yok yapar"
+   ],
+   "depends_on": [
+    "D09-P04",
+    "D09-P05",
+    "D09-P06",
+    "D09-P08",
+    "D09-P09",
+    "D09-P10"
+   ],
+   "size": "M",
+   "notes": "Birden çok uç paketine yayılan senaryolar: iki rollü kişi ve başka hocanın dersi (yazma ve okuma uçları), 201 öğeli dört toplu istek, listeyle birlikte Kendi beyanı onayı ve reddi. Hiçbir paket bunu beklemez."
+  },
+  {
+   "id": "D09-P16",
+   "title": "Eşitleme indirmesi ve bildirim kapanışı senaryoları",
+   "files": [
+    "apps/server/test/features/duzeltmeler/indirme.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [],
+   "tests": [
+    "Öğrencinin düzeltmeleri ve bildirimleri eşitleme indirmesinde iner",
+    "Sorun bildirimi süresinde hocanın listesine düşer",
+    "Bildirim düzeltmeyle kapanır, düzeltme geri alınınca yeniden açılır"
+   ],
+   "depends_on": [
+    "D09-P04",
+    "D09-P05",
+    "D09-P06",
+    "D09-P07"
+   ],
+   "size": "M",
+   "notes": "Düzeltme, bildirim ve öğrenci kaynaklarını birlikte isteyen senaryolar: eşitleme indirmesinde iki bölüm, süresinde bildirimin hoca listesi ve indirmesi, düzeltmeyle kapanıp geri almayla açılma. Hiçbir paket bunu beklemez."
+  },
+  {
+   "id": "D09-P17",
+   "title": "Kilit sonrası ve işaretli oturum senaryoları",
+   "files": [
+    "apps/server/test/features/duzeltmeler/kilit-sonrasi.feature",
+    "apps/server/test/features/duzeltmeler/isaretli-oturum.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [],
+   "tests": [
+    "Kilitten sonra anlık yazılmadan gelen düzeltme bekletilir",
+    "Kilitli birim döneminin İncelemede kaydı listelenmez, sayım düzeltmeyle değişir",
+    "İşaretli oturum incelemesi ertesi gün"
+   ],
+   "depends_on": [
+    "D09-P04",
+    "D09-P06",
+    "D09-P08",
+    "D09-P10",
+    "D09-P11",
+    "D09-P13"
+   ],
+   "size": "M",
+   "notes": "Gün sonu anlığı beklemesi, kilitli dönemin İncelemede kaydı ve işaretli oturumun ertesi gün incelenmesi; düzeltme, liste, karar, sonradan değişenler ve gece partisini birlikte ister. Hiçbir paket bunu beklemez."
+  },
+  {
+   "id": "D09-P18",
+   "title": "Saklama, hesap silme ve bütünleşik denetimler",
+   "files": [
+    "apps/server/test/features/duzeltmeler/saklama-ve-hesap-silme.feature"
+   ],
+   "tables": [],
+   "endpoints": [],
+   "jobs": [],
+   "exports": [],
+   "needs": [
+    "D01.hesabiSil",
+    "D12.saklamaIsleyicisiniCalistir",
+    "D13.uygulamaKur"
+   ],
+   "tests": [
+    "Saklama işleyicisi tek sınıfla ve yalnız yoklama_saklama girişiyle siler",
+    "Hesap silme D09 satırlarına takılmaz",
+    "duzeltmelerEklentisi birleşim kuralına uyar",
+    "Denetim olay türleri kayıtlı ve kişisel alansız",
+    "Hata kodları sözleşmede ve senaryoda",
+    "Korumalar bozulunca test kırmızı olur",
+    "D09'dan yalnız yaprak içe aktarılır",
+    "Onay özeti ve listeler süre bütçesinde"
+   ],
+   "depends_on": [
+    "D09-P12",
+    "D09-P13",
+    "D09-P14",
+    "D09-P15",
+    "D09-P16",
+    "D09-P17"
+   ],
+   "size": "L",
+   "notes": "Tam bileşim isteyen uçtan uca denetimler en sonda: belge kipinde uygulamaKur ile eklenti birleşimi, D05 işleyicisiyle birlikte saklama, D01 hesap silmesi, bütün modüllerin denetim olay türleri, hata kodu kapsamı, dokuz korumanın md5 ile geri yazılan mutasyonu, D13 sınır testi ve k6 yük bütçesi. Hiçbir paket bunu beklemez."
+  }
+ ]
+}

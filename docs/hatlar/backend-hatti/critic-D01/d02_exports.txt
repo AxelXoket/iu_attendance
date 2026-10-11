@@ -1,0 +1,91 @@
+
+-- [0] dersGetir :: dersGetir(tx: VeritabaniIslemi, dersId: string): Promise<DersBilgisi | null>
+   Dersin ayarları ve sahipliği: DersBilgisi { id, donemId, birimId: string | null, bolumId: string | null, sahipKisiId, oncekiSahipKisiIdleri: string[], sahipAtamaSurumu: bigint, kod, ad, teoriP, uygulamaP, yoklamaSuresiDk: number | null, qrIleYoklama, denemeDersi, takipBaslangici: string | null, durum, arsivNedeni, arsivAni: Date | null, surum: bigint }. D03, D04, D05, D07, D08, D09, D11 okur; D03 devirde liste satırlarını yeni hocaya göndermek için sahipAtamaSurumu ve oncekiSahipKisiIdleri kullanır. yaprak.ts içinde.
+
+-- [1] dersYetkisi :: dersYetkisi(tx: VeritabaniIslemi, kisi: OturumKisisi, dersId: string): Promise<'sahip' | 'yonetici' | null>
+   Kaynak yetkisinin tek yeri: kişi dersin sahibiyse sahip; sahibi değil ama yönetici rolü ve kapsamı dersin birimini içeriyorsa yonetici; değilse null. D01'i çağırmaz, rol ve kapsam kökteki kancanın kişi nesnesinden okunur. Liste, yoklama, onay ve düzeltme işlemleri yalnız sahip sonucunu kabul eder; yonetici sonucu yalnız yönetici işleri (oran, devir) içindir. Asistan rolü gelirse yalnız burada genişler (D02-A09). yaprak.ts içinde.
+
+-- [2] subeGetir :: subeGetir(tx: VeritabaniIslemi, subeId: string): Promise<SubeBilgisi | null>
+   SubeBilgisi { id, dersId, etiket, durum: etkin | pasif, pasifAni: Date | null }; liste yükleme ve satır işlemleri (D03), teyit yetkisi (D01). yaprak.ts içinde.
+
+-- [3] dersSubeleri :: dersSubeleri(tx: VeritabaniIslemi, dersId: string): Promise<SubeBilgisi[]>
+   Dersin bütün şubeleri etiket sırasıyla (D03, D08, D10). yaprak.ts içinde.
+
+-- [4] oturumGetir :: oturumGetir(tx: VeritabaniIslemi, oturumId: string): Promise<OturumBilgisi | null>
+   OturumBilgisi { id, dersId, donemId, birimId: string | null, tur, tarih, baslangicSaati, bitisSaati, baslangicAni: Date, bitisAni: Date, teoriSaat, uygulamaSaat, derslik, yoklamaSuresiDk, qrIleYoklama, durum, iptalNedeni, kisaKod: string, kafaSayisi, kafaSayisiAni, yapildi: boolean | null, yapildiKaynagi, yapildiCeliskili, telafiEdilenOturumId, subeIdleri: string[], degisiklikler: { an: Date, neden, oncekiBaslangicAni, oncekiBitisAni, oncekiDurum }[] }. Eski programla gelen kaydın kararı için değişiklik geçmişiyle (D04, D05, D07, D09, D11). yaprak.ts içinde.
+
+-- [5] oturumlariGetir :: oturumlariGetir(tx: VeritabaniIslemi, suzgec: OturumSuzgeci): Promise<OturumBilgisi[]>
+   OturumSuzgeci { dersId?, subeId?, donemId?, birimId?, oturumIdleri?, kisaKod?, durum?: 'planlandi' | 'iptal', yapildi?: boolean | 'cevapsiz', bitmis?: boolean, baslangicAniEnAz?: Date, baslangicAniEnCok?: Date, tarihten?: string, tarihe?: string, tur?: ('normal' | 'telafi' | 'deneme')[], denemeDahil?: boolean (varsayılan false), sira?: 'artan' | 'azalan', adet?: number (en çok 5000) }; değişiklik geçmişi dönmez. T, kalan planlı saat ve sonraki oturum (D08), onaysız oturum engeli (D10), kısa kodla oturum (D11). yaprak.ts içinde.
+
+-- [6] oturumSubeleri :: oturumSubeleri(tx: VeritabaniIslemi, oturumId: string): Promise<string[]>
+   Kaydın öğrencisinin şubesi oturumun kümesinde mi sorusu (D05, D07). yaprak.ts içinde.
+
+-- [7] birimGetir :: birimGetir(tx: VeritabaniIslemi, birimId: string): Promise<BirimBilgisi | null>
+   BirimBilgisi { id, ad, tur, etkin, bolumler: { id, ad, etkin }[] }; hoca başvurusunda birim ve bölüm denetimi (D01). yaprak.ts içinde.
+
+-- [8] birimDonemiGetir :: birimDonemiGetir(tx: VeritabaniIslemi, birimId: string, donemId: string): Promise<BirimDonemiBilgisi | null>
+   BirimDonemiBilgisi { birimId, donemId, takvimId, dersBaslangic, dersBitis, ekleBirakBitis, sonGun, sonHaftaBaslangici, kilitAni: Date, kilitUygulandiAni: Date | null }; çağıran gönderme süresi sonu için D06.gondermeSuresiSonu saf işlevine verir (D07, D09, D10); kilit anı (D08, D09), son hafta. yaprak.ts içinde.
+
+-- [9] kilitDurumu :: kilitDurumu(tx: VeritabaniIslemi, birimId: string | null, donemId: string, an?: Date): Promise<KilitDurumu>
+   KilitDurumu { kilitli: boolean, kilitAni: Date | null, sonGun: string | null, uygulandi: boolean, kaynak: 'takvim' | 'inceleme' | 'takvim_yok' }. an verilmezse bileşim kökünün verdiği saat; kayıt kararında kaydın ulaşma anı verilir (D05, D07). Deneme dersi (birimsiz) hiç kilitlenmez. yaprak.ts içinde.
+
+-- [10] kilitliBirimDonemleri :: kilitliBirimDonemleri(tx: VeritabaniIslemi, an?: Date): Promise<Array<{ birimId: string; donemId: string; kilitAni: Date; kilitUygulandiAni: Date | null }>>
+   Kilit anı geçmiş bütün birim ve dönemler; eski saat belgesi ve QR anahtarı saklama süresi (D04, D11) ve dönemsel temizlik için. yaprak.ts içinde.
+
+-- [11] takvimGetir :: takvimGetir(tx: VeritabaniIslemi, birimId: string, donemId: string): Promise<TakvimBilgisi | null>
+   TakvimBilgisi { takvimId, donemId, ad, dersBaslangic, dersBitis, ekleBirakBitis, sonGun, tatiller: { ad, baslangicTarihi, bitisTarihi, yarimGunBaslangic }[], sinavHaftalari: { tur, baslangicTarihi, bitisTarihi, dersYapilir }[] }; ekle-bırak ipucu (D03), takvim gösterimi (D08, D10). yaprak.ts içinde.
+
+-- [12] kafaSayisiniYaz :: kafaSayisiniYaz(tx: VeritabaniIslemi, oturumId: string, kafaSayisi: number, yapildi: true): Promise<{ sonuc: 'yazildi' | 'degismedi' | 'celiski' | 'oturum_yok'; yapildi: boolean | null; celiskili: boolean }>
+   Yalnız D07'nin kafa_sayisi öğesi çağırır. 0 ile 5000 tam sayı; oturum satırı FOR UPDATE ile kilitlenir; 'yapılmadı' ya da iptal oturumda çelişki açar, kafa_sayisi_ani saat arayüzünden yazılır; yapıldı bilgisi değişirse aynı işlemde D08.devamHesaplaIsiKoy(tx, dersId, null, 'program') koyar. Denetim olayını çağıran (D07) yazar; inen sütun olmadığından sürüm almaz.
+
+-- [13] oranlariYaz :: oranlariYaz(tx: VeritabaniIslemi, dersId: string, oranlar: { teoriP: number; uygulamaP: number }): Promise<{ onceki: { teoriP: number; uygulamaP: number }; degisti: boolean }>
+   Yalnız D08'in PUT /v1/devam/dersler/{dersId}/oranlar ucu çağırır. 0 ile 100 tam sayı; arşivdeki ya da kilitli derste uygulamaHatasi(DERSLER_DERS_ARSIVDE | DERSLER_DONEM_KILITLI) fırlatır; değişince ders sürümünü alır (telefon yerel hak hesabı için p'yi indirir). Denetim ve devam işi D08'in.
+
+-- [14] oturumUretimDinleyicisiKaydet :: oturumUretimDinleyicisiKaydet(dinleyici: (tx: VeritabaniIslemi, olay: OturumUretimOlayi) => Promise<void>): void
+   OturumUretimOlayi { neden: 'uretim' | 'program' | 'telafi' | 'oturum' | 'iptal' | 'iptal_geri' | 'takvim' | 'sure' | 'arsiv' | 'deneme' | 'saat_dilimi', dersId, oturumlar: { oturumId, donemId, baslangicAni, bitisAni, yoklamaSuresiDk, durum, yeni: boolean, onceki: { baslangicAni, bitisAni } | null }[] }. D04 pencereleriHesapla bu yolla kaydolur. Her üretim ve oturum değişikliğinde sürüm alınmadan önce aynı işlemde kayıt sırasıyla çağrılır; hata işlemi geri alır. Eklentiler yüklenirken bir kez çağrılır.
+
+-- [15] kilitAdimiKaydet :: kilitAdimiKaydet(adim: { ad: string; sira: number; calistir: (tx: VeritabaniIslemi, birimDonemi: { birimId: string; donemId: string; kilitAni: Date }) => Promise<void> }): void
+   D07 donemKilidiKararKapanisi bu yolla kaydolur; donem_kilidi işi adımları sıra numarasıyla aynı işlemde çağırır; aynı ad iki kez kaydolursa hata.
+
+-- [16] listeKaynagiKaydet :: listeKaynagiKaydet(kaynak: { etkinSatirlar(tx: VeritabaniIslemi, suzgec: { subeIdleri?: readonly string[]; ogrenciNolari?: readonly string[] }): Promise<ReadonlyArray<{ satirId: string; subeId: string; ogrenciNo: string; surum: bigint }>>; pasiflesenSatirlar(tx: VeritabaniIslemi, ogrenciNo: string, surumden: bigint): Promise<ReadonlyArray<{ subeId: string; surum: bigint }>> }): void
+   Sözleşme eki (D02-A12): D03 kendi eklentisinde kaydolur, D02 D03'ü içe aktarmaz. Öğrenci indirme kapsamı, kapsam olayları, çakışma ucu ve şube pasifleştirme denetimi bunu kullanır; uygulama hazır olurken kayıt yoksa eklenti açılmaz.
+
+-- [17] denemeDersiniKur :: denemeDersiniKur(tx: VeritabaniIslemi, hocaKisiId: string): Promise<{ dersId: string; subeId: string }>
+   Sözleşme eki (D02-A13): D01'in inceleme_hesaplari_kurulumu işi çağırır. İnceleme dönemini ve deneme dersini (tek şube 1, süre seçilmemiş) idempotent kurar; sahibi farklıysa yeni deneme hocasına devreder; deneme_dersi_oturumlari işini aynı işlemde kuyruğa koyar.
+
+-- [18] donemArasiMi :: donemArasiMi(tx: VeritabaniIslemi, an?: Date): Promise<boolean>
+   Sözleşme eki (D02-A14): hiçbir etkin birimde dersleri başlamış ve kilitlenmemiş birim dönemi yoksa true (inceleme dönemi hariç). D13'ün en düşük sürüm koruması (D13-B17) ve yayın penceresi kullanır; app.ts bağlar. yaprak.ts içinde.
+
+-- [19] derslerEklentisi :: derslerEklentisi: FastifyPluginAsync<{ saat: Saat; qrDersAyariAcik: boolean }>
+   app.ts (D13) bir kez kaydeder: rotaları D13.rotalariKaydet ile ekler, indirme kaynağını D06.indirmeKaynagiKaydet ile kaydeder, saati ve QR ayarı bayrağını modüle verir; hazır olurken liste kaynağının kayıtlı olduğunu denetler.
+
+-- [20] derslerIsTanimlari :: derslerIsTanimlari(altyapi: { saat: Saat }): IsTanimi[]
+   jobs/dersler/index.ts: üç işin tanımı (ad, cron, tz Europe/Istanbul, missed, politika, işleyici); worker.ts (D14) toplar ve D14.isTanimla ile kaydeder.
+
+JOB takvim_oturumlarini_yenile: Takvime (ya da birim ve döneme) bağlı birimlerin etkin ve deneme olmayan derslerini kod sırasıyla gezer; her derste başlamamış normal oturumları saf üretim planıyla yeniden hesaplar (yeni oluşum, tatil, sınav haftası ve takvim iptali, geri alma), üretim dinleyicilerini (D04) çağırır, D08.devamHesaplaIsiKoy(tx, dersId, null, 'takvim') koyar, ders başına tek denetim olayı (dersler.oturumlar_yenilendi, sayılarla) yazar ve sürüm alır. Gece çalışmasında ayrıca başlamamış planlı oturumlarda baslangic_ani ve bitis_ani değerini (tarih + yerel saat) AT TIME ZONE 'Europe/Istanbul' ile yeniden türetip farklı olanları düzeltir (neden saat_dilimi, dinleyiciler çağrılır) ve kilit anı geçmemiş birim_donemleri.kilit_ani değerini yeniden türetir; düzeltilen satır sayısını dersler.yenileme.fark log satırına yazar. İş verisi yalnız iç kimlik taşır. | Olay tetiklemeli: takvim PUT'u { takvimId } ve birim ve dönem bağı PUT'u { birimId, donemId } verisiyle aynı veritabanı işleminde D14.isGonder ile kuyruğa koyar. Ayrıca her gece 04:50 Europe/Istanbul { gece: true } verisiyle (missed: once). Politika stately (bir bekleyen, bir çalışan), tekillik anahtarı takvim ya da birim ve dönem kimliği.
+
+JOB donem_kilidi: Kilit anı geçmiş her birim ve dönem için tek işlemde: kilitAdimiKaydet ile kayıtlı adımları sıra numarasıyla çağırır (D07 donemKilidiKararKapanisi: onaysız Kendi beyanı sayılmış haliyle, kararsız kayıtlar, denetim kaydıyla); birimin o dönemdeki etkin derslerini arşivler (arsiv_nedeni kilit); her ders için D08.devamHesaplaIsiKoy(tx, dersId, null, 'takvim') koyar (D10'un gün sonu anlığı bu işleri bekler); birim_donemleri ve ders satırlarını yeni sürümle damgalar (telefon kilidi öğrenir); kilit_uygulandi_ani yazar; dersler.donem_kilitlendi denetim olayını yazar. | Her gün 00:20 Europe/Istanbul (kilit anı 00:00, 03:00 ile 04:00 arası boş bırakılır: D14-B05), missed: once; politika stately.
+
+JOB deneme_dersi_oturumlari: Etkin deneme dersi için bugünden (İstanbul) 14 gün ileriye kadar her gün 00:00 ile 24:00 deneme oturumunu üretir (teori 1 saat, süre seçilmemiş, dersin bütün etkin şubeleri, kısa kodlu); yeni oturumlar için üretim dinleyicilerini (D04) çağırır ve sürüm alır. Deneme dersi yoksa bir şey yazmaz, dersler.deneme.yok uyarısını loglar (dersi D01'in inceleme_hesaplari_kurulumu işi denemeDersiniKur ile kurar). Geçmiş deneme oturumları kalır; onaysız liste, çakışma, kilit ve raporlar deneme dersini dışlar. | Her gün 04:40 Europe/Istanbul, missed: once; ayrıca denemeDersiniKur aynı işlemde kuyruğa koyar.
+
+GAP D02-B11: Kod ve ad serbest metindir: NFC, baş ve son boşluk silinir, çoklu boşluk teke iner; kod ayrıca Türkçe kuralla büyür (Intl kullanmadan). Tekillik etkin dersler arasında (dönem, sahip, kod) ve derste şube etiketi. Kod ve ad kilitten önce değişir, denetim kaydına yazılır.
+
+GAP D02-B13: Aynı gün içinde saat, derslik ve saat sayısı değişikliğinde kimlik korunur, önceki değerler oturum_degisiklikleri satırına yazılır. Gün değişikliği taşımadır: telafi ucunda eskisiniIptalEt ile eski oturum iptal (tasindi), yenisi telafi olarak aynı işlemde açılır. Oturum hiç silinmez.
+
+GAP D02-B30: Deneme dersi: derste deneme_dersi işareti, birimsiz, süresiz ve kilitsiz inceleme döneminde; deneme_dersi_oturumlari işi her gün 00:00 ile 24:00 oturumunu 14 gün ileriye üretir; onaysız liste, çakışma, kilit, dönem arası, ölçüm ve raporlar dışlar. Dersi D01'in kurulum işi denemeDersiniKur ile kurar (D02-A13).
+
+GAP D02-B34: Yarıyıl metin ve CHECK: guz, bahar, yaz (yaz okulu ilk sürümde kullanılmasa da değer var); inceleme yalnız deneme dersinin dönemi; cevapta x-extensible-enum.
+
+GAP D02-B37: Oturum hiç silinmez, iptal durum alanıyla iner; kaldırılan program saati ve tatil silindi işaretiyle iner; şube kümesi daralınca öğrencinin şubesini artık kapsamayan değişmiş program saati ve oturum ona silindi olarak iner. Derse sonradan eklenen öğrenciye ve devirle yeni hocaya dersin bütün satırları sürüme bakılmadan iner; takvim bağı değişince yeni takvimin tatilleri de. Pasifleşen liste satırında, hoca arşivinde ve devirde eski hocaya ders kapsamdanCikti işaretiyle iner.
+
+OPEN D02-A02: D02-B15: Hangi iptal telafi borcu doğurur, "yapılmayıp telafi edilmeyen saat" nasıl sayılır? || Oturum iptal nedenini (hoca, tasindi, tatil, sinav_haftasi, takvim, program, arsiv) ve isteğe bağlı telafi bağını tutar. Borç, tür başına hoca iptali ve "yapılmadı" saatleri eksi yapılan telafi saatleri; tatil, sınav haftası, takvim ve program iptali borç değildir, taşınan oturumun telafisi borcu kapatır. Hesap D08 ve D10'da (D08-B15, D10-B19); D02 alanları baştan taşır.
+
+OPEN D02-A06: D02-B22: Yönetici bütün birimlerde mi yetkili, yalnız kendi biriminde mi? || İlk sürümde genel yönetici. Her yönetici ucu yetkiyi D01.yetkiDenetle(kisi, yonetici, { birimId }) ile sorar ve dersYetkisi kapsamı kanca nesnesinden okur; kapsam alanı D01'de baştan durursa (D01-B02) birim bazlı yetki göçsüz açılır.
+
+OPEN D02-A07: D02-B23: Ders başka hocaya devredilebilir mi (hoca ayrıldı, izinde, hesabı silindi)? plan.html#kararlar-hesap-silme silinen hocanın derslerinin arşivlendiğini söyler ama anını yazmaz; hemen arşiv dönem ortasında öğrencilerin yoklamasını keser. || Evet: yönetici dersi etkin ve onaylı başka hocaya, kilitten önce, gerekçe koduyla ve denetim kaydıyla devreder; silinen ya da ayrılan hocanın dersi devredilene kadar açık kalır, kilitte arşivlenir (D01-B31 ile aynı); bekleyen onaylar ve cevapsız "Ders yapıldı mı?" soruları yeni hocaya geçer (D09-B25). Kilitten sonra yalnız sahibi silinmiş ya da pasif ve cevapsız oturumu kalmış ders devredilir, yoksa dönem sonu çıktısı hiç alınamaz (D10-B09). Uç hazırdır; sahip istemezse genişlet ve daralt yoluyla kaldırılır.
+
+OPEN D02-A08: D02-B24: Yönetici dersleri, öğrenci listelerini ve yoklamaları görebilir mi? || Yönetici ders listesinde kod, ad, hoca, birim, p, süre ve durum görür; öğrenci listesi, yoklama ve kafa sayısı görmez (D01-B03 ile aynı). Uç bu kurala göre yazılır.
+
+OPEN D02-A09: D02-B46: Uygulama (lab) oturumlarını asistan yürütüyorsa sahiplik ve yetki modeli ne olur; blok derste ikinci okutma oturumu böler mi? || Cevap gelene kadar tek sahip. Asistan rolü gelirse ders başına görevli tablosu önce genişlet sonra daralt yoluyla eklenir ve yetki yalnız dersYetkisi içinde genişler (D01-B52). İkinci okutma oturumu bölmez, oturum içinde ikinci denetim olarak D11'e kalır.
+
+OPEN D02-A13: Sözleşme eki: deneme dersini kim kurar? D01'in inceleme_hesaplari_kurulumu işi dersi kurmak istiyor ama D02 dış yüzünde kurucu işlev yok. || D02 dış yüzüne denemeDersiniKur(tx, hocaKisiId) eklenir; D01'in kurulum işi (jobs/kimlik altında, dosya döngüsü kurmaz) çağırır ve dönen şubeye deneme öğrencisinin liste satırını D03'ün bir dış yüz işleviyle kurdurur (D03-B26; D03'e eklenmesi gerekir). contracts.json güncellenmeli.

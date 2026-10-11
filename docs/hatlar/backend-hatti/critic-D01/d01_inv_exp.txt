@@ -1,0 +1,93 @@
+##### INVARIANTS
+0: D01 tablolarına yalnız D01 kodu yazar; öbür modüller okumak ve değiştirmek için dış yüzü çağırır, giris_oturumlari satırına yabancı anahtar kurmaz.
+1: Teyitli ve silinmemiş bir öğrenci numarası en çok bir hesapta durur (ogrenci_hesaplari_ogrenci_no_uq).
+2: Bir öğrencinin en çok bir etkin cihazı (inceleme cihazları hariç), en çok bir değişim bekleyen cihazı ve en çok bir açık değişim talebi olur.
+3: Bir donanım açık anahtarı en çok bir cihaz satırına, bir cihaz satırı tek hesaba bağlıdır; aynı uygulama kopyası iki hesaba bağlanamaz.
+4: Açık anahtar satırları silinmez ve anahtar baytları değişmez; yalnız yenilenen App Attest anahtarının gecersiz_ani dolar, eski kayıtlar onunla doğrulanır.
+5: Kod, oturum anahtarı, QR değeri ve kayıt kodu açık saklanmaz: kodlar giriş kodu özet anahtarıyla HMAC, oturum anahtarı ve QR değeri SHA-256 olarak durur; karşılaştırma timingSafeEqual ile sabit sürelidir.
+6: Giriş kodu özet anahtarı yalnız kimlik modülünde ve ayrı öneklerle (kod, adres, kayit) kullanılır; saat belgesi ya da QR anahtarıyla paylaşılmaz.
+7: Kod isteği, başvuru ve başvuru silme kodu isteği hesap durumundan bağımsız aynı gövdeyi, aynı durum kodunu ve aynı alt süreyi döner; e-posta cevaptan sonra gider ve iş kuyruğuna girmez.
+8: Personel oturumu yalnız durumu aktif kişiye açılır; durum aktiften çıkınca bütün oturumları aynı işlemde kapanır. Onaydan önce giriş yoktur.
+9: Bir personelin aynı anda en çok 3 etkin oturumu vardır (inceleme hesabı hariç); sayım kişi satırının FOR UPDATE kilidiyle tek sıradadır, telefon yenilemesi sayıma girmez.
+10: Telefon oturumu en geç 30 günde, panel oturumu en geç 24 saatte ya da 1 saat işlemsizlikte biter; kullanım bitişi uzatmaz. Öğrenci oturumunun bitişi yoktur, cihaz kapanınca ya da hesap silinince kapanır.
+11: Yetkiler her istekte veritabanından okunur; kanca önbellek tutmaz, geri alınan rol ya da kapatılan oturum bir sonraki istekte düşer.
+12: Kural taşıyan her an D04'ün saat arayüzünden gelir; SQL now() ve Date.now() kullanılmaz, zamanlamalar Europe/Istanbul.
+13: Öğrenci numarası, isim, e-posta adresi, kod ve anahtar loga, adres satırına, iş verisine ve denetim ayrıntısına girmez; yalnız iç kimlik yazılır.
+14: Silinen hesapta e-posta, giriş kodları ve oturum satırları kalmaz; kişi satırı silindi işaretiyle, öğrencide numarasıyla kalır.
+15: Son etkin tüm kapsamlı yönetici pasifleştirilemez ve yönetici rolü geri alınamaz; kendi hesabını silmesi engellenmez, kurtarma yonetici-ekle komutudur.
+16: Kayıt işleminde D03'ün paylaşımlı liste kilidi (numaraIleEslestir) numara kilidinden önce alınır; bekleyenKayitlariEslestir numara kilidi almaz, böylece liste yazımıyla kayıt arasında kilitlenme olmaz.
+17: Kimlik olayları D09.denetimeYaz ile kimlik.<olay> türünde yazılır; geri alınmaması gereken olaylar (oturum kapatma, pasif, cihaz değişimi, hesap silme) ayrıca pino'ya yalnız iç kimlik ve olay türüyle yazılır (geri yükleme sonrası yeniden uygulama için).
+18: Doğrulamadan geçemeyen cihaz da bağlanır ve etiketlenir; yalnız kanıt açıkça başka ya da değiştirilmiş uygulamayı gösterirse (D07 sonucu reddedildi) kayıt reddedilir.
+19: Kod ve başvuru isteğinde e-posta türü yalnız hesap durumundan seçilir. Kod (giris): aktif hoca ya da yönetici giriş kodu; onay_bekliyor "onay bekliyor"; kod_bekliyor yeni başvuru kodu; pasif, reddedildi, inceleme, kayıtsız ve silinmiş hiçbir şey. Kod (basvuru_silme): kod_bekliyor, onay_bekliyor ve reddedildi başvuru silme kodu; öbürleri hiçbir şey. Başvuru: kayıtsız adres yeni kişi satırı ve başvuru kodu; kod_bekliyor ve reddedildi bilgiler yenilenip başvuru kodu (reddedildi kod_bekliyor'a döner); onay_bekliyor "onay bekliyor"; aktif giriş kodu; pasif ve inceleme hiçbir şey. Hepsi D14 sınırından geçer, cevap hepsinde aynıdır.
+20: Sayısal kurallar packages/contracts/src/kimlik.ts içindeki KIMLIK_SABITLERI'nden okunur ve testler oradan içe alır: KOD_GECERLILIK_SN 300, KOD_YANLIS_SINIRI 3, BEKLEME_ILK_SN 30, BEKLEME_UST_SN 900, SABIT_CEVAP_MS 400, PERSONEL_EN_COK_OTURUM 3, TELEFON_OTURUM_GUN 30, YENILEME_ONCESI_GUN 3, PANEL_EN_UZUN_SAAT 24, PANEL_ISLEMSIZLIK_DK 60, SON_KULLANIM_YAZMA_SN 60, DEGISIM_QR_GECERLILIK_SN 900, KAYIT_KODU_SAAT 72, KAYIT_KODU_YANLIS_SINIRI 5, KAYIT_KODU_ACIK false, BEKLEYEN_HESAP_SINIRI 5, BEKLEYEN_KAPATMA_GUN 30, SILME_BEKLEME_GUN 7, YAKIN_GIRIS_DK 15, OTURUM_SATIRI_SAKLAMA_GUN 30.
+21: Kimlik olayı dinleyicileri olayı doğuran işlemin içinde çağrılır; bir dinleyici hata verirse işlemin tamamı geri alınır, yarım durum (kapanmış oturum ama iptal edilmemiş QR yuvası gibi) kalmaz.
+22: Değişim bekleyen cihazın kısıtlı oturumu hesabın verisini görmez: /ben yalnız talebin durumunu döner, numara, teyit ve kayıt bilgisi dönmez.
+##### EXPORTS
+
+-- oturumDogrula
+  signature: oturumDogrula(istek: { yontem: string; basliklar: Readonly<Record<string, string | undefined>>; cerezler: Readonly<Record<string, string | undefined>> }): Promise<{ durum: 'yok' } | { durum: 'gecersiz'; kod: 'KIMLIK_OTURUM_YOK' | 'KIMLIK_OTURUM_BITTI'; neden: OturumBitisNedeni | null } | { durum: 'gecerli'; kimlik: Kimlik }>
+  purpose: Kökteki oturum kancası; D13 kaydeder, bileşim kökü veritabanı ve saati verir. Çerezi (__Host-oturum) ya da Bearer anahtarını SHA-256 özetiyle bulur, süreyi ve hesap durumunu denetler, son kullanımı ve öğrencide cihazın son görülmesini en çok dakikada bir yazar. Kimlik = { kisiId, tur, roller, girisOturumuId, istemci, kaynak: cerez | bearer, cihazId, oturumKapsami, incelemeHesabi }. Girişsiz rotada geçersiz anahtar isteği düşürmez; kararı rota yetkisiyle D13 verir.
+
+-- yetkiDenetle
+  signature: yetkiDenetle(kimlik: Kimlik | null, gereksinim: { roller: ReadonlyArray<'ogrenci' | 'personel' | 'hoca' | 'yonetici'>; degisimBekleyenKabul?: boolean }, kapsam?: { birimId: BirimId | null }): { izin: true } | { izin: false; kod: 'KIMLIK_OTURUM_YOK' | 'KIMLIK_YETKI_YOK' | 'KIMLIK_KAPSAM_SINIRLI' | 'KIMLIK_HESAP_BULUNAMADI' }
+  purpose: Saf işlev: rota tablosundaki yetki alanını D13'ün ortak ön işleyicisi bununla uygular; modüller yönetici kapsamını aynı işlevle denetler (kapsam dışı hedef varlık sızmasın diye KIMLIK_HESAP_BULUNAMADI). Kaynak düzeyi (bu dersin hocası mı) modül servisindedir.
+
+-- kisiGetir
+  signature: kisiGetir(tx: Tx, kisiId: KisiId): Promise<{ kisiId: KisiId; tur: KisiTuru; durum: HesapDurumu; adSoyad: string | null; birimId: BirimId | null; bolumId: BolumId | null; incelemeHesabi: boolean; silinmeAni: Date | null } | null>
+  purpose: Kişinin özeti; e-posta dönmez. D02 ders yükündeki hoca adı, D10 raporları ve denetim ekranları için.
+
+-- personelRolleri
+  signature: personelRolleri(tx: Tx, kisiId: KisiId): Promise<ReadonlyArray<{ rol: 'hoca' | 'yonetici'; kapsamBirimId: BirimId | null; verilmeAni: Date }>>
+  purpose: Etkin roller; geri alınanlar dönmez.
+
+-- ogrenciHesabiGetir
+  signature: ogrenciHesabiGetir(tx: Tx, anahtar: { kisiId: KisiId }): Promise<OgrenciHesabi | null>; ogrenciHesabiGetir(tx: Tx, anahtar: { numara: string } | { numaralar: ReadonlyArray<string> }): Promise<ReadonlyArray<OgrenciHesabi>>
+  purpose: OgrenciHesabi = { kisiId, ogrenciNo, durum, teyitDurumu, teyitYolu, teyitAni, teyitEdenKisiId, eslesmeDurumu, incelemeHesabi, etkinCihaz: { cihazId, dogrulandi, ikinciProfil } | null, bekleyenDegisimTalebi: { talepId, yeniCihazId, olusturmaAni } | null, silmeIstegiAni, silinmeAni, olusturmaAni }. Numarayla sorgu silinmişler dahil bütün hesapları döner (numara listede kalıcı kimliktir); D03 liste ekranı, D08 ve D10 toplama, D09 teyit grupları buradan okur.
+
+-- cihazGetir
+  signature: cihazGetir(tx: Tx, cihazId: CihazId): Promise<{ cihazId: CihazId; kisiId: KisiId; durum: 'etkin' | 'degisim_bekliyor' | 'kapandi'; platform: 'android' | 'ios'; incelemeCihazi: boolean; dogrulamaSonucu: 'dogrulandi' | 'dogrulanamadi'; isSystemUser: boolean | null; model: string | null; etkinlesmeAni: Date | null; kapanmaAni: Date | null; kapanmaNedeni: CihazKapanmaNedeni | null; bekleyenDegisimTalebi: { talepId: TalepId; olusturmaAni: Date } | null; hesapSilmeIstegiAni: Date | null } | null>
+  purpose: D05 imza yolunda ve D07 kararında cihazın durumu, etkinlik bitişi, ikinci profil ve doğrulama özeti için.
+
+-- cihazAnahtariGetir
+  signature: cihazAnahtariGetir(tx: Tx, anahtarId: CihazAnahtariId): Promise<{ anahtarId: CihazAnahtariId; cihazId: CihazId; kisiId: KisiId; tur: 'android_p256' | 'app_attest' | 'secure_enclave'; acikAnahtar: Uint8Array; appAttestAnahtarKimligi: Uint8Array | null; olusturmaAni: Date; gecersizAni: Date | null } | null>
+  purpose: Kayıt metnindeki anahtar kimliğiyle açık anahtar; kapanmış cihazın ve yenilenmiş anahtarın satırı da döner (kanıt).
+
+-- cihazDogrulamaSonucunuYaz
+  signature: cihazDogrulamaSonucunuYaz(tx: Tx, cihazId: CihazId, sonuc: { sonuc: 'dogrulandi' | 'dogrulanamadi'; kanitId: string; guvenlikDuzeyi: string | null; dogrulanmisAcilis: boolean | null; iosAcilisDogrulamaTuru: string | null; iosPaketSurumu: string | null; neden: 'iptal_listesi' | 'yeniden_dogrulama' }): Promise<void>
+  purpose: D07'nin sonradan değişen doğrulama sonucunu (iptal listesi gibi) cihaz satırına D01 yazar; değişiklik kimlik.cihaz_dogrulama_degisti olarak denetime düşer. Geçmiş kayıtların etiketi değişmez (D07).
+
+-- ogrenciTeyitEt
+  signature: ogrenciTeyitEt(tx: Tx, istek: { yapan: Kimlik; ogrenciKisiId: KisiId; yol: 'toplu' | 'tek' }): Promise<{ sonuc: 'teyitli' | 'zaten_teyitli' | 'tek_tek_gerekli' | 'numara_teyitli' | 'bulunamadi'; reddedilenHesaplar: ReadonlyArray<KisiId> }>
+  purpose: D09'un teyit ucu öğe başına kendi SAVEPOINT'inde çağırır. Yetkiyi (öğrencinin etkin liste satırı olan dersin hocası), toplu yol kuralını (yalnız eşleşmiş, doğrulanmış, çakışmasız) ve tekil numarayı D01 denetler; aynı numaranın öbür teyitsiz hesaplarını numara_baskasinda ile reddeder, aynı işlemde D07.yenidenDegerlendir çağırır ve kimlik.teyit yazar. Çağıran ayrıca denetim yazmaz.
+
+-- ogrenciTeyidiniReddet
+  signature: ogrenciTeyidiniReddet(tx: Tx, istek: { yapan: Kimlik; ogrenciKisiId: KisiId; gerekceKodu: 'bu_ogrenci_degil' | 'diger' }): Promise<{ sonuc: 'reddedildi' | 'zaten_reddedildi' | 'teyitli_hesap' | 'bulunamadi' }>
+  purpose: Teyit bekleyen hesabı reddeder: hesap ve teyit reddedildi, cihaz ve oturum kapanır, açık talep iptal olur, D07.yenidenDegerlendir çağrılır, kimlik.teyit_ret yazılır.
+
+-- bekleyenKayitlariEslestir
+  signature: bekleyenKayitlariEslestir(tx: Tx, subeId: SubeId): Promise<{ degisenHesaplar: ReadonlyArray<KisiId> }>
+  purpose: D03'e listeDegisikligiDinleyicisiKaydet ile kaydolur; liste uygulanırken D03'ün dışlayıcı kilidi altında, aynı işlemde şubenin etkin ve pasif satırlarındaki numaralara sahip teyit bekleyen hesapların eşleşmesini D03.numaraIleEslestir ile yeniler (çıkarılan öğrenci listede_yok'a da dönebilir). Numara kilidi almaz.
+
+-- kimlikOlayiDinleyicisiKaydet
+  signature: kimlikOlayiDinleyicisiKaydet(dinleyici: (tx: Tx, olay: { tur: 'giris_oturumu_kapandi'; girisOturumuId: GirisOturumuId; kisiId: KisiId; neden: OturumBitisNedeni; an: Date } | { tur: 'giris_oturumu_yenilendi'; eskiId: GirisOturumuId; yeniId: GirisOturumuId; kisiId: KisiId; an: Date } | { tur: 'cihaz_kapandi'; cihazId: CihazId; kisiId: KisiId; neden: CihazKapanmaNedeni; an: Date } | { tur: 'hesap_durumu_degisti'; kisiId: KisiId; eski: HesapDurumu; yeni: HesapDurumu; an: Date } | { tur: 'hesap_silindi'; kisiId: KisiId; kisiTuru: KisiTuru; an: Date }) => Promise<void>): void
+  purpose: Ek dış yüz (D01-A14). Alt modüller D01'i içe aktarmadan olaya bağlanır: D11 QR anahtar yuvasını iptal eder ya da yenilenen oturuma devreder, D15 telefon sayaçlarını, D06 kurulum izini siler, D02 silinen hocanın dersleri için kendi kararını uygular. Dinleyiciler olayı doğuran işlemin içinde çağrılır.
+
+-- oturumlariKapat
+  signature: oturumlariKapat(tx: Tx, suzgec: { kisiId?: KisiId; tur?: KisiTuru; istemci?: 'telefon' | 'panel' }, neden: 'olay_komutu' | 'geri_yukleme'): Promise<number>
+  purpose: Ek dış yüz (D01-A14): D15'in olay müdahalesindeki bütün hoca oturumlarını kapatma komutu ve D12'nin geri yüklemeden sonra panel oturumlarını kapatma adımı için; kapatılan sayıyı döner, her oturum için olay ve denetim yazar.
+
+-- incelemeHesaplari
+  signature: incelemeHesaplari(tx: Tx): Promise<{ hocaKisiId: KisiId | null; ogrenciNo: string; ogrenciKisiIdleri: ReadonlyArray<KisiId> }>
+  purpose: Ek dış yüz (D01-A14): D02 deneme dersinin sahibini, D03 deneme listesinin numarasını buradan okur.
+
+-- girisOturumuGetir
+  signature: girisOturumuGetir(tx: Tx, girisOturumuId: GirisOturumuId): Promise<{ girisOturumuId: GirisOturumuId; kisiId: KisiId; tur: KisiTuru; istemci: 'telefon' | 'panel'; olusturmaAni: Date; bitisAni: Date | null; kapanmaAni: Date | null; kapanmaNedeni: OturumBitisNedeni | null; oncekiOturumId: GirisOturumuId | null } | null>
+  purpose: Ek dış yüz (D01-A14): hoca telefonunun kimliği giriş oturumu olduğundan D04 saat belgesi öznesi ve D11 QR yuvası için. Silinmiş satırda null.
+
+-- hesabiSil
+  signature: hesabiSil(tx: Tx, istek: { kisiId: KisiId; kaynak: 'geri_yukleme_yeniden' }): Promise<'yapildi' | 'zaten_silinmis'>
+  purpose: Ek dış yüz (D01-A14): D12'nin geri yükleme komutu, kayıp penceredeki hesap silmeyi yapısal logdan yeniden uygularken çağırır; uçların ve gecelik işin kullandığı iç işlevle aynıdır.
+
+-- epostaNormallestir
+  signature: epostaNormallestir(ham: string): { tamam: true; adres: string } | { tamam: false } (packages/core/src/kimlik/eposta.ts)
+  purpose: Tek adres kuralı: baş ve son boşluk silinir, İ, I ve ı açık eşlemeyle i olur (toLowerCase'in İ için ürettiği birleşen nokta oluşmaz), A ile Z küçültülür; alan adı tam olarak istanbul.edu.tr, yerel kısım yalnız a-z, 0-9, nokta, alt çizgi, tire (1 ile 64), + ve ardışık nokta yok. D14 sınır özeti, telefon ve panel aynı işlevi kullanır.

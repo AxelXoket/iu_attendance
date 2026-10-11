@@ -1,0 +1,81 @@
+===  POST /v1/esitleme/gonderim
+{
+ "method": "POST",
+ "path": "/v1/esitleme/gonderim",
+ "client": "telefon",
+ "auth": "Rota tablosunda kimlik ['cihazImzasi', 'oturum'], roller ['ogrenci', 'personel'] (D13-B06). D13'ün kök oturum kancası Bearer'ı doğrular; geçersiz Bearer ve değişim bekleyen kısıtlı oturum (oturumHatasi KIMLIK_KAPSAM_SINIRLI) isteği düşürmez, istek.oturumHatasi'na yazılır ve istek oturumsuz sayılır. D06'nın kimlik kancası (kimlik-cozumu.ts, RotaUygulamasi.oncekiKancalar) D13'ün beyan denetiminden önce çalışır: oturumu istek.kimlik'ten okur (oturumDogrula'yı yeniden çağırmaz); ikinciCapa 'a' ya da 's' ise imzayı kayıtlı cihaz anahtarıyla doğrular (anahtar etkin, yenilenmiş, cihazı kapanmış ya da hesabı silinmiş olabilir) ve oturum yoksa istek.kimlik = { tur: 'cihaz', kaynak: 'imza', kisiId, cihazId } yazar (D13 Kimlik tipinin öbür alanları boş). Ne oturum ne geçerli imza varsa beyan denetimi 401 API_KIMLIK_GEREKLI verir. İkisi de varsa aynı kişi olmalı, kurulumun kişisi de o olmalı. Öğe düzeyinde türün rolü ve oturum isteği ayrıca aranır.",
+ "request": {
+  "X-Kurulum-Kimligi (başlık)": "UUID (RFC 9562, her sürüm; telefon UUIDv7 üretir), zorunlu: bu paketin kurulumu. Rota şemasında değil D06 kancasında denetlenir; yoksa ya da UUID değilse 403 ESITLEME_KURULUM_KIMLIGI_GECERSIZ (telefon o kurulumu durdurur).",
+  "Authorization (başlık)": "Bearer oturum anahtarı, isteğe bağlı: kurulumun hesabı bu telefonda girişliyse onun oturumu; değilse öğrencide Bearer'sız (yalnız imza), personelde paket gönderilmez.",
+  "X-Uygulama-Surumu, X-Guncelleme-Kimligi, X-Platform, X-Kanal, X-Saat-Istegi (başlık)": "İsteğe bağlı (D13). Geçersiz değer isteği düşürmez, boş yazılır.",
+  "paketKimligi": "UUIDv7, zorunlu; her deneme ve bölünen her yarı yeni kimlik alır.",
+  "imlec": "metin (en çok 256) ya da null: telefonun sakladığı indirme imleci; öğrenci durum onayı ve degisiklikVar için.",
+  "bekleyenYoklamaSayisi": "tam sayı 0 ile 100000: bu paketin dışında bu kurulumda sonuçlanmamış yoklama_kaydi öğesi sayısı; öbür türler sayılmaz.",
+  "ikinciCapa": "null ya da D13'ün imzaliMetinSemasi ile kurulan nesne (imzaliTurler ['a', 's'], imzasizTurler ['o'], ek { anahtarId }): { metin: base64url (en çok 32768), imzaTuru: 'a' | 's' | 'o', imza: base64url (en çok 200) ya da null, anahtarId: UUID ya da null }. 'a' ve 's'de imza ve anahtarId zorunlu, 'o'da ikisi de null.",
+  "ikinciCapaYokNedeni": "null ya da 'ESITLEME_BOZUK' (D04 sabiti) | 'IMZALANAMADI' (telefon imzalayamadı, bağlamda PAKET_IMZASIZ olur); yalnız ikinciCapa null iken anlamlı.",
+  "ogeler": "dizi, en çok 200: { tur: metin (en çok 64), sira: tam sayı 1 ile 9007199254740991 (JSON sayı, D06-C06), ogeKimligi: metin (en çok 64), govde: metin (en çok 65536; ham metin, öğe türünün modülü ayrıştırır), ilkCapa: nesne ya da null (IlkCapaAlanlari, şeması packages/contracts/src/saat.ts; yalnız kaydında ilkCapaVar true olan türde), ulasmaMakbuzu: metin (en çok 128) ya da null }. Öğe içi biçim öğe başına denetlenir, paketi düşürmez.",
+  "yerelRetler": "dizi, en çok 200, gevşek zarf: { sira: tam sayı, ogeKimligi: metin (en çok 512) ya da null, tur: metin (en çok 512) ya da null, httpKodu: tam sayı, hataKodu: metin (en çok 512) ya da null }. D06 girdileri tek tek denetler; uymayan girdi (sıra 1 ile 2^53-1 dışında, istekte tekrar eden ya da ogeler'de bulunan sıra) atılır ve sayılır, istek bu yüzden hiçbir zaman 400 almaz. ogeler ile yerelRetler toplamı en az 1.",
+  "gövde sınırı": "1 MiB (D13-B11); telefon paketi en çok 200 öğe ve 768 KiB ile kurar."
+ },
+ "response": {
+  "sonuclar": "dizi, istekteki ogeler sırasıyla birebir: { sira, ogeKimligi, tur, sonuc: 'KABUL' | 'ZATEN_VAR' | 'RET' | 'TEKRAR_DENE', gerekce: metin ya da null, ulasmaAni: ISO 8601 UTC milisaniyeli ya da null (defterin kabul_ani'si), ulasmaMakbuzu: metin ya da null, beklemeSaniye: tam sayı ya da null, ayrinti: nesne ya da null (şeması öğe türünün modülünün sözleşmesinde) }; sonuc ve gerekce x-extensible-enum.",
+  "sonSira": "tam sayı: bu kurulumun kesintisiz son sırası.",
+  "degisiklikVar": "boolean: imleç nesil, genel sayaç ya da öğrenci durumu bakımından geride olabilir (kaba işaret); telefon değişenleri ister.",
+  "X-Saat-Belgesi (başlık)": "Kök onSend kancası ekler (D13-B22, D04): rota saatBelgesi true; özne istek.kimlik'ten, imzayla gelen istekte D06 kancasının yazdığı cihaz; eşitleme bozukken yok."
+ },
+ "errors": [
+  "400 API_ISTEK_GECERSIZ (D13): zarf şemaya uymuyor; alan yolu ogeler ile başlıyorsa (200'ü aşan öğe, öğe zarfı) telefon böler, değilse kurulumu durdurur",
+  "400 API_JSON_BOZUK (D13)",
+  "401 API_KIMLIK_GEREKLI (D13 beyan denetimi): ne geçerli oturum ne geçerli paket imzası",
+  "403 ESITLEME_KURULUM_KIMLIGI_GECERSIZ",
+  "403 ESITLEME_KIMLIK_UYUSMUYOR",
+  "403 ESITLEME_KURULUM_BASKA_HESABIN",
+  "403 ESITLEME_KURULUM_ACILAMAZ",
+  "403 ESITLEME_KURULUM_SINIRI",
+  "413 API_GOVDE_COK_BUYUK (D13)",
+  "415 API_ICERIK_TURU (D13)",
+  "429 API_HIZ_SINIRI (D13), Retry-After ile",
+  "503 API_SUNUCU_YOGUN (D13) ya da D12.islem'in geçici kodları (VERITABANI_ZAMAN_ASIMI: 57014 ve 25P04, VERITABANI_KILITLENME, VERITABANI_HAVUZ_DOLU, VERITABANI_ERISILEMEZ; bekleme { aralik: [15, 45] }), Retry-After ile",
+  "503 ESITLEME_KURULUM_MESGUL, bekleme { sabit: 5 } (Retry-After 5)",
+  "500 API_SUNUCU_HATASI (D13)"
+ ],
+ "idempotency": "Öğe düzeyinde: (kurulum, sıra) defter anahtarı ve öğe kimliği. Aynı öğe yeniden gelirse işleyici yine çağrılır ve ZATEN_VAR döner (ilk ulaşma anıyla); KABUL olmuş satır değişmez; aynı sıra başka öğe kimliğiyle ya da aynı istekte ikinci kez gelirse RET ESITLEME_SIRA_CAKISMASI. Aynı kurulum için eşzamanlı iki istek kurulum satırı kilidinde sıraya girer. Ayrı Idempotency-Key yok (D13-B12).",
+ "rate_limit": "D13 hız sınıfı 'gonderim', kimlik kurulduktan sonraki kancada: anahtar doğrulanmış cihazdır (öğrencide oturumun ya da paket imzasının cihazı), cihaz yoksa giriş oturumudur (personel); dakikada 30 (D13-B09); X-Kurulum-Kimligi'ne bağlı değildir, başlığı değiştiren istemci sınırdan kaçamaz. Aşan 429 API_
+===  GET /v1/esitleme/degisiklikler
+{
+ "method": "GET",
+ "path": "/v1/esitleme/degisiklikler",
+ "client": "telefon",
+ "auth": "Rota tablosunda kimlik ['oturum'], kimlikKaynaklari ['bearer'], roller ['ogrenci', 'personel'], defterYazar: true (GET olduğu hâlde D06'nın kendi izini yazar): geçerli oturum (Bearer), D13'ün kök oturum kancası (D01); çerezle gelen istek 403 API_ROL_YETKISIZ, değişim bekleyen kısıtlı oturum 403 KIMLIK_KAPSAM_SINIRLI (D13 beyan denetimi). Oturum yok, bitmiş ya da kapanmışsa kökte 401; personel telefonu yalnız 401'de çıkış gibi davranır. Oturumun kişisi kurulumun kişisi olmalı (değilse 403).",
+ "request": {
+  "X-Kurulum-Kimligi (başlık)": "UUID (RFC 9562), zorunlu: isteği yapan hesabın bu kopyadaki kurulumu; yoksa ya da UUID değilse 403 ESITLEME_KURULUM_KIMLIGI_GECERSIZ. Çapraz site gezinmesi başlık koyamadığından çerezli bir gezinme bu uçta hiçbir şey yazamaz.",
+  "Authorization (başlık)": "Bearer, zorunlu.",
+  "imlec (sorgu)": "metin (en çok 256), isteğe bağlı; yoksa ya da tanınmazsa tam indirme.",
+  "adet (sorgu)": "tam sayı 100 ile 5000, varsayılan 1000: sayfa satır hedefi. Tek sürümün satırları bölünmediğinden aşılabilir.",
+  "yapiSurumu (sorgu)": "tam sayı 1 ile 10000, zorunlu: telefonun yerel veri yapısı sürümü (PRAGMA user_version).",
+  "bekleyenYoklamaSayisi (sorgu)": "tam sayı 0 ile 100000, varsayılan 0: bu kurulumda sonuçlanmamış yoklama_kaydi sayısı."
+ },
+ "response": {
+  "imlec": "metin: bu sayfa uygulandıktan sonra aynı yerel işlemde saklanır.",
+  "bastanIndir": "boolean: true ise bu sayfa yeni bir tam indirmenin ilk sayfasıdır (telefon yeni tam indirme numarası açar); hata kodu değil 200 cevabında alandır.",
+  "devamiVar": "boolean: true ise yeni imleçle hemen yeniden istenir.",
+  "tablolar": "{ [kaynakAdi]: Array<{ id: metin, silindi: boolean, veri: nesne ya da null }> }: yalnız satırı olan kaynaklar; silindi satırda veri null. Rol başına sütunlar kaynağı kaydeden modülün sözleşmesinde (D02 satırları için D02-B29).",
+  "ogrenci": "null ya da { bolumler: { [ad]: { tam: boolean, satirlar: Array<{ id, silindi, veri }> } } }: yalnız öğrencide ve durum sürümü imleçten ilerideyse; tam true ise telefon o bölümün yerel satırlarını bununla değiştirir. ogrenci_kayitlari bölümünün her satırı kararSurumu taşır.",
+  "sonSira": "tam sayı: bu kurulumun kesintisiz son sırası (her eşitlemede bildirilir).",
+  "X-Saat-Belgesi (başlık)": "Kök onSend kancası ekler (D13-B22, D04); rota saatBelgesi true."
+ },
+ "errors": [
+  "400 API_ISTEK_GECERSIZ (D13): sorgu şemaya uymuyor",
+  "401 D01 oturum kodları ya da API_KIMLIK_GEREKLI (kök kanca)",
+  "403 API_ROL_YETKISIZ (D13): kimlik kaynağı bearer değil",
+  "403 KIMLIK_KAPSAM_SINIRLI (D13 beyan denetimi): değişim bekleyen kısıtlı oturum",
+  "403 ESITLEME_KURULUM_KIMLIGI_GECERSIZ",
+  "403 ESITLEME_KURULUM_BASKA_HESABIN",
+  "403 ESITLEME_KURULUM_SINIRI",
+  "429 API_HIZ_SINIRI (D13), Retry-After ile",
+  "503 API_SUNUCU_YOGUN (D13) ya da D12.islem'in geçici kodları (VERITABANI_ZAMAN_ASIMI, VERITABANI_KILITLENME, VERITABANI_HAVUZ_DOLU, VERITABANI_ERISILEMEZ, VERITABANI_NESIL_BELIRSIZ; bekleme { aralik: [15, 45] }), Retry-After ile",
+  "500 API_SUNUCU_HATASI (D13)"
+ ],
+ "idempotency": "Güvenli: iş verisini değiştirmez (D13-B08 GET kuralı); rota defterYazar: true beyan eder, çünkü yalnız D06'nın kendi izini yazar (son temas, karar sunumu, onay); aynı istek iki kez gelirse aynı veri döner ve onay bir kez yazılır.",
+ "rate_limit": "D13 hız sınıfı 'oturum': oturum başına dakikada 120 (D13-B09)."
+}

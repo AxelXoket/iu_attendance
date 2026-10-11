@@ -1,0 +1,119 @@
+{
+ "id": "D01",
+ "instructions": [
+  {
+   "refs": [
+    "I001"
+   ],
+   "do": "Öğrenci kimliği (I001, contracts.json ortak kural): ogrenci_id hesap (kisiler) kimliğidir ve yalnız hesaptan gelen satırlarda durur; ders içindeki öğrenci (ders, numara) ile anılır ve aynı numaranın derste birden çok liste satırı tek öğrencidir; yolda, iş verisinde ve logda numara yoktur, liste satırı kimliği (satirId) taşınır ve numara D03.satirGetir ile çözülür; hesap ile numara arasında D01.ogrenciHesabiGetir(tx, { kisiIdler }) ve ({ numaralar }) toplu çağrısı kullanılır, silinmiş hesabın kayıtları da sayılır. D01 için: açık nokta D01-A15'i kapat (resolved_gaps'e bu kural ve contracts.json ortak kural göndermesi). ogrenciHesabiGetir'in { numaralar } ve { kisiIdler } biçimleri silinmiş hesapları da döner (durum silindi; numara kimlik.kisi_bagi saklaması anonimleştirene kadar) ve tek sorgudur. Çift anadal ikinci numarası için bağ tablosu D03-A02 sahip kararına kadar eklenmez."
+  },
+  {
+   "refs": [
+    "I002"
+   ],
+   "do": "D01-A16'yı kapat, öneri değişti: plan.html#gun-kenar-durumlar ('Değişim onaylanınca birlikte karara bağlanır') gereği eski cihazın kayıtları açık talep süresince D07'de Beklemede kalır. Kötüye kullanımı sınırla: GET /v1/kimlik/ben öğrencinin açık cihaz değişimi taleplerini (talepId, olusturmaAni, durum) döner; POST /v1/kimlik/cihaz-degisimi/{talepId}/ret etkin cihazın oturumuyla da çağrılabilir; talep 72 saatte kendiliğinden düşer (mevcut temizlik yolunda). Ret işleminde D07.yenidenDegerlendir(tx, { ogrenciId }, 'CIHAZ_DEGISIMI_REDDEDILDI'), düşmede ve iptalde 'DEGISIM_IPTAL' aynı işlemde çağrılır; böylece bekleyen kayıtlar hemen karara bağlanır. Senaryo: başkasının numarasıyla açılan talebi gerçek öğrenci etkin cihazından reddeder, bekleyen kaydı aynı işlemde Var olur."
+  },
+  {
+   "refs": [
+    "I003",
+    "I073",
+    "I080",
+    "I085"
+   ],
+   "do": "D01-A17'yi kapat (itme modeli kabul). inceleme_hesaplari_kurulumu işleyicisi apps/server/src/jobs/kimlik/ altındadır ve tek işlemde: hocayı kurar, D02.denemeDersiniKur(tx, hocaKisiId): Promise<{ dersId: string; subeId: string }> ile dersi kurdurur ya da devrettirir, dönen subeId ile D03.denemeListesiniKur(tx, subeId, INCELEME_OGRENCI_NO, INCELEME_OGRENCI_ADI) çağırır. Bu iki işlev yalnız jobs/kimlik'ten içe aktarılır; modules/kimlik D02 ve D03 index.ts'ine bunun için bağlanmaz. incelemeHesaplari dış yüzü yoktur. İş tanımı acilistaBirKez: true taşır; işçide gizli sabit kodun varlığını ayarlar().kimlik.incelemeSabitKoduVar'dan okur (işçi kodun kendisini yüklemez) ve bu seçimi iş tanımına yazar."
+  },
+  {
+   "refs": [
+    "I049",
+    "A5"
+   ],
+   "do": "bekleyen_kayit_kapatma her gece 00:15 Europe/Istanbul, sonra: donem_kilidi (D02, 00:05); D01-A14'te önerilen 00:30 geri alınır çünkü donem_kilidi 00:20'ye değil 00:05'te kalır ve 00:15 10 dakika kuralını sağlar (D14 çizelgesindeki yer). inceleme_hesaplari_kurulumu 00:45, hesap_silme_yurutucu 02:10, giris_oturumu_temizligi 02:20, kimlik_temizligi saat başı :17 aynen."
+  },
+  {
+   "refs": [
+    "I011"
+   ],
+   "do": "D01-B19'un eşleşme kuralını 'açık dönemlerdeki bütün etkin satırlar eşleşmeli' olarak yaz (bir numaranın açık dönemlerdeki bütün etkin liste satırları isimle eşleşmeden hesap eşleşmiş sayılmaz)."
+  },
+  {
+   "refs": [
+    "I015"
+   ],
+   "do": "bekleyenKayitlariEslestir imzası bekleyenKayitlariEslestir(tx: Tx, subeId: SubeId, s?: { ogrenciNolari?: readonly string[] }): Promise<{ degisenHesaplar: ReadonlyArray<KisiId> }> olur. D03'ün ESLESTIRME dinleyicisi uyarlayıcısı onu değişikliğin ayrık her subeId'si için yalnız o değişikliğin numaralarıyla çağırır; D03 yazmasının kova kümesi dışındaki numara D03'te iç hata verir. Bu işlev liste işleminin içinde yeni danışma anahtarı (teyit dahil) almaz; yalnız eşleşmeyi yazar."
+  },
+  {
+   "refs": [
+    "I032",
+    "I014"
+   ],
+   "do": "Danışma kilidi katmanları (contracts.json ortak kural): 1 dogrulama:liste, devam:hesap, is-kuyrugu:eposta, isletim:*; 2 listeler:kova, dogrulama:teyit; 3 yoklama:cift, projeksiyon:*, esitleme:kurulum_siniri, duzeltmeler:zincir; 4 dogrulama:sayac; 5 dogrulama:isaret. Tek genel sıra vardır, önce katman sonra anahtar metni: D12.danismaKilidi(tx, anahtarlar) bir çağrıdaki anahtarları bu sırayla alır; bir işlem birden çok kez çağırabilir ama yeni her anahtar işlemin tuttuğu bütün anahtarlardan sonra gelir; işlemin zaten tuttuğu anahtarı yeniden istemek işlemsizdir; sırada geride kalan yeni anahtar yalnız D12.danismaKilidiDene(tx, anahtar) ile alınır (beklemez, false dönerse çağıran TEKRAR_DENE döner ya da işi yeniden dener). Çok öğeli işlem öğelerin anahtarlarını saf anahtar işlevleriyle (D05 yoklamaCiftAnahtari, D07 kararAnahtarlari, dogrulamaTeyitAnahtari, dogrulamaListeAnahtari, D03 listeKovaAnahtari, D11 qrKilitAnahtarlari) baştan toplar ve tek çağrıda alır. Anahtar biçimi string ya da { anahtar, kip: 'paylasimli' }. Elle pg_advisory_xact_lock yazılmaz. Sıra: danışma anahtarları, satırlar, iş kuyruğu (D14.isGonder) ve öğrenci sürümü (D06.ogrenciDurumuDegisti), en son genel sayaç (D06.surumAl, bir kez). D01 için: ogrenciTeyitEt, ogrenciTeyidiniReddet, hesap silme (uç ve hesap_silme_yurutucu) ve bekleyen_kayit_kapatma, yazmadan önce 'dogrulama:teyit:<ogrenciId>' anahtarını (D07'nin packages/contracts/src/dogrulama.ts'teki dogrulamaTeyitAnahtari(ogrenciId) işleviyle, katman 2, dışlayıcı) alır. Aynı işlem numaraIleEslestir de çağıracaksa kova anahtarını (D03'ün listeKovaAnahtari(kovaNo(numara)), paylasimli) aynı çağrıya katar: danismaKilidi(tx, [{ anahtar: kova, kip: 'paylasimli' }, teyit]); numaraIleEslestir'in kendi isteği o zaman işlemsizdir. Sonra yeniden değerlendirme D07.yenidenDegerlendir ile (katman 3 ve üstü) gelir. cihazDogrulamaSonucunuYaz neden listesine 'onay_alani' eklenir (kayıt onayındaki iOS 27 alanları cihaz satırındakinden farklıysa). yenidenDegerlendir'i D07'nin YenidenNeden sabitleriyle çağır: TEYIT_VERILDI, TEYIT_REDDEDILDI, CIHAZ_DEGISIMI_ONAYLANDI, CIHAZ_DEGISIMI_REDDEDILDI, DEGISIM_IPTAL, HESAP_SILINDI, HESAP_KAPANDI (bekleme_bitti), CIHAZ_KAPANDI (çıkış). Kayıt, değişim ve yenileme sırası: dogrulamaDegeriniTuket, cihaz ve anahtar satırları, cihazKanitiniDogrula; reddedildi'de 403 ile geri alınır, değer yanmaz. cihazKanitAyrintilariniSil sahibe sorulan D12-A01 cevaplanınca eklenir; o zamana kadar not olarak kalır."
+  },
+  {
+   "refs": [
+    "I050",
+    "I085",
+    "I080",
+    "A2"
+   ],
+   "do": "Kimlik olayları (I050): D01.kimlikDinleyicileriniKur(aboneler: { dersler: KimlikDinleyicisi; esitleme: KimlikDinleyicisi; projeksiyon: KimlikDinleyicisi; isletim: KimlikDinleyicisi }): void ve kimlikDinleyicileriHazir(): void; KimlikDinleyicisi = (tx, olay: KimlikOlayi) => Promise<void>. Aboneler: dersler D02.derslerKimlikDinleyicisi, esitleme D06.esitlemeKimlikDinleyicisi, projeksiyon D11.projeksiyonKimlikDinleyicisi, isletim D15.kimlikOlayiDinleyicisi; D01 olayı doğuran işlemde bu sırayla çağırır. Kurulumu bileşim kökleri yapar: app.ts uygulamaKur (api ve isci), D12 cli/geri-yukleme, D15 cli/anahtar-uret ve cli/olay*. kimlikOlayiDinleyicisiKaydet adlı bir işlev yoktur. D01 için: kimlikDinleyicileriniKur imzasına dersler abonesini ekle ve çağrı sırasını yaz; eski kimlikOlayiDinleyicisiKaydet geçen her cümleyi kaldır. Açık nokta D01-A14 ürün kararı değil, mimar kararıdır: kapsadığı eklemeler I003, I009, I050, I071, I085 ve A2 kararlarıyla işlendi; open_points'ten çıkar ve resolved_gaps'e bu kararlara göndermeyle yaz."
+  },
+  {
+   "refs": [
+    "I080",
+    "I085"
+   ],
+   "do": "Dış yüze hesapSilindiMi(tx: Tx, kisiId: KisiId): Promise<boolean> ekle (modules/kimlik/yaprak.ts, [yaprak]): kisiler satırını FOR SHARE okur, silinme_ani doluysa true; hesabiSil aynı satırı güncellediğinden eşzamanlı öğe işlemiyle sıralanır. D15'in olcum_telefonda_kayip görünümü cihazlar.kapanma_nedeni, kapanma_ani, platform ve kisiler.silinme_ani sütunlarını okur: bu adlar değişmez, değişecekse önce D15 görünümü güncellenir (tablo notuna yaz)."
+  },
+  {
+   "refs": [
+    "I009",
+    "I071"
+   ],
+   "do": "Ortak Kimlik tipi (packages/contracts/src/ortak/kimlik.ts, D13): { kisiId, girisOturumuId, oturumKapsami, kaynak, roller: readonly { rol: 'ogrenci' | 'hoca' | 'yonetici'; kapsamBirimId: BirimId | null }[], incelemeHesabi }; kapsamBirimId null bütün birimler demektir. D01 için: oturumDogrula(girdi: OturumGirdisi): Promise<OturumSonucu> bu Kimlik'i döner (roller personel_rolleri'nden doldurulur); fırlatırsa app.ts çevirir. D02.dersYetkisi(tx, kimlik: Kimlik, dersId): Promise<'sahip' | 'yonetici' | null> (yoneticiKapsami parametresi yok; yönetici kapsamı kimlik.roller'dan okunur). D01'in YoneticiKapsami kurduğu yerler kalkar. Rota beyanları: 'hizSinifi girisli' yerine 'oturum'; DEGISIM_BEKLEYEN_ROTALARI'ndaki dört rota degisimBekleyenKabul: true; POST /v1/kimlik/giris ve POST /v1/kimlik/cihaz-degisimi kimlik ['girissiz', 'oturum'] ve hiz { kimliksiz: 'girissiz', kimlikli: 'oturum' }; öğrencinin girişsiz uçlarında kitle: 'ogrenci'; rota düzeyindeki rol reddi API_ROL_YETKISIZ, yetkiDenetle yalnız modül içi kapsam için; oturum çerezinin adı CEREZLER'deki __Host-yoklama-oturum ve çerez yalnız istek.panelden true iken kurulur; D01-B49'daki kaynak_disi 403 yerine 404 KIMLIK_BULUNAMADI. contracts.json'da DELETE /v1/kimlik/oturumlar/{girisOturumuId} oldu (yol parametresi adı); spec'teki yolu buna çek."
+  },
+  {
+   "refs": [
+    "I045"
+   ],
+   "do": "ogrenciTeyitEt ve ogrenciTeyidiniReddet istekteki islemId'yi kimlik.teyit ve kimlik.teyit_ret olayına yazar; OgrenciHesabi girilenAdSoyad'ı taşır; toplu teyit kuralının saf yüklemini topluTeyitUygunMu adıyla packages/core/src/kimlik'ten dışa aç (spec.exports'a 'topluTeyitUygunMu'). Denetim (I045): dersId taşıyan her denetim olayı birimId de taşır; olay türleri sözleşme dosyasında KIMLIK_DENETIM_OLAYLARI listesindedir ve D09.denetimOlaylariniKaydet ile kaydolur."
+  },
+  {
+   "refs": [
+    "I062",
+    "I064",
+    "I025"
+   ],
+   "do": "Her kimlik olayı (hesap_silindi, giris_oturumu_kapandi, giris_oturumu_yenilendi, cihaz_kapandi, hesap_durumu_degisti) ayrıca yalnız iç kimlik, olay türü ve anla yapısal log satırı olarak yazılır (D12'nin cli/geri-yukleme iptalleri bunu okur; numara, isim, adres yok). Saklama: yalnız D12 kataloğundaki 'kimlik.kisi_bagi' sınıfı için tek işleyici kaydet (saklamaIsleyicisiKaydet); öneksiz ya da ince sınıf adı (ör. 'yoklama_kayitlari', 'hesap_silme', 'aksis_ozet_anliklari', '<modül>.<tablo>') ve kayıtta oncekiSiniflar listesi yoktur, sıra kataloğun oncesinde listesinden gelir. İşleyici yoklama_saklama girişiyle açılan işlemde yalnız kendi tablolarında SELECT, UPDATE ve DELETE yapar; testi D12.saklamaIsleyicisiniCalistir ile yazılır. İşleyici ogrenci_hesaplari'ndaki numara ve girilen ismi anonimleştirir."
+  },
+  {
+   "refs": [
+    "I073"
+   ],
+   "do": "E-posta akışları: kod (giris_kodu), başvuru kodu, başvuru silme kodu (basvuru_silme_kodu) ve onay bekliyor e-postasından önce, kod üretmeden ve kendi READ COMMITTED işleminin ilk kilidi olarak D14.epostaSiniriDenetle(tx, normalAdres, tur) çağrılır (D14 'is-kuyrugu:eposta:<özet>' anahtarını katman 1'de alır); izin yoksa kod üretilmez, cevap aynıdır. epostaGonder işlem bitip cevap gittikten sonra (onResponse) çağrılır; giris_bildirimi BASARISIZ dönerse D09.denetimeYaz ile kimlik.bildirim_gonderilemedi yazılır. Adres yalnız epostaNormallestir'den geçer; cihaz etiketi tarayıcı ya da telefon ailesi ve işletim sisteminden oluşan sabit listeden üretilir. Giriş bildirimi için yeniden deneme işi yoktur (teknik.html#sunucu-kimlik)."
+  },
+  {
+   "refs": [
+    "A2"
+   ],
+   "do": "Yaprak kuralı (A2, contracts.json ortak kural): modules/<ad>/yaprak.ts başka alan modülünden yalnız onun yaprak.ts dosyasını içe aktarır, hiçbir index.ts'i içe aktarmaz; jobs/<modül>/ dosyaları ve bileşim kökleri (app.ts, server.ts, worker.ts, cli/) her index.ts'i içe aktarabilir; modules/ altındaki dosya jobs/ ya da bileşim kökü içe aktarmaz. D01 için: modules/kimlik/yaprak.ts kisiGetir, personelRolleri, yetkiDenetle, hesapSilindiMi, ogrenciHesabiGetir, cihazGetir, cihazAnahtariGetir ve girisOturumuGetir'i taşır ve başka modülün index.ts'ini içe aktarmaz. modules/kimlik D02'yi yalnız modules/dersler/yaprak.ts'ten (birimGetir, dersYetkisi, kilitliBirimDonemleri) içe aktarır; D07'yi index.ts'ten (cihazKanitiniDogrula, dogrulamaDegeriniTuket, yenidenDegerlendir) kullanabilir çünkü D07 D01'i yalnız yaprak.ts ya da eklenti seçeneğiyle kullanır. Sınır testi bunu dependency-cruiser ile sınar."
+  },
+  {
+   "refs": [
+    "I074"
+   ],
+   "do": "İşler (I074): her pg-boss işi jobs/<modül>/index.ts'teki export const isler dizisinde D14.isTanimla ile tanımlıdır; KuyrukTanimi modules/<ad>/ içindedir; zamanlama D14 çizelge kurallarına uyar (03:00 ile 05:00 arası günlük iş yok, en az 5 dakika aralık); her iş için D14'ün adımıyla 'aynı veriyle iki kez çalışırsa' senaryosu vardır. Uymayan satırı düzelt."
+  },
+  {
+   "refs": [
+    "I070"
+   ],
+   "do": "Birleşim (I070): index.ts kimlikEklentisi adlı Fastify eklentisini ve EklentiTemelSecenekleri'ni ({ surec }) genişleten seçenek tipini dışa verir (spec.exports'a 'kimlikEklentisi' adıyla); eklenti altyapıyı seçenekten alır, kayıt sırasında veritabanına dokunmaz, zamanlayıcıyı yalnız surec 'api' iken kurar, dinleyici kayıtlarını her süreçte yapar; rotalar yalnız D13.rotalariKaydet ile; setErrorHandler ve setNotFoundHandler yok; hata kodu öneki modül adının büyük harfi; kaynak düzeyi ret 404 <MODÜL>_BULUNAMADI, rota düzeyi rol reddi API_ROL_YETKISIZ."
+  },
+  {
+   "refs": [
+    "A1"
+   ],
+   "do": "Göç klasörü (A1): spec'te ve bölümde göç yerini contracts.json migration_dir ile aynı yaz: apps/server/migrations/<14 haneli UTC>_kimlik_<açıklama>/ (migration.sql ve snapshot.json; dosya haritasında apps/server/migrations/??????????????_kimlik_* globu bu modülündür). Göç yalnız bu modülün tablolarına dokunur; göç dosyaları spec.files'a değil iş paketine yazılır; klasör kuralı ve CI göç denetimi D12'nindir. Paralel paketler birleşmeden önce ana dala yeniden dayanır, araya göç girdiyse kendi klasörünü silip drizzle-kit generate ile yeniden üretir."
+  }
+ ]
+}

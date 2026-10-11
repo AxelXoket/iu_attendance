@@ -1,0 +1,27 @@
+## spec/D15.json /tests[66]/asserts
+komut-girisleri.feature: olay oturumlari-kapat --tur personel açılışta D01.kimlikDinleyicileriniKur'u dört aboneyle (dersler D02, esitleme D06, projeksiyon D11, isletim D15) ve kimlikDinleyicileriHazir'ı çağırır; bütün personel oturumları kapanır, her biri için denetim kaydı yazılır ve hocanın etkin QR yuvası olay anıyla iptal olur (projeksiyon abonesinin bağlandığının davranış kanıtı); öğrenci oturumları açık kalır (zemin). anahtar-uret donem-arasi, dersi başlamış ve kilidi gelmemiş etkin bir birim dönemi varken { donemArasi: false }, yokken true yazar ve D02.donemArasiMi ile aynı değeri verir. Abonelerden biri verilmeden kurulan giriş açılmaz (D01 kuralı) ve hiçbir oturum kapanmaz (I050, I080).
+
+## spec/D15.json /resolved_gaps[5]/decision
+Anahtarlar cli/anahtar-uret ile üretilir: amaç başına 32 bayt crypto.randomBytes, base64. Sunucuda amaç başına bir sır dosyası (gizliAnahtarDosyasiSemasi: { bicim: 1, amac, etkinKid, anahtarlar: [{ kid, deger, durum, olusturmaAni, emeklilikAni }] }), en çok 4 anahtar, kid deseni ^[a-z0-9-]{1,8}$ (D04-B20 kuralı, D04 ve D11 aynı deseni kullanır: I018, I052; ad amaç kısaltması, yıl ve dönem harfi, ör. sb27b). Dosyalar /opt/iu-yoklama/gizli altında uid 1000'e ait, 0400; Compose dosya sırrı olarak yalnız matristeki servise bağlanır; ayarlariYukle /run/secrets/<ad> dosyasını aynı Zod şemasıyla doğrular. Döndürme: saat_belgesi, qr_anahtar_kaynagi ve ulasma_makbuzu her dönem arasında, en düşük sürümün yükseltildiği pencerede; giris_kodu_ozeti ve eposta_ozeti her an (yalnız 5 dakikalık kodlar ve e-posta sayaçları düşer). ayarlariYukle anahtar kümesini açılışta bir kez yüklediğinden döndürme iki adımlıdır ve ana makinedeki docker/isletim/anahtar.sh dondur --amac <amaç> ile yapılır: (1) anahtar-uret dondur --hazirla yeni kid'i dosyaya HAZIR (yalnız doğrulamada) ekler; yayinla.sh --yeniden-baslat isci, api-1 ve api-2'yi sırayla yeniden başlatır (anahtarı kullanan her süreç: saat_belgesi ve qr
+
+## spec/D15.json /resolved_gaps[7]/decision
+Olay müdahalesi bu belgede (Durumlar ve kurallar, Olay müdahalesi) ve komutlarda: docker/isletim/anahtar.sh ele-gecirildi --supheden <an> (yeni kid iki adımda etkin olur, işçi dahil bütün süreçler her adımda yeniden başlar; eski kid ELE_GECIRILDI ve eleGecirilmeAni şüphe anı; o kid'le işaretten sonra doğrulanan belgede D04 anahtarEleGecirildi true döner ve D07 kaydı İncelemede alır; şüphe anı ile işaret arasında ulaşmış kayıtlar komutun son adımında D07.yenidenDegerlendir(tx, { belgeKid: { amac, kid } }, 'ANAHTAR_ELE_GECIRILDI') ile İncelemede'ye döner; I086). Ayrım belgenin içindeki imza anına göre değil ulaşma anına göre yapılır: sızan anahtarla geçmiş tarihli belge üretilebilir, ulaşma anını ise sunucu yazar. Bu yüzden işaretten sonra gelen ama sızıntıdan önce imzalanmış meşru kayıt da İncelemede'ye düşer; ret değildir, hoca karar verir (plan.html#hile), olay oturumlari-kapat (apps/server/src/cli/olay.ts, olay komutlarının globu cli/olay*; D01.oturumlariKapat, bütün personel oturumları; I080), xprem yayın anahtarının değiştirilmesi ve etiketsiz güncellemenin geri alınması (ota_yayin_denetimi), makinenin temiz imajla yeniden kurulup şüpheden önceki âna PITR ile dönülmesi (D12). H
+
+## spec/D15.json /dis_yuz_kullanimi[4]
+D01 (bileşim kökü yoluyla, I080 ve I085): kimlikDinleyicileriniKur ve kimlikDinleyicileriHazir (cli/anahtar-uret ve cli/olay girişleri, dört aboneyle), hesapSilindiMi okuyucusu (yaprak; app.ts'ten eklentiye), oturumlariKapat (cli/olay oturumlari-kapat); KimlikDinleyicisi ve KimlikOlayi tipleri.
+
+## spec/D15.json /olay_mudahalesi[2]/adimlar
+olay oturumlari-kapat --tur personel (docker compose run --rm --no-deps goc node src/cli/olay.ts oturumlari-kapat --tur personel; giriş önce D01.kimlikDinleyicileriniKur'u dört aboneyle kurar, sonra D01.oturumlariKapat, her oturum için denetim kaydı; projeksiyon abonesi hocaların QR yuvalarını da iptal eder); hocalar e-posta koduyla yeniden girer.
+
+## spec/D01.json /endpoints[23]/path
+/v1/kimlik/yonetim/hesaplar/{kisiId}/oturumlari-kapat
+
+## spec/D01.json /endpoints[24]/auth
+Yönetici; kapsamındaki personel, yönetici hedefte rol kapsamı kuralıyla (oturumlari-kapat ile aynı).
+
+## spec/D01.json /tests[19]/asserts
+Birimi A biriminde olan tüm kapsamlı yöneticiye A kapsamlı yönetici pasif, etkin ve oturumlari-kapat isteğinde 404 KIMLIK_BULUNAMADI alır ve hedef değişmez; tüm kapsamlı yönetici aynı işleri yapar. Tüm kapsamlı yöneticiye POST /v1/kimlik/yonetim/yoneticiler ile birim kapsamı istemek 409 KIMLIK_HESAP_DURUMU_UYGUN_DEGIL ve rol değişmez; önce DELETE (son yönetici koruması), sonra ekleme işler. Kapsamlı yöneticinin tüm kapsamlı yönetici ekleme ya da kapsamı dışındaki birime rol verme isteği 404 KIMLIK_BULUNAMADI (kaynak düzeyi ret, 403 değil).
+
+## spec/D01.json /tests[64]/asserts
+D15'in anahtar-uret oturumlari-kapat komutu kendi bileşim köküyle koşar: bütün personel oturumları kapanır, D11 QR anahtar yuvaları aynı işlemde iptal olur, öğrenci oturumlarına dokunulmaz; sonraki personel isteği 401 neden olay_komutu.
+

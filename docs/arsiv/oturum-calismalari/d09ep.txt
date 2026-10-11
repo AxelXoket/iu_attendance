@@ -1,0 +1,96 @@
+##### endpoints /v1/duzeltmeler/teyitler
+{
+"method": "GET",
+"path": "/v1/duzeltmeler/teyitler",
+"client": "panel",
+"auth": "Rota roller [hoca] (panel ya da telefonun hoca modu); yalnız kişinin hocası olduğu dersler: liste D02.hocaninDersleri(tx, kimlik.kisiId, { acikDonem: true }) ile süzülür; dersId verilip D02.dersYetkisi(tx, kimlik, dersId) 'yonetici' ya da null dönerse 404 DUZELTMELER_BULUNAMADI; yalnız kişinin açık dönemdeki derslerinde etkin liste satırı olan teyitsiz hesaplar.",
+"request": {
+"dersId": "uuid (sorgu), isteğe bağlı; liste 2000 satırı aşınca daraltmak için"
+},
+"response": {
+"toplu": "TeyitOgesi[]; D01'in toplu kuralına uyanlar (eslesmeDurumu eslesti, etkinCihaz.dogrulandi true, aynı numarada başka teyitsiz hesap yok; D09-B13)",
+"cihaziDogrulanmamis": "TeyitOgesi[]; etkinCihaz.dogrulandi false ya da cihaz yok; tek tek teyit",
+"isimEslesmeyen": "TeyitOgesi[] (girilenAdSoyad dolu); eslesmeDurumu isim_uyusmuyor; tek tek teyit",
+"ayniNumara": "dizi: { ogrenciNo, listeAdSoyad, hesaplar: TeyitOgesi[] }; tek tek karar",
+"TeyitOgesi": "{ ogrenciId, ogrenciNo, listeAdSoyad, girilenAdSoyad (yalnız isimEslesmeyen ve ayniNumara; kaynak D01 OgrenciHesabi.girilenAdSoyad, D01 yalnız ekleme alanı olarak verdi, D09-A09), dersler: [{ dersId, dersAdi }], kayitAni }",
+"toplam": "tam sayı"
+},
+"errors": [
+"API_ISTEK_GECERSIZ (400, D13: sorgu ya da gövde şemaya uymuyor)",
+"DUZELTMELER_BULUNAMADI (404: dersId kişinin değil)",
+"API_SONUC_COK_BUYUK (422, D13-B13: 2000 satırı aşan sınıf boyu liste; kesik liste dönmez, istemci dersId ile daraltır)",
+"API_KIMLIK_GEREKLI (401, D13)",
+"API_ROL_YETKISIZ (403, D13: rol uymuyor)",
+"API_HIZ_SINIRI (429) ve API_SUNUCU_YOGUN (503), Retry-After ile (D13)"
+],
+"idempotency": "Yalnız okuma; tekrar zararsız.",
+"rate_limit": "Hız sınıfı agir (D13.hizSinifi): oturum başına dakikada 20 istek; liste her istekte birçok modülden canlı kurulur"
+}
+##### endpoints /v1/duzeltmeler/teyitler/kararlar
+{
+"method": "POST",
+"path": "/v1/duzeltmeler/teyitler/kararlar",
+"client": "panel",
+"auth": "Rol HOCA; yetki ve toplu kuralını D01.ogrenciTeyitEt ve ogrenciTeyidiniReddet denetler (öğrencinin etkin liste satırı olan dersin hocası); D09 yalnız sonucu eşler.",
+"request": {
+"islemId": "uuid, UUIDv7; D01'e istekle geçer, kimlik.teyit ve kimlik.teyit_ret olayları taşır",
+"ogeler": "dizi, 1 ile 200: { ogrenciId: uuid, karar: TEYIT | RET, toplu: boolean, gerekceKodu: BU_OGRENCI_DEGIL | DIGER ya da null }; toplu yalnız TEYIT ile true olabilir; gerekceKodu RET'te zorunlu, TEYIT'te null (değilse 400); D01'e küçük harfle (bu_ogrenci_degil, diger) geçer"
+},
+"response": {
+"islemId": "uuid",
+"sonuclar": "ogeSonuclariSemasi (D13-B28) dizisi, istek sırasıyla: { kimlik: ogrenciId, sonuc: KABUL | ZATEN_VAR | RET | TEKRAR_DENE (x-extensible-enum), kod: hata kodu ya da null }; TEKRAR_DENE yalnız kod DUZELTMELER_GECICI_CAKISMA ya da DUZELTMELER_ANLIK_BEKLENIYOR ile, öbür öğeler etkilenmez (D09-B32)"
+},
+"errors": [
+"API_ISTEK_GECERSIZ (400, D13: şemaya uymayan gövde ya da 200'den fazla öğe)",
+"API_GOVDE_COK_BUYUK (413, D13: gövde 256 KiB'ı aşıyor)",
+"API_KIMLIK_GEREKLI (401, D13)",
+"API_ROL_YETKISIZ (403, D13: rol uymuyor)",
+"API_HIZ_SINIRI (429) ve API_SUNUCU_YOGUN (503), Retry-After ile (D13)",
+"öğe: DUZELTMELER_BULUNAMADI",
+"öğe: DUZELTMELER_TEK_TEK_ONAYLANMALI",
+"öğe: DUZELTMELER_ZATEN_KARAR_VERILMIS",
+"öğe (TEKRAR_DENE): DUZELTMELER_GECICI_CAKISMA"
+],
+"idempotency": "islemId ve öğrenci: denetim_kayitlari'nda aynı islem_id, olay_turu kimlik.teyit ya da kimlik.teyit_ret ve ogrenci_id ile satır varsa ZATEN_VAR (D01 olayı yazar, D09 ayrı olay yazmaz; D09-B15). D01 sonuç eşlemesi: teyitli ve reddedildi KABUL; zaten_teyitli ZATEN_VAR; tek_tek_gerekli RET DUZELTMELER_TEK_TEK_ONAYLANMALI; numara_teyitli, teyitli_hesap ve zaten_reddedildi RET DUZELTMELER_ZATEN_KARAR_VERILMIS; bulunamadi RET DUZELTMELER_BULUNAMADI. reddedilenHesaplar'ın her biri için aynı işlemde D06.ogrenciDurumuDegisti. Öğe başına ayrı işlem (D09-B40): her öğenin işleminde ilk kilit D01'in 'dogrulama:teyit:<ogrenciId>' anahtarı (katman 2), sonra D07'nin yeniden değerlendirme anahtarları; öğeler kanonik sırayla (ogrenciId) işlenir, cevap istek sırasıyla döner; 40P01 ve 55P03'te öğenin işlemi bir kez yeniden denenir, yine olursa TEKRAR_DENE DUZELTMELER_GECICI_CAKISMA.",
+"rate_limit": "Hız sınıfı oturum (D13.hizSinifi): oturum başına dakikada 120 istek (D13-B09 başlangıç değeri); istek başına en çok 200 öğe (fazlası 400 API_ISTEK_GECERSIZ), gövde sınırı 256 KiB (aşan 413 API_GOVDE_COK_BUYUK, D13-B11)"
+}
+##### endpoints /v1/duzeltmeler/sonradan-degisenler
+{
+"method": "GET",
+"path": "/v1/duzeltmeler/sonradan-degisenler",
+"client": "panel",
+"auth": "Rol HOCA; dersId zorunlu, D02.dersYetkisi(tx, kimlik, dersId) dersin hocası sonucunu vermeli (vermezse 404).",
+"request": {
+"dersId": "uuid (sorgu), zorunlu",
+"bolum": "GEC_ULASAN | SONUCU_DEGISEN | SAYILIRSA_DEGISECEK (sorgu), isteğe bağlı; verilmezse üçü sırayla",
+"imlec": "metin (sorgu); opak keyset imleci (bölüm sırası, an, kimlik); liste her sayfada aynı kuralla kurulur",
+"adet": "tam sayı (sorgu), 1 ile 500, varsayılan 100"
+},
+"response": {
+"kilit": "{ kilitli: boolean, kilitAni: metin ya da null } (D02.kilitDurumu)",
+"ogeler": "dizi, her öğe bolum alanı taşır: GEC_ULASAN { bolum, kayit, oturumId, oturumBaslangicAni, listeSatiriId, ogrenciAdSoyad, neden: GEC_ULASTI | GEC_KARAR, ulasmaAni, kararAni, gondermeSuresiSonu, karar }; SONUCU_DEGISEN { bolum, listeSatiriId, ogrenciAdSoyad, tur: TEORI | UYGULAMA | GENEL, tabanSonucu, simdikiSonuc, tabanAni, sinif (D10'un degisimSinifi sonucu; Haksız devamsız sınıflaması, I048), kaynaklar: [{ tur: DUZELTME | KARAR | GEC_KAYIT, sebepKodu, duzeltmeId, kayit, ani }] }; SAYILIRSA_DEGISECEK { bolum, kayit, oturumId, listeSatiriId, ogrenciAdSoyad, ulasmaAni, eylem: { yol: POST /v1/duzeltmeler, onerilenSebepKodu: BEYANA_DAYALI (D09-A06), kayit } }",
+"sonrakiImlec": "metin ya da null"
+},
+"errors": [
+"API_ISTEK_GECERSIZ (400, D13: sorgu ya da gövde şemaya uymuyor)",
+"DUZELTMELER_IMLEC_GECERSIZ (400)",
+"DUZELTMELER_BULUNAMADI (404)",
+"API_KIMLIK_GEREKLI (401, D13)",
+"API_ROL_YETKISIZ (403, D13: rol uymuyor)",
+"API_HIZ_SINIRI (429) ve API_SUNUCU_YOGUN (503), Retry-After ile (D13)"
+],
+"idempotency": "Yalnız okuma; tekrar zararsız. Liste sorgu anında, yalitim 'repeatable_read' ile açılan okuma işleminde kurulur, ayrı tablo yok; D08.sonucuDegistirebilirMi kip 'AKSIS' ve isteğin anıyla çağrılır (I038); sayfalama D13-B13 keyset desenidir.",
+"rate_limit": "Hız sınıfı agir (D13.hizSinifi): oturum başına dakikada 20 istek; liste her istekte birçok modülden canlı kurulur"
+}
+##### exports ogrencininDuzeltmeleri
+{
+"name": "ogrencininDuzeltmeleri",
+"signature": "ogrencininDuzeltmeleri: OgrenciKaynagi = { tur: 'ogrenci', bolum(tx: Islem, ogrenciId: KisiId, i: { surumden: bigint | null; surumeKadar: bigint }): Promise<{ tam: true; satirlar: readonly { id: string; silindi: false; veri: OgrenciDuzeltmesi }[]; kararlar: [] }> }",
+"purpose": "Öğrenci kaynağı 'duzeltmeler'; duzeltmelerEklentisi D06.indirmeKaynagiKaydet('duzeltmeler', ogrencininDuzeltmeleri) ile kaydeder. Numara bellekte D01.ogrenciHesabiGetir(tx, { kisiIdler: [ogrenciId] }) ile (silinmiş hesap dahil); liste satırları D03.ogrencininSatirlari(tx, numara) ile pasifler dahil bütün satırlar (şube değişiminden ya da listeden çıkarılmadan önceki düzeltmeler de iner; aynı numaranın satırları tek öğrencidir); açık dönemlerin zincir satırları duzeltmeleriGetir ile. Her zaman tam liste (D06-B11). OgrenciDuzeltmesi: { id, tur, sebepKodu, sonDurum, harf, dersId, oturumId, listeSatiriId, teoriSaat, uygulamaSaat, oncekiDuzeltmeId, kayit, etkin, olusturmaAni }; belge numarası, yapan ve kaynak inmez."
+}
+##### exports ogrencininSorunBildirimleri
+{
+"name": "ogrencininSorunBildirimleri",
+"signature": "ogrencininSorunBildirimleri: OgrenciKaynagi = { tur: 'ogrenci', bolum(tx: Islem, ogrenciId: KisiId, i: { surumden: bigint | null; surumeKadar: bigint }): Promise<{ tam: true; satirlar: readonly { id: string; silindi: false; veri: OgrenciSorunBildirimi }[]; kararlar: [] }> }",
+"purpose": "Öğrenci kaynağı 'sorun_bildirimleri'; duzeltmelerEklentisi D06.indirmeKaynagiKaydet('sorun_bildirimleri', ogrencininSorunBildirimleri) ile kaydeder. Öğrencinin açık dönemlerdeki bütün bildirimleri, tam liste. OgrenciSorunBildirimi: { id, dersId, oturumId, kayit, nedenKodu, durum, ulasmaAni, sureBitisAni, kapanisAni, duzeltmeId }; kapatan hoca ve kurulum inmez."
+}

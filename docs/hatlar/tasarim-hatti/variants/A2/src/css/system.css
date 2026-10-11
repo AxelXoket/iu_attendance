@@ -1,0 +1,317 @@
+/* src/css/system.css · owner F1a (OWNERS.md)
+   Rules that only system sections use: renk, kontrast, bilesenler, katmanlar, hareket, etkilesim, tokenlar, kaynaklar,
+   and the platform fallback. Sizes read the --component-* variables and motion reads the --motion-* variables that
+   tools/build.js writes from tokens.json (decisions-r2 E1, E3).
+   tools/lib/sources.js merges base, system and screens: every chunk starts with an "@order" marker line,
+   and the chunks of all three files are joined in marker order, so the page sees one stylesheet in that order (the cascade).
+   Markers and this note never reach tasarim.html. To add rules, extend a chunk, or start one with a free number
+   between its neighbours. */
+/* @order 0700 */
+/* ---------- Color ---------- */
+.ramp { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); border: 1px solid var(--border-subtle); }
+.ramp > div { height: 80px; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; color: var(--text-primary); position: relative; }
+.ramp > div.dark { color: var(--text-onInverse); }
+.ramp > div b { font: 600 20px/24px var(--font-sans); letter-spacing: 0; position: relative; z-index: 1; }
+.ramp > div.off::after { content: ''; position: absolute; inset: 0; background-image: repeating-linear-gradient(135deg, transparent 0 6px, rgba(26, 32, 48, 0.10) 6px 7px); }
+@media (max-width: 720px) { .ramp { grid-template-columns: repeat(6, minmax(0, 1fr)); } .ramp > div { height: 64px; } }
+.ramp-gap { margin-top: 16px; }
+.role-chip { display: inline-flex; align-items: center; gap: 8px; font: 400 12px/16px var(--font-mono); }
+.role-chip i { width: 16px; height: 16px; display: inline-block; flex: none; box-shadow: inset 0 0 0 1px rgba(26, 32, 48, 0.16); }
+/* Role cards: one line each, the role and the step it stands for (the hex only for a literal role). */
+.roles { column-count: 4; column-gap: 24px; }
+.roles .role-g { break-inside: avoid; }
+@media (max-width: 1000px) { .roles { column-count: 2; } }
+@media (max-width: 560px) { .roles { column-count: 1; } }
+.role-g { border-top: 1px solid var(--text-primary); padding-top: 8px; margin-bottom: 24px; min-width: 0; }
+.role-g h4 { font: 600 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); margin-bottom: 4px; }
+.role-r { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border-subtle); }
+.role-r i { width: 16px; height: 16px; box-shadow: inset 0 0 0 1px rgba(26, 32, 48, 0.16); }
+.role-r .n { font: 500 12px/16px var(--font-mono); overflow-wrap: anywhere; white-space: normal; }
+.role-r .v { font: 400 12px/16px var(--font-mono); color: var(--text-secondary); }
+.st-g { align-items: start; }
+/* Contrast tables: two real tables side by side on a wide screen, one line per color pair; the kind is a group row
+   with its threshold; on a phone each pair is a two-line card (foreground and ratio, then background). */
+.sw-i { display: inline-block; width: 12px; height: 12px; margin-right: 8px; flex: none; margin-top: 2px; box-shadow: inset 0 0 0 1px rgba(26, 32, 48, 0.16); }
+.k-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; align-items: start; }
+@media (max-width: 1180px) { .k-two { grid-template-columns: minmax(0, 1fr); } .k-two > .scroll-x + .scroll-x thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }
+.k-tbl { font: 400 12px/16px var(--font-sans); }
+.scroll-x > .tbl-doc.k-tbl { min-width: 0; }
+.k-tbl td { padding-top: 4px; padding-bottom: 4px; }
+.k-tbl .k-g th { padding-top: 12px; padding-bottom: 4px; border-bottom: 1px solid var(--border-subtle); color: var(--text-primary); }
+.k-tbl .kc { display: flex; align-items: flex-start; min-width: 0; }
+.k-tbl .kn { display: flex; flex-wrap: wrap; gap: 0 8px; min-width: 0; }
+.k-tbl .kn code { font: 400 12px/16px var(--font-mono); white-space: nowrap; }
+.k-tbl td.r { white-space: nowrap; }
+.k-tbl b { font-weight: 600; }
+.k-cap { font: 600 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); margin: 0 0 4px; }
+.k-all { margin-top: 16px; }
+.k-all .det-c, .k-all > :not(summary):not(.det) { padding: 0 16px 8px; }
+.k-map { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 24px; align-items: start; margin-bottom: 24px; }
+@media (max-width: 900px) { .k-map { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) {
+  .k-tbl thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .k-tbl, .k-tbl tbody { display: block; }
+  .k-tbl tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "fg ratio" "bg bg"; gap: 2px 12px; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }
+  .k-tbl tr.k-g { display: block; border-bottom: 0; }
+  .k-tbl td { display: block; padding: 0; border: 0; }
+  .k-tbl td:nth-child(1) { grid-area: fg; } .k-tbl td:nth-child(2) { grid-area: bg; color: var(--text-secondary); } .k-tbl td:nth-child(3) { grid-area: ratio; }
+}
+
+/* @order 1500 */
+.state-table { width: 100%; border-collapse: collapse; }
+.state-table th { font: 400 12px/16px var(--font-mono); letter-spacing: 0.32px; color: var(--text-secondary); text-align: left; padding: 0 16px 12px 0; white-space: nowrap; }
+.state-table td { padding: 8px 16px 8px 0; border-top: 1px solid var(--border-subtle); }
+.state-table td:first-child { font: 500 13px/16px var(--font-sans); white-space: nowrap; }
+.state-table .btn { white-space: nowrap; }
+@media (max-width: 600px) {
+  .state-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .state-table, .state-table tbody { display: block; }
+  .state-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; padding: 16px 0; border-top: 1px solid var(--border-subtle); }
+  .state-table td { display: grid; gap: 4px; justify-items: start; padding: 0; border: 0; }
+  .state-table td:first-child { grid-column: 1 / -1; }
+  .state-table td[data-th]::before { content: attr(data-th); font: 400 12px/16px var(--font-mono); color: var(--text-secondary); }
+  .state-table td:empty { display: none; }
+}
+/* Component anatomy (Bileşenler, Katmanlar): one closed details per component under its demo; its summary is the
+   decision in one line, the body the size table and the state table, generated from the component tokens. */
+.anat-list { display: grid; margin-top: 16px; }
+.anat-list > .anat-d + .anat-d { border-top: 0; }
+.anat-d > summary { display: grid; grid-template-columns: 176px minmax(0, 1fr) 8px; gap: 16px; align-items: baseline; font-weight: 400; }
+.anat-d > summary::after { align-self: center; }
+.anat-n { font: 600 14px/20px var(--font-sans); }
+.anat-s { font: 400 14px/20px var(--font-sans); color: var(--text-secondary); }
+.anat-s code { color: var(--text-primary); }
+@media (max-width: 600px) { .anat-d > summary { grid-template-columns: minmax(0, 1fr) 8px; gap: 4px 16px; } .anat-s { grid-row: 2; } }
+.anat-t td:first-child { font-weight: 500; white-space: nowrap; }
+.anat-t td:nth-child(3) { white-space: normal; }
+.anat-h { font: 600 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); margin: 16px 0 4px; }
+.anat-st td:first-child { width: 112px; font-weight: 500; }
+/* On a phone a long token path may break anywhere rather than widen the card. */
+@media (max-width: 600px) { .anat-t code, .anat-st code, .k-tbl code, .pat-tbl code { white-space: normal; overflow-wrap: anywhere; } }
+.cb-off { color: var(--text-disabled); cursor: not-allowed; }
+.t-off { color: var(--text-disabled); }
+/* @order 1700 */
+/* Messages under a field (Etkileşim tablosu, hata: the message comes in from distance.kucuk above). */
+.msg { display: flex; gap: 8px; align-items: flex-start; font: 400 12px/16px var(--font-sans); letter-spacing: 0.32px; min-height: 16px; }
+.msg .ic { width: 16px; height: 16px; flex: none; }
+.msg.err { color: var(--status-danger-text); }
+.msg.ok { color: var(--status-success-text); }
+.msg.busy { color: var(--text-secondary); }
+.msg.in { animation: msgIn var(--motion-error-message-enter-dur) var(--motion-error-message-enter-ease); }
+@keyframes msgIn { from { opacity: 0; transform: translateY(calc(var(--distance-kucuk) * -1 * var(--mv))); } }
+/* E-mail code (Bileşenler, Kod alanı: component.code). The narrow cells start below component.code.narrowBelow; the
+   build checks that the media query below says the same number. */
+.otp { display: grid; gap: var(--component-input-gap); }
+.otp-box { position: relative; width: max-content; max-width: 100%; }
+.otp-in { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; font-size: 16px; cursor: text; transition: opacity var(--motion-focus-enter-dur) var(--motion-focus-enter-ease); }
+.otp-cells { display: grid; grid-template-columns: repeat(6, var(--component-code-cellWidth-base)); gap: var(--component-code-gap-base); }
+.otp-cells span { position: relative; height: var(--component-code-cellHeight); display: grid; place-items: center; background: var(--bg-surface); border: var(--component-code-border) solid var(--border-strong); font: var(--type-phone-kod); letter-spacing: var(--type-phone-kod-ls); transition: border-color var(--hov) var(--hov-e), color var(--hov) var(--hov-e); }
+.otp-cells span::after { content: ''; position: absolute; left: calc(var(--component-code-border) * -1); right: calc(var(--component-code-border) * -1); bottom: calc(var(--component-code-border) * -1); height: var(--line-isaret); background: var(--accent-mark); transform: scaleX(0); transition: transform var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease); }
+.otp-in:focus ~ .otp-cells span.cur::after { transform: scaleX(1); }
+/* The ring is drawn around the six cells (the input itself is invisible); it appears like every focus ring. */
+.otp-in:focus-visible ~ .otp-cells { outline: var(--line-odak) solid var(--focus-ring); outline-offset: var(--component-code-ringOffset); --ring-from: calc(var(--component-code-ringOffset) + var(--focus-offset)); animation: ringIn var(--motion-focus-enter-dur) var(--motion-focus-enter-ease); }
+@media (prefers-reduced-motion: reduce) { .otp-cells span::after { transition: none; } }
+@media (hover: hover) and (pointer: fine) { .otp-box:hover .otp-cells span { border-color: var(--border-hover); } }
+.otp[data-st="err"] .otp-cells span { border-color: var(--status-danger-border); }
+.otp[data-st="ok"] .otp-cells span { color: var(--status-success-text); }
+@media (max-width: 400px) { .otp-cells { grid-template-columns: repeat(6, var(--component-code-cellWidth-narrow)); gap: var(--component-code-gap-narrow); } }
+
+/* @order 1900 */
+/* List row (Bileşenler, Liste satırı: component.row): one vertical padding, the minimum heights carry the rest. */
+.lrow-list { background: var(--bg-surface); border: 1px solid var(--border-subtle); }
+.lrow { position: relative; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--component-row-gap); align-items: center; min-height: var(--component-row-minHeight-twoLine); padding: var(--component-row-padY) var(--component-row-padX); border: 0; border-bottom: var(--component-row-border) solid var(--border-subtle); background: var(--bg-surface); text-align: left; transition: background-color var(--hov) var(--hov-e), color var(--hov) var(--hov-e); }
+.lrow:last-child { border-bottom: 0; }
+.lrow::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: var(--component-row-mark); background: var(--accent-mark); transform: scaleY(0); transition: transform var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease); }
+.lrow .t { display: block; font: var(--type-phone-satir-baslik); letter-spacing: var(--type-phone-satir-baslik-ls); }
+.lrow .s { display: block; font: var(--type-phone-govde-kucuk); letter-spacing: var(--type-phone-govde-kucuk-ls); color: var(--text-secondary); }
+.lrow .ic { color: var(--icon-default); }
+.lrow:active, .lrow[data-state="pressed"] { background: var(--bg-pressed); }
+.lrow[aria-pressed="true"], .lrow[data-state="selected"] { background: var(--bg-selected); }
+.lrow[aria-pressed="true"]::before, .lrow[data-state="selected"]::before { transform: scaleY(1); }
+.lrow:disabled, .lrow[data-state="disabled"] { color: var(--text-disabled); cursor: not-allowed; }
+.lrow:disabled .s, .lrow[data-state="disabled"] .s, .lrow:disabled .ic, .lrow[data-state="disabled"] .ic { color: var(--text-disabled); }
+.lrow:focus-visible { outline-offset: var(--focus-offsetInset); }
+.lrow[data-state="hover"] { background: var(--bg-hover); }
+@media (hover: hover) and (pointer: fine) { .lrow:not(:disabled):not([aria-pressed="true"]):hover { background: var(--bg-hover); } }
+.lrow .sel-ic { opacity: 0; transition: opacity var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease); color: var(--accent-mark); }
+.lrow[aria-pressed="true"] .sel-ic, .lrow[data-state="selected"] .sel-ic { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .lrow::before { transition: none; } }
+
+/* @order 2300 */
+/* Tab content fades in with the tab pattern's content timing (ease.standart); a keyboard choice shows it at once. */
+.tabpanel { padding: 16px 0 0; }
+.tabpanel[hidden] { display: none; }
+.tabpanel.in { animation: fadeIn var(--motion-tab-content-enter-dur) var(--motion-tab-content-enter-ease); }
+/* @order 2500 */
+/* ---------- Menu (Katmanlar, Menü: component.menu; Etkileşim tablosu, menü) ---------- */
+.menu-wrap { position: relative; display: inline-block; }
+.menu {
+  position: absolute; top: calc(100% + var(--component-menu-offset)); right: 0; z-index: 20; min-width: var(--component-menu-minWidth); padding: var(--component-menu-padY) 0;
+  background: var(--bg-surface); box-shadow: var(--shadow-2); border-radius: var(--radius-menu);
+  visibility: hidden; opacity: 0; transform-origin: 100% 0;
+  transform: translateY(calc(var(--distance-kucuk) * -1 * var(--mv))) scale(calc(1 - (1 - var(--scale-katman)) * var(--mv)));
+  transition: opacity var(--motion-menu-exit-dur) var(--motion-menu-exit-ease), transform var(--motion-menu-exit-dur) var(--motion-menu-exit-ease), visibility 0s linear var(--motion-menu-exit-dur);
+}
+.menu[data-open="true"] { visibility: visible; opacity: 1; transform: none; transition: opacity var(--motion-menu-enter-dur) var(--motion-menu-enter-ease), transform var(--motion-menu-enter-dur) var(--motion-menu-enter-ease), visibility 0s; }
+.menu [role="menuitem"] { width: 100%; min-height: var(--component-menu-itemHeight); display: flex; align-items: center; gap: var(--component-menu-gap); padding: 0 var(--component-menu-itemPadX); border: 0; background: transparent; text-align: left; font: var(--type-panel-govde-kompakt-01); letter-spacing: var(--type-panel-govde-kompakt-01-ls); color: var(--text-primary); }
+.menu [role="menuitem"] .ic { width: var(--component-menu-icon); height: var(--component-menu-icon); color: var(--icon-default); }
+.menu [role="menuitem"].danger, .menu [role="menuitem"].danger .ic { color: var(--status-danger-text); }
+.menu [role="menuitem"]:focus-visible { outline-offset: var(--focus-offsetInset); background: var(--bg-hover); }
+.menu [role="menuitem"]:active { background: var(--bg-pressed); }
+@media (hover: hover) and (pointer: fine) { .menu [role="menuitem"]:hover { background: var(--bg-hover); } .menu [role="menuitem"]:active { background: var(--bg-pressed); } }
+.menu hr { border: 0; height: var(--component-menu-separator); background: var(--border-subtle); margin: var(--component-menu-separatorGap) 0; }
+/* Tooltip (Katmanlar, İpucu: component.tooltip; Etkileşim tablosu, ipucu): a small paper card under its trigger,
+   facing it. The page script opens it after time.ipucu (at once while another one was just open) and closes it on
+   leave, blur and Escape; the timing is the popover pattern's. */
+.tip-wrap { position: relative; display: inline-flex; }
+.tip { position: absolute; z-index: 25; top: calc(100% + var(--component-tooltip-offset)); left: 50%; width: max-content; max-width: var(--component-tooltip-maxWidth); padding: var(--component-tooltip-padY) var(--component-tooltip-padX); background: var(--bg-surface); color: var(--text-primary); box-shadow: var(--shadow-2); border-radius: var(--radius-tooltip); font: var(--type-panel-etiket-01); letter-spacing: var(--type-panel-etiket-01-ls); pointer-events: none;
+  visibility: hidden; opacity: 0; transform-origin: 50% 0; transform: translateX(-50%) scale(calc(1 - (1 - var(--scale-ipucu)) * var(--mv)));
+  transition: opacity var(--motion-popover-exit-dur) var(--motion-popover-exit-ease), transform var(--motion-popover-exit-dur) var(--motion-popover-exit-ease), visibility 0s linear var(--motion-popover-exit-dur); }
+.tip-wrap.tip-now .tip { transition: none; }
+.tip-wrap[data-tip="on"] .tip { visibility: visible; opacity: 1; transform: translateX(-50%); transition: opacity var(--motion-popover-enter-dur) var(--motion-popover-enter-ease), transform var(--motion-popover-enter-dur) var(--motion-popover-enter-ease), visibility 0s; }
+
+/* @order 4000 */
+/* Records screen, its bottom sheet (a drawing of the system sheet), the offline band and the phone toast */
+.lay-dev { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+.rec { background: var(--bg-surface); border: 1px solid var(--border-subtle); }
+.rec-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px var(--component-row-gap); padding: var(--component-row-padY) var(--component-row-padX); border-bottom: var(--component-row-border) solid var(--border-subtle); }
+.rec-row:last-child { border-bottom: 0; }
+.rec-row .t { font: var(--type-phone-satir-baslik); letter-spacing: var(--type-phone-satir-baslik-ls); }
+.rec-row .s { font: var(--type-phone-govde-kucuk); letter-spacing: var(--type-phone-govde-kucuk-ls); color: var(--text-secondary); }
+.rec-st { grid-column: 1; display: flex; flex-wrap: wrap; gap: 8px; }
+.rec-row .btn-icon { grid-row: 1 / span 2; grid-column: 2; align-self: center; color: var(--icon-default); }
+.ph-main { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+/* Offline band (Katmanlar, Çevrimdışı şeridi: component.banner): light bg.sunken, never a dark band; it pushes the
+   content down and the sheet scrim (z 8) dims it too. Timing: the banner pattern; the content below moves with its
+   push track, which is instant under reduced motion. */
+#ph-records .ph-status { background: var(--bg-page); }
+.pbanner { position: absolute; left: 0; right: 0; top: 40px; z-index: 2; display: grid; grid-template-columns: var(--component-banner-icon) minmax(0, 1fr); gap: var(--component-banner-gap); padding: var(--component-banner-padY) var(--component-banner-padX); background: var(--bg-sunken); color: var(--text-primary); border-bottom: var(--component-banner-border) solid var(--border-subtle); font: var(--type-phone-govde-kucuk); letter-spacing: var(--type-phone-govde-kucuk-ls); opacity: 0; visibility: hidden; transform: translateY(calc(-100% * var(--mv))); transition: transform var(--motion-banner-exit-dur) var(--motion-banner-exit-ease), opacity var(--motion-banner-exit-dur) var(--motion-banner-exit-ease), visibility 0s linear var(--motion-banner-exit-dur); }
+.pbanner .ic { width: var(--component-banner-icon); height: var(--component-banner-icon); color: var(--icon-default); }
+.pbanner b { font-weight: 600; }
+.pbanner small { display: block; font: 500 14px/20px var(--font-sans); letter-spacing: 0.15px; color: var(--text-secondary); }
+.offline .pbanner { opacity: 1; visibility: visible; transform: none; transition: transform var(--motion-banner-enter-dur) var(--motion-banner-enter-ease), opacity var(--motion-banner-enter-dur) var(--motion-banner-enter-ease), visibility 0s; }
+/* FLIP: the list below the banner moves by transform, never by animating its top margin. */
+.push { transition: transform var(--motion-banner-push-exit-dur) var(--motion-banner-push-exit-ease); }
+.offline .push { transform: translateY(var(--bh, 0px)); transition: transform var(--motion-banner-push-enter-dur) var(--motion-banner-push-enter-ease); }
+/* The sheet here is a picture of the system sheet (TrueSheet): it plays with the side panel's timing (Etkileşim tablosu,
+   yan panel); on the phone the motion is the system's own. */
+.sheet-scrim { position: absolute; inset: 0; z-index: 8; background: var(--scrim-a); opacity: 0; visibility: hidden; transition: opacity var(--motion-drawer-exit-dur) var(--motion-drawer-exit-ease), visibility 0s linear var(--motion-drawer-exit-dur); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; background: var(--bg-surface); box-shadow: var(--shadow-3); border-radius: var(--radius-sheet); padding: 8px 0 var(--component-sheet-padBottom); visibility: hidden; opacity: var(--mv); transform: translateY(calc(100% * var(--mv))); transition: transform var(--motion-drawer-exit-dur) var(--motion-drawer-exit-ease), opacity var(--motion-drawer-exit-dur) var(--motion-drawer-exit-ease), visibility 0s linear var(--motion-drawer-exit-dur); }
+.sheet-open .sheet-scrim { opacity: 1; visibility: visible; transition: opacity var(--motion-drawer-enter-dur) var(--motion-drawer-enter-ease), visibility 0s; }
+.sheet-open .sheet { visibility: visible; opacity: 1; transform: none; transition: transform var(--motion-drawer-enter-dur) var(--motion-drawer-enter-ease), opacity var(--motion-drawer-enter-dur) var(--motion-drawer-enter-ease), visibility 0s; }
+.sheet-grab { width: var(--component-sheet-grabWidth); height: var(--component-sheet-grabHeight); margin: 0 auto 8px; background: var(--neutral-8); }
+.sheet-h { display: flex; justify-content: space-between; align-items: center; padding: 0 0 0 var(--component-sheet-padX); }
+.sheet-h h4 { font: var(--type-phone-baslik-2); letter-spacing: var(--type-phone-baslik-2-ls); }
+.sheet-h .icon-btn { width: var(--component-sheet-close); height: var(--component-sheet-close); }
+.sheet-h .icon-btn .ic { width: var(--component-sheet-closeIcon); height: var(--component-sheet-closeIcon); }
+.sheet-d { padding: 4px var(--component-sheet-padX) 12px; font: var(--type-phone-govde-kucuk); letter-spacing: var(--type-phone-govde-kucuk-ls); color: var(--text-secondary); }
+/* Choice rows (no circles drawn): the chosen row gets bg.selected, the selection mark on its left and a check. */
+.opt-list { border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
+.opt { position: relative; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) var(--component-sheet-check); gap: var(--component-row-gap); align-items: center; min-height: var(--component-sheet-optionHeight); padding: var(--component-row-padY) var(--component-sheet-padX); border: 0; border-bottom: var(--component-row-border) solid var(--border-subtle); background: var(--bg-surface); text-align: left; font: var(--type-phone-govde); letter-spacing: var(--type-phone-govde-ls); }
+.opt:last-child { border-bottom: 0; }
+.opt::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: var(--component-row-mark); background: var(--accent-mark); transform: scaleY(0); transition: transform var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease); }
+.opt .opt-ic { width: var(--component-sheet-check); height: var(--component-sheet-check); color: var(--accent-mark); opacity: 0; transition: opacity var(--motion-toggle-enter-dur) var(--motion-toggle-enter-ease); }
+.opt[aria-checked=true] { background: var(--bg-selected); }
+.opt[aria-checked=true]::before { transform: scaleY(1); }
+.opt[aria-checked=true] .opt-ic { opacity: 1; }
+.opt:active { background: var(--bg-pressed); }
+.opt:focus-visible { outline-offset: var(--focus-offsetInset); }
+@media (hover: hover) and (pointer: fine) { .opt:not([aria-checked=true]):hover { background: var(--bg-hover); } }
+@media (prefers-reduced-motion: reduce) { .opt::before { transition: none; } }
+.sheet-rec { color: var(--text-primary); font-weight: 500; }
+.sheet .msg { padding: 8px var(--component-sheet-padX) 0; }
+.sheet-f { padding: 16px var(--component-sheet-padX) 0; }
+/* Phone toast (Katmanlar, Bildirim: component.toast.phone): one line, above the tab bar, close button at the target. */
+.ptoast { position: absolute; left: var(--component-toast-phone-edge); right: var(--component-toast-phone-edge); bottom: calc(var(--component-tabbar-height) + 16px + var(--component-toast-phone-aboveTabbar)); z-index: 12; display: grid; grid-template-columns: var(--component-toast-icon) minmax(0, 1fr) var(--component-toast-phone-close); gap: var(--component-toast-gap); align-items: center; min-height: var(--component-toast-phone-minHeight); padding: var(--component-toast-phone-padY) 0 var(--component-toast-phone-padY) var(--component-toast-phone-padLeft); background: var(--bg-surface); box-shadow: var(--shadow-2); font: var(--type-phone-govde-kucuk); letter-spacing: var(--type-phone-govde-kucuk-ls); animation: toastIn var(--motion-toast-enter-dur) var(--motion-toast-enter-ease); }
+.ptoast .ic { width: var(--component-toast-icon); height: var(--component-toast-icon); }
+.ptoast.out { animation: toastOut var(--motion-toast-exit-dur) var(--motion-toast-exit-ease) forwards; }
+.ptoast .icon-btn { width: var(--component-toast-phone-close); height: var(--component-toast-phone-close); }
+/* Loading states (Katmanlar, Yükleniyor) */
+.spin-demo { display: flex; gap: 24px; align-items: center; }
+.skel { display: grid; gap: var(--component-progress-skeletonGap); }
+.skel span { display: block; background: var(--neutral-4); }
+.skel-t { height: var(--component-progress-skeletonTitle); width: 60%; }
+.skel-l { height: var(--component-progress-skeletonLine); width: 90%; }
+.skel-l.skel-s { width: 75%; }
+
+/* @order 4200 */
+/* ---------- Motion ---------- */
+.dur-list { border-top: 1px solid var(--text-primary); }
+.dur-row { display: grid; grid-template-columns: 112px 64px minmax(0, 1fr) 48px; gap: 16px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+.dur-head { padding: 8px 0; font: 600 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); }
+.dur-row .k { font: 500 14px/20px var(--font-mono); letter-spacing: 0; }
+.dur-row .ms { font: 400 12px/16px var(--font-mono); color: var(--text-secondary); }
+.dur-row .use { display: block; font: 400 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); margin-top: 8px; }
+@media (max-width: 720px) { .dur-row { grid-template-columns: 96px minmax(0, 1fr) 48px; } .dur-row .ms { display: none; } .dur-head { display: none; } }
+.lane { position: relative; height: 12px; background: linear-gradient(var(--border-subtle), var(--border-subtle)) center / 100% 1px no-repeat; }
+.lane .bar { position: absolute; left: 0; top: 4px; height: 4px; background: var(--neutral-9); transform-origin: 0 0; }
+.lane .dot { position: absolute; left: 0; top: 0; width: 12px; height: 12px; background: var(--text-primary); }
+.lane.run .dot { transform: translateX(calc((var(--lw, 200px) - 12px) * var(--mv))); transition: transform var(--d) var(--e); }
+@media (prefers-reduced-motion: reduce) { .lane.run .dot { left: auto; right: 0; animation: fadeIn var(--dur-hizli) var(--ease-standart); } }
+.play-btn { --h: var(--component-button-height-small); }
+.tim-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; border-top: 1px solid var(--text-primary); }
+.tim-list li { display: grid; grid-template-columns: 160px 72px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font: 400 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); }
+.tim-list li code { color: var(--text-primary); font-size: 12px; }
+.tim-list li b { font: 400 12px/16px var(--font-mono); color: var(--text-primary); }
+@media (max-width: 720px) { .tim-list { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 400px) { .tim-list li { grid-template-columns: 136px minmax(0, 1fr); } .tim-list li span { grid-column: 1 / -1; } }
+.curves { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.curves.c3s { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1000px) { .curves, .curves.c3s { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Every card of a row shares the plot height; the text below takes what is left and the replay strip sits at the bottom,
+   so titles and strips line up across the row. */
+.curve { background: var(--bg-surface); border: 1px solid var(--border-subtle); display: grid; grid-template-columns: 136px minmax(0, 1fr); grid-template-rows: 1fr auto; align-content: start; }
+.curve-plot { padding: 12px; grid-row: 1; }
+.curve-plot svg { width: 100%; height: auto; overflow: visible; max-width: 112px; margin: 0 auto; }
+.curve-plot .grid { stroke: var(--border-subtle); stroke-width: 1; fill: none; vector-effect: non-scaling-stroke; }
+.curve-plot .ax { stroke: var(--border-strong); stroke-width: 1; fill: none; vector-effect: non-scaling-stroke; }
+.curve-plot .cv { stroke: var(--text-primary); stroke-width: 2; fill: none; vector-effect: non-scaling-stroke; }
+.curve-plot .hd { stroke: var(--neutral-8); stroke-width: 1; fill: none; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.curve-plot .cp { fill: var(--bg-surface); stroke: var(--text-primary); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.curve-plot .ov { stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.curve-meta { padding: 12px 16px 12px 0; display: flex; flex-direction: column; min-width: 0; }
+.curve-meta .k { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0 8px; font: 600 14px/20px var(--font-mono); letter-spacing: 0; }
+.curve-meta .k code { font: 400 12px/20px var(--font-mono); color: var(--text-secondary); }
+.curve-meta .v { font: 400 12px/16px var(--font-mono); color: var(--text-secondary); margin-top: 4px; overflow-wrap: anywhere; }
+.curve-meta .u { font: 400 12px/16px var(--font-sans); letter-spacing: 0.32px; margin-top: 8px; color: var(--text-secondary); }
+.curve-run { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 8px 16px; border-top: 1px solid var(--border-subtle); }
+.spring-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.spring-nums div { font: 400 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); }
+.spring-nums b { display: block; font: 500 14px/20px var(--font-sans); color: var(--text-primary); letter-spacing: 0; }
+/* @order 4600 */
+/* ---------- Interaction table (Etkileşim tablosu): a real table, generated from the motion patterns ---------- */
+.pat-wrap { --sx-bg: var(--bg-page); }
+@media (min-width: 601px) { .scroll-x > .tbl-doc.pat-tbl { min-width: 1040px; } }
+.pat-tbl { font: 400 13px/18px var(--font-sans); letter-spacing: 0.16px; table-layout: fixed; }
+.pat-tbl th:nth-child(1) { width: 15%; } .pat-tbl th:nth-child(2) { width: 19%; } .pat-tbl th:nth-child(3) { width: 21%; } .pat-tbl th:nth-child(4) { width: 25%; } .pat-tbl th:nth-child(5) { width: 20%; }
+.pat-tbl td { padding-top: 12px; padding-bottom: 12px; }
+.pat-tbl td p + ul, .pat-tbl td p + p { margin-top: 4px; }
+.pat-tbl code { font: 400 12px/18px var(--font-mono); }
+.pat-n { display: block; font: 600 14px/20px var(--font-sans); }
+.pat-pl { display: inline-block; margin-top: 4px; font: 400 12px/16px var(--font-mono); color: var(--text-secondary); padding: 0 8px; background: var(--bg-sunken); }
+.pat-t { display: grid; gap: 4px; }
+.pat-ph { color: var(--text-secondary); }
+.pat-tk { font-weight: 600; }
+.pat-more { margin-top: 8px; border: 0; background: transparent; }
+.pat-more > summary { min-height: 24px; padding: 2px 0; font: 500 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); justify-content: flex-start; }
+.pat-more .det-c, .pat-more > :not(summary):not(.det) { padding: 4px 0 0; }
+.pat-dl { display: grid; gap: 4px; margin: 0; }
+.pat-dl dt { font: 600 12px/16px var(--font-sans); letter-spacing: 0.32px; color: var(--text-secondary); margin-top: 4px; }
+.pat-dl dd { margin: 0; }
+@media (max-width: 600px) {
+  .pat-tbl { table-layout: auto; font-size: 12px; line-height: 16px; }
+  .curves, .curves.c3s { grid-template-columns: minmax(0, 1fr); }
+  .curve { grid-template-columns: 104px minmax(0, 1fr); }
+  .curve-plot svg { max-width: 80px; }
+  .spring-nums b { font-size: 14px; line-height: 20px; }
+}
+
+/* @order 4650 */
+/* ---------- Token file (Tokenlar): the whole file inside a closed details ---------- */
+.code-d > summary { font: 500 12px/16px var(--font-mono); letter-spacing: 0; }
+.code-file { max-height: 640px; overflow: auto; background: var(--bg-surface); border-top: 1px solid var(--border-subtle); }
+.code-file pre { margin: 0; padding: 16px 24px; font: 400 12px/20px var(--font-mono); letter-spacing: 0; color: var(--text-primary); white-space: pre; tab-size: 2; }
+.code-file:focus-visible { outline-offset: var(--focus-offsetInset); --ring-from: var(--focus-offsetInset); }
+.code-d .det-c, .code-d > :not(summary):not(.det) { padding: 0; }
+
+/* ---------- Platform fallback ---------- */

@@ -1,0 +1,119 @@
+[
+  {
+    "id": "D04-B19",
+    "question": "Eşitleme bozukken ulaşan kayıtların ulaşma anı nasıl yazılır ve eşitleme düzelince bu kayıtlar yeniden değerlendirilir mi?",
+    "why": "Eşitleme bozukken sunucunun kendi saati de şüphelidir; ulaşma anı hem \"ulaşma anını aşamaz\" denetiminde (D04-K35) hem gönderme süresi hesabında kullanılır. Kesinti bitince İncelemede kalan kayıtların ne olacağı yazılmamış.",
+    "options": [
+      "Ulaşma anı yine sunucu saatinden yazılır, kayıtta \"eşitleme bozukken ulaştı\" işareti tutulur; kesinti bitince ölçülen sapma küçükse (eşiğin altında) bu kayıtlar aynı kurallarla yeniden değerlendirilir, değilse İncelemede kalır",
+      "Hiç yeniden değerlendirme yok, hoca karar verir"
+    ],
+    "recommendation": "İlk seçenek. Kesinti aralığı saat_esitleme_kesintileri tablosunda durduğundan (D04-B18) etkilenen kayıtlar tek sorguyla bulunur; yeniden değerlendirme olay işi olarak çalışır, iki kez çalışsa da sonuç değişmez. Hoca yükü yalnız gerçekten belirsiz kalan kayıtlarla sınırlı kalır.",
+    "needs_owner": false
+  },
+  {
+    "id": "D04-B20",
+    "question": "Saat belgesi anahtarı nasıl döndürülür: kid biçimi, aynı anda kaç anahtar, yeni anahtar ne zaman devreye girer, eski anahtar ne zaman silinir?",
+    "why": "Eski anahtar \"en az dönem kilidine kadar\" saklanır (D04-K54), ama dönem kilidi birim bazındadır; anahtarı silme anı hangi birimin kilidine bakılacağı belli olmadan seçilemez. Anahtar kaybolursa çevrimdışı yedek kullanılır (D04-K55).",
+    "options": [
+      "Secrets dosyasında kid ile anahtar eşlemesi ve \"güncel kid\" ayarı; yeni belgeler güncel kid ile; eski anahtar, onunla imzalı belge taşıyan kayıt içerebilecek bütün birimlerin dönemleri kilitlenene kadar kalır",
+      "Tek anahtar, döndürme yok",
+      "Her dönem başında otomatik döndürme"
+    ],
+    "recommendation": "İlk seçenek: kid 1 bayt, döndürme elle ve nadiren (sızma şüphesinde ya da yılda bir), anahtarın silinmesi en geç kilitlenen birime bağlı. Telefonlar eldeki belgeyle en çok 7 gün çalıştığından yeni anahtara geçişte 7 gün boyunca iki anahtar birlikte doğrular. Secrets taşıma biçimi D15'in.",
+    "needs_owner": false
+  },
+  {
+    "id": "D04-B21",
+    "question": "Programdaki yerel saatten oturumun UTC açılış ve kapanış anı nerede ve hangi araçla hesaplanır; Türkiye'nin saat dilimi kuralı değişirse ne olur?",
+    "why": "packages/core Intl kullanmaz (D04-K51), oysa yerel saatten UTC'ye çevirmek saat dilimi verisi ister. Kural değişirse (yeniden yaz saati gibi) önceden üretilmiş gelecekteki oturumların anları yanlış kalır ve telefonlara yanlış pencere iner.",
+    "options": [
+      "Çevirme yalnız sunucuda, Node'un yerleşik ICU saat dilimi verisiyle (Intl.DateTimeFormat, timeZone Europe/Istanbul) yapılır; core yalnız UTC milisaniye alır; saat dilimi verisi değişince henüz başlamamış oturumların anları yeniden hesaplanıp değişiklik olarak indirilir",
+      "Sabit +03:00 kaydırma",
+      "Ayrı bir saat dilimi kütüphanesi"
+    ],
+    "recommendation": "İlk seçenek: yeni paket gerekmez, telefonun saat dilimi verisine de bağlı kalınmaz (D04-K02). Yeniden hesaplama, oturum üretimiyle aynı fonksiyondan geçer (D02); sunucu imajı güncellendiğinde bir yayın adımı tz sürümünü karşılaştırır.",
+    "needs_owner": false
+  },
+  {
+    "id": "D04-B22",
+    "question": "Oturum kapatma işi tam olarak ne yapar: \"kapandı\" bayrağı neye yarar, kaç dakikada bir çalışır, süre seçilmeyen derste kapanış nedir, kapanış hangi işleri tetikler?",
+    "why": "teknik.html \"birkaç dakikada bir\" der (D04-K56); bayrak birkaç dakika gecikir. Kararlar bayrağa bakarsa kapanıştan sonraki ilk dakikalarda ulaşan kayıtlar yanlış değerlendirilir; ayrıca kapanışın hangi olayları başlattığı yazılmamış.",
+    "options": [
+      "Kararlar her zaman kaydın saat aralığını oturumun anlarıyla karşılaştırır, bayrak yalnız listeler ve olaylar içindir; iş her dakika çalışır; süre seçilmeyen derste kapanış ders bitişidir; bayrak düşerken \"oturum kapandı\" olayı kuyruğa girer",
+      "Kararlar bayrağa bakar"
+    ],
+    "recommendation": "İlk seçenek. Karar kuralı bayraktan bağımsız olunca gecikme zararsızdır ve iş kaç kez çalışırsa çalışsın sonuç aynıdır (D04-K57). \"Oturum kapandı\" olayını isteyenler: kafa sayısı karşılaştırması (D07), \"Ders yapıldı mı?\" sorusu ve sorun bildirimi süresi (D09, ders bitişine bağlı). İş pg-boss zamanlamasıyla dakikada bir, yalnız kapanış anı geçmiş ve bayrağı düşmemiş satırları tek sorguyla günceller.",
+    "needs_owner": false
+  },
+  {
+    "id": "D04-B23",
+    "question": "İptal edilen ya da saati değiştirilen oturuma, eski programı bilen internetsiz telefondan gelen kayıt nasıl değerlendirilir?",
+    "why": "Plan \"internetsizken eski program geçerli, son karar sunucuda\" der (D04-K12) ama kararı yazmaz. Saati kaydırılan derste eski pencerede verilen kayıt yeni pencereye göre pencere dışı olur.",
+    "options": [
+      "İptal: kayıt saklanır, Ret ve \"oturum iptal\" gerekçesi; iptal geri alınırsa yeniden değerlendirilir. Saat kayması: kayıt D04-B03'teki gibi Beklemede, son karar yeni pencereye göre",
+      "İptal edilen oturuma gelen kayıt İncelemede",
+      "Kayıt eski pencereye göre değerlendirilir"
+    ],
+    "recommendation": "İlk seçenek. İptal edilen oturum yapılmamış derse benzer ve plan yapılmayan dersin kayıtlarını saymaz (Onaysız ders satırı); saat kayması ise ders içi değişikliğin özel hâlidir, aynı yol kullanılır. Telefona inmemiş değişiklik öğrencinin suçu olmadığından gerekçe kodu tarafsız seçilir.",
+    "needs_owner": false
+  },
+  {
+    "id": "D04-B24",
+    "question": "\"Aynı saatte yalnız bir derse yoklama verilir\" kuralında \"aynı saat\" ders saatlerinin mi, pencerelerin mi çakışmasıdır; ikinci kayıt gelirse hangisi geçerli olur?",
+    "why": "Çift anadal ve yandal derslerinde ders saatleri kısmen çakışıp pencereler çakışmayabilir (09:00 ile 10:50 dersinin penceresi 09:00 ile 09:15, 10:00 dersinin penceresi 10:00 ile 10:15). Tanım seçimi öğrencinin ikinci dersten yoklama verip veremeyeceğini değiştirir (D04-K09).",
+    "options": [
+      "Ders saatleri çakışıyorsa yalnız ilk kayıt geçerli, sonraki Ret ve \"çakışan ders\" gerekçesi; çakışma her iki hocaya gösterilir",
+      "Yalnız pencereler çakışıyorsa kural uygulanır",
+      "İkisi de İncelemede, hocalar karar verir"
+    ],
+    "recommendation": "Ders saati çakışması ve ilk kaydın geçerli olması: öğrenci aynı anda iki derste bulunamaz, plan da çakışmayı hocalara göstermeyi ister. \"İlk\" kaydın saat aralığına göre belirlenir; telefon da ikinci derste düğmeyi kapalı gösterir. Çakışmanın tespiti D02'nin program verisinden, kararı D07'den.",
+    "needs_owner": true
+  },
+  {
+    "id": "D04-B25",
+    "question": "Birlikte işlenen şubelerin dersleri farklı yoklama süresi ayarına sahipse birleşik oturumun penceresi hangi ayarla açılır?",
+    "why": "Birleşik oturumda tek yoklama vardır (D04-K10); oturum birden çok şubeyi kapsar ama süre ders ayarındadır (D04-K01), iki ayar çelişebilir.",
+    "options": [
+      "Birleşik oturumun kendi süre ayarı olur, birleştirme sırasında hoca seçer",
+      "En uzun süre",
+      "İlk şubenin ayarı"
+    ],
+    "recommendation": "Birleşik oturumun kendi ayarı (D04-B10'daki oturum düzeyi alanı); birleştirme anında hocaya sorulur, varsayılan dersler arasındaki en uzun süredir (öğrenci lehine).",
+    "needs_owner": false
+  },
+  {
+    "id": "D04-B26",
+    "question": "Günler sonra ulaşan ayar değişikliği (hoca oturumu derste bitmiş, D04-K73) hangi süre sınırlarıyla uygulanır?",
+    "why": "Değişiklik ulaşınca kararlar yeniden verilir (D04-K06) ve önceden Var olan kayıtlar Ret'e dönebilir; bu, gönderme süresi ve birimin son günü sonrasında sayımı kendiliğinden değiştirmemelidir.",
+    "options": [
+      "Kayıtlardaki kural aynen: 7 gün içinde uygulanır ve değişenler \"sonradan değişenler\" listesine düşer; birimin son gününden sonra ulaşan değişiklik yalnız saklanır, sayımı ancak denetim kaydı bırakan düzeltme değiştirir",
+      "Her zaman uygulanır",
+      "Hiç uygulanmaz"
+    ],
+    "recommendation": "İlk seçenek: plan geç gelen kayıt için bu iki sınırı zaten koymuş (Gönderme süresi satırı); hoca işlemine de aynısı uygulanınca kural tektir ve dönem sonu çıktısı geriye dönük kendiliğinden değişmez.",
+    "needs_owner": false
+  },
+  {
+    "id": "D04-B27",
+    "question": "packages/core'daki saat modülünün sahibi ve dış yüzü nedir: hangi saf fonksiyonlar, hangi girdi ve çıktılarla?",
+    "why": "Telefon, sunucu ve panel aynı kuralı aynı testlerle kullanır (D04-K50); D05, D06, D07 ve D11 bu fonksiyonları çağıracak. Dış yüz önceden sabitlenmezse paralel çalışan oturumlar aynı hesabı ayrı ayrı yazar.",
+    "options": [
+      "D04 sahibi; fonksiyonlar: ilkCapaAraligi, ikinciCapaAraligi, capalariBirlestir (kesişim ya da payı küçük olan, ayrışma sonucu), pencereHesapla (oturum anları ve değişiklik geçmişinden son pencere), pencereIcindeMi (aralık ve pencere: içinde, dışında, sınırda), ulasmaAniDenetimi; girdiler UTC milisaniye ve tam sayı süre, saat yalnız Saat arayüzünden",
+      "Her alan kendi hesabını yazar"
+    ],
+    "recommendation": "İlk seçenek; bütün fonksiyonlar saf ve TZ=UTC ile TZ=Europe/Istanbul altında aynı sonucu verir (D04-K63), sınır ve pay kuralları fast-check ile açık deneme sayısıyla denenir (D04-K64). D04'ün ilk teslimi bu modül ve test tablosudur; uçlar sonra gelir.",
+    "needs_owner": false
+  },
+  {
+    "id": "D04-B28",
+    "question": "D04 kodu sunucuda hangi modülde durur ve uçları hangi yol önekini alır? teknik.html modül listesinde saat belgesi ya da pencere için ayrı modül yok.",
+    "why": "Her modül /v1/<modül> altında kendi eklentisidir ve modüller birbirinin verisine dokunmaz (D04-K68, teknik.html#sunucu-mimari). Pencere ve saat belgesi mevcut oturumlar ya da yoklama modülüne konursa iki alan aynı klasörü ve tabloyu paylaşır, paralel çalışan oturumlar çakışır.",
+    "options": [
+      "İki küçük yeni modül: saat (saat belgesi ucu, eşitleme denetimi) ve pencereler (oturum_pencereleri, pencere_degisiklikleri, kapatma işi); oturumlar tablosu D02'de kalır, D02 oturum üretince pencereler dış yüzünü aynı işlemde çağırır",
+      "Pencere oturumlar modülünde, D02 ile aynı klasörde; saat belgesi yoklama modülünde",
+      "D04 oturumlar modülünün ve tablosunun sahibi olur, D02 oturumları onun dış yüzüyle yazar"
+    ],
+    "recommendation": "İlk seçenek. Kapsamlar çakışmaz, her modülün kendi tablosu, testi ve /v1/saat ile /v1/pencereler öneki olur; teknik.html listesine iki modül eklenmesi gerekir. Saat belgesini yalnız yoklama değil hocanın kuyruk işleri de kullandığından (D04-K13) yoklama modülüne konmaz. Oturum ile pencerenin bire bir bağı (dönem, oturum) yabancı anahtarıyla kurulur; teknik.html tablo dosyasının yabancı anahtar için başka modülün tablo tanımını almasına izin verir.",
+    "needs_owner": false
+  }
+]

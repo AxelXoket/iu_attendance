@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kayıt, imza ve makbuz · İÜ Yoklama Backend</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#0b0b0c; --surface:#131314; --surface-2:#1a1a1c; --text:#e8e8e6; --muted:#9a9a9e; --border:#2a2a2d;
+  --accent:#94afde; --accent-bg:rgba(148,175,222,.10);
+  --ok:#b7cbef; --ok-bg:rgba(183,203,239,.10);
+  --warn:#ff9e9e; --warn-bg:rgba(255,158,158,.10);
+  --bad:#f06b6b; --bad-bg:rgba(240,107,107,.10);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:880px;margin:0 auto;padding:0 16px 64px}
+header{padding:40px 0 22px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 8px;letter-spacing:-.01em}
+.lead{font-size:1.1rem;color:var(--muted);margin:0 0 6px}
+.meta{font-size:.82rem;color:var(--muted);margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--border);margin:0 -16px;padding:0 16px;overflow-x:auto;white-space:nowrap}
+nav a{display:inline-block;padding:12px 10px 10px;color:var(--muted);text-decoration:none;font-size:.9rem;border-bottom:2px solid transparent}
+nav a:hover,nav a:focus-visible{color:var(--accent);border-bottom-color:var(--accent)}
+section{padding-top:38px}
+h2{font-size:1.45rem;margin:0 0 16px;padding-left:12px;border-left:3px solid var(--accent);line-height:1.25}
+h3{font-size:1.05rem;margin:22px 0 8px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:4px 0}
+.card{background:var(--surface);border:1px solid var(--border);padding:16px 18px}
+.phases{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.phases .card{border-top:2px solid var(--accent)}
+.phases .card h3{margin:8px 0 6px}
+.phases .card p{margin:0;color:var(--muted);font-size:.95rem}
+.tag{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border:1px solid var(--accent);color:var(--accent);background:var(--accent-bg);vertical-align:middle}
+.tag.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-bg)}
+.tag.warn{border-color:var(--warn);color:var(--warn);background:var(--warn-bg)}
+.tag.bad{border-color:var(--bad);color:var(--bad);background:var(--bad-bg)}
+.tag.mute{border-color:var(--border);color:var(--muted);background:transparent}
+.rows{background:var(--surface);border:1px solid var(--border);padding:2px 18px}
+.row{display:grid;grid-template-columns:190px 1fr;gap:4px 18px;padding:12px 0;border-bottom:1px solid var(--border)}
+.row:last-child{border-bottom:0}
+.row .k{font-weight:600}
+.callout{border-left:3px solid var(--accent);background:var(--accent-bg);padding:14px 18px;margin:16px 0}
+.callout h3{margin:0 0 8px}
+.callout ul{margin:0}
+.callout.warn{border-color:var(--warn);background:var(--warn-bg)}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cols3 .card{padding:14px 16px}
+.cols3 h3{margin:0 0 8px;font-size:1rem}
+.cols3 ul{padding-left:18px;margin:0;font-size:.95rem}
+details{background:var(--surface);border:1px solid var(--border);margin:12px 0;padding:0 18px}
+summary{cursor:pointer;padding:13px 0;font-weight:600}
+details[open] summary{border-bottom:1px solid var(--border);margin-bottom:12px}
+details>*:last-child{margin-bottom:16px}
+code{font:.9em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--surface-2);border:1px solid var(--border);padding:1px 6px}
+.formula{display:block;padding:10px 14px;margin:8px 0 12px}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:.9rem}
+.src li{font-size:.92rem;margin:6px 0}
+#sozluk{padding-top:24px}
+pre{background:var(--surface-2);border:1px solid var(--border);padding:12px 14px;overflow-x:auto;margin:8px 0 14px}
+pre code{background:none;border:0;padding:0;font-size:.85rem;line-height:1.55}
+.det .rows{border:0;background:transparent;padding:0}
+.det{margin:10px 0}
+@media (max-width:720px){
+  h1{font-size:1.65rem}
+  .phases,.cols3{grid-template-columns:1fr}
+  .row{grid-template-columns:1fr;gap:2px}
+}
+@media print{
+  :root{color-scheme:light;--bg:#fff;--surface:#fff;--surface-2:#f2f2f2;--text:#111;--muted:#555;--border:#c8c8c8;
+    --accent:#2b58b1;--accent-bg:#e3ecfa;--ok:#143065;--ok-bg:#eff4fc;--warn:#c0364a;--warn-bg:#fdeeee;--bad:#a32a2a;--bad-bg:#fce8e8}
+  nav{display:none}
+  details{break-inside:avoid}
+}
+</style>
+<style>.wrap,code{overflow-wrap:anywhere}.row>div{min-width:0}.paket{border-top:1px solid var(--border);margin-top:28px;padding-top:6px}</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Kayıt, imza ve makbuz</h1>
+  <p class="lead">Modül D05 · <code>apps/server/src/modules/yoklama/</code>. Bu sayfa modülün amacını, kurallarını, durumlarını, hata kodlarını ve açık noktalarını tutar; tablo, uç nokta, iş, dış yüz ve test ayrıntısı paketiyle birlikte kademe dosyasındadır.</p>
+  <p class="meta"><a href="../index.html">Backend</a> · <a href="../../plan.html">Plan</a> · <a href="../../teknik.html">Teknik</a> · <a href="../../tasarim.html">Tasarım</a></p>
+</header>
+<section id="yoklama">
+
+
+<p class="meta">D05 · yoklama modülü · apps/server/src/modules/yoklama · sözleşme packages/contracts/src/yoklama.ts · ortak kurallar packages/core/src/yoklama</p>
+
+<h3>Amaç ve sınırlar</h3>
+<p>Telefon kaydı bir kez tek metin olarak üretip imzalar; metin telefonda, kuyrukta ve sunucuda aynen durur (<a href="../../plan.html#kararlar-kayit-ve-makbuz">plan: Kayıt ve makbuz</a>, <a href="../../teknik.html#sunucu-imza-dogrulama">teknik: İmza doğrulama</a>). Bu modül o kaydın sunucudaki tek sorumlu modülüdür: zarfı ayrıştırır, imzayı gelen baytlar üzerinde doğrular, kaydı değiştirmeden saklar ve her kayda KABUL, ZATEN_VAR, RET ya da TEKRAR_DENE sonucu verir. Karar ve etiket kuralları D07'nin, saat ve pencere kuralları D04'ün, taşıma, ulaşma anı ve indirme D06'nın; bu modül onların sonucunu kayıt satırına yazan tek yerdir.</p>
+<div class="rows">
+<div class="row"><div class="k">Kapsam</div><div>Kayıt zarfı ve kayıt metni (şema, kodlama, 1273 bayt sınırı); imza doğrulama (Android P-256, Secure Enclave, App Attest onayı ve iOS 27 uzantıları); 'zaten var' ve 'ret' karşılaştırması; <code>yoklama_kaydi</code> ve <code>makbuz_okutmasi</code> öğe işleyicileri; saat sonucunun ve gelişteki pencere sonucunun kayıpsız sütunlara yazımı; (oturum, öğrenci) çift anahtarı ve öğe kilit anahtarları; sayılan kayıt seçimi; karar sütunlarının ve karar sürümünün yazımı (değeri D07 verir); öğrencinin kendi kayıtları indirme kaynağı; oturum kayıtları ucu; kanıt çıkarma işlevi ve kanıt komutu; iki tablonun göçleri, yetkileri ve saklama sınıfı.</div></div>
+<div class="row"><div class="k">Kapsam dışı</div><div>Taşıma, paket imzası, danışma kilitlerinin paket başına alınması, ulaşma anı ve ulaşma makbuzu, su seviyesi, indirme imleci ve sıra boşluğu ölçümü (D06); karar, etiket, pencere sonucunun karara eşlenmesi, 2'lik sınır, App Attest sayaç kuralı ve iOS 27 alanlarının karşılaştırılması (D07); saat belgesi, çapa, pencere ve pencere sonucunun hesabı (D04); danışma kilidi katmanları ve saklama kataloğu (D12); elle ekleme, düzeltme, sorun bildirimi ve denetim tablosu (D09); cihaz, anahtar ve hesap (D01); raporlar (D10) ve olcum_ görünümleri (D15) bu tabloyu yalnız okur.</div></div>
+<div class="row"><div class="k">Kullandığı dış yüzler</div><div>D01 <code>cihazAnahtariGetir</code>, <code>cihazGetir</code>, <code>kisiGetir</code>, <code>ogrenciHesabiGetir</code> (toplu numaralar) · D02 <code>oturumGetir</code>, <code>oturumSubeleri</code>, <code>dersGetir</code> (hocaAtamaGecmisi), <code>dersYetkisi(tx, kimlik, dersId)</code>, <code>kilitDurumu</code>, <code>oturumlariGetir</code>, <code>kilitliBirimDonemleri</code> ve OTURUM_TURLERI, OTURUM_DURUMLARI, IPTAL_NEDENLERI sabitleri · D03 <code>listeSatirlari</code> · D04 <code>simdi</code>, <code>saatBelgesiDogrula</code>, <code>esitlemeSaglikliMi</code>, <code>pencereSonucu</code>, packages/core/src/saat'in <code>saatSonucu</code> işlevi ve saat.ts sabitleri · D06 <code>ogeTuruKaydet</code>, <code>indirmeKaynagiKaydet</code>, <code>ogrenciDurumuDegisti</code>, <code>gondermeSuresiSonu</code> · D07 <code>appAttestSayaciniDenetle</code>, <code>kararHesapla</code>, <code>kararGecmisineYaz</code> (index.ts) ve dogrulama.ts'ten <code>kararAnahtarlari</code>, kod listeleri · D08 <code>devamHesaplaIsiKoy</code> (devam/yaprak.ts) ve DEVAM_SON_DURUMLARI · D09 <code>denetimeYaz</code>, <code>denetimOlaylariniKaydet</code>, <code>duzeltmeleriGetir</code> (duzeltmeler/yaprak.ts), <code>sonDurumOnceligi</code> (packages/core) · D11 <code>qrKanitiniAyristir</code>, <code>qrKilitAnahtarlari</code> (Aşama 2) · D12 <code>islem</code>, <code>danismaKilidi</code>, <code>kisitAdi</code>, <code>tabloYardimcilari</code>, <code>saklamaIsleyicisiKaydet</code> · D13 <code>rotalariKaydet</code>, <code>ogeTuruTanimla</code>, <code>uygulamaHatasi</code>, <code>hizSinifi</code>, EklentiTemelSecenekleri. Log, app.ts'in verdiği Fastify kaydedicisidir.</div></div>
+<div class="row"><div class="k">Kaydolduğu yerler</div><div>yoklamaEklentisi içinde (index.ts yüklenirken değil): D06'ya <code>ogeTuruKaydet('yoklama_kaydi', { roller: ['OGRENCI'], oturumGerekli: false, govdeEnBuyukBayt: 2048, ilkCapaVar: false, ayrintiSemasi: YoklamaAyrintisi, kilitAnahtarlari, isleToplu })</code> ve <code>ogeTuruKaydet('makbuz_okutmasi', { roller: ['PERSONEL'], oturumGerekli: true, govdeEnBuyukBayt: 2048, ilkCapaVar: true, ayrintiSemasi: OkutmaAyrintisi, kilitAnahtarlari, isleToplu })</code>; <code>indirmeKaynagiKaydet('ogrenci_kayitlari', { tur: 'ogrenci', bolum: ogrencininKayitlari })</code>; D12'ye <code>saklamaIsleyicisiKaydet('yoklama.donem_verisi', { modul: 'yoklama', islem: 'silme', partiIsle })</code>; D09'a <code>denetimOlaylariniKaydet('yoklama', YOKLAMA_DENETIM_OLAYLARI)</code>; D13'e <code>rotalariKaydet(app, YOKLAMA_ROTALARI)</code> (tek uç). Öğe gövde şemaları sözleşme dosyasında D13.ogeTuruTanimla ile tanımlıdır. App Attest uygulama kimliği (takım kimliği ve paket adı) eklenti seçeneği olarak app.ts'ten gelir.</div></div>
+<div class="row"><div class="k">Modül sınırı</div><div>D07'nin çağırdığı işlevler (kayitGetir, kayitlariKilitle, oturumKayitlari, sayilanKayitlar, kararSutunlariniYaz) modules/yoklama/yaprak.ts'tedir. Yaprak kuralı (contracts.json ortak kuralı, A2): yaprak.ts başka alan modülünden yalnız yaprak.ts içe aktarır, burada devam (devamHesaplaIsiKoy), esitleme (ogrenciDurumuDegisti) ve duzeltmeler; hiçbir index.ts'i ve D07'den hiçbir dosyayı almaz; D02 gerekmez (ders_id sütunu, skip scan). D07 D05'i yalnız yaprak.ts'ten ya da eklenti seçeneğiyle kullanır; modules/yoklama'nın öbür dosyaları D07'nin index.ts'ini (kararHesapla, kararGecmisineYaz, appAttestSayaciniDenetle) içe aktarır. cli/yoklama-kaniti.ts bileşim köküdür, çift saymaz. D13'ün sınır testi dependency-cruiser ile no-circular ve yaprak kuralını sıfır ihlalle koşar.</div></div>
+<div class="row"><div class="k">Birleşim</div><div>index.ts yoklamaEklentisi'ni ve EklentiTemelSecenekleri'ni ({ surec }) genişleten YoklamaEklentisiSecenekleri tipini dışa verir. Eklenti altyapıyı seçenekten alır, kayıt sırasında veritabanına dokunmaz; zamanlanmış işi olmadığından surec 'api' iken de zamanlayıcı kurmaz; kayıtlarını her süreçte yapar. Rotalar yalnız D13.rotalariKaydet ile; setErrorHandler ve setNotFoundHandler yok. Hata kodu öneki YOKLAMA_; kaynak düzeyi ret 404 YOKLAMA_BULUNAMADI, rota düzeyi rol reddi API_ROL_YETKISIZ (<a href="../../teknik.html#sunucu-mimari">teknik: Mimari</a>).</div></div>
+<div class="row"><div class="k">Ölçülen sonuç</div><div>'Sunucuya ulaştı' makbuzlu kayıtta kayıp 0; kayıtların en az %95'i 24 saatte (ulasma_ani ile hesaplanan_ani farkı); saati doğrulanamayan oranı platforma ve sebebe göre (imza_turu, saat_sebebi); işaretlenmeden kabul (ilk_kesin_karar). Hepsi bu tablodan tek sorguyla (<a href="../../plan.html#hedefler">plan: Hedefler</a>, <a href="../../plan.html#kararlar-olcum">plan: Ölçüm</a>). Her öğe sonucu tek log satırı bırakır: olay, tür, sonuç, gerekçe, kurulum kimliği, istek kimliği, süre; numara ve isim yok.</div></div>
+<div class="row"><div class="k">Göçler</div><div><code>apps/server/migrations/&lt;14 haneli UTC&gt;_yoklama_&lt;açıklama&gt;/</code> (contracts.json migration_dir ile aynı; dosya haritasında <code>apps/server/migrations/??????????????_yoklama_*</code> globu bu modülündür). Her klasörde migration.sql ve snapshot.json (drizzle-kit klasör biçimi, ortak dergi yok). Klasörler: <code>&lt;UTC&gt;_yoklama_tablolar</code>: iki tablo, dizinler, üretilmiş sütunlar ve CHECK'ler (drizzle-kit generate); <code>&lt;UTC&gt;_yoklama_yetkiler</code>: REVOKE ve sütun GRANT'ları, yoklama_saklama'dan UPDATE geri alımı (drizzle-kit generate --custom). Göç yalnız bu modülün iki tablosuna dokunur, yalnız ileri ve önce genişlet sonra daralt. Klasör kuralı ve CI göç denetimi D12'nindir (ad deseni, ana daldaki en yeni klasörden büyük zaman damgası, tablonun sorumlu modülü, ana dalda generate farksızlığı, drizzle-kit check). Paralel paketler birleşmeden önce ana dala yeniden dayanır; araya göç girdiyse paket kendi klasörünü silip drizzle-kit generate ile yeniden üretir; birleştirme kuyruğu paketleri tek tek alır. Göç dosyaları dosya listesinde değil iş paketinde yer alır.</div></div>
+<div class="row"><div class="k">Yeni paket</div><div>node-app-attest, sürümü tam sabit; apps/server/package.json'a D15 ekler. Bakımı durursa koda alınır (<a href="../../teknik.html#temel-yedek-paketler">teknik: Yedek paketler</a>).</div></div>
+</div>
+<details>
+<summary>Dış yüz: 11 öğe (contracts.json listesiyle aynı), imzaları ve kimin çağırdığı</summary>
+<table>
+<thead><tr><th>Ad</th><th>İmza</th><th>Amaç</th></tr></thead>
+<tbody>
+<tr><td><code>kayitGetir</code></td><td><code>kayitGetir(tx: Islem, donemId: DonemId, kayitId: KayitId, secenek?: { kilitle?: boolean }): Promise&lt;YoklamaKaydi | null&gt;  // modules/yoklama/yaprak.ts [yaprak]</code></td><td>Tek kaydı (dönem, kimlik) çiftiyle, güncel karar sürümü (kararSurumu) dahil bütün sütunlarıyla döner. kilitle verilirse kaydın değişmeyen (oturum, öğrenci) çiftini okur, yoklamaCiftAnahtari ile D12.danismaKilidi'ni ister (işlem anahtarı zaten tutuyorsa işlemsiz), sonra satırı FOR UPDATE okur. D09'un 200 öğelik karar isteği kayıtları önce kilitsiz okur, anahtarları D07.kararAnahtarlari ile toplar.</td></tr>
+<tr><td><code>kayitlariKilitle</code></td><td><code>kayitlariKilitle(tx: Islem, anahtarlar: readonly KayitAnahtari[]): Promise&lt;YoklamaKaydi[]&gt;  // modules/yoklama/yaprak.ts [yaprak]</code></td><td>Kayıtların değişmeyen (oturum, öğrenci) çiftlerini kilitsiz okur, anahtarları yoklamaCiftAnahtari ile üretir ve tek D12.danismaKilidi çağrısında (katman 3) ister, sonra satırları anahtar sırasıyla (anahtar metni, sonra kayıt kimliği) FOR UPDATE okur. Anahtarlar işlemde zaten tutuluyorsa (D07 çift ve sayaç anahtarlarını kararAnahtarlari ile önceden aldıysa) danismaKilidi işlemsizdir. D07.kararDegistir ve yenidenDegerlendir bununla ya da kararAnahtarlari ile, sayaç, ortak sınır ve işaret kilitlerinden önce başlar; ekleme yolu aynı sırayı izler (contracts.json dış yüzünde, D05-A02 ve D05-A10 kapandı).</td></tr>
+<tr><td><code>oturumKayitlari</code></td><td><code>oturumKayitlari(tx: Islem, oturumId: OturumId, secenek?: { yalnizSayilan?: boolean }): Promise&lt;YoklamaKaydi[]&gt;  // modules/yoklama/yaprak.ts [yaprak]</code></td><td>Oturumun bütün ham kayıtları ya da yalnız sayılanlar. Dönem için D02'yi çağırmaz: (donem_id, oturum_id, ogrenci_id) dizinini PostgreSQL 18 skip scan ile oturum kimliğinden kullanır (D05-C01 ile aynı yöntem), böylece yaprak.ts D02'nin index.ts'ine gitmez. Kafa sayısı karşılaştırması, rastgele isim ve 'sınıfta değil' (D07), işaretli oturum listeleri (D09) için.</td></tr>
+<tr><td><code>sayilanKayitlar</code></td><td><code>sayilanKayitlar(tx: Islem, suzgec: { donemId: DonemId; oturumIdler?: readonly OturumId[]; dersIdler?: readonly DersId[]; ogrenciIdler?: readonly KisiId[]; cihazId?: CihazId; kararlar?: readonly Karar[]; etiket?: EtiketAdi; kendiBeyaniOnaysiz?: true; ulasmaAraligi?: { altAni: Date; ustAni: Date }; yalnizSayilan?: boolean }): Promise&lt;YoklamaKaydi[]&gt;  // modules/yoklama/yaprak.ts [yaprak]</code></td><td>Dönem içinde süzgece uyan kayıtları toplu okur (karar sürümü, gerekceKodu ve ulasmaAni dahil bütün sütunlar); varsayılan yalnız sayılanlar. Oturum, ders, öğrenci, cihaz, açık karar ya da kendiBeyaniOnaysiz koşulundan biri zorunludur, dizin dışı tarama yapılmaz. dersIdler ders_id sütunuyla (donem_id, ders_id, ogrenci_id) kısmi dizinini kullanır, çağıran oturum listesi kurmaz. etiket (EtiketAdi = keyof Etiketler) o etiketi true olanları süzer, tek başına yeterli koşul değildir. kendiBeyaniOnaysiz onay bekleyen yüklemini (etiket_kendi_beyani, karar VAR, onay_ani boş) kısmi dizinle verir; ulasmaAraligi [alt, üst) ek süzgeçtir. D08 devam hesabı (sayilanKayitlar(tx, { donemId, oturumIdler }) ya da dersIdler ile), D09 listeleri ve D07 yeniden değerlendirme (yalnizSayilan: false) kullanır.</td></tr>
+<tr><td><code>ogrencininKayitlari</code></td><td><code>ogrencininKayitlari(tx: Islem, ogrenciId: KisiId, i: { surumden: bigint | null; surumeKadar: bigint }): Promise&lt;{ tam: boolean; satirlar: readonly { id: string; silindi: false; veri: OgrenciKaydi }[]; kararlar: readonly { donemId: DonemId; kayitId: KayitId; kararSurumu: number }[] }&gt;</code></td><td>D06'nın OgrenciKaynagi.bolum arayüzü; imza contracts.json'daki (tx, ogrenciId, { surumden, surumeKadar }) biçimidir (D05-A02 kapandı). D05 eklentisi D06.indirmeKaynagiKaydet('ogrenci_kayitlari', { tur: 'ogrenci', bolum: ogrencininKayitlari }) ile kaydeder, D06 D05'i içe aktarmaz. degisiklik_surumu (surumden, surumeKadar] aralığındaki kayıtlar; surumden null ise tam indirme (tam = true) ve öğrencinin kilidi uygulanmamış birim dönemlerindeki bütün kayıtları (D02.kilitliBirimDonemleri ile süzülür). Her satır için kararlar listesine { donemId, kayitId, kararSurumu } girer; D06 karar teslimini bununla yazar. Satır kimliği kayıt kimliğidir; zarf, cihaz ve anahtar alanları inmez.</td></tr>
+<tr><td><code>kararSutunlariniYaz</code></td><td><code>kararSutunlariniYaz(tx: Islem, kayitAnahtari: KayitAnahtari, karar: { karar: Karar; gerekceKodu: GerekceKodu | null; kararKaynagi: 'OTOMATIK' | 'HOCA'; kararAni: Anlik; kararSurumu: number; etiketler?: Partial&lt;Etiketler&gt;; onay?: { onaylayanId: KisiId; onayAni: Anlik } | null }): Promise&lt;YoklamaKaydi&gt;  // modules/yoklama/yaprak.ts [yaprak]</code></td><td>Yalnız D07 çağırır (kararDegistir ve olay işleyicileri), karar ve etiket değerleri yalnız D07'nin verdiğidir. kararSurumu D07'nin yeni kayit_karar_gecmisi.sira değeridir ve saklıdan büyük olmalıdır (değilse yazmaz, hata verir). onay: verilmezse dokunulmaz, nesne doldurur, null boşaltır (onay girdisini D07 doldurur ve boşaltır). Çift anahtarını ister (zaten tutuluyorsa işlemsiz), karar sütunlarını yazar, ilk kesin kararı bir kez doldurur, sayılanı yeniden seçer (kardeş satırlar aynı çift kilidi altındadır); son adımlarda D08.devamHesaplaIsiKoy(tx, ders_id, ogrenciId, 'KARAR', { tur: 'KAYIT', id: kayitId, donemId }) ve D06.ogrenciDurumuDegisti ile öğrenci sürümü, dönen sürüm satırın degisiklik_surumu'na. Öğrenci sürümü satırı en son kilittir: D07 bu çağrıyı kayıt, ortak sınır ve işaret satırlarını kilitledikten sonra yapar; aynı işlemde aynı öğrenci için ikinci çağrı tutulan satırı yeniden kullanır. Karar geçmişi ve denetim D07'nindir. Yaprak dosyası yalnız devam, esitleme ve duzeltmeler modüllerinin yaprak.ts dosyalarını, D12 altyapısını ve sözleşmeleri içe aktarır; D07'den hiçbir dosya almaz.</td></tr>
+<tr><td><code>yoklamaKaydiOgesi</code></td><td><code>yoklamaKaydiOgesi: OgeIsleyici&lt;'yoklama_kaydi'&gt; = { roller: ['OGRENCI']; oturumGerekli: false; govdeEnBuyukBayt: 2048; ilkCapaVar: false; ayrintiSemasi: YoklamaAyrintisi; kilitAnahtarlari(tx: Islem, ogeler: readonly GelenOge[], baglam: PaketBaglami): Promise&lt;readonly DanismaAnahtari[]&gt;; isleToplu(tx: Islem, ogeler: readonly GelenOge[], baglam: PaketBaglami): Promise&lt;readonly OgeSonucu[]&gt; }</code></td><td>D06'ya ogeTuruKaydet ile kaydolan işleyici. kilitAnahtarlari gövdeyi çözer (imzayı beklemeden) ve metindeki öğrencisi paketin kişisi olan her öğe için D07.kararAnahtarlari([{ oturumId, ogrenciId, anahtarId }]) (çift anahtarı yoklamaCiftAnahtari ile; anahtarId yalnız App Attest kaydında) ve Aşama 2 alanı varsa D11.qrKilitAnahtarlari({ oturumId, ogrenciId, alanlar }) anahtarlarını döner; D06 bunları paketin öbür gruplarıyla tek danismaKilidi çağrısında alır. isleToplu kendi danismaKilidi çağrısı yapmaz; öğeleri doğrular, okur, pencere sonucunu alır, kararı D07'den alır, satırları yazar, son adımda devam işini ve öğrenci sürümünü yazar. Aynı uzunlukta ve sırada OgeSonucu döner, beklenen hiçbir durumda fırlatmaz, SAVEPOINT açmaz; yan etki belleği bu çağrıya yereldir.</td></tr>
+<tr><td><code>makbuzOkutmasiOgesi</code></td><td><code>makbuzOkutmasiOgesi: OgeIsleyici&lt;'makbuz_okutmasi'&gt; = { roller: ['PERSONEL']; oturumGerekli: true; govdeEnBuyukBayt: 2048; ilkCapaVar: true; ayrintiSemasi: OkutmaAyrintisi; kilitAnahtarlari(tx: Islem, ogeler: readonly GelenOge[], baglam: PaketBaglami): Promise&lt;readonly DanismaAnahtari[]&gt;; isleToplu(tx: Islem, ogeler: readonly GelenOge[], baglam: PaketBaglami): Promise&lt;readonly OgeSonucu[]&gt; }</code></td><td>Hocanın okutma öğesi. kilitAnahtarlari gövdeyi ve içindeki zarfı çözer, gövdedeki hocaId paketin kişisi olan öğede okutulan kaydın anahtarlarını yoklamaKaydiOgesi ile aynı yoldan döner. isleToplu gövdedeki hocayı paketin kişisiyle, okutanın dersin hocası olduğunu da D02.dersYetkisi(tx, baglam.kimlik, dersId) ile (önceki hocayı DersBilgisi.hocaAtamaGecmisi ile) denetler, okutma anını kurar, zarfı aynı çekirdekten OKUTMA yoluyla geçirir, okutmayı makbuz_okutmalari'na yazar, dersin hocasına kaydın kararını döner.</td></tr>
+<tr><td><code>kanitCikar</code></td><td><code>kanitCikar(tx: Islem, donemId: DonemId, kayitId: KayitId): Promise&lt;KayitKaniti | null&gt;  // modules/yoklama/kanit.ts</code></td><td>İtiraz için kanıt (contracts.json dış yüzünde, D05-A02 kapandı): zarf aynen, açık anahtar ve türü, imzanın şimdi saklı anahtarla yeniden doğrulanması, geliş yolu, okutmalar, karar ve karar sürümü. Yalnız sunucu makinesindeki kanıt komutu apps/server/src/cli/yoklama-kaniti.ts çağırır (D01'in yonetici-ekle komutu gibi ince sarmalayıcı, <a href="../../teknik.html#sunucu-ilk-yonetici">teknik: İlk yönetici</a>).</td></tr>
+<tr><td><code>yoklamaCiftAnahtari</code></td><td><code>yoklamaCiftAnahtari(oturumId: string, ogrenciId: string): string  // packages/contracts/src/yoklama.ts, saf; 'yoklama:cift:&lt;oturumId&gt;:&lt;ogrenciId&gt;' döner</code></td><td>(oturum, öğrenci) çift kilidinin tek anahtar işlevi; önek yoklama:cift D12'nin DANISMA_KATMANLARI tablosunda katman 3'tür. D05 (kilitAnahtarlari, kayitlariKilitle, kayitGetir kilitle, kararSutunlariniYaz) ve D07 (kararAnahtarlari) aynı işlevi kullanır, anahtar metni başka yerde yeniden yazılmaz.</td></tr>
+<tr><td><code>yoklamaEklentisi</code></td><td><code>yoklamaEklentisi: FastifyPluginAsync&lt;YoklamaEklentisiSecenekleri&gt;; YoklamaEklentisiSecenekleri = EklentiTemelSecenekleri &amp; { veritabani: Veritabani; saat: Saat; appAttestUygulamaKimligi: { takimKimligi: string; paketAdi: string } }  // modules/yoklama/index.ts</code></td><td>Birleşim kuralına uyan Fastify eklentisi (app.ts kaydeder). Altyapıyı seçenekten alır, kayıt sırasında veritabanına dokunmaz; zamanlanmış işi olmadığından surec 'api' iken de zamanlayıcı kurmaz; kayıtlarını her süreçte yapar: D06.ogeTuruKaydet (iki tür), D06.indirmeKaynagiKaydet ('ogrenci_kayitlari'), D12.saklamaIsleyicisiKaydet('yoklama.donem_verisi', { modul: 'yoklama', islem: 'silme', partiIsle }), D09.denetimOlaylariniKaydet('yoklama', YOKLAMA_DENETIM_OLAYLARI). Rotalar yalnız D13.rotalariKaydet(app, YOKLAMA_ROTALARI) ile; setErrorHandler ve setNotFoundHandler kullanmaz. Hata kodu öneki YOKLAMA_, kaynak düzeyi ret 404 YOKLAMA_BULUNAMADI, rota düzeyi rol reddi API_ROL_YETKISIZ.</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>Tipler ve sözleşme dosyası: yoklamaCiftAnahtari, öğe gövde şemaları, denetim olayları, KayitTaslagi, YoklamaKaydi ve öğe ayrıntıları</summary>
+<p>D05 ile D07 bu tiplere karşı ayrı ayrı yazılabilir. YoklamaKaydi sütun listesinin camelCase halidir; bir sütun eklenip tipe eklenmezse tip testi kırılır.</p>
+<pre><code>// packages/contracts/src/yoklama.ts (D05). Saat tipleri D04'ün saat.ts'inden, öğe tipleri D06'nın esitleme.ts'inden,
+// KayitKanitAlanlari ve QrSonucu D11'in projeksiyon.ts'inden, KararBaglami, KararSonucu ve kod listeleri D07'nin dogrulama.ts'inden içe alınır; burada yeniden yazılmaz.
+export const yoklamaCiftAnahtari = (oturumId: string, ogrenciId: string): string =&gt; `yoklama:cift:${oturumId}:${ogrenciId}`;
+export const YoklamaKaydiGovdesi = ogeTuruTanimla('yoklama_kaydi', KayitZarfiSemasi, { modul: 'yoklama' });            // D13
+export const MakbuzOkutmasiGovdesi = ogeTuruTanimla('makbuz_okutmasi', OkutmaGovdesiSemasi, { modul: 'yoklama' });
+export const YOKLAMA_DENETIM_OLAYLARI = { 'yoklama.kimlik_cakismasi': ..., 'yoklama.ogrenci_cihaz_uyusmuyor': ...,
+  'yoklama.gonderen_uyusmuyor': ... } as const;  // Zod şemaları; dersId taşıyan olay birimId de taşır (D09.denetimOlaylariniKaydet)
+export type KayitAnahtari = { donemId: DonemId; kayitId: KayitId };
+export type ImzaTuru = 'ANDROID_P256' | 'APP_ATTEST' | 'SECURE_ENCLAVE';
+export type GelisYolu = 'TELEFON' | 'OKUTMA';
+export type Etiketler = { qrsiz: boolean; kendiBeyani: boolean; saatDogrulanamadi: boolean; cihazDogrulanmadi: boolean;
+  ikinciProfil: boolean; yedekKodlu: boolean; dogrulanmis: boolean };
+export type EtiketAdi = keyof Etiketler;
+export type KayitTaslagi = {              // D05 kurar, D07.kararHesapla okur; satır henüz yazılmamıştır
+  donemId: DonemId; kayitId: KayitId; oturumId: OturumId; dersId: DersId; ogrenciId: KisiId; cihazId: CihazId;
+  anahtarId: CihazAnahtariId; imzaTuru: ImzaTuru; siraNo: bigint; gelisYolu: GelisYolu; okutanHocaId: KisiId | null;
+  okutmaAni: SaatAraligi | null;          // okutma yolunda hocanın çapasından; kayıt saatine üst sınır kuralı D07'nin
+  ulasmaAni: Date;                        // GelenOge.ulasmaAni
+  saat: SaatSonucu;                       // D04 saatSonucu çıktısı, olduğu gibi (esitlemeBozukkenUlasti dahil)
+  pencereSonucu: PencereSonucu;           // D04.pencereSonucu, kayıt satırından önce oturum kimliği sırasıyla alınmış
+  oturumOzeti: { baslangicAni: Date; bitisAni: Date };  // D02.oturumGetir; kararGecmisineYaz kayıttan kopyalar
+  telefonAni: Date;
+  appAttest: { sayac: 'GECTI' | 'ARTMADI';  // D07.appAttestSayaciniDenetle sonucu; yazısı kayıt eklenmese de kalır
+    iosUzantilari: { acilisDogrulamaTuru: string | null; paketSurumu: string | null } | null } | null;  // iOS 27 onay uzantıları; iOS 26'da null
+  qr: QrSonucu | null;                    // Aşama 2 ve 3, D11.qrKanitiniAyristir
+  uygulamaSurumu: string; runtimeSurumu: string | null; guncellemeKimligi: string | null;
+  ogrenciSilinmeAni: Date | null;         // D01.kisiGetir; HESAP_SILINMIS kuralı D07'nin
+};
+export type YoklamaKaydi = {              // sütunların camelCase hali; tip testi sütun listesiyle birebir karşılaştırır
+  donemId: DonemId; id: KayitId; oturumId: OturumId; dersId: DersId; ogrenciId: KisiId; cihazId: CihazId; anahtarId: CihazAnahtariId;
+  siraNo: bigint; zarf: string; imzaTuru: ImzaTuru; appAttestSayaci: bigint | null; uygulamaSurumu: string; runtimeSurumu: string | null;
+  guncellemeKimligi: string | null; telefonAni: Date; telefonSaatDilimi: string;
+  ilkCapaDurumu: IlkCapaDurumu; ikinciCapaDurumu: IkinciCapaDurumu; saatDurumu: SaatSonucu['durum']; saatKaynagi: SaatSonucu['kaynak'];
+  kayitAniAlt: Date | null; kayitAniUst: Date | null; hesaplananAni: Date; payMs: number | null; ulasmaAniniAsiyor: boolean;
+  eleGecmisAnahtar: boolean; esitlemeBozukkenUlasti: boolean; pencereSonucu: PencereSonucu['sonuc']; saatSebebi: string | null;
+  ulasmaAni: Date; gelisYolu: GelisYolu; gonderenKurulumId: string; okutanHocaId: KisiId | null; okutmaAniAlt: Date | null; okutmaAniUst: Date | null;
+  karar: Karar; gerekceKodu: GerekceKodu | null; kararKaynagi: 'OTOMATIK' | 'HOCA'; kararAni: Date; kararSurumu: number;
+  ilkKesinKarar: Karar | null; ilkKesinKararAni: Date | null; onaylayanId: KisiId | null; onayAni: Date | null; gecGeldi: boolean;
+  etiketler: Etiketler; sayilan: boolean; degisiklikSurumu: bigint };
+export type OgrenciKaydi = {              // telefona inen satırın verisi; zarf, cihaz ve anahtar yok
+  donemId: string; kayitId: string; oturumId: string; hesaplananAni: string; saatDurumu: string; ulasmaAni: string;
+  karar: string; gerekceKodu: string | null; kararAni: string; kararSurumu: number; etiketler: string[]; gelisYolu: string; sayilan: boolean };
+export type YoklamaAyrintisi = { karar: string; gerekceKodu: string | null; kararAni: string; kararSurumu: number;
+  etiketler: string[]; sayilan: boolean };           // KABUL ve ZATEN_VAR ayrıntısı, değerler x-extensible-enum
+export type OkutmaAyrintisi = { kayit: { donemId: string; kayitId: string; ogrenciId: string; karar: string;
+  gerekceKodu: string | null; kararSurumu: number; etiketler: string[] } };
+export type KayitKaniti = { anahtar: KayitAnahtari; zarf: string; acikAnahtarSpki: string; anahtarTuru: ImzaTuru;
+  imzaSimdiDogrulandi: boolean; gelisYolu: GelisYolu; ulasmaAni: Date;
+  okutmalar: { hocaId: KisiId; kurulumId: string; denemeNo: number; okutmaAniAlt: Date | null; okutmaAniUst: Date | null;
+    ulasmaAni: Date; sonuc: 'KABUL' | 'ZATEN_VAR' | 'RET'; gerekceKodu: string | null }[];
+  karar: { karar: Karar; gerekceKodu: GerekceKodu | null; kararAni: Date; kararSurumu: number } };
+// D07'nin packages/contracts/src/dogrulama.ts'inde (D05-A03 ve D07-A04 kapandı, iki tarafta aynı): KararBaglami ve
+// KararSonucu = { karar: Karar; gerekceKodu: GerekceKodu | null; ekGerekceler: GerekceKodu[]; etiketler: Etiketler; gecGeldi: boolean; kararSurumu: number }
+// kararHesapla(tx, KayitTaslagi, KararBaglami): Promise&lt;KararSonucu | { tekrarDene: 'DOGRULAMA_BAGLAM_DEGISIYOR' }&gt;; ilk eklemede kararSurumu 1
+// kararAnahtarlari(girdiler: readonly { oturumId; ogrenciId; anahtarId: string | null }[]): readonly DanismaAnahtari[]  (çift ve sayaç anahtarları)</code></pre>
+</details>
+<details>
+<summary>Dosyalar: 46 dosya, hepsi D05'in dosya alanında</summary>
+<table>
+<thead><tr><th>Dosya</th><th>İçerik</th></tr></thead>
+<tbody>
+<tr><td><code>packages/contracts/src/yoklama.ts</code></td><td>Zod şemaları (KayitZarfi; KayitMetniV1 <code>z.object</code> ile, strict değil, D11'in KayitKanitAlanlari'nı isteğe bağlı alan olarak içe alır; YoklamaAyrintisi, OkutmaAyrintisi, OturumKayitlariCevabi), iki öğe türünün gövde şeması D13.ogeTuruTanimla ile (YoklamaKaydiGovdesi, MakbuzOkutmasiGovdesi), saf yoklamaCiftAnahtari, YOKLAMA_ önekli kodlar, gerekçe ve sonuç sabitleri, YOKLAMA_DENETIM_OLAYLARI, YOKLAMA_ROTALARI ve Tipler bölümündeki tipler (KayitTaslagi D07 okur).</td></tr>
+<tr><td><code>packages/core/src/yoklama/index.ts</code></td><td>Paketin dış yüzü; telefon ve sunucu aynı işlevleri kullanır.</td></tr>
+<tr><td><code>packages/core/src/yoklama/zarf.ts</code></td><td>Zarf üretme ve ayrıştırma: önek, ayırıcılar, 1273 bayt, kanonik base64url, metin çözme; okutma gövdesinin JSON biçimi.</td></tr>
+<tr><td><code>packages/core/src/yoklama/zarf.test.ts</code></td><td>Gidiş dönüş ve sınır özellik testleri (fast-check).</td></tr>
+<tr><td><code>packages/core/src/yoklama/karsilastir.ts</code></td><td>Saklı ile gelen zarfın karşılaştırma tablosu (AYNI, METIN_AYNI_IMZA_FARKLI, METIN_FARKLI); imza karşılaştırmadan önce doğrulanmış olur.</td></tr>
+<tr><td><code>packages/core/src/yoklama/karsilastir.test.ts</code></td><td>Karşılaştırma tablosu testleri.</td></tr>
+<tr><td><code>packages/core/src/yoklama/sayilan.ts</code></td><td>sayilanSec: sayılan kaydın sıralama anahtarı ve seçimi; oturum ucunda bir numaradaki hesapların kaydını da seçer.</td></tr>
+<tr><td><code>packages/core/src/yoklama/sayilan.test.ts</code></td><td>Permütasyon özellik testi.</td></tr>
+<tr><td><code>packages/core/src/yoklama/saatSutunlari.ts</code></td><td>SaatSonucu ile kayıt sütunları arasında iki yönlü eşleme: sutunlaraYaz(saat, telefonAni) ve saatSonucunuKur(satir) (tahminMs yalnız kaynak YOK iken boş); ikinci çapa girdisinin yola göre seçimi (kendi cihazı, OKUTMA_YOLU, BASKA_CIHAZ_GONDERDI; D04 sabitleri içe aktarılır) ve onarılabilir yokluk kuralı da burada saf işlevdir.</td></tr>
+<tr><td><code>packages/core/src/yoklama/saatSutunlari.test.ts</code></td><td>Gidiş dönüş özellik testi ve yokluk nedeni tablosu.</td></tr>
+<tr><td><code>packages/core/src/yoklama/gerekceler.ts</code></td><td>Gönderim reddi gerekçeleri ve sınıfları (RET ya da TEKRAR_DENE, beklemeSaniye; saklanmayan durumlar listesi, D05-A01; D07'nin DOGRULAMA_BAGLAM_DEGISIYOR kodu içe aktarılır, 2 saniye).</td></tr>
+<tr><td><code>packages/core/src/yoklama/gerekceler.test.ts</code></td><td>Sınıflama tablosu testi.</td></tr>
+<tr><td><code>packages/core/src/yoklama/panelSayilari.ts</code></td><td>Oturum ucunun sayıları: ETKIN satırların ilk uyan kümeye bölüşümü (düzeltme ve muaf, var, incelemede ve beklemede, yok), reddedilen kayıt.</td></tr>
+<tr><td><code>packages/core/src/yoklama/panelSayilari.test.ts</code></td><td><a href="../../tasarim.html#head-sw-l">tasarım: Kafa sayısından önce</a> örneği ve bölüşüm özellik testi.</td></tr>
+<tr><td><code>packages/core/src/yoklama/ornekZarflar.ts</code></td><td>Kayıtlı örnek zarflar (Android, Secure Enclave, App Attest iOS 26 ve iOS 27 onayı) ve test anahtarları; telefon ve sunucu aynı vektörlerle denenir.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/index.ts</code></td><td>Dış yüz: yoklamaEklentisi ve seçenek tipi, kanitCikar, iki öğe işleyicisi, ogrencininKayitlari ve yaprak.ts'teki işlevlerin yeniden dışa verilmesi; yüklenirken başka modülü çağırmaz. D07 bu dosyayı değil yalnız yaprak.ts'i (ya da eklenti seçeneğini) kullanır; bu modülün öbür dosyaları D07'nin index.ts'ini (kararHesapla, kararGecmisineYaz, appAttestSayaciniDenetle) içe aktarabilir.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/yaprak.ts</code></td><td>kayitGetir, kayitlariKilitle, oturumKayitlari, sayilanKayitlar, kararSutunlariniYaz. Başka alan modülünden yalnız yaprak.ts içe aktarır: devam (devamHesaplaIsiKoy), esitleme (ogrenciDurumuDegisti) ve duzeltmeler; ayrıca D12 altyapısı, sözleşmeler (yoklamaCiftAnahtari) ve bu modülün kilit, sayılan ve tablo dosyaları. D02'yi çağırmaz (ders_id sütunu, skip scan), hiçbir index.ts'i ve D07'den hiçbir dosyayı içe aktarmaz; D13'ün sınır testi (dependency-cruiser) bunu sıfır ihlalle denetler.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/eklenti.ts</code></td><td>yoklamaEklentisi (FastifyPluginAsync&lt;YoklamaEklentisiSecenekleri&gt;): D13.rotalariKaydet(app, YOKLAMA_ROTALARI), D06.ogeTuruKaydet ile iki öğe işleyicisi (ilkCapaVar ve kilitAnahtarlari ile) ve 'ogrenci_kayitlari' öğrenci kaynağı, D12.saklamaIsleyicisiKaydet('yoklama.donem_verisi', ...), D09.denetimOlaylariniKaydet('yoklama', YOKLAMA_DENETIM_OLAYLARI). Kayıtta veritabanına dokunmaz, zamanlayıcı kurmaz, setErrorHandler ve setNotFoundHandler kullanmaz.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/tablolar.ts</code></td><td>İki tablonun Drizzle tanımı (anlık sütunlar D12.tabloYardimcilari.an ile), dizinler, üretilmiş saat_sebebi ve ele_gecmis_anahtar sütunları, CHECK kısıtları (değerler sorumlu modüllerin sabitlerinden içe aktarılır, adlar D12.kisitAdi ile).</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/kayitIsle.ts</code></td><td>İki öğe türünün ortak çekirdeği: kilitsiz doğrulama, okumalar ve karşılaştırma, oturum kimliği sırasıyla D04.pencereSonucu, saat ve karar, ekleme, sayılan; son adımda (ders, öğrenci) başına devam işi ve öğrenci başına bir kez öğrenci sürümü; yan etki belleği isleToplu çağrısına yerel.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/imzaDogrula.ts</code></td><td>Node crypto (P-256 DER) ve node-app-attest ile imza doğrulama; uygulama kimliği eklenti seçeneğinden. App Attest onayının doğrulayıcı verisinden sayacı ve iOS 27 uzantılarını (açılış doğrulama türü, paket sürümü; iOS 26'da yok) çıkarır.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/kilit.ts</code></td><td>İki işleyicinin kilitAnahtarlari kancası: gövdeyi çözer (imzayı beklemeden), paketin kişisine ait öğeler için D07.kararAnahtarlari (çift anahtarı yoklamaCiftAnahtari ile, App Attest'te sayaç) ve D11.qrKilitAnahtarlari anahtarlarını toplar; kayitlariKilitle'nin anahtar ve satır sırası. Kilidi D12.danismaKilidi alır, elle pg_advisory_xact_lock yoktur.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/islemOnbellegi.ts</code></td><td>İşlem başına önbellek yalnız değişmeyen okumalar için: cihaz, anahtar, kişi (silinme anı), oturum, ders. Durum sürümü ve devam işi burada tutulmaz.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/denetimSiniri.ts</code></td><td>Denetim olayı sınırı: (cihaz, gerekçe, İstanbul günü) başına en çok 20 olay; aşan olay yalnız 'denetim_siniri_asildi' log satırı bırakır. Süreç içi sayaç, yeniden başlatmada sıfırlanır. Olay türleri YOKLAMA_DENETIM_OLAYLARI'ndan; dersId taşıyan olaya birimId eklenir.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/yoklamaKaydiOgesi.ts</code></td><td>yoklama_kaydi işleyicisi (OgeIsleyici: ilkCapaVar false, kilitAnahtarlari, isleToplu).</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/makbuzOkutmasiOgesi.ts</code></td><td>makbuz_okutmasi işleyicisi (OgeIsleyici: ilkCapaVar true, kilitAnahtarlari, isleToplu), dersin hocası denetimi (dersYetkisi ve hocaAtamaGecmisi), okutma anı ve deneme satırı.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/sayilanSecimi.ts</code></td><td>Kilit altında sayılanın yeniden seçimi ve işaret güncellemesi.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/oturumKayitlariUcu.ts</code></td><td>GET /v1/yoklama/oturumlar/{oturumId}/kayitlar.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/indirmeKaynagi.ts</code></td><td>ogrencininKayitlari: D06'ya kaydolan 'ogrenci_kayitlari' öğrenci kaynağının bolum işlevi.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/saklama.ts</code></td><td>Katalogdaki tek sınıf 'yoklama.donem_verisi' için tek partiIsle işlevi: önce makbuz_okutmalari, sonra yoklama_kayitlari satırlarını siler; kayıtta sıra ya da oncekiSiniflar yoktur.</td></tr>
+<tr><td><code>apps/server/src/modules/yoklama/kanit.ts</code></td><td>kanitCikar.</td></tr>
+<tr><td><code>apps/server/src/jobs/yoklama/index.ts</code></td><td>Boş iş listesi; worker.ts bütün modülleri bir kez listelediği için dosya vardır.</td></tr>
+<tr><td><code>apps/server/src/cli/yoklama-kaniti.ts</code></td><td>Sunucu makinesinde elle çalışan kanıt komutu (bileşim kökü): veritabanını D12 ile açar, kanitCikar(tx, donemId, kayitId) çağırır, sonucu JSON olarak standart çıktıya yazar; kayıt yoksa çıkış kodu 1. D01'in yonetici-ekle komutu gibi ince sarmalayıcıdır (<a href="../../teknik.html#sunucu-ilk-yonetici">teknik: İlk yönetici</a>), iş kuralı taşımaz.</td></tr>
+<tr><td><code>apps/server/test/features/yoklama/kayit-gonderme.feature</code></td><td>Kabul, bozuk öğe, imza önce, saat, pencere sonucu, ikinci çapa, bağlam değişiyor ve sınır senaryoları.</td></tr>
+<tr><td><code>apps/server/test/features/yoklama/zaten-var-ve-ret.feature</code></td><td>Tekrar gönderme, çakışma ve denetim sınırı senaryoları.</td></tr>
+<tr><td><code>apps/server/test/features/yoklama/makbuz-okutma.feature</code></td><td>Okutma, deneme satırı ve devir (hocaAtamaGecmisi) senaryoları.</td></tr>
+<tr><td><code>apps/server/test/features/yoklama/sayilan-kayit.feature</code></td><td>Eşzamanlı geliş, kilit anahtarları ve katman sırası, karar değişikliği, karar sürümü, devam işi nedeni, öğrenci sürümü ve yan etki belleği.</td></tr>
+<tr><td><code>apps/server/test/features/yoklama/degismezlik.feature</code></td><td>Rol yetkileriyle değişmezlik.</td></tr>
+<tr><td><code>apps/server/test/features/yoklama/oturum-kayitlari-ucu.feature</code></td><td>Uç yetkisi, kafa sayısı gizlemesi, büyük ve çok şubeli oturum, son durum (sayım dışı, kilitli, MUAF).</td></tr>
+<tr><td><code>apps/server/test/features/yoklama/saklama-ve-kanit.feature</code></td><td>yoklama.donem_verisi sınıfının D12.saklamaIsleyicisiniCalistir ile parti silmesi, kanıt çıkarma ve kanıt komutu.</td></tr>
+<tr><td><code>apps/server/test/features/yoklama/gonderme-durum-makinesi.feature</code></td><td>fast-check durum makinesi (<a href="../../teknik.html#testler-kalite">teknik: Kalite kapıları</a>).</td></tr>
+<tr><td><code>apps/server/test/steps/yoklama/kayit-adimlari.ts</code></td><td>Kayıt adımları.</td></tr>
+<tr><td><code>apps/server/test/steps/yoklama/okutma-adimlari.ts</code></td><td>Okutma adımları.</td></tr>
+<tr><td><code>apps/server/test/steps/yoklama/uc-adimlari.ts</code></td><td>Uç adımları.</td></tr>
+<tr><td><code>apps/server/test/steps/yoklama/durum-makinesi-adimlari.ts</code></td><td>Durum makinesi komutları.</td></tr>
+<tr><td><code>apps/server/test/support/kurucular/yoklama.ts</code></td><td>Veri kurucusu: test anahtarlarıyla imzalı zarf üretir (App Attest onayı kendi P-256 test anahtarıyla, doğrulayıcı verisi, sayaç ve isteğe bağlı iOS 27 uzantılarıyla kurulur); D01 ve D02 kurucularını kullanır.</td></tr>
+</tbody>
+</table>
+</details>
+
+<h3>Durumlar ve kurallar</h3>
+<p><strong>Zarf ve kayıt metni.</strong> Zarf kuyrukta, istekte ve makbuz QR'ında aynı tek ASCII metindir; sunucu saklarken ve karşılaştırırken yeniden biçimlendirmez (<a href="../../teknik.html#sunucu-imza-dogrulama">teknik: İmza doğrulama</a>, <a href="../../teknik.html#telefon-kamera-qr">teknik: Kamera ve QR</a>).</p>
+<pre><code>IUY1.&lt;kayıt metni&gt;.&lt;tür&gt;.&lt;imza&gt;
+  kayıt metni  base64url (dolgusuz) UTF-8 JSON; imzalanan baytlar bu metnin ASCII baytları
+  tür          a  Android Keystore P-256 (DER, SHA-256)
+               s  Secure Enclave P-256 (DER, SHA-256)
+               i  App Attest onayı (CBOR: authenticatorData, signature)
+  imza         base64url (dolgusuz)
+  üst sınır    1273 bayt (L düzeyinde QR sürüm 25)
+
+Kayıt metninin içi, v1 (Aşama 1):
+{&quot;tur&quot;:&quot;kayit&quot;,&quot;v&quot;:1,
+ &quot;id&quot;:&quot;0199b9a4-3c1e-7d2a-9f10-5b2c7e8a4d61&quot;,
+ &quot;cihaz&quot;:&quot;0198f0c2-77a1-7b3e-8c55-1d2e3f4a5b6c&quot;,
+ &quot;anahtar&quot;:&quot;0198f0c2-77a2-7c11-9a0b-2c3d4e5f6a7b&quot;,
+ &quot;sira&quot;:42,
+ &quot;oturum&quot;:&quot;0198e7d0-1a2b-7c3d-8e4f-5a6b7c8d9e0f&quot;,
+ &quot;ogrenci&quot;:&quot;0198d1e2-f3a4-7b5c-9d6e-7f8a9b0c1d2e&quot;,
+ &quot;belge&quot;:&quot;&lt;saat belgesi aynen, D04 biçimi&gt;&quot;,
+ &quot;belgeIstegiMs&quot;:180,&quot;belgedenKayitMs&quot;:5400000,&quot;ilkCapa&quot;:&quot;&lt;D04 değeri&gt;&quot;,
+ &quot;telefonSaati&quot;:&quot;2026-10-06T07:03:21.000Z&quot;,&quot;saatDilimi&quot;:&quot;Europe/Istanbul&quot;,
+ &quot;uygulamaSurumu&quot;:&quot;1.0.0&quot;,&quot;runtimeSurumu&quot;:&quot;1.0.0&quot;,&quot;guncellemeKimligi&quot;:null}
+Aşama 2 ve 3 isteğe bağlı alanları (D11 KayitKanitAlanlari): qr, yedekKod, qrYetenegi, bluetooth, konum</code></pre>
+<p>Metinde öğrenci numarası, isim, kod ya da jeton yoktur; dönem yazılmaz, oturumdan bulunur. Şema <code>z.object</code> ile strip kipindedir: bilinmeyen alan atılır, kayıt reddedilmez; sunucu bildiği her v'yi okumayı sürdürür, kayıt gönderme yolu hiçbir sürüme kapanmaz (<a href="../../plan.html#dagitim-guncelleme-ilkesi">plan: Güncelleme ilkesi</a>). Aşama 2 ve 3 alanları D11'in KayitKanitAlanlari şemasından içe alınır, iki yerde yazılmaz.</p>
+<p><strong>İşleme sırası</strong> (1. adım paket başına D06'nın içinde, öbürleri isleToplu'nun her parçasında; makbuz okutması gövde ve hoca denetimlerinden sonra aynı çekirdeği OKUTMA yoluyla kullanır; genel sıra contracts.json'daki danışma kilidi katmanlarıdır: danışma anahtarları, satırlar, iş kuyruğu ve öğrenci sürümü, en son genel sayaç)</p>
+<ol>
+<li>Anahtarlar (kilitAnahtarlari, D06 hiçbir grubu işlemeden önce çağırır). Gövde imza beklenmeden çözülür; metindeki öğrencisi paketin kişisi olan (okutmada gövdedeki hocaId paketin kişisi olan) her öğe için D07.kararAnahtarlari([{ oturumId, ogrenciId, anahtarId }]) (çift anahtarı yoklamaCiftAnahtari ile 'yoklama:cift:&lt;oturumId&gt;:&lt;ogrenciId&gt;', katman 3; anahtarId yalnız App Attest kaydında, 'dogrulama:sayac:&lt;anahtarId&gt;', katman 4) ve Aşama 2 alanı varsa D11.qrKilitAnahtarlari({ oturumId, ogrenciId, alanlar }) döner. Çözülemeyen ya da başka kişinin öğesi anahtar vermez. D06 bütün grupların anahtarlarını kendi 'esitleme:kurulum_siniri:&lt;kisiId&gt;' anahtarıyla tek D12.danismaKilidi çağrısında alır; isleToplu yeni danışma anahtarı istemez.</li>
+<li>Yazısız doğrulama, öğe öğe. Zarf ayrıştırılır (packages/core/src/yoklama/zarf.ts): önek, üç ayırıcı, en çok 1273 bayt, kanonik base64url, UTF-8 JSON, KayitMetni şeması; bozuksa RET YOKLAMA_ZARF_BOZUK ya da YOKLAMA_METIN_BOZUK, önek ya da v bu sunucudan yeniyse TEKRAR_DENE YOKLAMA_BICIM_SURUMU_BILINMIYOR (beklemeSaniye 3600). yoklama_kaydi'nda GelenOge.ogeKimligi metindeki id değilse RET YOKLAMA_OGE_KIMLIGI_UYUSMUYOR.</li>
+<li>Anahtar D01.cihazAnahtariGetir ile etkinliğine bakılmadan bulunur; tür harfi ve metindeki cihaz tutmalı. İmza gelen baytlar üzerinde metindeki anahtarla doğrulanır: a ve s için Node <code>crypto.verify('sha256', ..., { dsaEncoding: 'der' })</code>; i için node-app-attest (uygulama kimliği özeti ve imza; sayaç kütüphaneye 0 verilerek geçilir, sıra numarasına göre D07 denetler); App Attest doğrulayıcı verisinden sayaç ve iOS 27 uzantıları (açılış doğrulama türü, paket sürümü) çıkarılır. Geçmezse RET YOKLAMA_IMZA_GECERSIZ, yalnız log; saklı kayda bakılmaz.</li>
+<li>Bağlar: cihaz metindeki öğrenciye bağlı olmalı (D01.cihazGetir), değilse RET YOKLAMA_OGRENCI_CIHAZ_UYUSMUYOR. Telefon yolunda paketin kişisi (PaketBaglami.kisiId) metindeki öğrenci olmalı, değilse RET YOKLAMA_GONDEREN_UYUSMUYOR ve saklı kayıt olsa bile karar dönmez. İkisi de sınırlı denetim kaydı yazar. Oturum D02.oturumGetir ile bulunur, dönem, ders ve oturumun başlangıç ve bitişi oradan alınır; yoksa RET YOKLAMA_OTURUM_BILINMIYOR.</li>
+<li>Okuma ve karşılaştırma. Kimlik bütün dönemlerde aranır. Metin aynıysa ZATEN_VAR (imza baytları farklı olabilir; ikisi de aynı anahtarla doğrulanmıştır), saklı ulaşma anını ve güncel kararı taşır; metin farklıysa RET YOKLAMA_KIMLIK_CAKISMASI ve denetim kaydı. Geliş yolu bakılmaz. Aynı dönemde (cihaz, sıra) başka kimlikle saklıysa RET YOKLAMA_SIRA_CAKISMASI; cihazın bu oturumda 10 saklı kaydı varsa RET YOKLAMA_OTURUM_KAYIT_SINIRI.</li>
+<li>Saat: D04.saatBelgesiDogrula ve packages/core/src/saat'in saatSonucu'su; ulaşma anı GelenOge.ulasmaAni, esitlemeSaglikli D04.esitlemeSaglikliMi. İkinci çapa girdisi yola göre seçilir: kaydın kendi cihazının paketi (gönderen imzalayan.cihazId, yoksa oturum.cihazId, ikisi de yoksa kendi cihazı sayılır) GelenOge.ikinciCapa; okutma { yokNedeni: 'OKUTMA_YOLU' }; başka cihaz { yokNedeni: 'BASKA_CIHAZ_GONDERDI' } (D04 sabitleri). Kendi cihazında ilk çapa geçerli değilse ve ikinci çapa PAKET_IMZASIZ, ESITLEME_BOZUK ya da GONDERILMEDI nedeniyle yoksa TEKRAR_DENE YOKLAMA_IKINCI_CAPA_GEREKLI (ESITLEME_BOZUK'ta beklemeSaniye 300), kayıt saklanmaz (<a href="../../plan.html#gun-ikinci-capa">plan: İkinci çapa</a>). SONRA_YENIDEN_BASLATMA, KAYIT_7_GUNDEN_ESKI ve geçersiz ikinci belge kalıcıdır: kayıt saklanır.</li>
+<li>Pencere: kalan öğeler oturum kimliğine göre sıralanır ve her biri için D04.pencereSonucu(tx, { oturumId, kayitSaati, kayitUlasmaAni }) çağrılır (pencere satırı FOR KEY SHARE; kayıt satırı, D07'nin ortak sınır satırı ve öğrenci sürümünden önce). kayitSaati SaatSonucu.aralik, aralık yoksa hesaplanan_ani tek noktası.</li>
+<li>Karar: öğrencinin silinme anı D01.kisiGetir ile okunur. App Attest kaydında D07.appAttestSayaciniDenetle; Aşama 2 alanları varsa D11.qrKanitiniAyristir; KayitTaslagi kurulur (Tipler; saat, pencereSonucu, oturumOzeti dahil) ve D07.kararHesapla çağrılır (yalnız okur ve kilitler). { tekrarDene: 'DOGRULAMA_BAGLAM_DEGISIYOR' } dönerse öğe TEKRAR_DENE DOGRULAMA_BAGLAM_DEGISIYOR (beklemeSaniye 2), satır yazılmaz.</li>
+<li>Ekleme: satır <code>INSERT ... ON CONFLICT (donem_id, id) DO NOTHING</code> ile eklenir; karar_surumu 1, pencere_sonucu, ders_id, degisiklik_surumu 0; öğrencinin o oturumdaki ilk kaydıysa sayılan, değilse sayılmayan. Ekleme olmazsa yan etki yazılmadan 5. adımdaki karşılaştırma yapılır. Eklendiyse aynı işlemde: yeni kayıt sıralamada öndeyse eski sayılanın işareti kaldırılır, yenisi işaretlenir; D07.kararGecmisineYaz (sira 1); Aşama 2 kanıt satırı (D11 kaydet). Sonuç KABUL, ayrıntısı YoklamaAyrintisi.</li>
+<li>Son adım (çağrı başına, yan etki belleğinden): yazılan her (ders, öğrenci) için bir kez D08.devamHesaplaIsiKoy(tx, dersId, ogrenciId, 'KAYIT', { tur: 'KAYIT', id, donemId }); sonra öğrenci kimliği sırasıyla öğrenci başına bir kez D06.ogrenciDurumuDegisti ve dönen sürüm o öğrencinin bu çağrıda yazılan ya da sayılan işareti değişen satırlarına tek UPDATE ile. Genel sayacı (D06.surumAl) paketin sonunda D06 alır.</li>
+</ol>
+<div class="rows">
+<div class="row"><div class="k">Ulaşma anı</div><div>Kaydın ulaşma anı GelenOge.ulasmaAni'dir: D06'nın paket başına saat arayüzünden okuduğu an ya da öğe geçerli ulaşma makbuzuyla yeniden geldiyse makbuzdaki an (D12-B31). D05 kendi ulaşma kanıtını üretmez, D04 saat belgesini bu iş için kullanmaz. Öğe gövdesi yeniden gönderimlerde bayt bayt aynı kalır ki makbuz tutsun.</div></div>
+<div class="row"><div class="k">Saklanmadan RET</div><div>Makbuz 'Telefonda kayıtlı, gönderilmedi' kalır; kendiliğinden yeniden denenmez (<a href="../../plan.html#kararlar-yeniden-deneme">plan: Yeniden deneme</a>). Yalnız kayda güvenilemeyen durumlar: YOKLAMA_ZARF_BOZUK, YOKLAMA_METIN_BOZUK, YOKLAMA_OGE_KIMLIGI_UYUSMUYOR, YOKLAMA_ANAHTAR_BILINMIYOR, YOKLAMA_IMZA_TURU_UYUSMUYOR, YOKLAMA_ANAHTAR_CIHAZ_UYUSMUYOR, YOKLAMA_IMZA_GECERSIZ, YOKLAMA_OGRENCI_CIHAZ_UYUSMUYOR, YOKLAMA_GONDEREN_UYUSMUYOR, YOKLAMA_OTURUM_BILINMIYOR, YOKLAMA_KIMLIK_CAKISMASI, YOKLAMA_SIRA_CAKISMASI, YOKLAMA_OTURUM_KAYIT_SINIRI, YOKLAMA_HOCANIN_DERSI_DEGIL, YOKLAMA_HESAP_UYUSMUYOR. Son ikisi yalnız okutmada çıkar.</div></div>
+<div class="row"><div class="k">Saklanır, kararı D07</div><div>Makbuz 'Sunucuya ulaştı', karar ayrıca görünür. İmzası geçerli ve metindeki öğrencinin cihazına bağlı öbür her kayıt: listede olmayan ders, pencere dışı, ulaşma anını aşan saat, eski ya da değişim bekleyen cihaz, silinmiş hesabın silmeden sonraki kaydı (Ret HESAP_SILINMIS), sayacı artmayan App Attest onayı (İncelemede), teyitsiz öğrenci, hatalı sürüm, eşitleme bozukken ulaşan kayıt. Ham kayıt kanıttır, atılmaz (<a href="../../plan.html#kararlar-cihaz-dogrulamasi">plan: Cihaz doğrulaması</a>). Bu ayrım varsayılandır, onay bekliyor (Açık noktalar, D05-A01).</div></div>
+<div class="row"><div class="k">Saat sütunları</div><div>SaatSonucu kayıpsız yazılır (packages/core/src/yoklama/saatSutunlari.ts): ilk ve ikinci çapa durumu, saat_durumu, saat_kaynagi, aralık (kayit_ani_alt, kayit_ani_ust), hesaplanan_ani = tahminMs (tahminMs yalnız kaynak YOK iken boştur, o zaman telefon_ani), pay_ms, ulasma_anini_asiyor, esitleme_bozukken_ulasti. Değerler D04'ün büyük harfli sabitleridir (OKUTMA_YOLU, BASKA_CIHAZ_GONDERDI dahil; KURULMADI yoktur), CHECK listeleri oradan içe aktarılır. saat_sebebi ve ele_gecmis_anahtar iki çapa durumundan üretilmiş sütunlardır, ayrı değer listesi yoktur. D07 yeniden değerlendirmede saati bu sütunlardan aynen geri kurar; ele geçmiş anahtar ya da ayrışan çapalar yüzünden İncelemede kalan kayıt yeniden hesapta Var'a kaymaz. Gelişteki pencere sonucu pencere_sonucu sütununda kalır (ICINDE, DEGISIM_DILIMI, ESKI_PROGRAM, DISINDA) ve KayitTaslagi.pencereSonucu ile D07'ye gider; pencere sonradan değişirse D07 yeniden değerlendirmede D04.pencereSonucu'nu yeniden çağırır, sütun değişmez.</div></div>
+<div class="row"><div class="k">Sayılan kayıt</div><div>Sıralama: karar önceliği (VAR, BEKLEMEDE, INCELEMEDE, RET), sonra ulaşma anı, sonra kimlik (packages/core/src/yoklama/sayilan.ts). İlk kayıt sayılan eklenir; sonraki sayılmayan eklenir ve öndeyse aynı işlemde yer değiştirir. Her karar değişikliği seçimi yeniden yapar. Tek kaydı Ret olan öğrencinin sayılanı o kayıttır; son durumu D09.sonDurumOnceligi verir.</div></div>
+<div class="row"><div class="k">Kilit ve işlem</div><div>Kilitler contracts.json'daki danışma kilidi katmanlarıyla alınır (D12.danismaKilidi; elle pg_advisory_xact_lock yazılmaz): 'yoklama:cift:&lt;oturumId&gt;:&lt;ogrenciId&gt;' katman 3, D07'nin 'dogrulama:sayac:&lt;anahtarId&gt;' katman 4, 'dogrulama:isaret' katman 5; tek genel sıra önce katman, sonra anahtar metnidir ve işlemde zaten tutulan anahtarı yeniden istemek işlemsizdir. Gönderim işleminde sıra: (1) danışma anahtarları, D06'nın paket başına tek çağrısında (kilitAnahtarlari kancası; D06 kendi kurulum sınırı anahtarını ve öbür grupların anahtarlarını da katar); (2) D04.pencereSonucu'nun pencere satırı okumaları, oturum kimliği sırasıyla; (3) satırlar: kayıt satırları, D07'nin ortak sınır satırı, karar geçmişi, Aşama 2 kanıt satırı; (4) iş kuyruğu (D08.devamHesaplaIsiKoy) ve öğrenci sürümü (D06.ogrenciDurumuDegisti, öğrenci başına bir kez, öğrenci kimliği sırasıyla); (5) en son genel sayaç (D06.surumAl, paket başına bir kez, D06'nın). D07.kararDegistir ve yenidenDegerlendir hedeflerin çift kilitlerini D05.kayitlariKilitle ya da D07.kararAnahtarlari ile tek çağrıda, sayaç, ortak sınır ve işaret kilitlerinden önce alır ve kararSutunlariniYaz'ı satır kilitlerinden sonra çağırır; böylece ekleme yolu ile karar yolu aynı sırayla kilitler (D05-A10 kapandı). kararSutunlariniYaz ve kayitGetir(kilitle) aynı çift anahtarını ister, işlemsiz geçer; kardeş satırlar (sayılan yer değiştirmesi) aynı çift kilidi altında olduğundan başka işlem onları tutamaz. Aynı kaydın iki yoldan ve aynı öğrencinin iki kaydının eşzamanlı gelişi sıraya girer; ikinci işlem birincinin yazdığını görür; <a href="../../teknik.html#veritabani">teknik: Veritabanı</a> satırındaki 'sayılan dizinine takılan kayıt sayılmayan olarak yazılır, kabul alır' sonucu böylece hata oluşmadan sağlanır (D05-A07). Kalan 40P01 PostgreSQL'in kestiği parçadır: D06 o parçayı TEKRAR_DENE ESITLEME_GECICI_CAKISMA yapar, telefon yeniden gönderir; sayısı ders çıkışı yük testinde yazılır.</div></div>
+<div class="row"><div class="k">Yan etkiler</div><div>İşleyici SAVEPOINT açmaz ve veritabanı hatası yakalamaz; parça SAVEPOINT'i D06'nındır. 2'lik sınır kullanımı, karar geçmişi, devam işi ve Aşama 2 kanıt satırı yalnız satır eklendikten sonra yazılır; eklenmeyen kayıt bunların hiçbirini bırakmaz. İşlem önbelleği yalnız değişmeyen okumaları tutar (cihaz, anahtar, kişi ve silinme anı, oturum, ders). Yan etki belleği (bu çağrıda yazılan satırlar, öğrenci başına sürüm, (ders, öğrenci) başına devam işi) isleToplu çağrısına yereldir. Her D08.devamHesaplaIsiKoy çağrısı kuyruğa bir iş satırı ekler (ne bellek kümesi ne singletonKey): D06 parçayı SAVEPOINT'e geri alınca iş satırı da gider, öğeleri tek tek yeniden verince her çağrı yeni bellekle başlar ve yeni iş satırı ekler; aynı (ders, öğrenci) işlerini D08 partide birleştirir (D05-A12 kapandı).</div></div>
+<div class="row"><div class="k">Denetim sınırı</div><div>Denetim satırı yalnız imzası doğrulanmış zarftan D09.denetimeYaz ile yazılır. Olay türleri sözleşme dosyasındaki YOKLAMA_DENETIM_OLAYLARI listesindedir (yoklama.kimlik_cakismasi, yoklama.ogrenci_cihaz_uyusmuyor, yoklama.gonderen_uyusmuyor) ve eklentide D09.denetimOlaylariniKaydet('yoklama', ...) ile kaydolur; ayrıntıda yalnız iç kimlikler ve zarf özeti; dersId taşıyan olay birimId de taşır (D02.dersGetir'den). (cihaz, gerekçe, İstanbul günü) başına en çok 20 olay yazılır, fazlası 'denetim_siniri_asildi' log satırıdır (denetimSiniri.ts, süreç içi sayaç). İmzasız çöp metin log satırından başka iz bırakmaz ve kilitAnahtarlari başka kişinin çiftine anahtar vermediği için kurbanın kilidini de tutamaz. <a href="../../teknik.html#veritabani">teknik: Veritabanı</a> satırı 'aynı kimlik farklı baytla ya da başka cihazın anahtarıyla imzalı gelirse' gelen zarfı denetim kaydına yazdırır; imzalı zarf için bu aynen korunur. Günlük sınırın teknik.html'e yazılması D05-A07'de.</div></div>
+<div class="row"><div class="k">Makbuz okutması</div><div><ol>
+<li>Anahtar kancası gövdeyi ve içindeki zarfı çözer; gövdedeki hocaId paketin kişisiyse okutulan kaydın çift, sayaç ve QR anahtarlarını verir. Kilit, okutanın dersin hocası olduğu denetlenmeden önce alınır: yetkisiz okutma başka öğrencinin çiftini yalnız bu paketin işlemi süresince tutar, iz bırakmaz.</li>
+<li>Gövde (JSON { v, zarf, hocaId }) çözülür, değilse RET YOKLAMA_ZARF_BOZUK; hocaId paketin kişisi (PaketBaglami.kisiId) olmalı, değilse RET YOKLAMA_HESAP_UYUSMUYOR. İkisinde de satır yazılmaz. Giriş oturumu olmayan paketi D06 bu işleyiciye vermez (ESITLEME_OTURUM_GEREKLI).</li>
+<li>Okutma anı GelenOge.ilkCapa (ilkCapaVar true) ve ikinciCapa'dan D04.saatSonucu ile özne personel (okutan hoca) kurulur; ilkCapa yoksa okutma anı boştur.</li>
+<li>Öğe kimliği makbuz_okutmalari'nda bütün dönemlerde aranır, son deneme okunur: zarf özeti ya da hoca farklıysa RET YOKLAMA_KIMLIK_CAKISMASI (satır yazılmaz); son sonuç KABUL ya da ZATEN_VAR ise ZATEN_VAR ve kaydın güncel kararı, kayıt yeniden işlenmez; son sonuç RET ise öğe aşağıdaki adımlardan yeniden geçer.</li>
+<li>Zarf çekirdeğin yazısız doğrulamasından geçer; bozuksa, imza geçersizse ya da oturum yoksa RET, satır yazılmaz.</li>
+<li>Okutan oturumun dersinin hocası olmalı: D02.dersYetkisi(tx, PaketBaglami.kimlik, dersId) üç parametreyle dersin hocası sonucunu döner. Önceki hoca D02.dersGetir'in DersBilgisi.hocaAtamaGecmisi alanından okunur ve yalnız okutma anının üst ucu o hoca atamasının bitisAni'sinden önceyse kabul edilir; okutma anı boşsa önceki hoca kabul edilmez. Değilse RET YOKLAMA_HOCANIN_DERSI_DEGIL; karar dönmez, okutma satırı yazılır.</li>
+<li>Zarf ortak çekirdekten OKUTMA yoluyla geçer: ikinci çapa OKUTMA_YOLU, okutma anı KayitTaslagi.okutmaAni, ulaşma anı hocanın öğesinin GelenOge.ulasmaAni'si (<a href="../../plan.html#kararlar-kayit-ve-makbuz">plan: Kayıt ve makbuz</a>).</li>
+<li>Okutma satırı sonucuyla yazılır (KABUL, ZATEN_VAR ya da RET; TEKRAR_DENE satır yazmaz). Yeniden hesaplanan öğede sonuç saklı son RET'ten farklıysa deneme_no bir artan yeni satır yazılır, aynıysa satır yazılmaz; eski satır kanıt olarak kalır. Dersin hocasına OkutmaAyrintisi ile kaydın kararı ve etiketleri döner.</li>
+</ol></div></div>
+<div class="row"><div class="k">Öğrencinin kayıtları</div><div>D05 kendi <code>ogrenci_kayitlari</code> öğrenci kaynağını D06'ya kaydeder; D06 D05'i içe aktarmaz. bolum çağrısı (surumden, surumeKadar] aralığındaki kayıtları verir; surumden boşsa tam indirmedir (tam = true) ve öğrencinin kilidi uygulanmamış birim dönemlerindeki bütün kayıtlarını verir (kayıtlar dönem kilidine kadar telefonda kalır). Her satır için kararlar listesine { donemId, kayitId, kararSurumu } girer; D06 karar teslimini (karar_teslimleri) bununla yazar, sorun bildirme süresi kararın telefona ulaştığı anda başlar (<a href="../../plan.html#kararlar-supheli-kayit">plan: Şüpheli kayıt</a>). D09'un sorun_bildirimi gövdesindeki kararSurumu aynı tam sayıdır (JSON sayı, en az 1). Okutmayla ulaşan kayıt ve sonradan değişen karar böylece telefona iner; telefon listede gördüğü yerel kaydı 'Sunucuya ulaştı' yapar (<a href="../../tasarim.html#ph-records">tasarım: Kayıtlar ekranı</a>). Zarf, cihaz ve anahtar alanları inmez.</div></div>
+<div class="row"><div class="k">Oturum ucu</div><div>D02.oturumGetir ve D02.dersYetkisi(tx, istek.kimlik, dersId) ile dersin hocası sonucu (değilse 404 YOKLAMA_BULUNAMADI); oturum türü, durumu ve iptal nedeni D02'nin OTURUM_TURLERI, OTURUM_DURUMLARI ve IPTAL_NEDENLERI sabitleriyle karşılaştırılır, yeniden yazılmaz. Görünürlük yüklemi D05, D07 ve D09'da tektir: kafa sayısı boş değil ya da yapildi boş değil; değilse KAFA_SAYISI_BEKLENIYOR, boş liste, sayilar ve listeDisiKayitSayisi null (<a href="../../plan.html#kararlar-kafa-sayisi">plan: Kafa sayısı</a>, <a href="../../tasarim.html#head-sw-l">tasarım: Kafa sayısından önce</a>). Varsa satırlar oturumun her şubesinin liste satırlarıdır (D02.oturumSubeleri, D03.listeSatirlari): bütün ETKIN satırlar ve yalnız bu oturumda kaydı ya da düzeltmesi olan PASIF satırlar; D03'ün şube başına 2.000 etkin satır sınırı dışında kesme yoktur. Kayıtlar sayilanKayitlar(tx, { donemId, oturumIdler: [oturumId] }) ile toplu okunur, her satır gerekceKodu ve ulasmaAni taşır. Numaralar tek toplu D01.ogrenciHesabiGetir({ numaralar }) çağrısıyla hesaplara çevrilir; bir numarada birden çok hesap varsa (silinip yeniden kaydolan öğrenci) satır hepsini ogrenciIdler'de taşır ve kayıt olarak onların sayılan kayıtlarından sayilanSec ile önde olanı gösterir. Hesabı olmayan öğrencinin satırı kayıtsız kalır. Son durum D09.sonDurumOnceligi ile hesaplanır: SonDurumKaydi.sayimDisi, ulaşma anı D02.kilitDurumu'nun kilit anından sonraysa ya da gerekçe SON_GUNDEN_SONRA ise true; SonDurumOturumu.kilitli, kilitDurumu kilitliyse true. Muaf satırın son durum hücresi MUAF'tır (D08'in DEVAM_SON_DURUMLARI sabiti, D10'un M hücresiyle aynı). Düzeltmeler D09.duzeltmeleriGetir, sayılar panelSayilari (ilk uyan küme kuralı, Cevap bölümünde), gönderme süresinin sonu D06.gondermeSuresiSonu, şimdiki an D04.simdi ile. Panel görünüşü için bkz. <a href="../../tasarim.html#pnl-table">tasarım: Yoklama tablosu</a> ve <a href="../../tasarim.html#pnl-drawer">tasarım: Panel ekranı notları</a>.</div></div>
+<div class="row"><div class="k">Değişmezlik</div><div>Uygulama rollerinde UPDATE yalnız karar, gerekçe, karar kaynağı, anı ve sürümü, ilk kesin karar ve anı, onay, etiket, sayılan ve değişiklik sürümü sütunlarında; DELETE ve TRUNCATE yok; yoklama_saklama yalnız siler. Kanıt, saat ve pencere sütunlarını kod hatası bile değiştiremez (<a href="../../teknik.html#veritabani">teknik: Veritabanı</a>).</div></div>
+<div class="row"><div class="k">Saklama ve kanıt</div><div>D12'ye katalogdaki tek sınıf için tek işleyici kaydedilir: <code>saklamaIsleyicisiKaydet('yoklama.donem_verisi', { modul: 'yoklama', islem: 'silme', partiIsle })</code>. İnce sınıf adı ve kayıtta oncekiSiniflar listesi yoktur; sıra D12'nin SAKLAMA_VERI_SINIFLARI kataloğundaki oncesinde listesinden gelir: esitleme, dogrulama ve projeksiyon sınıfları yoklamadan önce, devam ve duzeltmeler yoklama ve listelerden önce işlenir (D05-A11 kapandı). makbuz_okutmalari bu sınıftadır ve işleyicide kayıtlardan önce silinir. partiIsle({ tx, sinirAni, partiBoyutu }) yoklama_saklama girişiyle açılan işlemde çalışır, kendi tablolarında yalnız SELECT ve DELETE yapar: D02.kilitliBirimDonemleri(tx, sinirAni) ile kilit anı sınırdan önce olan birim dönemlerini, D02.oturumlariGetir ile onların oturumlarını bulur ve en çok partiBoyutu satırı tek dönemden siler, { satirSayisi, donemId, bitti } döner. Birimsiz deneme dersi (OTURUM_TURLERI'ndeki deneme) kilitlenmediğinden silinmez. Testi D12.saklamaIsleyicisiniCalistir ile yazılır. Süre karar bekleyen açık noktadır (<a href="../../plan.html#acik-saklama-suresi">plan: Saklama süresi</a>); bugün sureler.ts boş, hiçbir satır silinmez. İtirazda kanıtı kanitCikar verir; sunucu makinesinde <code>apps/server/src/cli/yoklama-kaniti.ts</code> komutu onu çağırıp JSON yazar (<a href="../../teknik.html#sunucu-ilk-yonetici">teknik: İlk yönetici</a>).</div></div>
+</div>
+<details>
+<summary>Durum makinesi: Kayıt öğesinin sunucu sonucu (yoklama_kaydi; makbuz_okutmasi aynı çekirdekten geçer)</summary>
+<p>Durumlar: <code>GELDI</code>, <code>KILITLI</code>, <code>DOGRULANDI</code>, <code>KABUL</code>, <code>ZATEN_VAR</code>, <code>RET</code>, <code>TEKRAR_DENE</code></p>
+<table>
+<thead><tr><th>Nereden</th><th>Nereye</th><th>Kim</th><th>Ne zaman</th></tr></thead>
+<tbody>
+<tr><td><code>GELDI</code></td><td><code>KILITLI</code></td><td>kilitAnahtarlari, D06 danismaKilidi</td><td>Gövde çözüldü (imza beklenmeden); metindeki öğrenci paketin kişisi (okutmada gövdedeki hocaId paketin kişisi). Öğenin çift (yoklamaCiftAnahtari), sayaç (D07.kararAnahtarlari) ve QR (D11.qrKilitAnahtarlari) anahtarları D06'nın paket başına tek D12.danismaKilidi çağrısında, paketin öbür gruplarıyla birlikte alındı.</td></tr>
+<tr><td><code>GELDI</code></td><td><code>TEKRAR_DENE</code></td><td>zarfAyristir</td><td>Önek IUY ve rakamla başlıyor ama zarf biçim sürümü ya da metnin v değeri bu sunucudan yeni (YOKLAMA_BICIM_SURUMU_BILINMIYOR, beklemeSaniye 3600); öğe anahtarsızdır, atılmaz.</td></tr>
+<tr><td><code>GELDI</code></td><td><code>RET</code></td><td>zarfAyristir, imzaDogrula, baglarDenetle</td><td>Anahtarsız öğe: zarf ya da metin bozuk (yalnız log) ya da metindeki öğrenci paketin kişisi değil; ikincisinde imza doğrulanır, geçerliyse bağ denetimi RET YOKLAMA_OGRENCI_CIHAZ_UYUSMUYOR ya da YOKLAMA_GONDEREN_UYUSMUYOR ve sınırlı denetim kaydı verir, değilse RET YOKLAMA_IMZA_GECERSIZ ve yalnız log. Kimsenin çift kilidi alınmaz.</td></tr>
+<tr><td><code>KILITLI</code></td><td><code>RET</code></td><td>imzaDogrula, baglarDenetle</td><td>Öğe kimliği metindeki id değil, anahtar bilinmiyor ya da tutmuyor, imza gelen baytlarda doğrulanmıyor (yalnız log); imza geçerli ama cihaz metindeki öğrencinin değil (sınırlı denetim kaydı); oturum yok. Kilit yalnız paketin kendi kişisinin çiftindedir.</td></tr>
+<tr><td><code>KILITLI</code></td><td><code>DOGRULANDI</code></td><td>imzaDogrula, baglarDenetle</td><td>İmza gelen baytlarda metindeki anahtarla doğrulandı, anahtar, cihaz, öğrenci ve gönderen tuttu, oturum, dönem ve ders bulundu. Bu adımda yazı yoktur.</td></tr>
+<tr><td><code>DOGRULANDI</code></td><td><code>ZATEN_VAR</code></td><td>karsilastir</td><td>Kimlik bir dönemde saklı ve metin aynı (imza baytları farklı olabilir; ikisi de aynı anahtarla doğrulanmıştır); geliş yolu bakılmaz.</td></tr>
+<tr><td><code>DOGRULANDI</code></td><td><code>RET</code></td><td>karsilastir</td><td>Kimlik saklı ama metin farklı (YOKLAMA_KIMLIK_CAKISMASI; imzalı olduğundan denetim kaydı, sınırlı).</td></tr>
+<tr><td><code>DOGRULANDI</code></td><td><code>RET</code></td><td>kayitDenetle</td><td>Aynı dönemde (cihaz, sıra) başka kimlikle dolu ya da cihazın oturum sınırı aşıldı.</td></tr>
+<tr><td><code>DOGRULANDI</code></td><td><code>TEKRAR_DENE</code></td><td>saatKur</td><td>Kaydın kendi cihazından gelen, ilk çapası geçerli olmayan kayıtta ikinci çapa PAKET_IMZASIZ, ESITLEME_BOZUK ya da GONDERILMEDI nedeniyle yok (YOKLAMA_IKINCI_CAPA_GEREKLI); satır ve yan etki yok.</td></tr>
+<tr><td><code>DOGRULANDI</code></td><td><code>TEKRAR_DENE</code></td><td>D07.kararHesapla</td><td>kararHesapla { tekrarDene: 'DOGRULAMA_BAGLAM_DEGISIYOR' } döndü: öğe TEKRAR_DENE DOGRULAMA_BAGLAM_DEGISIYOR, beklemeSaniye 2; satır ve yan etki yok, App Attest sayaç denetiminin yazısı kalır.</td></tr>
+<tr><td><code>DOGRULANDI</code></td><td><code>KABUL</code></td><td>kayitYaz</td><td>Pencere sonucu alındı (D04.pencereSonucu, kayıt satırından önce), D07 kararı verdi, satır eklendi (karar_surumu 1); sayılan, karar geçmişi ve Aşama 2 kanıt satırı aynı işlemde yazıldı; devam işi ve öğrenci sürümü çağrının son adımında.</td></tr>
+<tr><td><code>DOGRULANDI</code></td><td><code>ZATEN_VAR</code></td><td>kayitYaz</td><td>Ekleme yarışında aynı (dönem, kimlik) aynı metinle yazılmış (ON CONFLICT DO NOTHING ekleme yapmadı); yan etki yazılmadan karşılaştırmaya dönülür. Metin farklıysa RET YOKLAMA_KIMLIK_CAKISMASI.</td></tr>
+<tr><td><code>DOGRULANDI</code></td><td><code>TEKRAR_DENE</code></td><td>D06 parça SAVEPOINT</td><td>Kilitlenme, serileştirme, kilit ya da deyim zaman aşımı: D06 parçayı geri alır, ESITLEME_GECICI_CAKISMA. Kısıt hatasında D06 öğeleri tek tek yeniden verir.</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>Durum makinesi: Sayılan işareti (bir oturumda bir öğrencinin ham kayıtları)</summary>
+<p>Durumlar: <code>YENI</code>, <code>SAYILAN</code>, <code>SAYILMAYAN</code></p>
+<table>
+<thead><tr><th>Nereden</th><th>Nereye</th><th>Kim</th><th>Ne zaman</th></tr></thead>
+<tbody>
+<tr><td><code>YENI</code></td><td><code>SAYILAN</code></td><td>kayitYaz</td><td>Öğrencinin o oturumdaki ilk kaydı ya da sıralamada var olan sayılandan önde (eskisi aynı işlemde SAYILMAYAN olur).</td></tr>
+<tr><td><code>YENI</code></td><td><code>SAYILMAYAN</code></td><td>kayitYaz</td><td>Var olan sayılan kayıt sıralamada önde ya da eşit.</td></tr>
+<tr><td><code>SAYILMAYAN</code></td><td><code>SAYILAN</code></td><td>kararSutunlariniYaz</td><td>Bu kaydın yeni kararı onu sıralamada öne geçirdi; eski sayılan aynı işlemde SAYILMAYAN olur.</td></tr>
+<tr><td><code>SAYILAN</code></td><td><code>SAYILMAYAN</code></td><td>kararSutunlariniYaz</td><td>Bu kaydın kararı düştü ve başka bir ham kayıt sıralamada öne geçti.</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>Durum makinesi: Öğrencinin makbuzu (telefonda; sunucunun öğe sonucuna ve indirmeye göre)</summary>
+<p>Durumlar: <code>TELEFONDA_KAYITLI_GONDERILMEDI</code>, <code>SUNUCUYA_ULASTI</code></p>
+<table>
+<thead><tr><th>Nereden</th><th>Nereye</th><th>Kim</th><th>Ne zaman</th></tr></thead>
+<tbody>
+<tr><td><code>TELEFONDA_KAYITLI_GONDERILMEDI</code></td><td><code>SUNUCUYA_ULASTI</code></td><td>gönderim cevabı</td><td>Öğe sonucu KABUL ya da ZATEN_VAR; ulaşma anı ve karar sunucunun verdiği değerdir (<a href="../../tasarim.html#ph-success">tasarım: Makbuz ekranı</a>). Telefon D06'nın ulaşma makbuzunu kaydın yanında saklar.</td></tr>
+<tr><td><code>TELEFONDA_KAYITLI_GONDERILMEDI</code></td><td><code>SUNUCUYA_ULASTI</code></td><td>indirme</td><td>Kayıt hocanın okutmasıyla ulaşmış; öğrencinin indirmesinde kendi kayıtları arasında göründü.</td></tr>
+<tr><td><code>TELEFONDA_KAYITLI_GONDERILMEDI</code></td><td><code>TELEFONDA_KAYITLI_GONDERILMEDI</code></td><td>gönderim cevabı</td><td>RET: kendiliğinden yeniden denenmez, uygulama ya da güncelleme değişince bir kez denenir; makbuz QR'ı hocaya okutulabilir (<a href="../../plan.html#kararlar-yeniden-deneme">plan: Yeniden deneme</a>).</td></tr>
+<tr><td><code>TELEFONDA_KAYITLI_GONDERILMEDI</code></td><td><code>TELEFONDA_KAYITLI_GONDERILMEDI</code></td><td>gönderim cevabı</td><td>TEKRAR_DENE: artan, rastgele kaydırılmış aralıkla, en az beklemeSaniye kadar bekleyip yeniden gönderilir; YOKLAMA_IKINCI_CAPA_GEREKLI'de telefon paketi imzalayabildiği ve belge alabildiği ilk turu bekler.</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>Durum makinesi: Makbuz okutması (hocanın kuyruk öğesi)</summary>
+<p>Durumlar: <code>GELDI</code>, <code>KABUL</code>, <code>ZATEN_VAR</code>, <code>RET</code>, <code>TEKRAR_DENE</code></p>
+<table>
+<thead><tr><th>Nereden</th><th>Nereye</th><th>Kim</th><th>Ne zaman</th></tr></thead>
+<tbody>
+<tr><td><code>GELDI</code></td><td><code>RET</code></td><td>okutmaIsle</td><td>Gövde çözülemiyor (YOKLAMA_ZARF_BOZUK) ya da gövdedeki hocaId paketin kişisi değil (YOKLAMA_HESAP_UYUSMUYOR); satır yazılmaz.</td></tr>
+<tr><td><code>GELDI</code></td><td><code>RET</code></td><td>okutmaIsle</td><td>Öğe kimliği saklı ama zarf özeti ya da hoca farklı (YOKLAMA_KIMLIK_CAKISMASI); satır yazılmaz, saklı satır değişmez.</td></tr>
+<tr><td><code>GELDI</code></td><td><code>ZATEN_VAR</code></td><td>okutmaIsle</td><td>Öğe kimliğinin saklı son denemesi KABUL ya da ZATEN_VAR: kaydın güncel kararı döner, kayıt yeniden işlenmez, satır yazılmaz.</td></tr>
+<tr><td><code>GELDI</code></td><td><code>RET</code></td><td>okutmaIsle</td><td>Zarf bozuk, imza geçersiz ya da oturum yok (satır yazılmaz); okutan dersin hocası değil (YOKLAMA_HOCANIN_DERSI_DEGIL, satır yazılır); çekirdek reddetti (ör. YOKLAMA_KIMLIK_CAKISMASI; satır gerekçesiyle RET). Saklı son deneme RET iken aynı sonuç çıkarsa yeni satır yazılmaz.</td></tr>
+<tr><td><code>GELDI</code></td><td><code>KABUL</code></td><td>okutmaIsle</td><td>Kayıt bu okutmayla OKUTMA yoluyla saklandı; okutma satırı KABUL (saklı son deneme RET idiyse deneme_no bir artar).</td></tr>
+<tr><td><code>GELDI</code></td><td><code>ZATEN_VAR</code></td><td>okutmaIsle</td><td>Kayıt zaten vardı (öğrencinin telefonundan ya da önceki okutmadan); okutma satırı ZATEN_VAR.</td></tr>
+<tr><td><code>GELDI</code></td><td><code>TEKRAR_DENE</code></td><td>D06 parça SAVEPOINT, D07.kararHesapla</td><td>Geçici hata ya da D07'nin bağlam değişiyor sonucu (DOGRULAMA_BAGLAM_DEGISIYOR, beklemeSaniye 2); satır yazılmaz, öğe yeniden gelir.</td></tr>
+</tbody>
+</table>
+</details>
+<details>
+<summary>Ana yolun SQL taslağı: kilit, arama, pencere, ekleme, sayılan, öğrenci sürümü, karar sürümü ve yetkiler</summary>
+<p>Kodun tek kaynağı tablolar.ts, kilit.ts, kayitIsle.ts ve yaprak.ts'tir; bu taslak işleme sırasındaki adımların SQL karşılığıdır. Parametreler $ ile; her ifade ayrı istektir, böylece kilitten sonraki okuma kilidi bekledikten sonra işlenmiş veriyi görür (READ COMMITTED). Danışma kilidi SQL'i elle yazılmaz, D12.danismaKilidi'nin içindedir.</p>
+<pre><code>-- 1. anahtarlar (TypeScript, D06 paket başına tek çağrı; katman 3 ve 4, önce katman sonra metin):
+--    D12.danismaKilidi(tx, [ ...D06 'esitleme:kurulum_siniri:&lt;kisiId&gt;',
+--      ...D07.kararAnahtarlari([{ oturumId, ogrenciId, anahtarId }])   -- 'yoklama:cift:&lt;oturumId&gt;:&lt;ogrenciId&gt;' (yoklamaCiftAnahtari)
+--                                                                      -- ve App Attest'te 'dogrulama:sayac:&lt;anahtarId&gt;'
+--      ...D11.qrKilitAnahtarlari({ oturumId, ogrenciId, alanlar }) ])
+
+-- 5. kimlik bütün dönemlerde (PostgreSQL 18 skip scan, birincil anahtar dizini)
+SELECT donem_id, zarf, ulasma_ani, karar, gerekce_kodu, karar_ani, karar_surumu,
+       etiket_qrsiz, etiket_kendi_beyani, etiket_saat_dogrulanamadi, etiket_cihaz_dogrulanmadi,
+       etiket_ikinci_profil, etiket_yedek_kodlu, etiket_dogrulanmis, sayilan, ogrenci_id
+  FROM yoklama_kayitlari WHERE id = $kimlik;
+
+-- 5. aynı dönemde (cihaz, sıra) ve öğrencinin bu oturumdaki ham kayıtları
+SELECT id FROM yoklama_kayitlari
+ WHERE donem_id = $donem AND cihaz_id = $cihaz AND sira_no = $sira;
+SELECT id, cihaz_id, karar, ulasma_ani, sayilan FROM yoklama_kayitlari
+ WHERE donem_id = $donem AND oturum_id = $oturum AND ogrenci_id = $ogrenci ORDER BY id;
+
+-- 7. pencere: D04.pencereSonucu oturum kimliği sırasıyla (D04 içinde, kayıt satırından önce)
+--    SELECT ... FROM oturum_pencereleri WHERE oturum_id = $oturum FOR KEY SHARE;
+
+-- 9. ekleme: hedefli, hedefsiz ON CONFLICT yazılmaz; saat_sebebi ve ele_gecmis_anahtar üretilmiş, yazılmaz
+INSERT INTO yoklama_kayitlari (donem_id, id, oturum_id, ders_id, ..., saat_durumu, ..., pencere_sonucu,
+                               ulasma_ani, karar_surumu, sayilan, degisiklik_surumu)
+VALUES ($donem, $kimlik, $oturum, $ders, ..., $saat_durumu, ..., $pencere_sonucu,
+        $gelen_oge_ulasma_ani, 1, $ilk_kayit_mi, 0)
+ON CONFLICT (donem_id, id) DO NOTHING
+RETURNING id;            -- satır dönmezse 5. adımdaki karşılaştırma
+
+-- 9. yeni kayıt sıralamada öndeyse yer değiştirme (aynı işlem, çift kilidi altında, önce eskisi)
+UPDATE yoklama_kayitlari SET sayilan = false WHERE donem_id = $donem AND id = $eski_sayilan;
+UPDATE yoklama_kayitlari SET sayilan = true  WHERE donem_id = $donem AND id = $kimlik;
+
+-- 10. son adım: devam işleri (D08.devamHesaplaIsiKoy, her çağrı bir iş satırı), sonra öğrenci
+--     kimliği sırasıyla öğrenci başına bir kez $surum = D06.ogrenciDurumuDegisti(tx, $ogrenci) ve:
+UPDATE yoklama_kayitlari SET degisiklik_surumu = $surum
+ WHERE (donem_id, id) IN (SELECT * FROM unnest($donemler::uuid[], $kimlikler::uuid[]));
+--     (bu çağrıda eklenen ve sayılan işareti değişen satırlar; sonrasında degisiklik_surumu = 0 satır kalmaz)
+
+-- kararSutunlariniYaz: karar sürümü yalnız büyür, ilk kesin karar bir kez yazılır
+UPDATE yoklama_kayitlari
+   SET karar = $karar, gerekce_kodu = $gerekce, karar_kaynagi = $kaynak, karar_ani = $an,
+       karar_surumu = $karar_surumu,
+       ilk_kesin_karar     = COALESCE(ilk_kesin_karar,     CASE WHEN $karar &lt;&gt; 'BEKLEMEDE' THEN $karar END),
+       ilk_kesin_karar_ani = COALESCE(ilk_kesin_karar_ani, CASE WHEN $karar &lt;&gt; 'BEKLEMEDE' THEN $an END)
+       -- etiket sütunları verilmişse; onay nesneyle doldurulur, null ile boşaltılır
+ WHERE donem_id = $donem AND id = $kimlik AND karar_surumu &lt; $karar_surumu
+RETURNING id, ders_id, ogrenci_id;   -- satır dönmezse sürüm küçük ya da eşit: yazılmaz, hata
+--   sonra sayılan yeniden seçimi, D08.devamHesaplaIsiKoy(tx, ders_id, ogrenci_id, 'KARAR', ...),
+--   $surum = D06.ogrenciDurumuDegisti(tx, ogrenci_id) ve degisiklik_surumu = $surum
+
+-- okutma öğesinin son denemesi (bütün dönemlerde, skip scan)
+SELECT donem_id, deneme_no, zarf_ozeti, hoca_id, sonuc, gerekce_kodu, kayit_id
+  FROM makbuz_okutmalari WHERE id = $oge ORDER BY deneme_no DESC LIMIT 1;
+
+-- okutma satırı: hedefli tekillik; aynı öğe aynı anda iki kez gelemez (D06'nın kurulum sınırı anahtarı)
+INSERT INTO makbuz_okutmalari (donem_id, id, deneme_no, ..., hoca_telefon_ani, ..., sonuc, gerekce_kodu)
+VALUES ($donem, $oge, $son_deneme + 1, ..., $hoca_telefon_ani, ..., $sonuc, $gerekce)
+ON CONFLICT (donem_id, id, deneme_no) DO NOTHING;
+
+-- saklama partisi ('yoklama.donem_verisi', yoklama_saklama girişi; oturumlar D02'den, tek dönem)
+DELETE FROM makbuz_okutmalari WHERE (donem_id, id, deneme_no) IN (
+  SELECT donem_id, id, deneme_no FROM makbuz_okutmalari
+   WHERE donem_id = $donem AND oturum_id = ANY($oturumlar) LIMIT $parti_boyutu);
+DELETE FROM yoklama_kayitlari WHERE (donem_id, id) IN (     -- okutmalar bittikten sonra
+  SELECT donem_id, id FROM yoklama_kayitlari
+   WHERE donem_id = $donem AND oturum_id = ANY($oturumlar) LIMIT $parti_boyutu);
+
+-- yetki göçü (&lt;UTC&gt;_yoklama_yetkiler, drizzle-kit generate --custom)
+REVOKE UPDATE, DELETE, TRUNCATE ON yoklama_kayitlari, makbuz_okutmalari FROM yoklama_api, yoklama_isci;
+REVOKE UPDATE ON yoklama_kayitlari, makbuz_okutmalari FROM yoklama_saklama;
+GRANT UPDATE (karar, gerekce_kodu, karar_kaynagi, karar_ani, karar_surumu, ilk_kesin_karar,
+              ilk_kesin_karar_ani, onaylayan_id, onay_ani, etiket_qrsiz, etiket_kendi_beyani,
+              etiket_saat_dogrulanamadi, etiket_cihaz_dogrulanmadi, etiket_ikinci_profil,
+              etiket_yedek_kodlu, etiket_dogrulanmis, sayilan, degisiklik_surumu)
+   ON yoklama_kayitlari TO yoklama_api, yoklama_isci;</code></pre>
+</details>
+<details>
+<summary>Değişmezler: her zaman doğru kalması gereken 20 kural</summary>
+<ol>
+<li>Saklanan kaydın zarfı, kimliği, dönemi, oturumu, dersi, öğrencisi, cihazı, anahtarı, sıra numarası, saat ve pencere sütunları, ulaşma anı, geliş yolu, okutma alanları ve sürüm alanları hiç değişmez; uygulama rollerinin bu sütunlarda UPDATE, tabloda DELETE ve TRUNCATE yetkisi yoktur; yoklama_saklama yalnız saklama işinde siler, güncelleyemez.</li>
+<li>Saklanan her zarf, anahtar_id'nin gösterdiği açık anahtarla bugün de doğrulanır; anahtar satırı silinmez, hesap silinse de kalır (<a href="../../plan.html#kararlar-hesap-silme">plan: Hesap silme</a>).</li>
+<li>Bir kayıt kimliği bir dönemde en çok bir kez bulunur (birincil anahtar); başka dönemde saklı kimlik eklemeden önceki aramayla bulunur ve karşılaştırılır. Kalan tek açık yarış, iki farklı cihazın aynı kimliği aynı anda iki ayrı dönemin oturumuna göndermesidir; iki satır da imzalı kanıttır, hiçbiri öbürünün yerine yazılmaz (D05-C01).</li>
+<li>(dönem, cihaz, sıra numarası) tekildir (<a href="../../teknik.html#veritabani">teknik: Veritabanı</a>).</li>
+<li>Kaydı bulunan her (dönem, oturum, öğrenci) için tam bir sayılan kayıt vardır ve o kayıt sayilanSec sırasının ilkidir; kısmi tekil dizin ikincisini reddeder.</li>
+<li>Aynı öğe aynı veriyle kaç kez ve hangi yoldan gelirse gelsin tabloda tek satır kalır; ilk gelişten sonraki her geliş ZATEN_VAR alır, saklı ulaşma anını ve güncel kararı yalnız kaydın öğrencisine (telefon yolu) ya da dersin hocasına (okutma) taşır.</li>
+<li>Hiçbir denetim satırı imzası doğrulanmamış bir zarftan yazılmaz; imzalı zarftan yazılan denetim olayları (cihaz, gerekçe, İstanbul günü) başına en çok 20'dir.</li>
+<li>RET ve TEKRAR_DENE yoklama_kayitlari'na satır yazmaz, 2'lik sınırı, karar geçmişini ve devam işini değiştirmez; KABUL tam bir satır yazar. Yan etki belleği (bu çağrıda yazılan satırlar, öğrenci başına sürüm, (ders, öğrenci) başına devam işi) isleToplu çağrısına yereldir; D06 parçayı geri alınca bellek de gider, tek tek yeniden işlenen öğe yeni bellekle yeni iş satırı ekler.</li>
+<li>Kaydın ulaşma anı GelenOge.ulasmaAni'dir (paketin anı ya da D06'nın geçerli ulaşma makbuzundaki an); kural kodunda SQL now() ve Date.now() yoktur, D05 kendi ulaşma kanıtını üretmez.</li>
+<li>Karar sütunlarını yalnız ilk ekleme (D07.kararHesapla sonucuyla, karar_surumu 1) ve kararSutunlariniYaz (yalnız D07 çağırır, kararSurumu D07'nin yeni kayit_karar_gecmisi.sira değeri, karar_surumu yalnız büyür) yazar ve yalnız D07'nin verdiği değerle; ilk_kesin_karar bir kez yazılır, sonra değişmez.</li>
+<li>Kaydın sayılan işareti ya da kararı değişen her yazım (ekleme ve kararSutunlariniYaz) aynı işlemde D08.devamHesaplaIsiKoy(tx, dersId, ogrenciId, 'KAYIT' ya da 'KARAR') çağırır ve öğrencinin durum sürümünü D06.ogrenciDurumuDegisti ile artırır; ikisi kaydın yazıldığı işlemle birlikte geri alınır ya da kalıcı olur. Her çağrı bir iş satırı ekler; aynı (ders, öğrenci) işlerini D08 partide birleştirir.</li>
+<li>Danışma kilitleri contracts.json'daki katman kuralıyla alınır: 'yoklama:cift:&lt;oturumId&gt;:&lt;ogrenciId&gt;' (yoklamaCiftAnahtari) katman 3'tür; bir (oturum, öğrenci) çiftinin kayıt satırlarına yazan her işlem önce o anahtarı tutar. Gönderimde anahtarları D06, kilitAnahtarlari kancasının verdiği listeyle paketin bütün gruplarıyla tek D12.danismaKilidi çağrısında alır; D07'nin karar yolları kayitlariKilitle ya da kararAnahtarlari ile, sayaç (katman 4), ortak sınır ve işaret (katman 5) kilitlerinden önce alır. Elle pg_advisory_xact_lock yazılmaz; işlemde zaten tutulan anahtarı yeniden istemek işlemsizdir.</li>
+<li>Gönderim işlemindeki sıra: danışma anahtarları; D04.pencereSonucu'nun pencere satırı okumaları (FOR KEY SHARE, oturum kimliği sırasıyla); kayıt ve öbür satırlar (D07 ortak sınır satırı dahil); iş kuyruğu (D08.devamHesaplaIsiKoy) ve öğrenci sürümü (D06.ogrenciDurumuDegisti, öğrenci başına bir kez, öğrenci kimliği sırasıyla); en son genel sayaç (D06.surumAl, D06'nın, paket başına bir kez). D05 surumAl çağırmaz.</li>
+<li>İmzası doğrulanmamış bir öğe yalnız kendi paketinin kişisinin çift anahtarını tutturabilir (kilitAnahtarlari metindeki öğrencisi ya da okutmada gövdedeki hocası paketin kişisi olmayan öğeye anahtar vermez); başka öğrencinin çiftini yalnız giriş oturumlu personelin okutma paketi, o paketin işlemi süresince tutabilir (okutanın dersin hocası olduğu kilitten sonra denetlenir, kalıcı iz kalmaz).</li>
+<li>Kayıt metni ve bu modülün logları öğrenci numarası, isim, kod ya da jeton taşımaz; yalnız iç kimlikler.</li>
+<li>Bir cihaz bir oturuma en çok 10 kayıt saklatabilir.</li>
+<li>Hocanın okutması kaydı değiştirmez: kayıt ilk ulaştığı yolu taşır, her okutma makbuz_okutmalari'nda ayrı satırdır; saklı son sonucu RET olmayan okutma öğesi yeni satır yazdırmaz.</li>
+<li>Kafa sayısı ya da 'ders yapıldı mı' cevabı gelmeden oturumun kayıt listesi, sayıları ve liste dışı kayıt sayısı bu modülün hiçbir cevabında dönmez; okutma cevabı yalnız okutulan kaydın kararını taşır (<a href="../../plan.html#kararlar-kafa-sayisi">plan: Kafa sayısı</a>).</li>
+<li>Saat sütunlarından D04'ün SaatSonucu'su kayıpsız geri kurulur (packages/core/src/yoklama/saatSutunlari.ts); tahminMs yalnız saat_kaynagi YOK iken boştur; saat_sebebi ve ele_gecmis_anahtar iki çapa durumunun üretilmiş saf işlevidir.</li>
+<li>Kaydın kendi cihazından gelen, ilk çapası geçerli olmayan kayıt, ikinci çapası onarılabilir bir nedenle yokken saklanmaz; saklanmış kayıt hiç değişmediği için sonradan gelecek geçerli ikinci çapa böylece kaybolmaz.</li>
+</ol>
+</details>
+
+<h3>Hata kodları</h3>
+<p>HTTP hatası yalnız oturum ucundadır; kuyruk öğelerinin her sonucu 200 gövdesinde öğe sonucu olarak döner (D13). Bu modülün kodları YOKLAMA_ önekli (modül adının büyük harfi) ve packages/contracts/src/yoklama.ts'te; ortak kodlar D13'ün API_ önekli kodlarıdır. Kaynak düzeyi ret 404 YOKLAMA_BULUNAMADI, rota düzeyi rol reddi API_ROL_YETKISIZ; modül setErrorHandler ve setNotFoundHandler kullanmaz. Cevaplarda x-extensible-enum. HESAP_SILINMIS bir öğe kodu değil, D07'nin karar gerekçesidir; DOGRULAMA_BAGLAM_DEGISIYOR D07'nin kodudur ve öğe sonucunda aynen geçer.</p>
+<table>
+<thead><tr><th>Kod</th><th>HTTP</th><th>Ne zaman</th></tr></thead>
+<tbody>
+<tr><td><code>YOKLAMA_BULUNAMADI</code></td><td>404</td><td>Kaynak düzeyi ret: oturum yok ya da çağıran o oturumun dersinin hocası değil (varlık sızdırılmaz).</td></tr>
+<tr><td><code>API_KIMLIK_GEREKLI</code></td><td>401</td><td>Giriş oturumu yok ya da bitti (D01, D13).</td></tr>
+<tr><td><code>API_ROL_YETKISIZ</code></td><td>403</td><td>Rota düzeyi rol reddi: rol hoca değil; öğrenci oturumu (D13).</td></tr>
+<tr><td><code>API_HIZ_SINIRI</code></td><td>429</td><td>'agir' sınıfının oturum başına dakikada 20 sınırı (D13).</td></tr>
+<tr><td><code>API_SUNUCU_YOGUN</code>, <code>API_SORGU_ZAMAN_ASIMI</code></td><td>503</td><td>Havuz ya da aşırı yük (Retry-After ile), deyim zaman aşımı (D13).</td></tr>
+</tbody>
+</table>
+<details>
+<summary>Öğe gerekçe kodları: 15 RET, 3 TEKRAR_DENE</summary>
+<table>
+<thead><tr><th>Kod</th><th>Sonuç</th><th>Ne zaman</th><th>İz</th></tr></thead>
+<tbody>
+<tr><td><code>YOKLAMA_ZARF_BOZUK</code></td><td><code>RET</code></td><td>Önek, üç ayırıcı, 1273 bayt sınırı ya da kanonik base64url biçimi tutmuyor; okutma öğesinin gövdesi çözülemiyor.</td><td>log</td></tr>
+<tr><td><code>YOKLAMA_METIN_BOZUK</code></td><td><code>RET</code></td><td>Kayıt metni UTF-8 JSON değil ya da KayitMetni şemasına uymuyor (tur, zorunlu alanlar, sınırlar).</td><td>log</td></tr>
+<tr><td><code>YOKLAMA_OGE_KIMLIGI_UYUSMUYOR</code></td><td><code>RET</code></td><td>yoklama_kaydi öğesinin kimliği (GelenOge.ogeKimligi) metindeki id değil.</td><td>log</td></tr>
+<tr><td><code>YOKLAMA_ANAHTAR_BILINMIYOR</code></td><td><code>RET</code></td><td>Metindeki anahtar kimliği D01'de yok.</td><td>log</td></tr>
+<tr><td><code>YOKLAMA_IMZA_TURU_UYUSMUYOR</code></td><td><code>RET</code></td><td>Zarftaki tür harfi anahtarın türüyle aynı değil.</td><td>log</td></tr>
+<tr><td><code>YOKLAMA_ANAHTAR_CIHAZ_UYUSMUYOR</code></td><td><code>RET</code></td><td>Anahtar metindeki cihaza ait değil.</td><td>log</td></tr>
+<tr><td><code>YOKLAMA_IMZA_GECERSIZ</code></td><td><code>RET</code></td><td>İmza gelen baytlar üzerinde metindeki anahtarla doğrulanmadı (App Attest'te uygulama kimliği özeti dahil). Saklı kayıtla karşılaştırılmadan önce verilir; öğenin çift anahtarı yalnız metindeki öğrenci paketin kişisiyse alınmıştır, başkasının çiftine imzasız öğe kilit tutturamaz.</td><td>yalnız log</td></tr>
+<tr><td><code>YOKLAMA_OGRENCI_CIHAZ_UYUSMUYOR</code></td><td><code>RET</code></td><td>İmza geçerli ama cihaz metindeki öğrenciye bağlı değil: başka öğrencinin adına imzalanmış kayıt.</td><td>denetim kaydı, (cihaz, gerekçe, gün) başına en çok 20</td></tr>
+<tr><td><code>YOKLAMA_GONDEREN_UYUSMUYOR</code></td><td><code>RET</code></td><td>Telefon yolunda paketin kişisi (PaketBaglami.kisiId) metindeki öğrenci değil; kayıt saklı olsa da karar ve etiket dönmez. Aracı yalnız hocanın okutması olabilir.</td><td>denetim kaydı, (cihaz, gerekçe, gün) başına en çok 20</td></tr>
+<tr><td><code>YOKLAMA_OTURUM_BILINMIYOR</code></td><td><code>RET</code></td><td>Metindeki oturum yok.</td><td>log</td></tr>
+<tr><td><code>YOKLAMA_KIMLIK_CAKISMASI</code></td><td><code>RET</code></td><td>İmzası doğrulanmış metin, aynı kayıt kimliğiyle (herhangi bir dönemde) saklı başka bir metinle çakışıyor; ya da aynı okutma öğesi kimliği başka zarfla ya da başka hocayla saklı. Saklanan satır değişmez.</td><td>denetim kaydı (gelen zarfın özeti ve saklı kaydın (dönem, kimlik) çifti), (cihaz, gerekçe, gün) başına en çok 20</td></tr>
+<tr><td><code>YOKLAMA_SIRA_CAKISMASI</code></td><td><code>RET</code></td><td>Aynı dönemde (cihaz, sıra numarası) başka kimlikle saklı; eşzamanlı yarışta D06'nın tek öğe yeniden denemesinden sonra da bu kod çıkar.</td><td>log</td></tr>
+<tr><td><code>YOKLAMA_OTURUM_KAYIT_SINIRI</code></td><td><code>RET</code></td><td>Cihazın bu oturumda 10 saklı kaydı var.</td><td>log</td></tr>
+<tr><td><code>YOKLAMA_HOCANIN_DERSI_DEGIL</code></td><td><code>RET</code></td><td>Okutma: D02.dersYetkisi(tx, PaketBaglami.kimlik, dersId) sonucu dersin hocası değil ve okutan, DersBilgisi.hocaAtamaGecmisi'nde okutma anının üst ucu bitisAni'sinden önce kalan önceki hoca da değil; cevapta karar ve etiket dönmez.</td><td>makbuz_okutmalari satırı</td></tr>
+<tr><td><code>YOKLAMA_HESAP_UYUSMUYOR</code></td><td><code>RET</code></td><td>Okutma: gövdedeki hocaId paketin kişisi değil (öğe başka hesapla oluşturulmuş).</td><td>log</td></tr>
+<tr><td><code>YOKLAMA_BICIM_SURUMU_BILINMIYOR</code></td><td><code>TEKRAR_DENE</code></td><td>Zarf öneki (IUY ve rakam) ya da metnin v değeri bu sunucudan yeni; öğe atılmaz, beklemeSaniye 3600, sunucu güncellenince geçer.</td><td>log</td></tr>
+<tr><td><code>YOKLAMA_IKINCI_CAPA_GEREKLI</code></td><td><code>TEKRAR_DENE</code></td><td>Kaydın kendi cihazından gelen, ilk çapası geçerli olmayan kayıtta ikinci çapa onarılabilir bir nedenle yok (PAKET_IMZASIZ, ESITLEME_BOZUK, GONDERILMEDI; D04 sabiti); kayıt saklanmaz, telefonda bekler (<a href="../../plan.html#gun-ikinci-capa">plan: İkinci çapa</a>). ESITLEME_BOZUK'ta beklemeSaniye 300.</td><td>log</td></tr>
+<tr><td><code>DOGRULAMA_BAGLAM_DEGISIYOR</code></td><td><code>TEKRAR_DENE</code></td><td>D07'nin kodu, packages/contracts/src/dogrulama.ts'ten içe aktarılır, yeniden yazılmaz: D07.kararHesapla { tekrarDene: 'DOGRULAMA_BAGLAM_DEGISIYOR' } döndü (liste ya da teyit bağlamı o an başka işlemde değişiyor). Satır, karar geçmişi ve devam işi yazılmaz; App Attest sayaç denetiminin yazısı kalır. beklemeSaniye 2.</td><td>log</td></tr>
+</tbody>
+</table>
+</details>
+<p>Denetim olayları (YOKLAMA_DENETIM_OLAYLARI, D09.denetimOlaylariniKaydet ile kayıtlı; D09.denetimeYaz, ayrıntıda yalnız iç kimlik ve zarf özeti, dersId taşıyan olayda birimId; yalnız imzası doğrulanmış zarftan; (cihaz, gerekçe, gün) başına en çok 20): <code>yoklama.kimlik_cakismasi</code>, <code>yoklama.ogrenci_cihaz_uyusmuyor</code>, <code>yoklama.gonderen_uyusmuyor</code>. Beklenmeyen kısıt hatası ya da zaman aşımında parça SAVEPOINT'i geri alınır, sonucu D06 verir (geçici kod TEKRAR_DENE ESITLEME_GECICI_CAKISMA; kısıt hatasında öğeler tek tek yeniden denenir, yine düşerse RET ESITLEME_KISIT_IHLALI).</p>
+
+<h3>Açık noktalar</h3>
+<div class="rows">
+<div class="row"><div class="k">D05-A01 <span class="tag warn">onay bekliyor</span></div><div>Gönderimde hangi durumlar kaydı saklamadan 'ret' sonucu verir (makbuz 'Telefonda kayıtlı, gönderilmedi' kalır), hangileri kaydı saklayıp kararı Ret yapar (makbuz 'Sunucuya ulaştı', karar Ret)? (D05-B05; D06-B05 ve D07-B03 aynı soru)<br><strong>Öneri:</strong> Yalnız kayda güvenilemeyen durumlar saklanmadan ret alsın: bozuk biçim, bilinmeyen anahtar, geçersiz imza, başka öğrencinin cihazı ya da telefonu, kimlik ve sıra çakışması, oturum sınırı, yetkisiz okutma. Listede olmayan ders, pencere dışı, ulaşma anını aşan saat, eski cihaz, silinmiş hesabın silmeden sonra imzalanmış kaydı (Ret HESAP_SILINMIS) ve öbür kurallar kaydı saklasın, kararı D07 versin: öğrenci gerekçeli Ret'i görür ve 3 gün içinde sorun bildirebilir; liste sonradan düzelirse kayıt yeniden karara bağlanır (<a href="../../plan.html#kararlar-cihaz-dogrulamasi">plan: Cihaz doğrulaması</a>: ham kayıt kanıttır, atılmaz).</div></div>
+<div class="row"><div class="k">D05-A07 <span class="tag warn">onay bekliyor</span></div><div>teknik.html'de beş yer güncellensin mi? (1) Veri modeli, Yoklama kayıtları: 'saat sayısı' kayıtta tutulmaz, kayıt oturumun bütün saatleri için geçerlidir, kısmi saat düzeltmededir (D05-B19). (2) Kimlik: hoca telefonunun kurulum kaydı giriş güveninde kullanılmaz, yalnız kuyruk sırası ve okutma kanıtı içindir (D05-C03). (3) Veritabanı, Kısıtlar: aynı öğrencinin aynı oturuma eşzamanlı kayıtları (oturum, öğrenci) danışma kilidiyle sıraya girer, sayılan dizinine takılma oluşmaz; sonuç aynıdır (kayıt atılmaz, kabul alır). (4) Veritabanı: aynı kimlik 'farklı baytla' değil 'farklı içerikle (kayıt metni)' gelirse zaten var değil ret döner; aynı metnin yeni imza baytları zaten var alır (D05-B04). (5) Veritabanı: çakışan zarfın denetim kaydı (cihaz, gerekçe, gün) başına 20 olayla sınırlıdır, fazlası yalnız log satırıdır; imzası doğrulanmayan zarf denetime yazılmaz.<br><strong>Öneri:</strong> Evet. (1) ile (4) davranışı değiştirmez, belgeyi tasarımla aynı yapar. (5) davranıştır ama yalnız kötüye kullanımı keser: meşru bir öğrenci günde 20 imzalı çakışma üretmez, imzasız çöp metin zaten kanıt değildir; sınır olmadan makbuz QR'ından kayıt kimliğini öğrenen biri kalıcı denetim satırlarıyla diski doldurabilirdi. Sessiz sapma kalmaz.</div></div>
+</div>
+
+<h3 id="yoklama-paketler">Paketleri</h3>
+<div class="rows">
+<div class="row"><div class="k"><a href="../kademe-02a.html#D05-P01">D05-P01</a></div><div>Sözleşme, zarf kodlaması ve çift anahtarı (Kademe 2A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-03a.html#D05-P02">D05-P02</a></div><div>Saf çekirdek: karşılaştırma, sayılan sırası, gerekçe tablosu ve panel sayıları (Kademe 3A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-04a.html#D05-P03">D05-P03</a></div><div>Tablolar, tablo göçü ve test kurucusu (Kademe 4A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-07a.html#D05-P04">D05-P04</a></div><div>Yaprak: kayıt okuma, kilitleme, sayılan seçimi ve karar yazımı (Kademe 7A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-07a.html#D05-P05">D05-P05</a></div><div>Gönderim yardımcıları: saat sütunları, çekirdek girişi, kilit anahtarları ve denetim sınırı (Kademe 7A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-07a.html#D05-P06">D05-P06</a></div><div>İmza ve bağ denetimi, kayıtlı örnek zarflar (Kademe 7A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-09a.html#D05-P07">D05-P07</a></div><div>Değişmezlik yetkileri ve saklama partisi (Kademe 9A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-09a.html#D05-P08">D05-P08</a></div><div>Öğrenci indirme kaynağı, kanıt ve kanıt komutu (Kademe 9A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-09a.html#D05-P09">D05-P09</a></div><div>Oturum kayıtları ucu (Kademe 9A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-10a.html#D05-P10">D05-P10</a></div><div>Öğrenci kaydı gönderimi: kayıt işleme çekirdeği ve kayıt işleyicisi (Kademe 10A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-12a.html#D05-P11">D05-P11</a></div><div>Makbuz okutması ve yoklama eklentisi (Kademe 12A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-18a.html#D05-P12">D05-P12</a></div><div>Ret, zaten var ve eşzamanlı gönderim senaryoları (Kademe 18A)</div></div>
+<div class="row"><div class="k"><a href="../kademe-19a.html#D05-P13">D05-P13</a></div><div>Uçtan uca gönderim: durum makinesi, yedekten dönüş ve ders çıkışı yükü (Kademe 19A)</div></div>
+</div>
+</section>
+</div>
+</body>
+</html>

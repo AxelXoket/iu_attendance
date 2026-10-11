@@ -1,0 +1,220 @@
+##### GET /v1/devam/dersler/{dersId}/karar-bekleyenler
+{
+"method": "GET",
+"path": "/v1/devam/dersler/{dersId}/karar-bekleyenler",
+"client": "panel ve hoca telefonu",
+"auth": "Hoca oturumu (panel çerezi ya da hoca telefonu Bearer; rota tablosunda kimlik: oturum, rol: hoca; rolü uymayan 403 API_ROL_YETKISIZ, D13). D02.dersYetkisi(tx, kimlik, dersId) dersin hocası sonucunu vermezse 404 DEVAM_BULUNAMADI (varlık sızmaz, D13-B02). Deneme dersinde de 404 DEVAM_BULUNAMADI (D08 deneme dersini hesaplamaz).",
+"request": {
+"dersId": "yol; uuid (z.uuidv7())"
+},
+"response": {
+"dersId": "uuid",
+"hesapAni": "metin; UTC ISO 8601; isteğin tek \"şimdi\"si (D04.simdi bir kez okunur, hesabın bütün zaman karşılaştırmaları bununla)",
+"sonDersGunu": "metin YYYY-AA-GG ya da null; dersin iptal edilmemiş son oturumunun İstanbul günü",
+"basladi": "boolean; hesap anının İstanbul günü sonDersGunu ya da sonrası",
+"sonGun": "metin YYYY-AA-GG ya da null; birimin devamsızlık işleme son günü (D02.takvimGetir)",
+"kilitli": "boolean; birim dönemi hesap anında kilitli (D02.kilitDurumu.kilitli). true iken BAGLANTI_YOK nedeni yoktur ve donmuş kararlar açık işaret sayılmaz.",
+"ogrenciler": "dizi, en çok 2000 (D13 sert sınırı); basladi false iken boş. Öğe: { satirId: uuid, subeId: uuid, ogrenciNo: metin, adSoyad: metin, nedenler: (BAGLANTI_YOK | ACIK_ISARET)[] x-extensible-enum, sonuc: DEVAMSIZ | DEVAMLI x-extensible-enum, sonTemasAni: metin ya da null, sonTemastaBekleyenVar: boolean (D06 bekleyenYoklamaVar), tekKayitOturumlari: [{ oturumId, tarih, teoriSaat, uygulamaSaat }], acikIsaretler: [{ oturumId, tur: BEKLEMEDE | INCELEMEDE | KENDI_BEYANI_ONAY | SORUN_BILDIRIMI x-extensible-enum }] }"
+},
+"errors": [
+"DEVAM_BULUNAMADI"
+],
+"idempotency": "GET; hiçbir şey yazmaz. Tek işlemde canlı hesap: D12.islem(fn, { yalitim: 'repeatable_read', saltOkunur: true }); packages/core/src/devam, dersSonuclari ile aynı fonksiyon; saklanan satıra ve bekleyen işe bağlı değil.",
+"rate_limit": "Hız sınıfı agir (oturum başına dakikada 20, D13 hizSinifi); dersin bütün şubelerini canlı hesaplayan en ağır okuma. Hesap bütçesi: 300 öğrenci ve 70 oturumda p95 en çok 1 saniye; sorgu sayısı öğrenci sayısından bağımsız (toplu okumalar: D01.ogrenciHesabiGetir { numaralar } ve { kisiIdler }, D05.sayilanKayitlar, D06.kurulumSonTemaslari, D09 duzeltmeleriGetir ve acikSorunBildirimleri)."
+}
+##### PUT /v1/devam/dersler/{dersId}/ogrenciler/{satirId}/muaf
+{
+"method": "PUT",
+"path": "/v1/devam/dersler/{dersId}/ogrenciler/{satirId}/muaf",
+"client": "panel",
+"auth": "Hoca oturumu (panel; kimlik: oturum, rol: hoca; rolü uymayan 403 API_ROL_YETKISIZ). D02.dersYetkisi(tx, kimlik, dersId) dersin hocası sonucunu vermezse 404 DEVAM_BULUNAMADI; deneme dersinde de 404. Yönetici bu ucu kullanmaz (Devamdan muaf: hoca işaretler (plan.html#devam)).",
+"request": {
+"dersId": "yol; uuid",
+"satirId": "yol; uuid; bu dersin bir şubesindeki liste satırı (D03.satirGetir); hesabı olmayan öğrenci de işaretlenir. Yol contracts.json ile aynı (D08-A09).",
+"muaf": "boolean; zorunlu"
+},
+"response": {
+"satirId": "uuid",
+"muaf": "boolean",
+"degisti": "boolean; false ise hiçbir şey yazılmadı",
+"hesapKuyrukta": "boolean"
+},
+"errors": [
+"DEVAM_BULUNAMADI",
+"DEVAM_SATIR_PASIF",
+"DEVAM_DONEM_KILITLI",
+"DEVAM_DERS_ARSIVDE"
+],
+"idempotency": "PUT doğal eş güçlü. Muaf (ders, numara) başına tek değerdir (A3): tek işlemde D03.satirGetir ile satır, dersi ve etkinliği doğrulanır (başka dersin satırı 404 DEVAM_BULUNAMADI, pasif satır 409 DEVAM_SATIR_PASIF), sonra D03.muafIsaretle(tx, satirId, muaf, { an, yapan: { kisiId } }) numaranın dersteki bütün satırlarını kilitleyip yazar ve sonuç birliği döner. DEGISMEDI: 200 degisti false, denetim ve iş yok. YAZILDI: aynı işlemde tek D09.denetimeYaz (devam.muaf_degisti; donemId, birimId, dersId, listeSatiriId, onceki ve sonraki muaf) ve devamHesaplaIsiKoy(tx, dersId, null, 'MUAF', { tur: 'LISTE_SATIRI', id: satirId, donemId }, istekKimligi). Sonuç birliği D08 kodlarına çevrilir: KILITLI ve neden DONEM_KILIDI 409 DEVAM_DONEM_KILITLI, DERS_ARSIVDE 409 DEVAM_DERS_ARSIVDE, SUBE_PASIF 409 DEVAM_SATIR_PASIF, DENEME_DERSI ve SATIR_YOK 404 DEVAM_BULUNAMADI; beyan dışı kod çıkmaz (D13-B02). D02.kilitDurumu(tx, birimId, donemId, an).kilitli ve D02.dersGetir durumu yalnız ön denetimdir; kesin cevap muafIsaretle'nin kilit altındaki sonucudur (00:00 ile 00:05 arasında da kilitli). Sıra: satır kilitleri (muafIsaretle), denetim, iş kuyruğu; danışma anahtarı gerekmez.",
+"rate_limit": "Hız sınıfı oturum (oturum başına dakikada 120, D13)."
+}
+##### PUT /v1/devam/yonetim/dersler/{dersId}/oranlar
+{
+"method": "PUT",
+"path": "/v1/devam/yonetim/dersler/{dersId}/oranlar",
+"client": "panel",
+"auth": "Yönetici oturumu (panel; kimlik: oturum, rol: yonetici). Yol yönetici uçları kuralıyla (teknik.html#sunucu) /v1/devam/yonetim/ altındadır (D08-A14); rolü yönetici olmayan 403 API_ROL_YETKISIZ (D13). Kaynak denetimi kişinin dersin hocası olup olmamasından bağımsızdır: D01.yetkiDenetle(kimlik, 'yonetici', { birimId: ders.birimId }) false ise 404 DEVAM_BULUNAMADI. D02.dersYetkisi kullanılmaz, çünkü kişi dersin hocasıysa kapsama bakmadan dersin hocası sonucunu verir: dersin hocası olan kapsam içi yönetici 200 alır, başka birimin yöneticisi olan hoca kendi dersinde 404 alır. Birimsiz deneme dersi kapsam dışıdır (404).",
+"request": {
+"dersId": "yol; uuid",
+"teoriP": "tam sayı 0 ile 100 (z.int().min(0).max(100)); zorunlu",
+"uygulamaP": "tam sayı 0 ile 100; zorunlu"
+},
+"response": {
+"dersId": "uuid",
+"teoriP": "tam sayı",
+"uygulamaP": "tam sayı",
+"degisti": "boolean",
+"hesapKuyrukta": "boolean"
+},
+"errors": [
+"DEVAM_BULUNAMADI",
+"DEVAM_DONEM_KILITLI",
+"DEVAM_DERS_ARSIVDE"
+],
+"idempotency": "PUT eş güçlü. Tek işlemde D02.oranlariYaz(tx, dersId, { teoriP, uygulamaP }) ders satırını kilitleyip aynı anla denetler ve sonuç birliği döner: degismedi 200 degisti false (denetim ve iş yok); kilitli 409 DEVAM_DONEM_KILITLI; arsivde 409 DEVAM_DERS_ARSIVDE; yazildi: aynı işlemde D09.denetimeYaz (devam.oran_degisti; donemId, birimId, dersId, onceki ve sonraki iki değer) ve devamHesaplaIsiKoy(tx, dersId, null, 'ORAN', { tur: 'DERS', id: dersId }, istekKimligi). Aralık dışı ya da tam sayı olmayan değer Zod doğrulamasıyla 400 (D13 zarfı).",
+"rate_limit": "Hız sınıfı oturum (oturum başına dakikada 120, D13)."
+}
+##### POST /v1/duzeltmeler
+{
+"method": "POST",
+"path": "/v1/duzeltmeler",
+"client": "panel",
+"auth": "Rota tablosunda kimlik: oturum, roller [hoca] (panel çerezi ya da telefonun hoca modundaki Bearer anahtarı); kaynak düzeyinde yalnız D02.dersYetkisi(tx, kimlik, dersId) dersin hocası sonucunu verirse geçer (üç parametre, I009); 'yonetici' ya da null sonucu DUZELTMELER_BULUNAMADI alır (iki rollü kişi başka birimin dersine yazamaz, plan.html#baslangic); her öğe ayrı denetlenir, yetkisiz öğe DUZELTMELER_BULUNAMADI alır (varlık sızdırılmaz). Yönetici ve öğrenci 403.",
+"request": {
+"islemId": "uuid, UUIDv7 (z.uuidv7); isteğin işlem kimliği, bütün satırların islem_id'si",
+"ogeler": "dizi, 1 ile 200 öğe; kanonik sırayla işlenir, cevap istek sırasıyla",
+"ogeler[].id": "uuid, UUIDv7; yazılacak satırın kimliği, istemci üretir (tekrar anahtarı)",
+"ogeler[].oturumId": "uuid; başlamış, iptal edilmemiş, yapılmadı denmemiş oturum",
+"ogeler[].listeSatiriId": "uuid; oturumun şubelerinden birinde; D08'in kapsam yüklemine (packages/core/src/devam/kapsam.ts) göre oturumun başlangıç anında öğrencinin kapsamında (Md.9/4 onceki_yok seçiminde eklenmeden önceki oturum da kapsamda)",
+"ogeler[].sebepKodu": "GOREVLENDIRME | OGRENCI_ISLERI_YAZISI | KURUL_KARARI | BEYANA_DAYALI | TELEFON_YOK_CALISMIYOR | QR_OKUTAMADI | YOKLAMADA_SINIFTA_DEGIL (son kod yalnız oturumda açık işaret varken, D09-B29)",
+"ogeler[].belgeNo": "metin ya da null; Görevli ve Belgeli kodlarında zorunlu, ötekilerde null; belgeNoNormalize sonrası 1 ile 64 karakter",
+"ogeler[].teoriSaat": "tam sayı ya da null; null oturumun bütün teori saatleri; 0 ile oturumun teori saati arası (D08 oturumSaatleri)",
+"ogeler[].uygulamaSaat": "tam sayı ya da null; null bütün uygulama saatleri, OGRENCI_ISLERI_YAZISI'nda null 0 sayılır",
+"ogeler[].oncekiDuzeltmeId": "uuid ya da null; değiştirmede zincirin son satırı; son satır GERI_ALMA ise null da kabul (sunucu doldurur, istek özetine girmez)",
+"ogeler[].sorunBildirimiId": "uuid ya da null; aynı oturum ve liste satırının ACIK bildirimi, aynı işlemde DUZELTILDI olur",
+"ogeler[].kayit": "{ donemId: uuid, kayitId: uuid } ya da null; aynı oturum ve öğrencinin kaydı; sonradan değişenlerdeki SAYILIRSA_DEGISECEK satırının düzeltmesinde dolu"
+},
+"response": {
+"islemId": "uuid",
+"sonuclar": "ogeSonuclariSemasi (D13-B28) dizisi, istek sırasıyla: { kimlik: öğe id, sonuc: KABUL | ZATEN_VAR | RET | TEKRAR_DENE (x-extensible-enum), kod: hata kodu ya da null, duzeltme: Duzeltme ya da null (KABUL ve ZATEN_VAR'da; ogeSonuclariSemasi'na yalnız ekleme alanı) }; TEKRAR_DENE yalnız kod DUZELTMELER_GECICI_CAKISMA ya da DUZELTMELER_ANLIK_BEKLENIYOR ile, öbür öğeler etkilenmez (D09-B32)",
+"Duzeltme": "{ id, islemId, tur, sebepKodu, sonDurum, birimId, dersId, oturumId, listeSatiriId, kayit, belgeNo, teoriSaat, uygulamaSaat, oncekiDuzeltmeId, sorunBildirimiId, kaynak, yapanKisiId, istemciAniAlt, istemciAniUst, saatKaynagi, ulasmaAni, olusturmaAni } (anlar ISO 8601 UTC metni)"
+},
+"errors": [
+"API_ISTEK_GECERSIZ (400, D13: şemaya uymayan gövde ya da 200'den fazla öğe)",
+"API_GOVDE_COK_BUYUK (413, D13: gövde 256 KiB'ı aşıyor)",
+"API_KIMLIK_GEREKLI (401, D13)",
+"API_ROL_YETKISIZ (403, D13: rol uymuyor)",
+"API_HIZ_SINIRI (429) ve API_SUNUCU_YOGUN (503), Retry-After ile (D13)",
+"öğe: DUZELTMELER_BULUNAMADI",
+"öğe: DUZELTMELER_KIMLIK_CAKISMASI",
+"öğe: DUZELTMELER_OTURUM_BASLAMADI",
+"öğe: DUZELTMELER_OTURUM_IPTAL",
+"öğe: DUZELTMELER_OTURUM_YAPILMADI",
+"öğe: DUZELTMELER_LISTEDE_DEGIL",
+"öğe: DUZELTMELER_BELGE_NO_GEREKLI",
+"öğe: DUZELTMELER_BELGE_NO_YASAK",
+"öğe: DUZELTMELER_BELGE_NO_GECERSIZ",
+"öğe: DUZELTMELER_SAAT_GECERSIZ",
+"öğe: DUZELTMELER_SAAT_TURU_YASAK",
+"öğe: DUZELTMELER_DUZELTME_VAR",
+"öğe: DUZELTMELER_DUZELTME_DEGISTI",
+"öğe: DUZELTMELER_SORUN_BILDIRIMI_UYUSMUYOR",
+"öğe: DUZELTMELER_KAYIT_UYUSMUYOR",
+"öğe: DUZELTMELER_ISARETLI_OTURUM_DEGIL",
+"öğe (TEKRAR_DENE): DUZELTMELER_ANLIK_BEKLENIYOR",
+"öğe (TEKRAR_DENE): DUZELTMELER_GECICI_CAKISMA"
+],
+"idempotency": "Öğe kimliği birincil anahtar: aynı id ve aynı istek_ozeti ZATEN_VAR ve saklanan satır; aynı id farklı özet RET DUZELTMELER_KIMLIK_CAKISMASI, satır değişmez. Özet isteğin gönderildiği halinden hesaplanır (null saatler ve null oncekiDuzeltmeId null kalır), sunucunun çözdüğü değerlerle karşılaştırılmaz (D09-B30). Danışma anahtarları: bütün öğelerin 'duzeltmeler:zincir:<oturumId>:<listeSatiriId>' anahtarları (katman 3; numaranın aynı oturum şubelerindeki öbür satırlarınınkiler de, D09-A08) işlemin ilk çağrısıdır; kuyruk işleyicisi aynı anahtarı kilitAnahtarlari kancasıyla D06'ya verir. Hesap işi D08.devamHesaplaIsiKoy(tx, dersId, ogrenciId ya da hesapsız öğrencide null, DUZELTME, { tur: 'DUZELTME', id }); liste satırından hesaba geçiş D03 satırının numarasıyla D01.ogrenciHesabiGetir(tx, { numaralar }) toplu çağrısıdır, numara yalnız bellekte. Tek işlem: önce danışma anahtarları işlemin ilk çağrısında tek D12.danismaKilidi ile (D09-B40), sonra öğe başına SAVEPOINT (D13-B28). Öğeler kanonik sırayla işlenir (öğrencinin kişi kimliği, hesapsız öğrencide liste satırı kimliği; sonra oturumId; sonra kayıt kimliği), cevap istek sırasıyla döner; 40P01 ve 55P03 öğe başına yakalanır, ROLLBACK TO SAVEPOINT ve bir kez yeniden denenir, yine olursa öğe TEKRAR_DENE DUZELTMELER_GECICI_CAKISMA alır (D09-B32). Öğrenci sürümü (D06.ogrenciDurumuDegisti) öğrenci başına bir kez, o öğrencinin öğelerinden sonra.",
+"rate_limit": "Hız sınıfı oturum (D13.hizSinifi): oturum başına dakikada 120 istek (D13-B09 başlangıç değeri); istek başına en çok 200 öğe (fazlası 400 API_ISTEK_GECERSIZ), gövde sınırı 256 KiB (aşan 413 API_GOVDE_COK_BUYUK, D13-B11)"
+}
+##### GET /v1/duzeltmeler/sorun-bildirimleri
+{
+"method": "GET",
+"path": "/v1/duzeltmeler/sorun-bildirimleri",
+"client": "panel",
+"auth": "Rota roller [hoca] (panel ya da telefonun hoca modu); yalnız kişinin hocası olduğu dersler: liste D02.hocaninDersleri(tx, kimlik.kisiId, { acikDonem: true }) ile süzülür; dersId verilip D02.dersYetkisi(tx, kimlik, dersId) 'yonetici' ya da null dönerse 404 DUZELTMELER_BULUNAMADI.",
+"request": {
+"gorunum": "BUGUN | ACIK | KAPALI | SURE_DISI (sorgu), varsayılan ACIK; BUGUN gun değeri bugünden büyük olmayan en son parti; KAPALI ve SURE_DISI sayfalı",
+"dersId": "uuid (sorgu), isteğe bağlı",
+"imlec": "metin (sorgu), yalnız sayfalı görünümde",
+"adet": "tam sayı (sorgu), 1 ile 500, varsayılan 100"
+},
+"response": {
+"gun": "tarih ya da null; yalnız BUGUN görünümünde",
+"ogeler": "dizi: { id, dersId, dersAdi, oturumId, oturumBaslangicAni, ogrenciId, listeSatiriId, ogrenciAdSoyad, kayit, kayitKarari (kafa sayısı bekleyen oturumda ikisi de null), nedenKodu, onerilenSebepKodu, durum, istemciAniAlt, ulasmaAni, sureBitisAni, kapanisAni, kapatanKisiId, duzeltmeId, partiSirasi, kritik }",
+"sonrakiImlec": "metin ya da null"
+},
+"errors": [
+"API_ISTEK_GECERSIZ (400, D13: sorgu ya da gövde şemaya uymuyor)",
+"DUZELTMELER_IMLEC_GECERSIZ (400)",
+"DUZELTMELER_BULUNAMADI (404)",
+"API_SONUC_COK_BUYUK (422, D13-B13: 2000 satırı aşan sınıf boyu liste; kesik liste dönmez, istemci dersId ile daraltır)",
+"API_KIMLIK_GEREKLI (401, D13)",
+"API_ROL_YETKISIZ (403, D13: rol uymuyor)",
+"API_HIZ_SINIRI (429) ve API_SUNUCU_YOGUN (503), Retry-After ile (D13)"
+],
+"idempotency": "Yalnız okuma; tekrar zararsız.",
+"rate_limit": "Hız sınıfı oturum (D13.hizSinifi): oturum başına dakikada 120 istek (D13-B09 başlangıç değeri)"
+}
+##### POST /v1/duzeltmeler/kendi-beyani/kararlar
+{
+"method": "POST",
+"path": "/v1/duzeltmeler/kendi-beyani/kararlar",
+"client": "panel",
+"auth": "Rota tablosunda kimlik: oturum, roller [hoca] (panel çerezi ya da telefonun hoca modundaki Bearer anahtarı); kaynak düzeyinde yalnız D02.dersYetkisi(tx, kimlik, dersId) dersin hocası sonucunu verirse geçer (üç parametre, I009); 'yonetici' ya da null sonucu DUZELTMELER_BULUNAMADI alır (iki rollü kişi başka birimin dersine yazamaz, plan.html#baslangic) (kaydın oturumunun dersi).",
+"request": {
+"islemId": "uuid, UUIDv7",
+"ogeler": "dizi, 1 ile 200: { kayit: { donemId, kayitId }, karar: ONAY | RET }"
+},
+"response": {
+"islemId": "uuid",
+"sonuclar": "ogeSonuclariSemasi (D13-B28) dizisi, istek sırasıyla: { kimlik: kayitId, sonuc: KABUL | ZATEN_VAR | RET | TEKRAR_DENE (x-extensible-enum), kod: hata kodu ya da null }; TEKRAR_DENE yalnız kod DUZELTMELER_GECICI_CAKISMA ya da DUZELTMELER_ANLIK_BEKLENIYOR ile, öbür öğeler etkilenmez (D09-B32)"
+},
+"errors": [
+"API_ISTEK_GECERSIZ (400, D13: şemaya uymayan gövde ya da 200'den fazla öğe)",
+"API_GOVDE_COK_BUYUK (413, D13: gövde 256 KiB'ı aşıyor)",
+"API_KIMLIK_GEREKLI (401, D13)",
+"API_ROL_YETKISIZ (403, D13: rol uymuyor)",
+"API_HIZ_SINIRI (429) ve API_SUNUCU_YOGUN (503), Retry-After ile (D13)",
+"öğe: DUZELTMELER_BULUNAMADI",
+"öğe: DUZELTMELER_KENDI_BEYANI_DEGIL",
+"öğe: DUZELTMELER_ZATEN_KARAR_VERILMIS",
+"öğe: DUZELTMELER_KAFA_SAYISI_BEKLENIYOR",
+"öğe: DUZELTMELER_DONEM_KILITLI",
+"öğe (TEKRAR_DENE): DUZELTMELER_GECICI_CAKISMA"
+],
+"idempotency": "islemId ve kayıt: aynı islemId ile aynı kayda yazılmış duzeltmeler.kendi_beyani_karari olayı varsa ZATEN_VAR. Danışma anahtarları: kayıtlar önce kilitsiz okunur (D05.kayitGetir), D07.kararAnahtarlari(kayıtların { oturumId, ogrenciId, anahtarId } listesi) çift ve sayaç anahtarlarını üretir, işlemin ilk çağrısında alınır. Onay D07.kararDegistir(tx, kayit, { karar: 'VAR', beklenenKarar: 'VAR' }, { tur: 'HOCA', kisiId, olay: 'KENDI_BEYANI_ONAY', islemId }), ret { karar: 'RET', beklenenKarar: 'VAR' } ve olay KENDI_BEYANI_RET (birleşik biçim, D09-B12; dersId ve istemci D09'un olayında). D07 hataları: KARAR_DEGISTI ZATEN_KARAR_VERILMIS, DONEM_KILITLI DONEM_KILITLI, YETKISIZ_HOCA BULUNAMADI, GECIS_GECERSIZ KENDI_BEYANI_DEGIL olur. Olay, D08 hesap işi ve öğrenci durum sürümü aynı işlemde. Tek işlem: önce danışma anahtarları işlemin ilk çağrısında tek D12.danismaKilidi ile (D09-B40), sonra öğe başına SAVEPOINT (D13-B28). Öğeler kanonik sırayla işlenir (öğrencinin kişi kimliği, hesapsız öğrencide liste satırı kimliği; sonra oturumId; sonra kayıt kimliği), cevap istek sırasıyla döner; 40P01 ve 55P03 öğe başına yakalanır, ROLLBACK TO SAVEPOINT ve bir kez yeniden denenir, yine olursa öğe TEKRAR_DENE DUZELTMELER_GECICI_CAKISMA alır (D09-B32). Öğrenci sürümü (D06.ogrenciDurumuDegisti) öğrenci başına bir kez, o öğrencinin öğelerinden sonra.",
+"rate_limit": "Hız sınıfı oturum (D13.hizSinifi): oturum başına dakikada 120 istek (D13-B09 başlangıç değeri); istek başına en çok 200 öğe (fazlası 400 API_ISTEK_GECERSIZ), gövde sınırı 256 KiB (aşan 413 API_GOVDE_COK_BUYUK, D13-B11)"
+}
+##### POST /v1/duzeltmeler/incelemeler/kararlar
+{
+"method": "POST",
+"path": "/v1/duzeltmeler/incelemeler/kararlar",
+"client": "panel",
+"auth": "Rota tablosunda kimlik: oturum, roller [hoca] (panel çerezi ya da telefonun hoca modundaki Bearer anahtarı); kaynak düzeyinde yalnız D02.dersYetkisi(tx, kimlik, dersId) dersin hocası sonucunu verirse geçer (üç parametre, I009); 'yonetici' ya da null sonucu DUZELTMELER_BULUNAMADI alır (iki rollü kişi başka birimin dersine yazamaz, plan.html#baslangic) (kaydın oturumunun dersi).",
+"request": {
+"islemId": "uuid, UUIDv7",
+"ogeler": "dizi, 1 ile 200: { kayit: { donemId, kayitId }, baglam: INCELEME | KARAR_DEGISTIR, beklenenKarar: INCELEMEDE | VAR | RET, yeniKarar: VAR | RET }",
+"kural": "INCELEME: beklenenKarar INCELEMEDE, yeniKarar VAR (onay) ya da RET. KARAR_DEGISTIR (D09-B34): beklenenKarar VAR ve yeniKarar RET ya da tersi; yalnız son geçişi HOCA kaynaklı ve bu dersin kararı olan kayıtta, birim dönemi kilitlenmeden; D07'nin durum makinesindeki 'Hoca kendi kararını kilitten önce değiştirdi' geçişi. Gerekçe sabitlerini D07 seçer (packages/contracts/src/dogrulama.ts'ten içe aktarılır; ör. HOCA_ONAYLADI, HOCA_REDDETTI, KENDI_BEYANI_ONAYLANDI, KENDI_BEYANI_REDDEDILDI)"
+},
+"response": {
+"islemId": "uuid",
+"sonuclar": "ogeSonuclariSemasi (D13-B28) dizisi, istek sırasıyla: { kimlik: kayitId, sonuc: KABUL | ZATEN_VAR | RET | TEKRAR_DENE (x-extensible-enum), kod: hata kodu ya da null, yeniKarar: VAR | RET ya da null, sayilan: boolean ya da null (ogeSonuclariSemasi'na yalnız ekleme alanları) }; TEKRAR_DENE yalnız kod DUZELTMELER_GECICI_CAKISMA ya da DUZELTMELER_ANLIK_BEKLENIYOR ile, öbür öğeler etkilenmez (D09-B32)"
+},
+"errors": [
+"API_ISTEK_GECERSIZ (400, D13: şemaya uymayan gövde ya da 200'den fazla öğe)",
+"API_GOVDE_COK_BUYUK (413, D13: gövde 256 KiB'ı aşıyor)",
+"API_KIMLIK_GEREKLI (401, D13)",
+"API_ROL_YETKISIZ (403, D13: rol uymuyor)",
+"API_HIZ_SINIRI (429) ve API_SUNUCU_YOGUN (503), Retry-After ile (D13)",
+"öğe: DUZELTMELER_BULUNAMADI",
+"öğe: DUZELTMELER_ZATEN_KARAR_VERILMIS",
+"öğe: DUZELTMELER_KARAR_DEGISTIRILEMEZ",
+"öğe: DUZELTMELER_KAFA_SAYISI_BEKLENIYOR",
+"öğe: DUZELTMELER_DONEM_KILITLI",
+"öğe (KABUL ile bilgi): DUZELTMELER_ZATEN_SAYILAN_KAYIT_VAR",
+"öğe (TEKRAR_DENE): DUZELTMELER_GECICI_CAKISMA"
+],
+"idempotency": "islemId ve kayıt: aynı islemId ile yazılmış duzeltmeler.inceleme_karari ya da karar_degistirildi olayı varsa ZATEN_VAR; beklenenKarar tutmazsa ZATEN_KARAR_VERILMIS (ikinci cihaz üzerine yazamaz). D07 hataları: KARAR_DEGISTI ZATEN_KARAR_VERILMIS, DONEM_KILITLI DONEM_KILITLI, YETKISIZ_HOCA BULUNAMADI; GECIS_GECERSIZ INCELEME bağlamında ZATEN_KARAR_VERILMIS, KARAR_DEGISTIR bağlamında KARAR_DEGISTIRILEMEZ olur. Danışma anahtarları kendi-beyani kararlarıyla aynı: D07.kararAnahtarlari ile işlemin ilk çağrısında. KararKaynagi { tur: 'HOCA', kisiId, olay: INCELEME_ONAY | INCELEME_RET | KARAR_DEGISTIR, islemId }, YeniKarar { karar: yeniKarar, beklenenKarar } (D09-B12). Onayda D07.kararDegistir dönüşündeki kaydın (KararDegisimi.kayit) sayilan bayrağı okunur: onaylanan kayıt sayılan değilse KABUL ile DUZELTMELER_ZATEN_SAYILAN_KAYIT_VAR bilgisi, sayılansa bilgi yok (D09-B12). Tek işlem: önce danışma anahtarları işlemin ilk çağrısında tek D12.danismaKilidi ile (D09-B40), sonra öğe başına SAVEPOINT (D13-B28). Öğeler kanonik sırayla işlenir (öğrencinin kişi kimliği, hesapsız öğrencide liste satırı kimliği; sonra oturumId; sonra kayıt kimliği), cevap istek sırasıyla döner; 40P01 ve 55P03 öğe başına yakalanır, ROLLBACK TO SAVEPOINT ve bir kez yeniden denenir, yine olursa öğe TEKRAR_DENE DUZELTMELER_GECICI_CAKISMA alır (D09-B32). Öğrenci sürümü (D06.ogrenciDurumuDegisti) öğrenci başına bir kez, o öğrencinin öğelerinden sonra.",
+"rate_limit": "Hız sınıfı oturum (D13.hizSinifi): oturum başına dakikada 120 istek (D13-B09 başlangıç değeri); istek başına en çok 200 öğe (fazlası 400 API_ISTEK_GECERSIZ), gövde sınırı 256 KiB (aşan 413 API_GOVDE_COK_BUYUK, D13-B11)"
+}

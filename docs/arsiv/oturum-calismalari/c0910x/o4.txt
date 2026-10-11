@@ -1,0 +1,196 @@
+{"id": "D01-A02", "question": "Yönetici hocaların derslerini, kayıtlarını ve raporlarını görebilir ya da hoca adına işlem yapabilir mi? (D01-B03, D10-B17)", "recommendation": "İlk sürümde görmez; yönetici yalnız sayılan işleri yapar. \"Başka hocanın dersini görme\" ret senaryosu yöneticiye de uygulanır; ihtiyaç doğarsa kapsamındaki derslere salt okuma eklenir.", "needs_owner": true}
+
+{"id": "D01-A05", "question": "Hoca ilk kayıt teyidini reddederse hesap kapanır mı? (D01-B22, D09-B14)", "recommendation": "Kapanır: hesap ve teyit reddedildi, cihaz ve oturum kapanır, girilen isim ve cihaz ayrıntıları silinir, beklemedeki kayıtlar teyit_reddedildi ile ret alır (ham kayıt kalır), öğrenci yüz yüze yeniden kaydolur. Ret gerekçe kodu ve denetimle; tasarım bu davranışla kuruldu.", "needs_owner": true}
+
+{"id": "D01-A06", "question": "Tek kullanımlık kayıt kodu baştan mı gelsin, yoksa önce hoca teyidiyle mi başlansın? Numara başına teyitsiz hesap sınırı dolduğunda gerçek öğrencinin kesin yolu da bu koddur. (D01-B24, D01-B20, plan.html#acik)", "recommendation": "Önce hoca teyidi. Tablo, uç ve kurallar hazır (8 Crockford karakteri, 40 bit, 72 saat, 5 yanlışta düşer, tek numaraya bağlı, kodla kayıt teyitli sayılır, sınırları aşar ve numaranın öbür teyitsiz hesaplarını reddeder). Anahtar D15 ayarı kimlik.kayitKoduAcik (varsayılan false), karar gelince sürüm gerekmeden açılır. Öneri: genel açılış kararı ne olursa olsun, sınırı dolu numara için hocanın kod üretmesine izin verilsin; karar gelene kadar sınır dolu iken öğrenci hocanın sahte hesapları reddetmesini bekler.", "needs_owner": true}
+
+{"id": "D01-A07", "question": "Cihaz değişimi onaylanmadan yeni telefon ders ve oturum takvimini indirebilsin mi? (D01-B26)", "recommendation": "Bugünkü davranış: yeni telefonun imzalı yoklama kaydı oturum aranmadan gönderim yolundan gelir ve kabul edilir; D07 onu Beklemede CIHAZ_DEGISIMI_BEKLIYOR tutar, onayda normal kuralla karara bağlar, ret ya da düşmede Ret CIHAZ_ONAYLANMADI verir (D07-B12). Kısıtlı oturum yalnız /ben, /cikis ve değişim uçlarına girdiğinden telefon ders ve oturum takvimini indiremez. Öneri: yalnız ders ve oturum takvimi insin (geçmiş kayıt, karar ve devam inmesin); karar gelene kadar indirme kapalı kalır.", "needs_owner": true}
+
+{"id": "D01-A08", "question": "Dönem içinde hesabını silen hocanın dersleri hemen mi arşivlenir? (D01-B31, D02-B23)", "recommendation": "Giriş bilgileri ve oturumlar hemen silinir (mağaza şartı); dersler dönem kilidine kadar açık kalır, D02 hocasız dersi kisiGetir.silinmeAni ile yöneticiye gösterir, devir yetkisi yöneticide (D02 hesap_silindi gerekçeli devir ucu), kilitte arşivlenir. D02 hesap_silindi ve hesap_durumu_degisti olaylarını dersler abonesi (derslerKimlikDinleyicisi) olarak alır ve hocasız ders kuralını işletir.", "needs_owner": true}
+
+{"id": "D01-A20", "question": "Teyitli numaraya gelen kayıt ve çakışan teyitsiz hesaplar: önerilen davranış kabul mü? (D01-B21)", "recommendation": "Seçilen: teyitli numaraya gelen kayıt yeni hesap açmaz, değişim talebi açar; çakışan teyitsiz hesaplar toplu teyitten çıkar, hoca birini teyit edince öbürleri numara_baskasinda ile reddedilir, cihazları kapanır, kayıtları D07 kuralıyla ret alır. Seçenek: çakışan hesaplar reddedilmez, kapanmadan bekler ve hoca her birini ayrı ayrı karara bağlar (daha çok iş, sahte hesap birikir). Öneri seçilen.", "needs_owner": true}
+
+{"id": "D01-A21", "question": "Telefon kuyruğunun boşaldığını hiç bildirmezse silme 7 gün sonra gönderilmemiş kayıtlara bakmadan yapılsın mı? (D01-B29)", "recommendation": "Seçilen: 7 gün (plan.html#kararlar-gonderme-suresi'ndeki beklenen gönderme süresi) dolunca gecelik iş siler; istekten önce imzalanmış ve sonra gelen kayıtlar kabul edilir, sonrakiler sayılmaz. Seçenek: süre uzatılır (ör. 14 gün) ya da silme yalnız bildirimle olur; ikincisi kaybolan telefonda mağaza şartını karşılamaz. Öneri seçilen.", "needs_owner": true}
+
+{"id": "D01-A25", "question": "Listede hiç görünmeyen teyitsiz kayıt ne zaman kapansın? (D01-B20, D12-A03)", "recommendation": "Seçilen, D12-A03 ile aynı: oluşturmadan sonra iki birim ve dönem kilidi geçmiş ve en az 30 günlük hesap kapanır. Seçenek: bir kilit (geç gelen liste öğrenciyi yeniden kaydolmaya zorlar) ya da hiç kapanmaz (satır ve sahte hesap birikir). Öneri seçilen; sayı BEKLEYEN_KAPATMA_KILIT sabitindedir.", "needs_owner": true}
+
+{"id": "D01-A11", "question": "Apple hesabı değişirse ya da TestFlight'tan App Store'a geçişte veri kaybolursa yüzlerce iPhone öğrencisinin yüz yüze değişimi nasıl karşılanır? (D01-B51)", "recommendation": "Önce geçiş kendi iPhone'unda denenir. Ek olarak yöneticinin açtığı süreli bir geçiş penceresinde, hesaba bağlı Secure Enclave anahtarıyla imzalı yeniden bağlanma kabul edilebilir (App Attest yenilemesiyle aynı imza yolu); Apple ekip kimliği değişirse bu da çalışmaz, tek yol yüz yüze akış. Pencereyi açmak ürün kararı.", "needs_owner": true}
+
+##### POST /v1/kimlik/kayit-kodlari
+{
+"method": "POST",
+"path": "/v1/kimlik/kayit-kodlari",
+"client": "telefon|panel",
+"auth": "Hoca (rol beyanı hoca); numara hocanın dersinde etkin liste satırında olmalı, değilse 404 KIMLIK_BULUNAMADI.",
+"request": {
+"ogrenciNo": "9 ya da 10 ASCII rakam (gövdede, adres satırında değil)"
+},
+"response": {
+"kod": "8 Crockford karakteri, 4 ve 4 gruplu, yalnız bu cevapta",
+"bitisAni": "ISO 8601 (72 saat)"
+},
+"errors": [
+"KIMLIK_KAYIT_KODU_KAPALI",
+"KIMLIK_BULUNAMADI",
+"KIMLIK_NUMARA_TEYITLI"
+],
+"idempotency": "Numara başına tek açık kod; yeni istek öncekini geçersiz kılar. kimlik.kayitKoduAcik false iken 403. kimlik.kayit_kodu_uretildi denetimi dersId ve birimId taşır.",
+"rate_limit": "Oturum başına sınır (D13 hizSinifi oturum)."
+}
+##### POST /v1/kimlik/ogrenci/kayit
+{
+"method": "POST",
+"path": "/v1/kimlik/ogrenci/kayit",
+"client": "telefon",
+"auth": "Girişsiz (rota kimliği ['girissiz'], kitle 'ogrenci').",
+"request": {
+"ogrenciNo": "9 ya da 10 ASCII rakam (D03 şeması)",
+"adSoyad": "metin 2 ile 120, NFC",
+"platform": "android | ios",
+"model": "isteğe bağlı, en çok 60",
+"dogrulamaDegeri": "base64url, 32 bayt; POST /v1/dogrulama/deger ile amaç KAYIT",
+"kanit": "android: { acikAnahtar (SPKI, base64), sertifikaZinciri (isteğe bağlı, en çok 10 DER), isSystemUser, baglamaImzasi }; ios: { secureEnclaveAcikAnahtar (SPKI), baglamaImzasi, appAttest (isteğe bağlı) { kanit (CBOR, en çok 16 KiB), anahtarKimligi } }",
+"kayitKodu": "isteğe bağlı, 8 Crockford karakteri; yalnız D15 ayarı kimlik.kayitKoduAcik true iken"
+},
+"response": {
+"durum": "teyit_bekliyor | teyitli | degisim_bekliyor",
+"kisiId": "yalnız yeni ya da yeniden bağlanan hesapta",
+"cihazId": "uuid",
+"oturumAnahtari": "base64url 43 karakter, yalnız bu cevapta",
+"anahtarlar": "[{ anahtarId, tur }]",
+"eslesme": "eslesti | isim_uyusmuyor | listede_yok (değişimde yok)",
+"cihazDogrulandi": "boolean",
+"degisimTalebi": "{ talepId, qrDegeri, qrBitisAni, talepBitisAni } ya da null"
+},
+"errors": [
+"KIMLIK_DOGRULAMA_DEGERI_GECERSIZ",
+"KIMLIK_CIHAZ_KANITI_REDDEDILDI",
+"KIMLIK_CIHAZ_BAGLI",
+"KIMLIK_CIHAZ_KAPANDI",
+"KIMLIK_COK_BEKLEYEN_HESAP",
+"KIMLIK_COK_DEGISIM_TALEBI",
+"KIMLIK_KAYIT_KODU_GECERSIZ",
+"KIMLIK_KAYIT_KODU_KAPALI",
+"KIMLIK_NUMARA_TEYITLI"
+],
+"idempotency": "Doğrulama değeri tek kullanımlık; sıra dogrulamaDegeriniTuket, cihaz ve anahtar satırları, cihazKanitiniDogrula. Sonuç REDDEDILDI iken kimlik.kanitReddiBaglamayiEngeller açıksa 403 ve işlem geri alınır, değer yanmaz (D01-A19). Kaybolan cevap: aynı donanım anahtarı aynı numarayla yeniden gelirse ve anahtarın cihazı etkin ya da degisim_bekliyor, hesabı aktifse var olan hesap yeni oturum anahtarıyla döner, önceki oturum yenilendi diye kapanır, cihazın durumu değişmez (değişim bekleyen cihazda yeni QR değeri de döner). Anahtarın cihazı kapandiysa ya da hesap aktif değilse 409 KIMLIK_CIHAZ_KAPANDI ve oturum açılmaz: telefon yeni anahtar üretip değişim yolundan gelir (çalınan ya da değiştirilen eski telefon anahtarıyla hesaba dönemez, plan.html#hile). Aynı anahtar başka numarayla gelirse KIMLIK_CIHAZ_BAGLI. Yanlış kayıt kodunda sayaç ve tüketilen değer işlenir, hata sonra döner.",
+"rate_limit": "Girişsiz uçların geniş IP sınırı (D13 hizSinifi girissiz). Numara başına en çok 5 etkin cihazlı teyitsiz hesap (BEKLEYEN_HESAP_SINIRI) ve son 24 saatte en çok 10 yeni hesap (KAYIT_NUMARA_GUNLUK_SINIRI); geçerli kayıt kodu iki sınırı da aşar."
+}
+##### POST /v1/kimlik/cihaz-degisimi
+{
+"method": "POST",
+"path": "/v1/kimlik/cihaz-degisimi",
+"client": "telefon",
+"auth": "Rota kimliği ['girissiz', 'oturum'], kitle 'ogrenci', degisimBekleyenKabul: true: girişsiz (yeni telefonun ilk talebi) ya da talebi açan cihazın kısıtlı oturumu (QR değerini yenileme; oturumKapsami degisim_bekliyor). Tam öğrenci oturumu 409 KIMLIK_HESAP_DURUMU_UYGUN_DEGIL alır.",
+"request": {
+"govde": "girişsizken POST /v1/kimlik/ogrenci/kayit alanları (amaç CIHAZ_DEGISIMI, kayitKodu yok); değişim bekleyen oturumla boş gövde"
+},
+"response": {
+"talepId": "uuid",
+"qrDegeri": "base64url, 16 bayt, yalnız bu cevapta",
+"qrBitisAni": "ISO 8601 UTC (900 saniye)",
+"talepBitisAni": "ISO 8601 UTC (72 saat)",
+"cihazId": "uuid",
+"oturumAnahtari": "yalnız ilk açılışta",
+"anahtarlar": "[{ anahtarId, tur }], yalnız ilk açılışta"
+},
+"errors": [
+"KIMLIK_DOGRULAMA_DEGERI_GECERSIZ",
+"KIMLIK_CIHAZ_KANITI_REDDEDILDI",
+"KIMLIK_CIHAZ_BAGLI",
+"KIMLIK_CIHAZ_KAPANDI",
+"KIMLIK_COK_DEGISIM_TALEBI",
+"KIMLIK_DEGISIM_GEREKMIYOR",
+"KIMLIK_HESAP_DURUMU_UYGUN_DEGIL"
+],
+"idempotency": "Cihaz başına tek açık talep; başka bir cihazdan gelen talep öncekine dokunmaz (numarayı bilen biri gerçek talebi düşüremez). Açık talep süresince eski cihazın kayıtları D07'de Beklemede kalır (D07-B13, plan.html#gun-kenar-durumlar); gerçek öğrenci talebi /ben'de görür ve etkin cihazından reddeder, ret ve düşme bekleyen kayıtları aynı işlemde karara bağlatır (D01-A16). Hesapta doğrulanamayan cihazlı açık talep en çok 3 (DEGISIM_TALEBI_SINIRI): sınır kanıt sonucundan sonra denetlenir, dogrulanamadi cihazlı yeni talep sınırı aşacaksa işlem geri alınır ve 409 KIMLIK_COK_DEGISIM_TALEBI döner; doğrulanmış cihazın talebi sınıra takılmaz. Açık talep 72 saatte düşer (kimlik_temizligi). Yenileme yalnız QR değerini ve bitişini değiştirir. Kaybolan cevapta kayıt ucunun yeniden bağlama kuralı geçerlidir.",
+"rate_limit": "D13 hiz { kimliksiz: 'girissiz', kimlikli: 'oturum' }: oturumsuz istekte girişsiz uçların IP sınırı, oturumla gelende oturum sınırı."
+}
+##### POST /v1/kimlik/cihaz-degisimi/{talepId}/onay
+{
+"method": "POST",
+"path": "/v1/kimlik/cihaz-degisimi/{talepId}/onay",
+"client": "telefon",
+"auth": "Hoca (rol beyanı hoca); aynı yetki.",
+"request": {
+"talepId": "yol, uuid",
+"qrDegeri": "base64url, 16 bayt (okutulan QR'dan)",
+"kimlikGoruldu": "true sabiti"
+},
+"response": {
+"durum": "onaylandi"
+},
+"errors": [
+"KIMLIK_BULUNAMADI",
+"KIMLIK_DEGER_GECERSIZ",
+"KIMLIK_TALEP_KAPANMIS"
+],
+"idempotency": "Onaylanmış talebe aynı hocanın tekrar onayı 200 ve aynı sonuç. Onay tek işlemdir ve hesabın öbür açık taleplerini baska_talep_onaylandi ile iptal eder; onların yeni cihazları ve kısıtlı oturumları degisim_iptal ile kapanır. Aynı işlemde D07.yenidenDegerlendir(tx, { ogrenciId }, 'CIHAZ_DEGISIMI_ONAYLANDI') bir kez çağrılır (öbür taleplerin iptali aynı öğrencinin kayıtlarıdır).",
+"rate_limit": "Oturum başına sınır (D13 hizSinifi oturum)."
+}
+##### POST /v1/kimlik/cihaz/app-attest-yenile
+{
+"method": "POST",
+"path": "/v1/kimlik/cihaz/app-attest-yenile",
+"client": "telefon",
+"auth": "Öğrenci, tam oturum (rol beyanı ogrenci), iPhone cihazı.",
+"request": {
+"dogrulamaDegeri": "base64url, 32 bayt; amaç ANAHTAR_YENILEME",
+"appAttestKanit": "CBOR, en çok 16 KiB",
+"appAttestAnahtarKimligi": "base64, 32 bayt",
+"secureEnclaveImzasi": "DER; değer ile yeni anahtar kimliğinin birleşiminin SHA-256 özeti üstünde, hesaptaki Secure Enclave anahtarıyla"
+},
+"response": {
+"anahtarId": "uuid ya da null (kanıt doğrulanamadı ya da reddedildi)",
+"dogrulama": "dogrulandi | dogrulanamadi | reddedildi (genişleyen değer)"
+},
+"errors": [
+"KIMLIK_DOGRULAMA_DEGERI_GECERSIZ",
+"KIMLIK_IMZA_GECERSIZ",
+"KIMLIK_CIHAZ_KANITI_REDDEDILDI",
+"KIMLIK_HESAP_DURUMU_UYGUN_DEGIL"
+],
+"idempotency": "Aynı App Attest anahtar kimliği ikinci kez gelirse var olan anahtarId ve sonuç döner. Sıra: dogrulamaDegeriniTuket, eski anahtarın gecersiz_ani dolar, yeni anahtar yazılır, D07.cihazKanitiniDogrula (kanıt satırı yeni anahtara bağlanır). Sonuç REDDEDILDI iken kimlik.kanitReddiBaglamayiEngeller açıksa 403 KIMLIK_CIHAZ_KANITI_REDDEDILDI ve işlem geri alınır, değer yanmaz (D01-A19). Öbür durumda kanıt doğrulandi değilse yeni anahtarın gecersiz_ani aynı işlemde dolar (tek izinli dolum), işlem yine işlenir: kanıt satırı ve kimlik.app_attest_yenileme denetimi kalır, D07'nin sıklık sayımı başarısız yenilemeyi de görür, cihaz Secure Enclave anahtarıyla sürer. iPhone olmayan cihazda 409 KIMLIK_HESAP_DURUMU_UYGUN_DEGIL.",
+"rate_limit": "Oturum başına sınır (D13 hizSinifi oturum). Her yenileme, başarısız olan da, denetime ve D07 kanıt satırına yazılır."
+}
+##### POST /v1/kimlik/ogrenciler/{kisiId}/hesap-silme
+{
+"method": "POST",
+"path": "/v1/kimlik/ogrenciler/{kisiId}/hesap-silme",
+"client": "telefon|panel",
+"auth": "Hoca (rol beyanı hoca); gövdedeki dersin hocası ve öğrencinin o derste etkin liste satırı var, kimliği yüz yüze görerek. Yalnız etkin cihazı olmayan hesapta: telefonu olmayan öğrenci (plan.html#kararlar-hesap-silme), reddedilmiş ya da kapanmış hesap.",
+"request": {
+"kisiId": "yol, uuid",
+"dersId": "uuid; yetkiyi veren ders, denetime yazılır",
+"kimlikGoruldu": "true sabiti"
+},
+"response": {
+"durum": "yapildi"
+},
+"errors": [
+"KIMLIK_BULUNAMADI",
+"KIMLIK_HESAP_DURUMU_UYGUN_DEGIL"
+],
+"idempotency": "Silinmiş hesapta 200 yapildi. Etkin cihazı olan hesapta 409 KIMLIK_HESAP_DURUMU_UYGUN_DEGIL, hesap değişmez: öğrenci uygulamadan siler. Ele geçirilmiş bir hoca hesabı bütün sınıfı bu uçla silemez. Yetki D02.dersYetkisi(tx, kimlik, dersId) dersin hocası sonucuyla; öbür durumda 404 KIMLIK_BULUNAMADI. kimlik.hesap_silindi denetimi dersId ve dersin birimId'siyle yazılır.",
+"rate_limit": "Oturum başına ağır işlem sınırı (D13 hizSinifi agir)."
+}
+##### POST /v1/kimlik/hesap-silme
+{
+"method": "POST",
+"path": "/v1/kimlik/hesap-silme",
+"client": "telefon|panel",
+"auth": "Personel ya da öğrenci, tam oturum (rol beyanı ogrenci ve personel). Personelde ilk istek son 15 dakikada açılmış oturum ister (YAKIN_GIRIS_DK); sıradaki isteğe telefondan bildirim yeniden giriş istemez.",
+"request": {
+"bekleyenOgeSayisi": "telefonda zorunlu tamsayı (0 ya da büyük); panelde yok"
+},
+"response": {
+"durum": "sirada | yapildi",
+"sonYurutmeAni": "sırada ise ISO 8601",
+"bekleyenTelefonSayisi": "sırada ise kuyruğunun boşaldığını henüz bildirmeyen açık telefon oturumu sayısı"
+},
+"errors": [
+"KIMLIK_YENIDEN_GIRIS_GEREKLI"
+],
+"idempotency": "Hesap başına tek sıradaki istek; tekrar aynı satırı döner. Telefondan bekleyenOgeSayisi 0 gelince o giriş oturumu bos_bildiren_oturumlar'a eklenir; kişinin bütün açık telefon oturumları listedeyse istek aynı işlemde yürütülür. Böylece iki telefonlu hocada biri boş bildirince öbürünün işi beklenir (plan.html#kararlar-hesap-silme). Panelden istek kişinin açık telefon oturumu yoksa hemen yapılır. Öğrenci hesabında silmeyi yürüten işlem yazmadan önce dogrulama:teyit anahtarını alır ve D07.yenidenDegerlendir(tx, { ogrenciId }, 'HESAP_SILINDI') çağırır.",
+"rate_limit": "Oturum başına sınır (D13 hizSinifi oturum)."
+}

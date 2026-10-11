@@ -1,0 +1,286 @@
+[
+ {
+  "key": "personel-modeli",
+  "question": "Yönetici ayrı bir kişi türü mü, yoksa e-postayla giren personel hesabına verilen bir rol mü; aynı kişi hem hoca hem yönetici olabilir mi?",
+  "why": "teknik.html Kişiler satırı yönetici, hoca, öğrenci diye üç tür sayıyor, oturum tablosu \"iki rol\" tutuyor ve \"Giriş kodları yalnız hocalarda\" diyor; oysa ilk yönetici e-posta koduyla giriyor ve bölüm başkanı büyük olasılıkla ders de veriyor. Kişi tablosu, oturumdaki rol alanı ve yetki denetimi buna göre şekillenir.",
+  "options": [
+   "Tek personel hesabı, ayrı rol tablosu {hoca, yönetici}; giriş kodu bütün personelde",
+   "Yönetici ayrı kişi türü, ayrı hesap ve ayrı e-posta",
+   "Yönetici, hoca hesabında bir bayrak"
+  ],
+  "recommendation": "Tek personel hesabı ve ayrı rol tablosu (personel_rolleri: hoca, yonetici). Giriş kodu ve oturum kuralları (30 gün, 1 saat, 24 saat, 3 cihaz) bütün personelde aynı. Oturum satırındaki rol yalnız öğrenci ya da personel ayrımını tutar; yetkiler her istekte rol tablosundan okunur, böylece geri alınan yönetici yetkisi açık oturumda da hemen düşer. teknik.html'deki \"Giriş kodları yalnız hocalarda\" cümlesi \"yalnız personelde\" olarak düzeltilir.",
+  "needs_owner": false
+ },
+ {
+  "key": "yonetici-kapsami",
+  "question": "Yönetici bütün üniversitede mi yetkilidir, yoksa yalnız kendi biriminde mi (hoca onayı, birim takvimi, dönem kilidi, devam oranları, yönetici ekleme)?",
+  "why": "Plan bölüm başkanının diğer yöneticileri ekleyeceğini ve takvimin birim bazında olduğunu söylüyor ama yetkinin kapsamını yazmıyor. Birimlere genişlemede bir bölüm başkanının başka fakültenin takvimini değiştirmesi ya da hocasını onaylaması engellenmezse yetki sızar.",
+  "options": [
+   "Tek düzey: her yönetici her şeyde yetkili",
+   "Kapsamlı yönetici: rol satırında birim kimliği ya da tüm",
+   "İki düzey: komutla açılan sistem yöneticisi ve birim yöneticisi"
+  ],
+  "recommendation": "Kapsamlı yönetici: rol satırında kapsam (tüm ya da birim kimliği). İlk yönetici komutla \"tüm\" kapsamla açılır; bir yönetici yalnız kendi kapsamı içinde yönetici ekler, hoca onaylar, takvim ve oran değiştirir. Birim ve bölüm alanları baştan modelde olduğundan (plan, Ölçeklenme yolu) maliyeti küçük, sonradan eklemek göç ister.",
+  "needs_owner": true
+ },
+ {
+  "key": "yonetici-ders-verisi",
+  "question": "Yönetici hocaların derslerini, yoklama kayıtlarını ve raporlarını görebilir ya da hoca adına işlem yapabilir mi?",
+  "why": "Plan yöneticinin işlerini (hoca onayı, yönetici ekleme, takvim, kilit, oranlar, oturum kapatma) sayıyor, ders verisini saymıyor; \"başka hocanın dersini görme\" bir ret senaryosu. Yetki tablosu ve senaryolar bu bilinmeden yazılamaz.",
+  "options": [
+   "Yönetici ders verisini görmez, yalnız sayılan işleri yapar",
+   "Yönetici kapsamındaki derslerin rapor ve AKSİS özetini yalnız okur",
+   "Yönetici hoca adına da işlem yapar"
+  ],
+  "recommendation": "İlk sürümde yönetici ders verisini görmez; devam oranı gibi ders ayarı gerektiren iş yalnız o alana dokunur. Veri amaçla sınırlı ilkesine (plan, İndirme) ve \"başka hocanın dersini görme\" ret senaryosuna uyar; ihtiyaç doğarsa sonra salt okuma eklenir.",
+  "needs_owner": true
+ },
+ {
+  "key": "basvuru-durumlari",
+  "question": "Personel hesabının durumları ve geçişleri nedir: e-postası doğrulanmamış başvuru ne kadar yaşar, yönetici başvuruyu reddedebilir mi, reddedilen ya da pasifleştirilen kişi yeniden başvurabilir mi, hangi durumda hangi e-posta gider?",
+  "why": "Plan yalnız başvuru, \"onay bekliyor\", onay, pasif ve silinme durumlarını geçerken anıyor; ret, süre aşımı ve yeniden başvuru yazılmamış. Durum alanının CHECK listesi, kod isteğine verilecek tek tip cevap ve e-posta şablonları buna bağlı.",
+  "options": [
+   "kod_bekliyor, onay_bekliyor, aktif, pasif, reddedildi, silindi",
+   "Ret yok: yönetici yalnız onaylar, onaylanmayan başvuru bir süre sonra silinir"
+  ],
+  "recommendation": "Durumlar: kod_bekliyor (e-posta doğrulanmamış, 24 saat sonra silinir), onay_bekliyor, aktif, pasif, reddedildi, silindi. Ret yöneticiden gerekçe kodu ister ve denetim kaydına yazılır. Reddedilene ve pasife kod gitmez, kod isteğine yine aynı cevap döner. Reddedilen aynı adresle yeniden başvurabilir, yeni onay gerekir. Ret e-postası gidip gitmeyeceği sahibin kararı. Onayda kısa, bağlantısız \"hesabın onaylandı\" e-postası önerilir; onay bekleyen kod isteyince \"onay bekliyor\" e-postası alır (plan).",
+  "needs_owner": true
+ },
+ {
+  "key": "basvuru-uclari",
+  "question": "Hoca başvurusu hangi uçlarla yapılır; başvuru kodu giriş kodunun tablosunu ve kurallarını (5 dakika, 3 yanlış, dakikada 1, saatte 5, günde 10) paylaşır mı?",
+  "why": "teknik.html kimlik modülüne yalnız beş uç veriyor (kod iste, kodla gir, çık, oturumlarım, oturumu kapat); başvuru ve e-posta doğrulaması için uç yok. Aynı kodun iki amaçla karışması ya da ayrı kurallar, tutarsız sınırlar ve sızıntı doğurur.",
+  "options": [
+   "Ayrı başvuru ucu; kod giriş kodu tablosunda amaç alanıyla, kurallar ortak",
+   "Ayrı başvuru tablosu ve ayrı kurallar"
+  ],
+  "recommendation": "POST /v1/kimlik/basvuru (ad-soyad, birim ve bölüm, e-posta) kod üretir; kod giriş kodu tablosunda amac=basvuru ile durur, sayısal kurallar ve adres başına sınırlar ortaktır. Doğrulama POST /v1/kimlik/basvuru/dogrula ile; doğrulanınca durum onay_bekliyor olur, oturum açılmaz. Başvuru da her durumda aynı cevabı verir: adres kayıtlıysa yeni hesap açılmaz, kayıtlı adrese duruma uygun e-posta gider.",
+  "needs_owner": false
+ },
+ {
+  "key": "kayitsiz-adres",
+  "question": "Kod isteği kayıtsız, reddedilmiş, pasif ya da silinmiş bir adres için gelirse sunucu e-posta gönderir mi, ne gönderir; \"aynı hız\" nasıl sağlanır?",
+  "why": "Plan cevabın her durumda aynı olmasını ve onay bekleyene \"onay bekliyor\" e-postası gitmesini söylüyor, diğer durumları yazmıyor. Sessiz kalmak hocayı \"kod gelmiyor\" diye bırakır; her adrese e-posta göndermek yabancı adreslere e-posta yağdırmaya açılır. Veritabanı işi duruma göre değişirse cevap süresi adresin varlığını sızdırır.",
+  "options": [
+   "Kayıtsız adrese hiç e-posta gitmez",
+   "Kayıtsız adrese \"bu adresle hesap yok, uygulamadan başvur\" e-postası, aynı sınırlarla",
+   "Yalnız pasif ve silinmiş hesaba bilgi e-postası"
+  ],
+  "recommendation": "Kayıtsız @istanbul.edu.tr adresine kısa, bağlantısız \"hesap yok, başvuru yolu\" e-postası (adres başına aynı dakika, saat, gün sınırıyla); pasif ve reddedilmişe e-posta gitmez; silinmiş adres kayıtsız sayılır. Cevap her durumda aynı gövdeyle döner; sunucu sınır satırını her durumda yazar, cevabı sabit bir alt süreye (ör. 400 ms) bekletir ve e-postayı cevaptan sonra gönderir.",
+  "needs_owner": true
+ },
+ {
+  "key": "bekleme-formulu",
+  "question": "\"Art arda yanlışta bekleme uzar, kendiliğinden kalkar\" kuralının sayıları nedir: sayaç neye bağlı, ilk bekleme, artış, üst sınır ve sıfırlanma?",
+  "why": "Sayılar yazılmadan kural test edilemez; anahtar yanlış seçilirse ya hoca kolayca kilitlenir ya da tahmin saldırısı yavaşlamaz.",
+  "options": [
+   "Adres başına ardışık yanlış sayısı, ikinin katlarıyla artan bekleme",
+   "Adres ve IP çifti başına",
+   "Sabit bekleme"
+  ],
+  "recommendation": "Adres başına ardışık yanlış sayacı PostgreSQL'de (plan, Ölçeklenme yolu: giriş kodu sayaçları PostgreSQL'de). 3. yanlıştan sonra bekleme 30 saniye, her yanlışta iki katı, üst sınır 15 dakika; başarılı girişte ya da 24 saat yanlış gelmeyince sıfırlanır. Bekleme sırasında gelen deneme sayılmaz, aynı genel hatayı ve kalan süreyi alır. IP'ye bağlanmaz (kampüs NAT'ı). İnceleme hesabına da aynı kural.",
+  "needs_owner": false
+ },
+ {
+  "key": "kod-siniri-penceresi",
+  "question": "\"Dakikada 1, saatte 5, günde 10 kod\" kayan pencere mi, takvim günü mü; \"onay bekliyor\" ve başvuru e-postaları bu sayıya girer mi; sınır aşılınca ne döner?",
+  "why": "Takvim günü İstanbul gece yarısında arka arkaya 20 koda izin verir; şablonlu e-postalar sayılmazsa bir adrese sınırsız e-posta yollanabilir.",
+  "options": [
+   "Kayan pencere, bütün kimlik e-postaları birlikte sayılır",
+   "Takvim günü (Europe/Istanbul)",
+   "Yalnız giriş kodları sayılır"
+  ],
+  "recommendation": "Kayan pencere (son 60 saniye, 60 dakika, 24 saat), giriş kodu tablosundaki satırlardan sayılır; giriş kodu, başvuru kodu, \"onay bekliyor\" ve \"hesap yok\" e-postaları aynı sayaca girer. Sınır aşılınca cevap yine aynıdır, e-posta gitmez. Giriş bildirimi bu sayaca girmez.",
+  "needs_owner": false
+ },
+ {
+  "key": "acik-kodlar",
+  "question": "Yeni kod istenince önceki süresi dolmamış kod geçerli kalır mı; 3 yanlış deneme kod başına mı adres başına mı sayılır?",
+  "why": "\"Kod ulaşmazsa hoca yenisini ister\"; gecikmeli gelen eski kodu girmek başarısız olursa hoca boşuna bekler. Sayımın yeri tahmin bütçesini belirler.",
+  "options": [
+   "Yalnız son kod geçerli",
+   "Süresi dolmamış bütün kodlar geçerli, yanlışlar adres başına ortak sayılır"
+  ],
+  "recommendation": "Süresi dolmamış bütün kodlar geçerli; yanlış deneme sayacı adresin açık kodlarında ortak tutulur, 3 yanlışta adresin bütün açık kodları düşer; bir kodla giriş başarılı olunca adresin öbür açık kodları da kullanılmış sayılır. Günde en çok 10 kod ve 3 yanlış, adres başına günde en çok 30 tahmin eder (1 milyonda).",
+  "needs_owner": false
+ },
+ {
+  "key": "kodla-gir-bicimi",
+  "question": "Kodla gir isteği neyi taşır ve yanlış, süresi dolmuş, kullanılmış, beklemedeki durumlar cevapta nasıl ayrılır?",
+  "why": "Hata cevapları farklı olursa adresin varlığı ve durumu sızar; tamamen aynı olursa kullanıcıya \"yeni kod iste\" ya da \"bekle\" denemez. Telefon Bearer anahtarı, panel çerez almalı; istemci türü istekten bilinmeli.",
+  "options": [
+   "E-posta, kod ve istemci türü; tek genel hata kodu",
+   "Kod isteğinin verdiği opak istek kimliği ve kod"
+  ],
+  "recommendation": "E-posta (sunucuda normalleştirilir), 6 rakam ve istemci türü (telefon ya da panel; telefonda platform ve model). Yanlış, süresi dolmuş ve kullanılmış için tek hata kodu (ör. kod_gecersiz) ve aynı süre; bekleme sürüyorsa yalnız kalan süre döner. Başarıda panele çerez, telefona gövdede oturum anahtarı ve bitiş zamanı döner.",
+  "needs_owner": false
+ },
+ {
+  "key": "cihaz-etiketi",
+  "question": "Oturumlarım listesi ve giriş bildirimi için \"cihaz ya da tarayıcı türü\" nereden gelir; oturum satırında hangi alanlar tutulur, IP saklanır mı?",
+  "why": "Plan bildirimde cihaz ya da tarayıcı türü istiyor; tasarim.html örneği \"Tarayıcı: Edge, Windows\" yazıyor (öneri metni). Kaynağı ve saklanan alanlar belli değil; IP saklamak ayrıca kişisel veri ve plan istemiyor.",
+  "options": [
+   "Panelde User-Agent'tan küçük kendi eşleştirmemiz, telefonda uygulamanın gönderdiği platform ve model",
+   "Hazır User-Agent çözümleme paketi",
+   "Yalnız telefon ya da panel yazılır"
+  ],
+  "recommendation": "Oturum satırında istemci (telefon, panel) ve kısa cihaz etiketi: panelde User-Agent'tan bilinen birkaç tarayıcı ve sistem adı (yeni paket yok, bilinmeyen \"Tarayıcı\"), telefonda giriş isteğinde gelen platform ve model. IP saklanmaz. Oturumlarım oluşturma ve son kullanım zamanını gösterir.",
+  "needs_owner": false
+ },
+ {
+  "key": "oturum-yenileme",
+  "question": "Telefonun bitmeden 3 gün önceki yenilemesi yeni oturum mu açar, kendi oturumunun yerine mi geçer; yenileme 4. cihaz sayılıp başka bir oturumu kapatır mı?",
+  "why": "Yenileme yeni giriş sayılırsa bir telefonu ve iki paneli olan hocanın yenilemesi bir panel oturumunu kapatır ve gereksiz \"en eski oturum kapandı\" bildirimi gider; Aşama 2'nin cihaz anahtarı sırası oturuma bağlanırsa o da değişir.",
+  "options": [
+   "Yenileme geçerli Bearer anahtarını da taşır, sunucu aynı işlemde eskisini kapatıp yenisini açar, sayım dışı",
+   "Her giriş bağımsız, 3 cihaz kuralı aynen işler"
+  ],
+  "recommendation": "Kodla gir isteği isteğe bağlı olarak geçerli Bearer anahtarını taşır; aynı kişinin geçerli telefon oturumuysa yeni oturum onun yerine geçer (kapanma nedeni yenilendi), 3 cihaz sayımı ve en eski oturumu kapatma çalışmaz. Eşzamanlı girişlerde sayım kişi satırında SELECT FOR UPDATE ile tek sırada yapılır.",
+  "needs_owner": false
+ },
+ {
+  "key": "en-eski-oturum",
+  "question": "4. girişte kapanan \"en eski\" oturum oluşturma zamanına göre mi, son kullanıma göre mi seçilir?",
+  "why": "Son kullanıma göre seçmek her gün kullanılan eski oturumu korur, oluşturmaya göre seçmek planın sözüne ve bildirim metnine uyar; testin beklentisi buna bağlı.",
+  "options": [
+   "Oluşturma zamanı",
+   "Son kullanım zamanı"
+  ],
+  "recommendation": "Oluşturma zamanı (planın \"en eski\" sözü); önce panel oturumları, panel yoksa telefon. Bildirim e-postası kapanan oturumun cihaz etiketini yazar.",
+  "needs_owner": false
+ },
+ {
+  "key": "kuyruk-sahipligi",
+  "question": "Hoca oturumu bittikten ya da çıkış yaptıktan sonra telefonda kalan işler (kafa sayısı, erken kapatma, süre değişikliği, elle ekleme, makbuz okutma) hangi oturumla kabul edilir; telefona başka bir hesap girerse ne olur?",
+  "why": "Plan işlerin \"girişten sonra gider\"ini söylüyor ama işin hangi hocaya ait olduğu gönderen oturumdan çıkarılırsa başka hesapla girilen telefonda eski hocanın işleri yanlış hesaba yazılır ya da 403 bütün kuyruğu durdurur.",
+  "options": [
+   "Her iş oluşturan kişinin kimliğini taşır, sunucu yalnız aynı kişinin oturumundan kabul eder",
+   "İş gönderen oturumun sahibine yazılır"
+  ],
+  "recommendation": "Her hoca işi oluşturan kişinin kimliğini taşır; sunucu işi yalnız aynı kişinin geçerli oturumundan kabul eder, uyuşmazlıkta o işe ayrı sonuç (ret, gerekçe kodu) döner, kuyruk durmaz. Telefon başka hesap girişinde önceki hesabın işlerini göndermez; o hesap yeniden girince gider. Protokol ayrıntısı D06 ile ortak.",
+  "needs_owner": false
+ },
+ {
+  "key": "islem-tanimi",
+  "question": "Paneldeki 1 saatlik işlemsizliği hangi istekler sıfırlar; panelin kendiliğinden yaptığı yenileme istekleri sayılır mı; son kullanım her istekte mi yazılır?",
+  "why": "TanStack Query arka planda istek atarsa kürsüde açık kalan panel hiç işlemsiz kalmaz ve plandaki asıl önlem (1 saat) çalışmaz; her istekte yazmak da gereksiz yazma yükü.",
+  "options": [
+   "Her istek sayılır",
+   "Yalnız kullanıcı kaynaklı istekler sayılır, arka plan istekleri başlıkla işaretlenir"
+  ],
+  "recommendation": "Panelin kendiliğinden attığı istekler bir başlıkla (ör. x-arka-plan: 1) işaretlenir ve son kullanımı ilerletmez; kullanıcı istekleri ilerletir. Son kullanım en çok dakikada bir yazılır. Telefonda son kullanım yalnız bilgi içindir, süreyi uzatmaz. Süre denetiminde saat ortak saat arayüzünden gelir, SQL now() kullanılmaz.",
+  "needs_owner": false
+ },
+ {
+  "key": "kanca-ciktisi",
+  "question": "Oturum doğrulama kancası öğrenci, hoca ve yönetici için isteğe ne ekler ve her ucun gerektirdiği yetki nerede bildirilir?",
+  "why": "teknik.html kancanın \"hocanın kimliğini\" eklediğini söylüyor; oysa öğrencinin oturum anahtarı da aynı yoldan geliyor ve yönetici uçları ayrı yetki ister. Yetki denetimi her modülde elle yazılırsa unutulan uç açık kalır.",
+  "options": [
+   "Rota tablosunda her uca zorunlu yetki alanı, ortak ön işleyici denetler",
+   "Her modül kendi denetimini yazar"
+  ],
+  "recommendation": "Kanca isteğe { kisiId, tur: ogrenci|personel, roller, oturumId, istemci, cihazId } ekler. packages/contracts rota tablosunda her uç zorunlu yetki alanı taşır (girissiz, ogrenci, personel, hoca, yonetici); ortak ön işleyici denetler, yetki alanı olmayan rota kaydedilmez (testle). Kaynak düzeyindeki denetim (bu dersin hocası mı) modül servisinde kalır. Ayrıntı D13 ile ortak.",
+  "needs_owner": false
+ },
+ {
+  "key": "kayit-sorusu",
+  "question": "Öğrenci kaydında, cihaz değişiminde ve App Attest anahtar yenilemesinde cihaz kanıtına konacak sunucu sorusu (challenge) nasıl alınır, ne kadar geçerlidir?",
+  "why": "Android anahtar kanıtı ve App Attest kanıtı sunucunun verdiği tek kullanımlık değeri içermezse eski kanıt yeniden oynatılabilir; planda bu uç yok.",
+  "options": [
+   "Ayrı soru ucu, tek kullanımlık, kısa ömürlü",
+   "İstemcinin ürettiği değer"
+  ],
+  "recommendation": "POST /v1/kimlik/ogrenci/kayit-sorusu 32 bayt rastgele değer döner; sunucuda özeti, amacı (kayit, cihaz_degisimi, anahtar_yenileme) ve 5 dakikalık süresiyle tutulur, ilk kullanımda tüketilir. Kanıtın doğrulanması D07'nin dış yüzünde.",
+  "needs_owner": false
+ },
+ {
+  "key": "kayit-istegi",
+  "question": "Öğrenci kayıt isteği hangi alanları taşır ve cevap hangi durumları ayırır?",
+  "why": "Plan numara, isim ve cihaz bağlamayı söylüyor; isteğin alanları (anahtar kanıtı, iPhone'da iki açık anahtar, isSystemUser, uygulama sürümü) ve öğrencinin göreceği durumlar yazılmamış.",
+  "options": [
+   "Tek uç: numara, isim, platform, soru, kanıt, açık anahtarlar, isSystemUser; cevap oturum anahtarı ve durum"
+  ],
+  "recommendation": "POST /v1/kimlik/ogrenci/kayit: ogrenciNo (metin, 9 ya da 10 rakam), adSoyad, platform, soru, kanıt (Android sertifika zinciri; iPhone App Attest kanıtı ve Secure Enclave açık anahtarı), isSystemUser (Android), uygulama sürümü. Cevap: oturum anahtarı (yalnız bu cevapta), cihaz kimliği ve durum: teyit_bekliyor, isim_uyusmuyor, listede_yok, cakisma ya da degisim_gerekli (numara teyitli bir hesapta). Numara biçim hatası 400.",
+  "needs_owner": false
+ },
+ {
+  "key": "isim-bicimi",
+  "question": "Öğrencinin girdiği isim tek alan mı (ad soyad), ad ve soyad ayrı mı; isim birden çok listede farklı yazılmışsa hangisi esas alınır; hoca ekranlarında hangi isim görünür?",
+  "why": "Gerçek AKSİS liste örneği açık nokta; isim alanının biçimi eşleştirme fonksiyonunu, teyit ekranını ve öğrencinin yazdığı ismin saklanıp saklanmayacağını belirler.",
+  "options": [
+   "Tek alan ad soyad, herhangi bir etkin liste satırıyla eşleşme yeter",
+   "Ad ve soyad ayrı alanlar",
+   "Yalnız numara eşleşir, isim yalnız bilgi"
+  ],
+  "recommendation": "Tek alan; eşleşme numara ve normalleştirilmiş isimle, öğrencinin bulunduğu herhangi bir etkin liste satırıyla. Hoca ekranlarında liste satırındaki isim görünür; öğrencinin yazdığı isim yalnız eşleşmede ve uyuşmazlıkta teyit ekranında kullanılır. Liste biçimi D03'te kesinleşince alan bölünebilir.",
+  "needs_owner": false
+ },
+ {
+  "key": "bekleyen-kayit-omru",
+  "question": "Hiçbir listede olmayan bekleyen kayıt ne kadar bekler; rastgele ya da başkasının numarasıyla kayıt açılması nasıl sınırlanır?",
+  "why": "Kayıt girişsiz bir uç; başkasının numarasıyla önceden kayıt açmak gerçek öğrenciyi çakışmaya düşürür, sınırsız bekleyen kayıt tabloyu doldurur.",
+  "options": [
+   "Dönem kilidine kadar bekler; IP, cihaz ve numara başına sınır",
+   "Süresiz bekler"
+  ],
+  "recommendation": "Bekleyen kayıt dönem kilidine kadar bekler, sonra cihazı kapanır ve oturumu biter. Kayıt ucu girişsiz uçların IP sınırında; bir cihaz anahtarı tek hesaba bağlanır; aynı numarada en çok 3 bekleyen kayıt açılır, fazlası ret. Çakışmayı hoca yüz yüze çözer ({B:numara-cakismasi}).",
+  "needs_owner": false
+ },
+ {
+  "key": "numara-cakismasi",
+  "question": "Teyitli bir hesabın numarasıyla yeni kayıt gelirse ne olur; hoca çakışan iki teyitsiz kayıttan birini nasıl seçer, seçilmeyene ne olur?",
+  "why": "Plan iki kişinin aynı numarayı istemesini \"ikisi de beklemede, hoca karar verir\" diye çözüyor ama teyitli hesaba gelen yeni kaydın cihaz değişimi mi sahtecilik mi olduğu ve toplu teyitte çakışmaların nasıl ayrılacağı yazılmamış.",
+  "options": [
+   "Teyitli numaraya gelen kayıt cihaz değişimi talebi sayılır, hoca yüz yüze onaylar",
+   "Ayrı çakışma kaydı, toplu teyit dışında tek tek karar"
+  ],
+  "recommendation": "Teyitli numaraya gelen kayıt yeni hesap açmaz, cihaz değişimi talebi olarak açılır (degisim_gerekli). Teyitsiz iki kayıt çakışırsa ikisi de toplu teyitten çıkar, teyit ekranında yan yana ve işaretli görünür; hoca birini teyit eder, öbürü reddedilir, cihazı kapanır, kayıtları D07 kuralıyla ret alır.",
+  "needs_owner": true
+ },
+ {
+  "key": "teyit-reddi",
+  "question": "Hoca teyidi reddedebilir mi, ret ne yapar; hangi hoca hangi öğrenciyi teyit edebilir?",
+  "why": "Plan yalnız teyidi anlatıyor; \"Başkasının numarasıyla kayıt olmak: hoca teyidi\" bir ret yolu varsayıyor ama sonucu yazmıyor. Yetki sınırı \"başka hocanın dersini görme\" ret senaryosuyla birlikte test edilmeli.",
+  "options": [
+   "Teyit ve ret iki eylem; yetki: öğrencinin etkin liste satırı olan dersin hocası",
+   "Yalnız teyit, ret yok"
+  ],
+  "recommendation": "Teyit ve ret iki eylem. Yetki: öğrencinin etkin (pasif olmayan) liste satırı bulunan herhangi bir dersin hocası. Ret gerekçe koduyla (ör. bu_ogrenci_degil) hesabı reddedildi yapar, cihazı kapatır, beklemedeki kayıtları ret alır; denetim kaydına yazılır. Telefonu doğrulanamayan öğrenci toplu teyide girmez, tek tek onaylanır.",
+  "needs_owner": true
+ },
+ {
+  "key": "teyit-kararlari",
+  "question": "Teyit anında öğrencinin beklemedeki bütün kayıtları aynı işlemde mi yeniden karara bağlanır; toplu teyitte işlem boyu nasıl sınırlanır?",
+  "why": "Plan kararların ilgili olayda (teyit) aynı işlemde verildiğini söylüyor; 100 öğrencilik toplu teyit yüzlerce kaydı tek işlemde yeniden değerlendirir, uzun kilit ve zaman aşımı riski taşır.",
+  "options": [
+   "Aynı işlemde, istek başına öğrenci sayısı sınırlı",
+   "Teyit hemen, kararlar iş kuyruğunda sonra"
+  ],
+  "recommendation": "Aynı işlemde: teyit, D07'nin dış yüzündeki yeniden karar fonksiyonunu tx ile çağırır. Toplu teyit isteği en çok 200 öğrenci alır, panel büyük listeyi parçalar. İş kuyruğu kullanılmaz (plan: kararlar olay anında, gece işi kararı değiştirmez).",
+  "needs_owner": false
+ },
+ {
+  "key": "kayit-kodu",
+  "question": "Tek kullanımlık kayıt kodu baştan mı gelir; gelirse uzunluğu, deneme sınırı, kimin ürettiği ve kodla kayıtta teyidin gerekip gerekmediği nedir?",
+  "why": "plan.html açık noktalarda bu soru açık; kurallar (güvenli rastgele, tek numaraya bağlı, 72 saat, sınırlı deneme) yazılmış ama sayılar ve teyitle ilişkisi yok.",
+  "options": [
+   "Önce yalnız hoca teyidi, kod sonra",
+   "Baştan kod, kodla kayıt teyit sayılır",
+   "Baştan kod, teyit yine gerekir"
+  ],
+  "recommendation": "İlk sürüm hoca teyidiyle başlar; tablo ve uç baştan tasarlanır ki geçiş göçsüz olsun. Kod gelirse: 8 karakter Crockford base32 (40 bit), 5 yanlış denemede düşer, 72 saat geçerli, hoca panelden ya da telefondan tek numara için üretir; kodla yapılan kayıt teyitli sayılır, denetim kaydına kodu üreten hoca yazılır.",
+  "needs_owner": true
+ },
+ {
+  "key": "degisim-adimlari",
+  "question": "Cihaz değişimi sunucuda hangi adımlarla yürür: yeni telefon nasıl tanıtılır, hoca hangi bilgiyle onaylar, eski cihaz ve oturum ne zaman kapanır, kim onaylayabilir?",
+  "why": "Plan değişimin yüz yüze, kimlik görülerek hoca onayıyla olduğunu söylüyor; durumlar, mesajlar ve uçlar yazılmamış, brief.md de öğrenci ekranlarını belirsiz bırakıyor.",
+  "options": [
+   "Yeni telefon talep açar ve ekranda QR gösterir, hoca uygulamada okutup onaylar",
+   "Hoca listeden öğrenciyi seçip süreli izin verir, öğrenci yeni telefonda kayıt olur",
+   "Hoca yeni telefondaki kısa kodu elle yazar"
+  ],
+  "recommendation": "Yeni telefon kayıt sorusuyla talep açar (yeni cihaz durumu degisim_bekliyor) ve QR'da talep kimliği ile 128 bitlik tek kullanımlık değer gösterir; hoca hoca modunda okutur (makbuz kamerası zaten var), ekranda numara ve liste ismi görür, kimliği görüp onaylar. Onay internetle ve tek işlemde: eski cihaz kapanır (neden degisim), eski öğrenci oturumu kapanır, yeni cihaz etkin olur, bekleyen kayıtlar birlikte karara bağlanır. Talep 15 dakikada düşer. Onaylayan: öğrencinin etkin liste satırı olan bir dersin hocası.",
+  "needs_owner": false
+ }
+]

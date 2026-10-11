@@ -1,0 +1,94 @@
+D09.summary: duzeltmeler modülü hocanın düzeltmelerini (Görevli, Belgeli düzeltme, beyana dayalı, elle ekleme), Kendi beyanı, İncelemede ve işaretli oturum kararlarını, ilk kayıt teyidi listesini ve öğrencinin sorun bildirimlerini yürütür. Kayıt kararını ve teyit alanını kendisi yazmaz: karar D07.kararDegistir, teyit D01 ile aynı veritabanı işleminde değişir; D09 yalnız kendi dört tablosuna yazar. Bütün modüllerin tek denetim tablosu denetim_kayitlari bu modüldedir, tek yazma yolu yaprak denetimeYaz işlevidir ve uygulama rolleri bu tabloda ve düzeltmelerde yalnız ekler ve okur. Sebep kodu kataloğu ve son durum önceliği packages/core/src/duzeltmeler içinde saf tablo ve işlevdir; sunucu, panel ve telefon aynısını kullanır. Gece inceleme sıralaması hiçbir kararı değiştirmeden her hocaya o günün küçük partisini yazar.
+
+D09.tables[0].columns[1].name: islem_id
+
+D09.tables[0].indexes[9]: duzeltmeler_islem_id_idx: (islem_id)
+
+D09.tables[1].columns[19].name: kapanis_islem_id
+
+D09.tables[1].constraints[4]: sorun_bildirimleri_kapanis_ani_ck: (durum IN ('DUZELTILDI','DEGISIKLIK_YOK')) = (kapatan_kisi_id IS NOT NULL) AND (kapatan_kisi_id IS NULL) = (kapanis_ani IS NULL) AND (kapanis_islem_id IS NULL OR kapanis_ani IS NOT NULL)
+
+D09.tables[1].constraints[6]: Yetki: yoklama_api ve yoklama_isci SELECT, INSERT ve yalnız UPDATE (durum, kapatan_kisi_id, kapanis_ani, kapanis_islem_id); DELETE ve TRUNCATE yok
+
+D09.tables[2].columns[8].name: islem_id
+
+D09.tables[2].indexes[6]: denetim_kayitlari_islem_id_idx: (islem_id) WHERE islem_id IS NOT NULL; tekrar tanıma
+
+D09.endpoints[0].request.islemId: uuid, UUIDv7 (z.uuidv7); isteğin işlem kimliği, bütün satırların islem_id'si
+
+D09.endpoints[0].response.Duzeltme: { id, islemId, tur, sebepKodu, sonDurum, dersId, oturumId, listeSatiriId, kayit, belgeNo, teoriSaat, uygulamaSaat, oncekiDuzeltmeId, sorunBildirimiId, kaynak, yapanKisiId, istemciAni, olusturmaAni } (anlar ISO 8601 UTC metni)
+
+D09.endpoints[5].idempotency: islemId ve kayıt: aynı islemId ile aynı kayda yazılmış duzeltmeler.kendi_beyani_karari olayı varsa ZATEN_VAR. Onay D07.kararDegistir(tx, kayit, 'VAR', kaynak), ret 'RET'; olay, D08 hesap işi ve öğrenci durum sürümü aynı işlemde.
+
+D09.endpoints[7].idempotency: islemId ve öğrenci: aynı islemId ile yazılmış duzeltmeler.teyit_karari olayı varsa ZATEN_VAR. Teyit D01.ogrenciTeyitEt, ret D01.ogrenciTeyidiniReddet ile aynı işlemde; beklemedeki kayıtları D01 aynı işlemde D07'ye karara bağlatır.
+
+D09.endpoints[9].request.kural: INCELEME: beklenenKarar INCELEMEDE, ONAY Var, RET Ret. ISARETLI_OTURUM: beklenenKarar VAR, yalnız RET. Gerekçeyi D07 kataloğu verir (D07-B01 önerileri HOCA_ONAYLADI, INCELEME_REDDEDILDI; işaretli oturumda öneri YOKLAMADA_SINIFTA_DEGIL)
+
+D09.endpoints[9].idempotency: islemId ve kayıt: aynı islemId ile yazılmış duzeltmeler.inceleme_karari ya da isaretli_oturum_karari olayı varsa ZATEN_VAR; beklenenKarar tutmazsa ZATEN_KARAR_VERILMIS (ikinci cihaz üzerine yazamaz).
+
+D09.endpoints[10].response.ogeler: dizi: { oturumId, dersId, dersAdi, baslangicAni, kafaSayisi, kayitSayisi, ilkIsaretAni, kesinlesti, partiSirasi (ya da null) } (değerler D07.oturumIsaretleri'nden)
+
+D09.endpoints[11].errors[2]: DUZELTMELER_ZATEN_INCELENDI (409: başka islemId ile incelenmiş)
+
+D09.endpoints[11].idempotency: Aynı islemId ile tekrar 200 ve aynı cevap (duzeltmeler.isaretli_oturum_incelendi olayından okunur).
+
+D09.endpoints[13].idempotency: kapanis_islem_id = islemId ise 200 ve aynı satır; UPDATE ... WHERE durum = 'ACIK' tek satır değiştirmezse 409. Olay ve öğrenci durum sürümü aynı işlemde.
+
+D09.endpoints[15].response.ogeler: DenetimOlayi[]: { id, olayTuru, olayAni, yapan: { tur, kisiId, rol, adSoyad }, istemci, islemId, istemciAni, donemId, dersId, oturumId, ogrenciId, listeSatiriId, kayit, hedef, kod, onceki, sonraki, ayrinti }
+
+D09.jobs[0].does: 1) Adayları toplar: karar verilebilir İncelemede kayıtlar (D05 süzgeci; kilitli birim döneminde yalnız kilitten sonra ulaşanlar; yapıldı cevabı gelmemiş ya da yapılmadı denen oturumun kayıtları hariç), ACIK sorun bildirimleri, dersten sonra işaretlenmiş ve incelenmemiş oturumlar (D07.oturumIsaretleri). 2) Her öğeyi dersin bugünkü hocasına bağlar (D02.dersGetir). 3) Kritikliği bulur: kayda bağlı öğede D08.sonucuDegistirebilirMi; kayıtsız bildirimde D08.ogrenciDevamDurumu'nun tür başına kalan hakkı ile oturumun o türdeki saati (kalan hak 0'ın altında ve kalan hak artı saat en az 0); işaretli oturum kritik sayılmaz. 4) packages/core/src/duzeltmeler/parti.ts partiSec ile sıralar: kritik önce, sonra oturum başlangıcı, bekleme başlangıcı, öğe türü (INCELEME, SORUN_BILDIRIMI, ISARETLI_OTURUM), öğe kimliği; parti boyu kadarını (varsayılan 20) yazar. 5) 30 günden eski partileri siler. 6) Hoca, öğe, kritik öğe ve devreden öğe sayısını ve dünkü partiden çözülen öğe oranını loglar (iç kimlik ve isim yok). Karar, bildirim ve düzeltme değiştirmez.
+
+D09.state_machines[2].name: D09'un tetiklediği kayıt kararı geçişleri (sütunlar D05'in, geçiş D07.kararDegistir)
+
+D09.state_machines[2].transitions[1].when: Aynı koşullar; gerekçe D07 kataloğundan (D07-B01 önerisi KENDI_BEYANI_REDDEDILDI), son durum Yok, seviye yeniden hesaplanır.
+
+D09.state_machines[2].transitions[2].when: beklenenKarar tutar, D07 karara izin verir (kilitte donmamış); gerekçe D07 kataloğundan (öneri HOCA_ONAYLADI); aynı oturumda sayılan kayıt varsa kayıt sayılmayan Var kalır.
+
+D09.state_machines[2].transitions[3].when: beklenenKarar tutar; gerekçe D07 kataloğundan (öneri INCELEME_REDDEDILDI).
+
+D09.state_machines[2].transitions[4].when: Oturumda dersten sonra çıkmış, incelenmemiş kafa sayısı işareti var; gerekçeyi D07 verir.
+
+D09.invariants[0]: Uygulama rolleri (yoklama_api, yoklama_isci) duzeltmeler ve denetim_kayitlari tablolarında yalnız SELECT ve INSERT yapar; sorun_bildirimleri'nde yalnız durum, kapatan_kisi_id, kapanis_ani ve kapanis_islem_id sütunlarını günceller; üç tabloda DELETE ve TRUNCATE yoktur. Silme ve anonimleştirme yalnız saklama süresi dolunca sahip rolle olur (D12 saklama işi, D09 işleyicisi).
+
+D09.invariants[7]: D09 kayıt kararını, teyit alanını ve devam sonucunu kendisi yazmaz: karar D07.kararDegistir, teyit D01.ogrenciTeyitEt ve ogrenciTeyidiniReddet, hesap D08.devamHesaplaIsiKoy ile aynı veritabanı işleminde istenir.
+
+D09.invariants[8]: D09 uçlarından ve kuyruk öğelerinden geçen her yazma aynı işlemde bir duzeltmeler.* denetim olayı yazar; olay yazılamazsa işlem geri alınır. Tekrar gelen istek bu olayların islem_id'siyle tanınır.
+
+D09.invariants[17]: Kayıt kararının gerekçe kodlarını D07 seçer; D09 D07.kararDegistir'e yalnız kaynağı (tür HOCA, kişi, işlem: KENDI_BEYANI_ONAY, KENDI_BEYANI_RET, INCELEME_ONAY, INCELEME_RET, ISARETLI_OTURUM_RET, işlem kimliği) verir ve gerekçe sabitlerini D07 sözleşmesinden okur.
+
+D09.invariants[18]: Dönem kilidinden sonra düzeltme açık kalır ve sonradan değişenler listesinde kaynağıyla görünür; kilitte donan kararlar listelenmez, D07'nin izin vermediği karar isteği DUZELTMELER_DONEM_KILITLI alır.
+
+D09.invariants[20]: D09 başka modülün tablosuna yazmaz, yalnız şu dış yüzleri çağırır: D01 kisiGetir, ogrenciHesabiGetir, cihazGetir, yetkiDenetle, ogrenciTeyitEt, ogrenciTeyidiniReddet; D02 dersGetir, dersYetkisi, dersSubeleri, oturumGetir, oturumlariGetir, oturumSubeleri, birimDonemiGetir, kilitDurumu; D03 listeSatirlari, satirGetir, ogrencininEtkinSatirlari; D05 kayitGetir, oturumKayitlari, sayilanKayitlar; D06 ogeTuruKaydet, indirmeKaynagiKaydet, ogrenciDurumuDegisti, gondermeSuresiSonu, kararTeslimAni; D07 kararDegistir, oturumIsaretleri, isaretIncelendi, cihazDogrulanmadiMi; D08 devamHesaplaIsiKoy, dersSonuclari, ogrenciDevamDurumu, sonucuDegistirebilirMi; D10 aksisAnligiGetir; D12 islem, saklamaIsleyicisiKaydet, kisitAdi; D13 rotalariKaydet, uygulamaHatasi, istekKimligi, hizSinifi; D14 isTanimla. Saat arayüzü (infra/saat) ve ayarlar bileşim kökünden parametreyle gelir.
+
+D09.exports[0].purpose: [yaprak] modules/duzeltmeler/yaprak.ts. Bütün modüllerin tek denetim yazma yolu: zarfı Zod'la doğrular, yasak alan adlarını (ogrenciNo, numara, adSoyad, ad, eposta, kod, anahtar, jeton, belgeNo; iç içe de) ve 8 KB'yi aşan ayrıntıyı reddeder, satırı çağıranın işleminde ekler; hata çağıranın işlemini geri aldırır. Başka modül çağırmaz; olay anını çağıran saat arayüzünden verir. DenetimOlayiGirdisi (packages/contracts/src/duzeltmeler.ts): { tur: '<modül>.<olay>', ani: Date, yapan: { tur: 'KISI', kisiId, rol } | { tur: 'SISTEM' | 'KOMUT_SATIRI' }, istemci: TELEFON | PANEL | KURSU | SUNUCU, istekKimligi?, islemId?, istemciAni?, donemId?, dersId?, oturumId?, ogrenciId?, listeSatiriId?, kayit?: { donemId, kayitId }, hedef?: { tur, id }, kod?, onceki?, sonraki?, ayrinti? }.
+
+D09.exports[1].purpose: D08 (son durum ve devam hesabı), D05 (oturum kayıtları ekranının düzeltme sütunu) ve D10 için. Süzgeçte oturumIdler, listeSatiriIdler ya da dersId'den biri zorunludur (tam tablo taraması yok). DuzeltmeSatiri: { id, islemId, tur, sebepKodu, sonDurum, donemId, dersId, oturumId, listeSatiriId, kayit, belgeNo, teoriSaat, uygulamaSaat, oncekiDuzeltmeId, sorunBildirimiId, kaynak, yapanKisiId, istemciAni, olusturmaAni }; GERI_ALMA satırları zincir için döner.
+
+D09.tests[17].asserts: kapat DEGISIKLIK_YOK yapar, kapatan ve an dolu; aynı islemId ile tekrar 200; kapalı bildirime başka islemId ile kapat 409 DUZELTMELER_BILDIRIM_ACIK_DEGIL.
+
+D09.tests[19].asserts: RET sonrası kararı Ret ve gerekçesi D07 sözleşmesinden içe aktarılan Kendi beyanı reddi kodu (sabit yeniden yazılmaz), son durum Y, devam_hesapla işi kuyrukta, öğrenci durum sürümü artmış.
+
+D09.resolved_gaps[3].decision: Bir istek en çok 200 öğe taşır; her öğe tek oturum ve tek liste satırıdır, hepsi aynı islemId ile yazılır. Belgenin kapsadığı oturumları panel seçer, sunucu tarih aralığını kendisi genişletmez. Satırda teori_saat ve uygulama_saat ayrıdır; boş gelen tür oturumun o türdeki bütün saatleridir; tek saatlik oturumda seçim yoktur.
+
+D09.resolved_gaps[7].decision: Dört tablo: duzeltmeler (yalnız ekleme), sorun_bildirimleri (yalnız durum ve kapanış sütunları güncellenir), denetim_kayitlari (yalnız ekleme), gunluk_inceleme_partileri (işin çalışma tablosu). Hoca kararları ayrı tablo değil: geçmişi D07'nin kayit_karar_gecmisi tablosuna D07.kararDegistir yazar, işlemin olayı D09'un denetim tablosuna. Yetkiler göçte elle yazılan SQL ile.
+
+D09.resolved_gaps[10].decision: İstek hocanın gördüğü kayıt kimliklerini ve işlem kimliğini taşır (en çok 200); sunucu yalnız hâlâ onay bekleyenleri işler, öbürlerine ZATEN_KARAR_VERILMIS döner, ekran açıkken gelen yeni kayıt onaylanmaz. Onay D07.kararDegistir ile kararı Var bırakıp onayı yazdırır; ret kararı Ret yapar (gerekçe D07 kataloğundan, D07-B01 önerisi KENDI_BEYANI_REDDEDILDI), son durum Yok. İkisi de denetime, D08 hesap işine ve öğrenci durum sürümüne gider.
+
+D09.resolved_gaps[11].decision: Onay D07.kararDegistir ile Var, ret Ret; gerekçeleri D07 kataloğu verir (D07-B01 önerisi HOCA_ONAYLADI ve INCELEME_REDDEDILDI), D09 kaynakta hoca işlemini (INCELEME_ONAY, INCELEME_RET) bildirir. Aynı oturumda öğrencinin sayılan kaydı varsa kısmi tekil dizin korunur, onaylanan kayıt sayılmayan Var kalır, öğe KABUL ve DUZELTMELER_ZATEN_SAYILAN_KAYIT_VAR alır. İstek beklenen eski kararı taşır, tutmazsa ZATEN_KARAR_VERILMIS. Kayıt tek listede görünür: kararı İncelemede olan Kendi beyanı kaydı İncelemede listesindedir.
+
+D09.resolved_gaps[12].decision: Liste, hocanın açık dönemdeki derslerinde etkin liste satırı olan teyitsiz hesaplardan kurulur ve dört gruba ayrılır (öncelik sırasıyla): aynı numarayı isteyen hesaplar, isim eşleşmeyenler, cihazı doğrulanmamışlar (D07.cihazDogrulanmadiMi), toplu teyit edilebilenler. Toplu öğe yalnız son gruptan kabul edilir, öbürleri DUZELTMELER_TEK_TEK_ONAYLANMALI. Biri teyit edince öğrenci herkesin listesinden düşer.
+
+D09.resolved_gaps[14].decision: Liste ve uçlar D09'da; teyit alanlarını D01.ogrenciTeyitEt ve ogrenciTeyidiniReddet aynı işlemde yazar; beklemedeki kayıtları D01 aynı işlemde D07 ile karara bağlatır (D01-B23), D09 ayrıca D07 çağırmaz.
+
+D09.resolved_gaps[22].decision: Ara karar (AKSİS açık noktası kapanana kadar): kilitten sonra düzeltme ve geri alma aynı kurallarla açık; Kendi beyanı onayı kapanır (kilitte sayılmış haliyle donar); İncelemede kararı yalnız D07'nin izin verdiği kayıtlarda (kilitten sonra ulaşanlar) açık, kilitte donanlar listelenmez; teyit hesap düzeyinde olduğundan sürer; sorun bildirimi alınır ve açık kalır. Kilit sonrası yazmalar sonradan değişenlerde ve denetimde görünür. Süreç kararı D09-A06.
+
+D09.resolved_gaps[28].decision: İşaretli oturum partiye tek öğe olarak girer. Hoca oturumun kayıtlarını D05'in oturum kayıtları ucunda görür; düşürmek istediği Var kaydı POST /v1/duzeltmeler/incelemeler/kararlar ile baglam ISARETLI_OTURUM ve RET gönderir (gerekçeyi D07 verir, öneri YOKLAMADA_SINIFTA_DEGIL); bitince POST /v1/duzeltmeler/isaretli-oturumlar/{oturumId}/incelendi ile kapatır (D07.isaretIncelendi). Derste çıkan işarette bütün liste D07'nin 'burada değil' akışıyla okunur.
+
+D09.resolved_gaps[28].why: plan.html#kararlar-kafa-sayisi 'sonra çıkarsa oturumun kayıtlarını toplu inceler'; aynı gerekçe iki yerde aynı anlamı taşır; işaret D07'nin, inceleme D09'un.
+
+D09.contradictions_resolved[1].resolution: Son günden sonra ulaşan kayıt sayılmaz (D07: kararı İncelemede, kilitten sonra ulaştı gerekçesiyle) ve sonradan değişenlerin 'sayılırsa değiştirecekler' bölümünde görünür. Sayım ancak denetim olayı bırakan bir hoca işlemiyle değişir: kaydın onayı ya da düzeltme. plan.html#devam-donem-sonu'daki 'sonucu değiştirirse' bu varsayımsal sınama olarak okunur; plan cümlesine bu anlamın eklenmesi önerilir.
+
+D09.contradictions_resolved[4].resolution: 'Yoklamada sınıfta değil' D07'nin karar gerekçesidir (Ret), D09'un sebep kodu değildir; düzeltme satırı yazılmaz. sonDurumOnceligi sayılmayan Ret kaydını Yok'a bağladığından plan.html#gun-son-durumlar'daki Yok sonucu aynen tutar.
+
+D09.open_points[8].recommendation: Sahipleri yalnız ekleyerek sağlar: D05.sayilanKayitlar süzgecinde dersIdler, kararlar, etiket, onaysız ve ulaşma aralığı, dönen kayıtta karar, gerekçe, karar anı, karar kaynağı, karar sürümü, ulaşma anı, etiketler ve onaylayan; D02.oturumlariGetir'de hocanın açık dönemdeki dersleri; D01.ogrenciHesabiGetir'in bir numaradaki bütün silinmemiş hesapları dönmesi, yük testinde yavaşsa toplu okuma; D06 öğe zarfında çapalanmış işlem anı ve kimlik; D07.kararDegistir kaynağında hoca işlemi (KENDI_BEYANI_ONAY, KENDI_BEYANI_RET, INCELEME_ONAY, INCELEME_RET, ISARETLI_OTURUM_RET) ve 'kilitte dondu' sonucu; D10.aksisAnligiGetir'de karşılaştırma tabanı; D15 ayarlarında DUZELTMELER_PARTI_BOYU; D12 saklama sırasında kayda başvuran satırların kayıtlardan önce işlenmesi.
+

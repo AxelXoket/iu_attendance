@@ -1,0 +1,34 @@
+esitleme modülü telefonun ortak kuyruğunu tek uçtan (POST /v1/esitleme/gonderim) alır, her öğeyi türünün modülüne aynı veritabanı işleminde dağıtır ve her (kurulum, sıra) için tek defter satırı tutar; bozuk öğe paketi düşürmez, her öğeye KABUL, ZATEN_VAR, RET ya da TEKRAR_DENE döner. Kurulum, bir uygulama kopyasında bir hesabın kuyruğudur; kesintisiz son sıra her eşitlemede telefona bildirilir, yedekten dönüşte telefon sonrakileri yeniden gönderir ve imzalı ulaşma makbuzu ilk ulaşma anını korur. İndirme (GET /v1/esitleme/degisiklikler) tek sayaç satırından işlemin son adımında bir kez alınan sürümle (sürüm damgası) artımlıdır; imleç nesli, genel ve kapsam sürümünü, öğrencinin durum sürümünü, yerel yapı sürümünü ve hesap özetini taşır, nesil, kapsam, teyit ya da yapı değişince baştan indir der ve gönderme kuyruğuna dokunmaz. Öğrencinin kendi kayıtları, kararları, düzeltmeleri ve devam durumu öğrenci başına sürümle iner; telefonun imleçle sakladığını bildirdiği sürüm, kararın telefona ulaştığı anı (sorun bildirme süresinin başı) yazar. Modül iş kuralı tutmaz: öğe işleyicileri ve indirme kaynakları sorumlu modüllerin eklentisinde ogeTuruKaydet ve indirmeKaynagiKaydet ile kaydolur; D01 ve D04 işlevleri eklentiye app.ts'ten seçenekle gelir.
+
+TEST {"name": "200 öğelik paket tek işlemde işlenir", "kind": "behavior", "asserts": "Her öğeye istekteki sırayla tek sonuç döner, (sira, ogeKimligi) birebir; sonSira 200; defterde 200 satır; sahte işleyici öğeleri ardışık aynı tür grupları halinde, sıra düzeninde ve ham gövde metniyle alır."}
+
+TEST {"name": "Aynı paket ardışık iki kez gönderilir", "kind": "behavior", "asserts": "İkinci cevapta KABUL'lerin yerini ZATEN_VAR alır ve ulaşma anı ilk anla aynıdır; defter satırının sonucu ve kabul_ani değişmez, gorulme_sayisi 2; işleyici tablosunda öğe tek."}
+
+TEST {"name": "Aynı paket aynı anda iki kez gönderilir", "kind": "behavior", "asserts": "İki istek aynı danışma anahtarında (esitleme:kurulum_siniri) ve kurulum satırı kilidinde sıraya girer; her öğe kendi modülünün tablosunda tam bir kez; öğe başına biri KABUL, öbürü ZATEN_VAR. Aynı sıra başka öğe kimliğiyle eşzamanlı gelince ikinci paket defteri kilitten önce okumuş olsa da kilitten sonraki yeniden okuma RET ESITLEME_SIRA_CAKISMASI verir, öğe türünün modülünün tablosunda tek öğe kalır; yeniden okuma bilerek kaldırılınca senaryo kırmızı (dosya md5 ile geri yazılır)."}
+
+TEST {"name": "Bilinmeyen öğe türü atılmaz", "kind": "behavior", "asserts": "TEKRAR_DENE, ESITLEME_TUR_BILINMIYOR, beklemeSaniye 3600; defterde saklanır, sunucu_bekletme_ani yazılır, sonSira üstünden geçer."}
+
+TEST {"name": "Aynı sıra başka öğeyle gelir", "kind": "behavior", "asserts": "RET ESITLEME_SIRA_CAKISMASI; ilk defter satırı ve işleyici tablosu değişmez; çakışan öğe deftere yazılmaz."}
+
+TEST {"name": "Gövde sınırı ve öğe sayısı", "kind": "behavior", "asserts": "200 öğelik en büyük gerçekçi paket 200 döner; 1 MiB'ı 1 bayt aşan istek 413 API_GOVDE_COK_BUYUK; 201 öğe 400 API_ISTEK_GECERSIZ ve alan yolu ogeler; türün govdeEnBuyukBayt sınırını aşan tek öğe ve ilkCapaVar false türde ilkCapa taşıyan öğe yalnız kendisi RET ESITLEME_OGE_GECERSIZ alır."}
+
+TEST {"name": "Yerel ret bildirimi su seviyesini ilerletir", "kind": "behavior", "asserts": "yerelRetler ile bildirilen sıra RET ESITLEME_YEREL_RET yazılır, sonSira üstünden geçer; aynı sıradaki KABUL satırına dokunulmaz (kontrol)."}
+
+TEST {"name": "Rolü uymayan öğe", "kind": "behavior", "asserts": "Öğrenci oturumuyla gelen pencere_suresi RET ESITLEME_YETKI_YOK; aynı paketteki yoklama_kaydi etkilenmez."}
+
+TEST {"name": "İşleyicide kısıt hatası yalnız o öğeyi düşürür", "kind": "behavior", "asserts": "Parçada bir öğe kısıt ihlali: o RET ESITLEME_KISIT_IHLALI, parçadaki öbürleri KABUL; hızlı yolda parça başına tek SAVEPOINT, yedek yolda öğe başına SAVEPOINT (sorgu günlüğünden sayılır)."}
+
+TEST {"name": "Geçici çakışma yalnız parçayı bekletir", "kind": "behavior", "asserts": "İşleyicide kilitlenme (40P01) ya da kilit zaman aşımı (55P03): parçanın öğeleri TEKRAR_DENE ESITLEME_GECICI_CAKISMA; öbür parçalar KABUL, işlem sürer."}
+
+TEST {"name": "Artımlı indirme", "kind": "behavior", "asserts": "İmleçten sonra değişen satır iner, değişmeyen inmez; silinen satır silindi true ve veri null ile iner; sonSira her cevapta döner."}
+
+TEST {"name": "Baştan indir nedenleri", "kind": "behavior", "asserts": "Nesil değişti, imleç sayaçtan ileri, en_eski_gecerli_surum altında, bozuk imleç, başka hesabın imleci, yapı sürümü değişti, öğrencinin teyit durumu değişti: her birinde 200 ve bastanIndir true; sonSira değişmez. degisiklik_sayaci satırı yokken (test sıfırlamasından sonra) indirme sürümü 0 sayar ve 200 döner."}
+
+TEST {"name": "Sayfalar sürüm sınırında kesilir", "kind": "behavior", "asserts": "adet 100 ile çok sayfalı indirmede aynı sürümün satırları iki sayfaya bölünmez; sayfaların birleşimi tek seferde indirilenle aynı; 300 satırlık tek sürüm tek sayfada gelir. surumden'e eşit sürümlü satır döndüren sahte kaynak: satır atılır, loglanır, sayfa yine ilerler."}
+
+TEST {"name": "Karar teslimi onayla yazılır", "kind": "behavior", "asserts": "Karar değişince öğrenci bölümü iner ve satır SUNULDU olur; sonraki istekteki imleç öğrenci sürümünü taşıyınca telefona_ulasti_ani = son sunum anı; cevap kaybolursa (imleç saklanmadı) yazılmaz, sonraki sunumun anıyla yazılır."}
+
+TEST {"name": "Teslim bilgisi", "kind": "behavior", "asserts": "kararTeslimAni sunulmamış sürüm için null; sunulmuş ama onaylanmamış sürüm için iki sunum anı, telefonaUlastiAni null ve sunulan kurulumun son temas anı; onaylı sürüm için tek ve değişmeyen telefonaUlastiAni."}
+
+TEST {"name": "Teyitsiz öğrencinin kapsam bağlamı", "kind": "behavior", "asserts": "Teyitsiz öğrencinin indirmesinde öğrenci kapsam kaynağına (D03'ün ogrenci_liste_kapsami kaydı yerine sahte kaynak) teyitli false ve numara verilir; sahte liste kaynağı adı bu bayrakla siler ve cevapta ad yok. Teyit durumu D01.ogrenciHesabiGetir'den imleçteki hesap özetine girer: teyitten sonraki indirme bastanIndir true ve kendi adını taşır (kontrol); teyit değişmeden ikinci indirme bastanIndir false (kontrol)."}
+

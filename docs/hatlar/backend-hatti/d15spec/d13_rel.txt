@@ -1,0 +1,82 @@
+[
+  'id',
+  'title',
+  'decided',
+  'gaps',
+  'contradictions',
+  'entities',
+  'endpoints',
+  'jobs',
+  'depends_on',
+  'touches_other_domains'
+]
+K D13-K10 | teknik.html#sunucu-kimlik | İstemci IP'si yalnız Fastify'ın trustProxy ayarından okunur.
+K D13-K11 | teknik.html#altyapi-caddy | API ve işçinin portları dışarı açılmaz; Caddy'ye iç ağda sabit adres verilir ve trustProxy yalnız bu adresi tanır.
+K D13-K12 | teknik.html#sunucu-ayarlar | Kod, jeton, eşleştirme kodu ve öğrenci numarası hiçbir zaman adres satırına (yol ya da sorgu dizesi) konmaz; loglarda istek adresi yerine rota kalıbı yazılır.
+K D13-K29 | teknik.html#sunucu-mimari | Katalogdaki zod sürümü en az 4.2'dir, çünkü resmî tip sağlayıcı Zod 4.2 ve üstünü ister.
+K D13-K30 | teknik.html#temel | typescript, zod ve vitest sürümleri bütün paketler için pnpm catalog'da tek yerde tutulur.
+K D13-K64 | teknik.html#sunucu | Hata ve bulunamadı yakalayıcısı kökte tektir, modüllerde yoktur; her modülün hata fırlattığı durumu senaryo denetler.
+K D13-K67 | teknik.html#telefon-gonderme-protokolu | Telefon yalnız ağ hatası, zaman aşımı, 408, 429 ve 5xx cevabında yeniden dener: 2 saniyeden 10 dakikaya artan, rastgele kaydırılmış aralıklarla; Retry-After gelirse en az o kadar, üstüne rastgele pay.
+K D13-K72 | plan.html#kararlar-yeniden-deneme | Yetki hatasında gönderim durur ve cihaz durumu gösterilir.
+K D13-K76 | teknik.html#sunucu-guvenlik | Güvenlik eklentileri: @fastify/helmet, @fastify/rate-limit ve aşırı yükte 503 ile Retry-After dönen @fastify/under-pressure.
+K D13-K77 | teknik.html#sunucu-guvenlik | under-pressure eşikleri (olay döngüsü gecikmesi, kullanım, bellek) ders çıkışı yük testinden yazılır; yazılmazsa eklenti hiçbir şey yapmaz.
+K D13-K78 | teknik.html#altyapi-servisler | API kabının bellek sınırı vardır ve under-pressure'ın bellek eşiği bu sınırın altındadır.
+K D13-K80 | teknik.html#sunucu-ayarlar | Veritabanı hatası yalnız hata kodu ve kısıt adıyla loglanır, sorgu değerleriyle değil (bilerek kısıt ihlali yaptırılan senaryo denetler).
+K D13-K81 | teknik.html#sunucu-ayarlar | İlk sürümde OpenTelemetry yoktur; pino JSON logları istek kimliğini ve süreyi taşır.
+K D13-K92 | teknik.html#testler-kalite | Yayından önceki ders çıkışı yük testi gerçek sunucu boyutunda, sınırlar açık, binlerce ayrı cihaz kimliğiyle ve sabit geliş hızıyla koşar; en kötü durum 20.000 telefonun 1 dakikada gelmesidir.
+K D13-K94 | plan.html#teknoloji-sunucu-yeri | Sunucu kendi içinde durum tutmaz; aynı imajdan birden çok kopya önündeki Caddy'yle çalışabilir, işçiler ayrı ölçeklenir.
+K D13-K103 | teknik.html#testler-kalite | Gönderme ucunun durum makinesi testi rastgele en çok 200'lük paketler, aynı paketin aynı anda iki kez gönderilmesi, sıra bozulması ve yarıda kalan gönderimle her makbuzlu kaydın sunucuda tam bir kez bulunduğunu dener.
+K D13-K126 | teknik.html#sunucu-mimari | Büyüyebilen cevap değerleri (etiketler, kayıt sonuçları, durumlar) ilk yayından itibaren x-extensible-enum taşır; yoksa oasdiff yeni değeri kırılma sayar.
+K D13-K139 | teknik.html#sunucu-ayarlar | Sağlık uçları yalnız iç ağdan çağrılır: /health/live (dış bağımlılıksız, aşırı yük denetimi dışında) ve /health/ready (veritabanı, şema sürümü; işçiye bağlanmaz).
+K D13-K140 | teknik.html#sunucu-ayarlar | Herkese açık GET /v1/durum ucu Caddy üzerinden dış erişim denetimine hizmet eder: /health/live ile aynı işi yapar (veritabanına dokunmaz, gövdesiz 204), girişsizdir ve girişsiz uçların IP sınırı altındadır.
+
+B D13-B01 (false) Q: Bütün hata cevaplarının (4xx ve 5xx) gövdesi hangi tek biçimde olacak, hangi alanları taşıyacak?
+   REC: Kendi küçük zarfımız, şeması packages/contracts'ta tek tanım (hataZarfi): kod (BÜYÜK_HARF ASCII, x-extensible-enum), mesaj (kısa Türkçe genel cümle, kod kataloğundan dolar, iç ayrıntı ve gelen değer içermez), istekKimligi, alanlar [{yol, kod}] yalnız doğrulama hatasında (Zod issue yolu ve kodu; değer asla yankılanmaz, öğrenci numarası cevaba ve loga dönmesin), beklemeSaniye yalnız 429 ve 503'te (Retry-After ile aynı). Kökteki setErrorHandler ve setNotFoundHandler bu zarfı üretir; fastify-type-provider-zod'un doğrulama hatası 400 ve alanlar'a çevrilir; 5xx'te kod SUNUCU_HATASI ve sabit genel mesaj, başka hiçbir şey (teknik.html#sunucu: yalnız genel mesaj ve istek kimliği; sabit kod iç ayrıntı taşımadığından bu kararı bozmaz). RFC 9457 standart ama type, title, status alanları burada iş görmez ve istemcilere ikinci içerik türü getirir.
+
+B D13-B02 (false) Q: Hangi durumda hangi HTTP durum kodu döner; sunucu hata kodları nasıl adlandırılır ve nerede listelenir?
+   REC: Tek katalog (packages/contracts, hatalar). Kurallar: 401 yalnız kimlik yok ya da geçersiz (oturum bitti ya da kapandı, cihaz bilinmiyor ya da kaldırıldı); 403 yalnız ilke düzeyi red (rol uymuyor, Origin tutmuyor); kişinin görmeye yetkisi olmayan kaynak (başka hocanın dersi, başka öğrencinin kaydı) 404 döner, varlığı sızdırmaz (plan.html#baslangic 3. adımdaki başka hocanın dersini görme senaryosu bunu bekler); kuyruktan gelen uçlarda (gönderme ve toplu işlemler) öğe düzeyindeki her sonuç 200 gövdesinde öğe sonucu olarak döner, 4xx yalnız isteğin tamamı bozuksa; 409 yalnız çevrimiçi panel işlemlerinde; 413 gövde sınırı, 415 JSON dışı içerik, 429 ve 503 Retry-After ile, 500 beklenmeyen. API düşükken Caddy 502 ya da 503 döner (5xx, telefon yeniden dener); gönderme yolunun kaldırılmasını oasdiff zaten engeller. Kapsama testi her kodun en az bir senaryoda gerçekten döndüğünü denetler, kullanılmayan kod katalogda kalmaz.
+
+B D13-B04 (false) Q: İstek kimliğini kim üretir, biçimi ne, hangi başlıkla döner; istemcinin ya da Caddy'nin gönderdiği değere güvenilir mi?
+   REC: Üçüncüsü: genReqId randomUUID, requestIdHeader false (Caddy'nin adres başlıklarındaki gibi gelen değere güvenilmez; teknik.html#altyapi-caddy), log etiketi istekKimligi; başarı dahil her cevapta X-Request-Id başlığı, hata zarfında istekKimligi. pg-boss'a konan işin verisine kaynak istek kimliği eklenir, işçi logu aynı kimlikle aranır. UUIDv4 seçilir: UUIDv7'nin zaman sızdırması burada zararsız olsa da sunucu kimliklerinin dışa açık jeton olarak kullanılmaz kuralıyla (teknik.html#veritabani) karışmasın; sıralama zaten loglardaki zaman damgasından gelir.
+
+B D13-B05 (false) Q: Her uç hangi kimlik türünü kabul eder, bu nerede beyan edilir ve kök kanca isteğe tam olarak ne ekler?
+   REC: İkincisi. Rota tablosunda zorunlu alan kimlik: yok, oturum (gerekli roller: hoca, yonetici, ogrenci), cihaz-imzasi, projeksiyon; bir uç birden çoğunu kabul edebilir. Kanca isteğe {tur, kisiId, roller, oturumId, cihazId} ekler; tanınmayan, kapanmış ya da süresi dolmuş anahtar 401. Kanca oturumu her istekte veritabanından anahtar özetinin tekil dizininden okur, bellek önbelleği tutmaz: yöneticinin kapattığı ya da pasifleşen hesabın oturumu (plan.html#kararlar-roller) bir sonraki istekte düşmeli. Girişsiz uçlar açıkça listelenir ve IP sınırına girer: kod iste, kodla gir, hoca başvurusu, öğrenci kaydı, sürüm sorgusu, durum; Aşama 2'de eşleştirme kodu alma. Rota tablosundan üretilen senaryo her uç için kimliksiz isteğin 401, yanlış rolün 403 aldığını dener; kaynak sahipliği (kendi dersi mi) modül servisinde, reddi 404.
+
+B D13-B08 (false) Q: Origin denetimi tam olarak hangi isteklerde, hangi değerle yapılır; Origin yoksa ne olur; çerez adı ve GET kuralı ne?
+   REC: İkincisi: çerezle doğrulanan POST, PUT, PATCH, DELETE'te Origin ayarlardaki panel adresine birebir eşit olmalı, yoksa ya da farklıysa 403 KOKEN_GECERSIZ; Bearer ya da imzalı isteklerde çerez hiç okunmaz, Origin bakılmaz; aynı istekte hem çerez hem Bearer gelirse 400. Yazma isteklerinde Content-Type application/json zorunlu (415). Çerez adı __Host- önekli (Secure, Path=/, Domain yok). GET hiçbir zaman veri değiştirmez (rota tablosu kuralı, GET rotası yazma işlemi açmaz). CSRF jetonu gerekmez: aynı köken, yalnız JSON ve Origin yeter (ASVS 5.0 seviye 2 hedefi; teknik.html#sunucu-guvenlik).
+
+B D13-B09 (false) Q: Girişsiz uçlarda IP başına, girişli uçlarda oturum başına, gönderme ucunda cihaz başına sınırlar kaç; pencere ne; bellekteki tablo kaç anahtar?
+   REC: İkincisi. Başlangıç değerleri: girişsiz uçlar IP başına dakikada 3000 (kampüs ağı ve mobil hat NAT'ı: dönemin ilk dersinde bir amfinin bütün öğrencileri kayıt için aynı adresten gelebilir; kötüye kullanımı bu sınır değil uca özgü deneme sayaçları keser); girişli uçlar oturum başına dakikada 120; gönderme ucu cihaz başına dakikada 30 istek (200'lük paketle gerçek ihtiyacın çok üstü); saat belgesi ucu cihaz başına dakikada 30. cache 200.000 anahtar (50.000 öğrencinin 4 katı); hook preHandler (kimlikten sonra; teknik: doğrulamadan sonraki kancada); 429 gövdesi hata zarfı ve Retry-After. Kod deneme sınırları (e-posta kodu, kayıt kodu, yedek kod, eşleştirme kodu; plan.html#hile-rastgele-isim) bu genel sınırın dışında, PostgreSQL'de kesin sayaçla ilgili alanlarda kalır. n kopyada etkin sınır n katıdır; plan bunu kaba sınır diye kabul ediyor. Değerler yük testinden sonra teknik.html'e yazılır.
+
+B D13-B10 (false) Q: Aşırı yükte ve havuz dolunca dönen 503'lerde Retry-After kaç saniye, gövde ne?
+   REC: İki 503 de hata zarfıyla (SUNUCU_YOGUN) ve Retry-After ile döner; değer 15 ile 45 saniye arasında sunucuda rastgele seçilir (under-pressure'da pressureHandler ile), istemci üstüne kendi rastgele payını ekler (plan.html#kararlar-yeniden-deneme: en az o kadar, üstüne rastgele pay). /health/live ve /v1/durum aşırı yük denetimi dışında kalır. Eşikler ve aralık ders çıkışı yük testinden sonra teknik.html'e yazılır.
+
+B D13-B11 (false) Q: Genel ve uç başına istek gövdesi sınırı kaç bayt?
+   REC: İkincisi: genel 64 KiB; gönderme 1 MiB (en büyük paketin yaklaşık 4 katı), liste yükleme JSON'u 2 MiB, toplu işlemler 256 KiB; aşan istek 413 GOVDE_COK_BUYUK. Test 200 kayıtlık en büyük paketi ve sınırın 1 bayt üstünü gönderir.
+
+B D13-B13 (false) Q: Hangi liste uçları sayfalanır, hangi yöntemle, varsayılan ve en büyük boy ne?
+   REC: Sınıf boyu listeler (ders listesi, bir oturumun kayıtları, onay partisi) tek cevapta tam döner, sunucu sert üst sınır koyar (2000 satır; aşılırsa kesik liste değil açık hata kodu). Büyüyen listeler keyset: imlec ve adet sorgu parametreleri (adet varsayılan 100, en çok 500), cevap {ogeler, sonrakiImlec: metin ya da null}; imleç base64url (sıralama anahtarı ve UUID), içinde öğrenci numarası ya da ad yok (teknik.html#sunucu-ayarlar, adres satırı kuralı), biçimi Zod ile denetlenir. Telefonun indirme imleci (D06) bu desenden ayrıdır ama aynı opak metin kuralına uyar.
+
+B D13-B14 (false) Q: Yol, JSON alan adı ve kod değerleri hangi dilde ve harflerle yazılır; kaynak mı eylem mi; HTTP yöntemleri nasıl kullanılır?
+   REC: Türkçe ASCII. Yol bölümleri küçük harf ve tireli, koleksiyon çoğul (/v1/duzeltmeler, /v1/yonetim/hocalar); kaynak kimliği yolda UUID (/v1/dersler/{dersId}/oturumlar), en çok iki düzey iç içe; durum geçişleri kaynak altında eylem (POST /v1/oturumlar/{id}/erken-kapat, POST /v1/onaylar/toplu). JSON alanları camelCase ASCII (ogrenciNo, kafaSayisi), kod değerleri BÜYÜK_HARF ASCII; cevap kökü her zaman nesne (sonradan alan eklenebilsin); değeri olmayan alan null döner, atlanmaz. DELETE yalnız gerçekten kapanan şeyde (oturum kapatma); pasifleştirme ve arşivleme eylem ucuyla, çünkü plan öğrenciyi silmez, pasif yapar, dersi arşivler. Öğrenci numarası ve kodlar yola ya da sorguya konmaz, numarayla arama gövdeli POST ile. Modülsüz kök uçlar (/v1/durum, /v1/surum) rota tablosunda açık istisna; /health uçları /v1 dışında ve yalnız iç ağda.
+
+B D13-B16 (false) Q: Telefon uygulama sürümünü, updateId'yi, platformu ve kurulum kanalını hangi başlıklarla bildirir; sürüm sorgusu hangi uçtan, hangi alanlarla döner?
+   REC: Başlıklar, yalnız telefondan, her istekte; hepsi sözleşmede isteğe bağlı parametre (yoklukta istek reddedilmez, bekleyen gönderim engellenmesin). GET /v1/surum girişsiz; cevap {enSonSurum, enDusukSurum, guncellemeGerekli, magazaBaglantisi} kanal ve platforma göre. GitHub kanalında yüzde, kurulumun yerelde ürettiği rastgele kimliğin (X-Kurulum-Kimligi) özetinden mod 100 kovayla seçilir, böylece aynı telefon her gün aynı cevabı alır. Sunucu son görülen sürümü cihaz kaydına yazar (D01) ve loglara ekler.
+
+B D13-B17 (false) Q: En düşük sürümün dönem içinde yükselmesini ne engeller; sunucu en düşük sürümün altındaki istemcinin isteklerini reddeder mi?
+   REC: İkincisi: dönem içi, bir birimin dönem başlangıcı ile devamsızlık işleme son günü arası (D02 takvimi); bütün birimler dönem dışındayken yükseltme uygulanır, değilse eski değer sürer, uyarı loglanır ve istemci_surum_esigi tablosuna ertelendi diye yazılır. Sunucu en düşük sürümün altındaki istemcinin hiçbir isteğini HTTP düzeyinde reddetmez (plan: giriş, makbuz ve bekleyen gönderim çalışır); sınırı telefon uygular; tek sunucu yaptırımı o sürümün yeni kayıtlarını İncelemede alma kuralıdır (D07, bkz. D13-B29).
+
+B D13-B18 (false) Q: CI'nın yazdığı yayın bilgisi dosyası nerede durur, biçimi ne, sunucu ne zaman okur, bozuksa ne olur?
+   REC: İkincisi: sabit yol (ör. /srv/yayin/yayin-bilgisi.json), şeması contracts'ta Zod (platform ve kanal başına enSonSurum, enDusukSurum, githubYuzdesi, magazaBaglantisi). Sunucu her sürüm sorgusunda dosyanın değişme zamanına bakıp önbellekten okur; şemaya uymazsa son geçerli değer sürer ve uyarı verilir; hiç geçerli değer yoksa en düşük sürüm 0.0.0 sayılır (kimse kesilmez). CI'nın sunucuya yazma yolu (anahtar yalnız CI'da) D15'in işidir.
+
+B D13-B20 (false) Q: Büyüyebilen alanlar Zod'dan üretilen belgede nasıl x-extensible-enum olur, istemci bilinmeyen değeri nasıl karşılar?
+   REC: Tek yardımcı genisleyenEnum(degerler): cevap şemasında z.string() ve .meta ile x-extensible-enum (enum anahtarı üretilmez), TypeScript tipi bilinen değerler ya da string; istek şemasında kapalı z.enum. Uygulanacak alanlar: kayıt etiketleri, sunucu kararları, gerekçe ve sebep kodları, son durumlar, gönderme öğe sonuçları, uyarı seviyeleri, hata kodları. Belge üzerinden çalışan test: cevap şemalarında enum anahtarı geçen her alan kırmızı (bilerek kapalı bırakılanlar listede açıkça yazılır). İstemci bilinmeyen değerde çökmez: bilinmeyen etiket atlanır, bilinmeyen hata kodunda sunucunun mesajı gösterilir.
+
+B D13-B25 (false) Q: Cevap şeması üretimde de uygulanacak mı (fastify-type-provider-zod'un serializerCompiler'ı), uymazsa ne olur?
+   REC: Üretimde de: serializerCompiler açık; uymayan cevap 500 SUNUCU_HATASI, logda rota kalıbı ve Zod yolu (değer yok). Gönderme ucunda maliyet ders çıkışı yük testiyle ölçülür; bütçeyi aşarsa yalnız o uçta aynı şemadan üretilen JSON Schema ile Fastify'ın hızlı serileştiricisine geçilir.
+
+B D13-B26 (false) Q: Sunucu tarafında istek ve sorgu süre sınırları ne olacak?
+   REC: Fastify requestTimeout 25 saniye (telefonun 30 saniyesinden kısa); API veritabanı rolünde statement_timeout 20 saniye; Node keepAliveTimeout Caddy'nin üst akış boşta bağlantı süresinden uzun. Rapor sorguları da bu sürelere sığar, sığmazsa uç küçültülür (tarih aralığı daraltılır). Değerler yük testiyle doğrulanır.
+
+B D13-B29 (false) Q: Hatalı sürüm kuralı için kaydın sürümü imza anındaki sürüm mü, gönderim anındaki mi?
+   REC: Kayıt metni imza anındaki uygulama sürümünü ve updateId'yi taşır (D05 kayıt biçimi); İncelemede kuralı (D07) bunu kullanır; istek başlıkları yalnız gönderen istemciyi izlemek ve loglamak içindir.
