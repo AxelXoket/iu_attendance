@@ -1,5 +1,0 @@
-// usage: node sec.js file id [id...]  -> prints text of the element with that id up to the next element with an id at same or higher heading level (approx: until next id= occurrence of a section/h2/h3)
-const fs=require('fs'); const [,,file,...ids]=process.argv; const h=fs.readFileSync(file,'utf8');
-function strip(s){return s.replace(/<script[\s\S]*?<\/script>/g,'').replace(/<style[\s\S]*?<\/style>/g,'').replace(/<(h[1-6])[^>]*>/g,'\n\n## ').replace(/<li[^>]*>/g,'\n - ').replace(/<tr[^>]*>/g,'\n| ').replace(/<t[dh][^>]*>/g,' | ').replace(/<p[^>]*>/g,'\n').replace(/<br\s*\/?>/g,'\n').replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ').replace(/\n\s*\n\s*\n+/g,'\n\n');}
-for(const id of ids){ const i=h.indexOf('id="'+id+'"'); if(i<0){console.log('NOID',id);continue;} const start=h.lastIndexOf('<',i); // find next id= after
- const re=/id="([^"]+)"/g; re.lastIndex=i+5+id.length; let m=re.exec(h); const end=m? h.lastIndexOf('<',m.index):h.length; console.log('=== #'+id); console.log(strip(h.slice(start,end)).trim()); console.log(); }

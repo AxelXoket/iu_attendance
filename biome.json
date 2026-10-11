@@ -1,0 +1,344 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": false
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/coverage",
+      "!**/reports/mutation",
+      "!**/.stryker-tmp",
+      "!apps/server/migrations/**/snapshot.json",
+      "!docs",
+      "!.serena"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "all",
+      "semicolons": "always"
+    }
+  },
+  "plugins": [
+    {
+      "path": "./packages/core/rules/hermes.grit",
+      "includes": ["**/packages/core/src/**/*.{ts,mts,cts,tsx}", "!**/*.test.{ts,mts,cts,tsx}"]
+    }
+  ],
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "noPrivateImports": "error"
+      },
+      "nursery": {
+        "noFloatingPromises": "error"
+      },
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "pg-boss": "pg-boss is used only in apps/server/src/infra/jobs.",
+              "nodemailer": "nodemailer is used only in apps/server/src/infra/email.",
+              "pino": "pino is used only in apps/server/src/infra/monitoring.",
+              "dotenv": "Settings come from the validated environment; dotenv is not used.",
+              "tsx": "Node runs TypeScript itself; tsx is allowed only under apps/server/test/steps."
+            },
+            "patterns": [
+              {
+                "group": ["pg-boss/**"],
+                "message": "pg-boss is used only in apps/server/src/infra/jobs."
+              },
+              {
+                "group": ["nodemailer/**"],
+                "message": "nodemailer is used only in apps/server/src/infra/email."
+              },
+              {
+                "group": ["pino/**"],
+                "message": "pino is used only in apps/server/src/infra/monitoring."
+              },
+              {
+                "group": ["dotenv/**"],
+                "message": "Settings come from the validated environment; dotenv is not used."
+              },
+              {
+                "group": ["tsx/**"],
+                "message": "Node runs TypeScript itself; tsx is allowed only under apps/server/test/steps."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/**"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noFloatingPromises": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/core/src/**/*.{ts,mts,cts,tsx}",
+        "packages/contracts/src/**/*.{ts,mts,cts,tsx}",
+        "!**/*.test.{ts,mts,cts,tsx}"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "error"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/core/src/**/*.{ts,mts,cts,tsx}",
+        "!packages/core/src/**/*.test.{ts,mts,cts,tsx}"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "Intl": "Hermes rule: Intl is not allowed in shared code.",
+                  "BigInt": "Hermes rule: BigInt is not allowed in shared code; 64-bit values are decimal strings."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/server/src/infra/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "pg-boss": "pg-boss is used only in apps/server/src/infra/jobs.",
+                  "nodemailer": "nodemailer is used only in apps/server/src/infra/email.",
+                  "pino": "pino is used only in apps/server/src/infra/monitoring.",
+                  "dotenv": "Settings come from the validated environment; dotenv is not used.",
+                  "tsx": "Node runs TypeScript itself; tsx is allowed only under apps/server/test/steps."
+                },
+                "patterns": [
+                  {
+                    "group": ["pg-boss/**"],
+                    "message": "pg-boss is used only in apps/server/src/infra/jobs."
+                  },
+                  {
+                    "group": ["nodemailer/**"],
+                    "message": "nodemailer is used only in apps/server/src/infra/email."
+                  },
+                  {
+                    "group": ["pino/**"],
+                    "message": "pino is used only in apps/server/src/infra/monitoring."
+                  },
+                  {
+                    "group": ["dotenv/**"],
+                    "message": "Settings come from the validated environment; dotenv is not used."
+                  },
+                  {
+                    "group": ["tsx/**"],
+                    "message": "Node runs TypeScript itself; tsx is allowed only under apps/server/test/steps."
+                  },
+                  {
+                    "group": ["**/modules/**"],
+                    "message": "Infrastructure must not import modules; the module registers itself instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/server/src/infra/jobs/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "nodemailer": "nodemailer is used only in apps/server/src/infra/email.",
+                  "pino": "pino is used only in apps/server/src/infra/monitoring.",
+                  "dotenv": "Settings come from the validated environment; dotenv is not used.",
+                  "tsx": "Node runs TypeScript itself; tsx is allowed only under apps/server/test/steps."
+                },
+                "patterns": [
+                  {
+                    "group": ["nodemailer/**"],
+                    "message": "nodemailer is used only in apps/server/src/infra/email."
+                  },
+                  {
+                    "group": ["pino/**"],
+                    "message": "pino is used only in apps/server/src/infra/monitoring."
+                  },
+                  {
+                    "group": ["dotenv/**"],
+                    "message": "Settings come from the validated environment; dotenv is not used."
+                  },
+                  {
+                    "group": ["tsx/**"],
+                    "message": "Node runs TypeScript itself; tsx is allowed only under apps/server/test/steps."
+                  },
+                  {
+                    "group": ["**/modules/**"],
+                    "message": "Infrastructure must not import modules; the module registers itself instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/server/src/infra/email/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "pg-boss": "pg-boss is used only in apps/server/src/infra/jobs.",
+                  "pino": "pino is used only in apps/server/src/infra/monitoring.",
+                  "dotenv": "Settings come from the validated environment; dotenv is not used.",
+                  "tsx": "Node runs TypeScript itself; tsx is allowed only under apps/server/test/steps."
+                },
+                "patterns": [
+                  {
+                    "group": ["pg-boss/**"],
+                    "message": "pg-boss is used only in apps/server/src/infra/jobs."
+                  },
+                  {
+                    "group": ["pino/**"],
+                    "message": "pino is used only in apps/server/src/infra/monitoring."
+                  },
+                  {
+                    "group": ["dotenv/**"],
+                    "message": "Settings come from the validated environment; dotenv is not used."
+                  },
+                  {
+                    "group": ["tsx/**"],
+                    "message": "Node runs TypeScript itself; tsx is allowed only under apps/server/test/steps."
+                  },
+                  {
+                    "group": ["**/modules/**"],
+                    "message": "Infrastructure must not import modules; the module registers itself instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/server/src/infra/monitoring/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "pg-boss": "pg-boss is used only in apps/server/src/infra/jobs.",
+                  "nodemailer": "nodemailer is used only in apps/server/src/infra/email.",
+                  "dotenv": "Settings come from the validated environment; dotenv is not used.",
+                  "tsx": "Node runs TypeScript itself; tsx is allowed only under apps/server/test/steps."
+                },
+                "patterns": [
+                  {
+                    "group": ["pg-boss/**"],
+                    "message": "pg-boss is used only in apps/server/src/infra/jobs."
+                  },
+                  {
+                    "group": ["nodemailer/**"],
+                    "message": "nodemailer is used only in apps/server/src/infra/email."
+                  },
+                  {
+                    "group": ["dotenv/**"],
+                    "message": "Settings come from the validated environment; dotenv is not used."
+                  },
+                  {
+                    "group": ["tsx/**"],
+                    "message": "Node runs TypeScript itself; tsx is allowed only under apps/server/test/steps."
+                  },
+                  {
+                    "group": ["**/modules/**"],
+                    "message": "Infrastructure must not import modules; the module registers itself instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/server/test/steps/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "pg-boss": "pg-boss is used only in apps/server/src/infra/jobs.",
+                  "nodemailer": "nodemailer is used only in apps/server/src/infra/email.",
+                  "pino": "pino is used only in apps/server/src/infra/monitoring.",
+                  "dotenv": "Settings come from the validated environment; dotenv is not used."
+                },
+                "patterns": [
+                  {
+                    "group": ["pg-boss/**"],
+                    "message": "pg-boss is used only in apps/server/src/infra/jobs."
+                  },
+                  {
+                    "group": ["nodemailer/**"],
+                    "message": "nodemailer is used only in apps/server/src/infra/email."
+                  },
+                  {
+                    "group": ["pino/**"],
+                    "message": "pino is used only in apps/server/src/infra/monitoring."
+                  },
+                  {
+                    "group": ["dotenv/**"],
+                    "message": "Settings come from the validated environment; dotenv is not used."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

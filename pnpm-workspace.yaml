@@ -1,0 +1,56 @@
+packages:
+  - apps/*
+  - packages/*
+
+# A version must be public for one day before it can be installed. Writing the
+# value explicitly makes the check strict (a younger version stops the install).
+# minimumReleaseAgeStrict: false and minimumReleaseAgeExclude would lift the gate;
+# workspace-check.ts rejects both, wherever pnpm reads them from.
+minimumReleaseAge: 1440
+
+# Stop when a package's publish trust drops (trusted publisher, provenance).
+# The only escape for a false alarm is trustPolicyExclude with an exact
+# name@x.y.z and its reason as a comment; trustPolicyIgnoreAfter is not used.
+trustPolicy: no-downgrade
+
+# Install scripts run only for packages listed here, each with its reason; a true
+# entry must also be in ALLOWED_BUILDS in workspace-check.ts with the same reason.
+# A build entry under permissions (it overrides allowBuilds since pnpm 12.11)
+# and dangerouslyAllowAllBuilds are banned; workspace-check.ts verifies the
+# settings as pnpm sees them.
+allowBuilds:
+  # Pulled in by drizzle-kit. Its postinstall only speeds up binary lookup;
+  # drizzle-kit generate works without it.
+  esbuild: false
+
+# A .pnpmfile.mjs, .pnpmfile.cjs or global pnpmfile hook can rewrite every setting
+# above at install time, and pnpm config list does not show its effect. No hook
+# is used; workspace-check.ts requires this setting and rejects pnpmfile and
+# globalPnpmfile.
+ignorePnpmfile: true
+
+permissions:
+  # Dependencies may not hand instructions to AI coding agents.
+  drizzle-kit:
+    skills: false
+
+# dependabot-core #15904 (open): Dependabot's dependency graph reads only the
+# first YAML document of the lock file and its alerts close silently. Any other
+# value writes a second document; configDependencies does too, so it is banned.
+# Remove once #15904 is closed and the graph is verified to read both documents.
+pmOnFail: ignore
+
+# Scripts with environment prefixes (TZ=UTC ...) also run on Windows.
+shellEmulator: true
+
+catalog:
+  '@types/node': ^26.6.0
+  '@vitest/coverage-v8': 5.0.3
+  fast-check: 4.10.2
+  typescript: ~6.0.3
+  vitest: 5.0.3
+  # SheetJS publishes current versions only as a tarball on its own site; the
+  # npm registry copy stops at 0.18.5. packages/core (dev only) and the panel
+  # use this same file.
+  xlsx: https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+  zod: ^4.6.5

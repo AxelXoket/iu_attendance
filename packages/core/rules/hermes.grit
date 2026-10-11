@@ -1,0 +1,102 @@
+language js
+
+// Hermes rules for shared code (packages/core source; the biome.json includes keep tests out).
+// Biome anchors a Grit regex as ^...$ around the raw text, so an alternation a|b|c would
+// leave its middle names unanchored: every alternation sits inside (?:...). A capture group
+// binds a variable and the clause then never matches, so groups are always non-capturing.
+// Member clauses match the member access itself, so a call, an optional call (a?.b()) and a
+// reference (v.map(Math.log)) are caught alike.
+or {
+  JsStaticMemberExpression(member=$name) as $member where {
+    $name <: r"(?:localeCompare|toLocale[A-Za-z]*)",
+    register_diagnostic(span=$member, message="Hermes rule: localeCompare and toLocale* are not allowed in shared code; compare code units with <.", severity="error")
+  },
+  JsStaticMemberExpression(member=$name) as $member where {
+    $name <: r"(?:getFullYear|getYear|getMonth|getDate|getDay|getHours|getMinutes|getSeconds|getMilliseconds|getTimezoneOffset|setFullYear|setYear|setMonth|setDate|setHours|setMinutes|setSeconds|setMilliseconds|toDateString|toTimeString)",
+    register_diagnostic(span=$member, message="Hermes rule: local-time Date methods are not allowed in shared code; use getUTC* and setUTC*.", severity="error")
+  },
+  JsStaticMemberExpression(object=$object, member=$name) as $member where {
+    $object <: r"(?:Math|globalThis\??\.Math)",
+    $name <: r"(?:pow|exp|log)",
+    register_diagnostic(span=$member, message="Hermes rule: Math.pow, Math.exp and Math.log are not allowed in shared code; use integer arithmetic.", severity="error")
+  },
+  JsStaticMemberExpression(object=$object, member=$name) as $member where {
+    $object <: r"(?:Date|globalThis\??\.Date)",
+    $name <: `parse`,
+    register_diagnostic(span=$member, message="Hermes rule: Date.parse is not allowed in shared code; instants are UTC milliseconds.", severity="error")
+  },
+  // noRestrictedGlobals in biome.json catches the bare names.
+  JsStaticMemberExpression(object=$object, member=$name) as $member where {
+    $object <: `globalThis`,
+    $name <: r"(?:Intl|BigInt)",
+    register_diagnostic(span=$member, message="Hermes rule: Intl and BigInt are not allowed in shared code, also not through globalThis.", severity="error")
+  },
+  // The same members taken out by destructuring (const { log } = Math, const { getHours } = Date.prototype).
+  JsVariableDeclarator(id=$pattern, initializer=$init) as $declarator where {
+    $pattern <: JsObjectBindingPattern(),
+    or {
+      and { $init <: r"(?:=\s*(?:globalThis\??\.)?Math)", $pattern <: contains r"(?:pow|exp|log)" },
+      and { $init <: r"(?:=\s*(?:globalThis\??\.)?Date)", $pattern <: contains `parse` },
+      and { $init <: r"(?:=\s*globalThis)", $pattern <: contains r"(?:Intl|BigInt)" },
+      and {
+        $init <: r"(?:=\s*globalThis)",
+        $pattern <: contains r"Math",
+        $pattern <: contains r"(?:pow|exp|log)"
+      },
+      and {
+        $init <: r"(?:=\s*globalThis)",
+        $pattern <: contains r"Date",
+        $pattern <: contains `parse`
+      },
+      and {
+        $init <: r"(?:=\s*(?:globalThis\??\.)?[A-Z][A-Za-z0-9]*\.prototype)",
+        $pattern <: contains r"(?:localeCompare|toLocale[A-Za-z]*|getFullYear|getYear|getMonth|getDate|getDay|getHours|getMinutes|getSeconds|getMilliseconds|getTimezoneOffset|setFullYear|setYear|setMonth|setDate|setHours|setMinutes|setSeconds|setMilliseconds|toDateString|toTimeString)"
+      }
+    },
+    register_diagnostic(span=$declarator, message="Hermes rule: a banned Math, Date, Intl, BigInt, locale or local-time member is not allowed in shared code, also not by destructuring.", severity="error")
+  },
+  `new $date($first, $second, $...)` as $call where {
+    $date <: r"(?:Date|globalThis\??\.Date)",
+    register_diagnostic(span=$call, message="Hermes rule: new Date with several arguments reads local time; use Date.UTC.", severity="error")
+  },
+  `new $date($text)` as $call where {
+    $date <: r"(?:Date|globalThis\??\.Date)",
+    or { $text <: JsStringLiteralExpression(), $text <: JsTemplateExpression() },
+    register_diagnostic(span=$call, message="Hermes rule: new Date with text is not allowed in shared code.", severity="error")
+  },
+  `$date($...)` as $call where {
+    $date <: r"(?:Date|globalThis\??\.Date)",
+    register_diagnostic(span=$call, message="Hermes rule: Date called without new returns local time as text.", severity="error")
+  },
+  JsRegexLiteralExpression() as $regex where {
+    $regex <: r"(?s)/.*/[a-z]*[sdv][a-z]*",
+    register_diagnostic(span=$regex, message="Hermes rule: regular expression flags s, d and v are not allowed in shared code.", severity="error")
+  },
+  // Flags are judged only when written as a literal; a variable is not guessed at.
+  or {
+    `new $regExp($pattern, $flags)`,
+    `$regExp($pattern, $flags)`
+  } as $call where {
+    $regExp <: r"(?:RegExp|globalThis\??\.RegExp)",
+    or { $flags <: JsStringLiteralExpression(), $flags <: JsTemplateExpression() },
+    $flags <: r".[a-z]*[sdv][a-z]*.",
+    register_diagnostic(span=$call, message="Hermes rule: regular expression flags s, d and v are not allowed in shared code.", severity="error")
+  },
+  // A non-integer exponent rounds differently across engines, as Math.pow does. An exponent
+  // with a number that has a fraction part or a negative exponent part (0.5, .5, 1e-3), or
+  // with a division (1 / 2), is rejected; an integer exponent (2 ** 3, 1e3) is allowed, and
+  // so is a plain variable, which no syntax rule can judge.
+  `$base ** $exponent` as $power where {
+    $exponent <: r"(?s)(?:.*(?:(?:^|[^A-Za-z0-9_$.])(?:[0-9][0-9_]*\.|[0-9][0-9_]*[eE]-|\.[0-9])|/).*)",
+    register_diagnostic(span=$power, message="Hermes rule: ** with a non-integer exponent is not allowed in shared code; use integer arithmetic.", severity="error")
+  },
+  // A `$x **= $y` snippet does not compile in Biome's Grit, so the operator is read from the text.
+  JsAssignmentExpression(right=$exponent) as $power where {
+    $power <: r"(?s).*\*\*=.*",
+    $exponent <: r"(?s)(?:.*(?:(?:^|[^A-Za-z0-9_$.])(?:[0-9][0-9_]*\.|[0-9][0-9_]*[eE]-|\.[0-9])|/).*)",
+    register_diagnostic(span=$power, message="Hermes rule: ** with a non-integer exponent is not allowed in shared code; use integer arithmetic.", severity="error")
+  },
+  JsBigintLiteralExpression() as $literal where {
+    register_diagnostic(span=$literal, message="Hermes rule: bigint literals are not allowed in shared code; 64-bit values are decimal strings.", severity="error")
+  }
+}

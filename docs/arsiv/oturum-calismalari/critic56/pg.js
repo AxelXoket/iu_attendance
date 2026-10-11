@@ -1,1 +1,0 @@
-const fs=require('fs');const t=fs.readFileSync(__dirname+'/plan.txt','utf8');const R=new RegExp(process.argv[2],'gi');const w=+process.argv[3]||250;let m,c=0;while((m=R.exec(t))&&c<(+process.argv[4]||12)){c++;console.log('--- '+t.slice(Math.max(0,m.index-w),m.index+w));}
