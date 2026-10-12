@@ -1,6 +1,15 @@
 import { z } from 'zod';
 import { extensibleEnum } from './enum.ts';
 
+// A request that carries many items takes at most this many; more is 400
+// API_INVALID_REQUEST at the items field (too_big).
+export const REQUEST_ITEMS_MAX = 200;
+
+// The result of one item of the sync queue and of a multi-item answer that has no list of
+// its own in the spec.
+export const ITEM_RESULTS = ['ACCEPTED', 'ALREADY_EXISTS', 'REJECTED', 'RETRY'] as const;
+export type ItemResult = (typeof ITEM_RESULTS)[number];
+
 // The only fields a module may add to an item result.
 export type ItemResultExtras = {
   correction?: z.ZodType;

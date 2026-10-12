@@ -1,17 +1,15 @@
 import crypto from 'node:crypto';
 import net from 'node:net';
 import tls from 'node:tls';
+import { JOBS_GENERIC_ERROR_TEXT } from '@iu-attendance/contracts/jobs';
 import { LANGUAGES } from '@iu-attendance/contracts/shared/language';
 import fc from 'fast-check';
 import { createTransport } from 'nodemailer';
 import { SMTPServer, type SMTPServerOptions } from 'smtp-server';
 import { afterAll, afterEach, beforeAll, describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { fakeMailbox, type PlannedReply } from '../../../test/support/fake-mail.ts';
-import {
-  FIXED_WARNING_SENTENCE,
-  IF_NOT_YOU_SENTENCE,
-  JOBS_GENERIC_ERROR_TEXT,
-} from './fixed-texts.ts';
+import { closedPort, closeServer, listenLocally } from '../../../test/support/ports.ts';
+import { FIXED_WARNING_SENTENCE, IF_NOT_YOU_SENTENCE } from './fixed-texts.ts';
 import {
   SMTP_CONNECTION_SETTINGS,
   SMTP_TLS_SETTINGS,
@@ -277,27 +275,9 @@ async function startHeloOnlyServer(ehloReply: string): Promise<HeloOnlyServer> {
     });
     socket.write('220 helo-only.example ESMTP\r\n');
   });
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  cleanups.push(
-    () =>
-      new Promise<void>((resolve) => {
-        for (const socket of sockets) socket.destroy();
-        server.close(() => resolve());
-      }),
-  );
-  const address = server.address();
-  if (address === null || typeof address === 'string') throw new Error('no port');
-  return { port: address.port, commands, deliveries: () => deliveries };
-}
-
-// A port on which nothing listens any more.
-async function closedPort(): Promise<number> {
-  const probe = net.createServer();
-  await new Promise<void>((resolve) => probe.listen(0, '127.0.0.1', resolve));
-  const address = probe.address();
-  if (address === null || typeof address === 'string') throw new Error('no port');
-  await new Promise<void>((resolve) => probe.close(() => resolve()));
-  return address.port;
+  const port = await listenLocally(server);
+  cleanups.push(() => closeServer(server, sockets));
+  return { port, commands, deliveries: () => deliveries };
 }
 
 function refuseRecipients(responseCode: number): SMTPServerOptions['onRcptTo'] {
@@ -752,11 +732,9 @@ describe('The SMTP transport', () => {
       connections += 1;
       socket.destroy();
     });
-    await new Promise<void>((resolve) => dropper.listen(0, '127.0.0.1', resolve));
-    cleanups.push(() => new Promise<void>((resolve) => dropper.close(() => resolve())));
-    const address = dropper.address();
-    if (address === null || typeof address === 'string') throw new Error('no port');
-    const transport = track(smtpTransport(settingsFor(address.port, 'starttls')));
+    const port = await listenLocally(dropper);
+    cleanups.push(() => closeServer(dropper, []));
+    const transport = track(smtpTransport(settingsFor(port, 'starttls')));
 
     expect(await transport.send(EMAIL)).toMatchObject({ sent: false, errorKind: 'connection' });
     await sleep(150);

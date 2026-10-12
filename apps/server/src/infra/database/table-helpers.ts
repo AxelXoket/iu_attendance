@@ -10,9 +10,9 @@ import {
 } from 'drizzle-orm/pg-core';
 import { constraintName } from './constraint-name.ts';
 
-// Shared column rules for every module's tables.ts (D12-B01, D12-B11). Table flags (client
-// id, append only, partitionable, single row) are not here: they live in TABLE_FLAGS in the
-// database contract file.
+// Shared column rules for every module's tables.ts (D12-B01, D12-B11). Table markers (client
+// id, append only, term partitionable, single row, unindexed) are not here: they live in
+// TABLE_MARKERS in the database contract file.
 
 /** One CHECK with a text IN list, as the schema test compares it with the contract list. */
 export interface StatusCheckRecord {

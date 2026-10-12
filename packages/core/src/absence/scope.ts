@@ -1,3 +1,5 @@
+import { isEmptySpan, isMemberAt } from '../rosters/interval.ts';
+import type { LateChoice } from '../rosters/late-choice.ts';
 import type { HourType } from './types.ts';
 
 // Hours of a session per hour type. The spec makes this the one hours function of the
@@ -10,23 +12,17 @@ export function sessionHours(session: {
 }
 
 // One roster row of the student in the course: a member in [addedAt, inactiveAt); a row
-// trimmed by a revival can have length zero (D03). lateEnrollmentChoice is one value per
-// course and student (D03-B12): PREVIOUS_ABSENT keeps the sessions of the first row's
-// section before its addition in scope (they count as absent), PREVIOUS_NOT_COUNTED leaves
-// them out.
+// trimmed by a revival can have length zero (D03). A trimmed row still marks an addition
+// but holds no membership. lateEnrollmentChoice is the student's late choice in the
+// course (D03-B12, late-choice.ts).
 export type ScopeRow = {
   sectionId: string;
   addedAtMs: number;
   inactiveAtMs: number | null;
-  lateEnrollmentChoice: 'PREVIOUS_NOT_COUNTED' | 'PREVIOUS_ABSENT';
+  lateEnrollmentChoice: LateChoice;
 };
 
 export type ScopeSession = { sectionIds: readonly string[]; startAtMs: number };
-
-// A row trimmed to zero length: it still marks an addition but holds no membership.
-function isTrimmed(row: ScopeRow): boolean {
-  return row.inactiveAtMs !== null && row.inactiveAtMs <= row.addedAtMs;
-}
 
 // The fixed order among candidate rows: earliest addedAtMs; at one instant the row the
 // student holds before a trimmed one (D03 keeps that one and trims the other, state
@@ -37,7 +33,7 @@ function isTrimmed(row: ScopeRow): boolean {
 // first given is returned.
 function precedes(a: ScopeRow, b: ScopeRow): boolean {
   if (a.addedAtMs !== b.addedAtMs) return a.addedAtMs < b.addedAtMs;
-  if (isTrimmed(a) !== isTrimmed(b)) return isTrimmed(b);
+  if (isEmptySpan(a) !== isEmptySpan(b)) return isEmptySpan(b);
   if (a.sectionId !== b.sectionId) return a.sectionId < b.sectionId;
   const aEnd = a.inactiveAtMs ?? Number.POSITIVE_INFINITY;
   const bEnd = b.inactiveAtMs ?? Number.POSITIVE_INFINITY;
@@ -75,13 +71,7 @@ export function coveringRow<R extends ScopeRow>(
   participated: boolean,
 ): R | null {
   const ofSession = rows.filter((row) => session.sectionIds.includes(row.sectionId));
-  const member = earliest(
-    ofSession.filter(
-      (row) =>
-        row.addedAtMs <= session.startAtMs &&
-        (row.inactiveAtMs === null || session.startAtMs < row.inactiveAtMs),
-    ),
-  );
+  const member = earliest(ofSession.filter((row) => isMemberAt(row, session.startAtMs)));
   if (member !== null) return member;
   const first = firstRow(rows);
   if (

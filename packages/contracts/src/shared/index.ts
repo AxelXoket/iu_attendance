@@ -11,4 +11,8 @@ export * from './modules.ts';
 export * from './page.ts';
 export * from './rate.ts';
 export * from './route.ts';
+export * from './signed-text.ts';
+export * from './text.ts';
 export * from './time.ts';
+export * from './value.ts';
+export * from './version.ts';

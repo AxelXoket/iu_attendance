@@ -29,9 +29,10 @@ export const FULL_LIST_DEFAULT_MAX = 2000;
 export const FULL_LIST_MAX_META = 'x-full-list-max';
 
 // The one helper for class-sized full lists: at most 2000 rows by default, a smaller
-// whole number if given, never more. Route registration counts the rows of an answer
-// carrying this schema before serialising it and answers 422 API_RESULT_TOO_LARGE
-// above the limit.
+// whole number if given, never more. Route registration counts the rows of every list
+// carrying this schema in an answer, together, before serialising it and answers 422
+// API_RESULT_TOO_LARGE above the limit. An answer grouped by session marks the row
+// lists inside the groups, not the groups.
 export function fullListSchema<T extends z.ZodType>(item: T, max: number = FULL_LIST_DEFAULT_MAX) {
   if (!Number.isInteger(max) || max < 1 || max > FULL_LIST_DEFAULT_MAX) {
     throw new Error(

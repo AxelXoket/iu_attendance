@@ -497,11 +497,19 @@ describe('clock entry (index.ts)', () => {
     const istanbul = await import('./istanbul.ts');
     const system = await import('./system-clock.ts');
     expect(Object.keys(entry).sort()).toEqual([
+      'DAY_MS',
+      'ISTANBUL_TIME_ZONE',
+      'MINUTE_MS',
       'istanbulDate',
       'istanbulDayEndInstant',
       'istanbulInstant',
       'systemClock',
       'wallClockOffsetMs',
+    ]);
+    expect([entry.ISTANBUL_TIME_ZONE, entry.MINUTE_MS, entry.DAY_MS]).toEqual([
+      'Europe/Istanbul',
+      60_000,
+      86_400_000,
     ]);
     expect(entry.istanbulDate).toBe(istanbul.istanbulDate);
     expect(entry.istanbulInstant).toBe(istanbul.istanbulInstant);

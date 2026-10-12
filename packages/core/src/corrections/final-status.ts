@@ -7,7 +7,10 @@ import {
 } from './catalog.ts';
 import { resolveChain, splitChains } from './chain.ts';
 
-const RECORD_DECISIONS = ['PRESENT', 'PENDING', 'IN_REVIEW', 'REJECTED'] as const;
+// The decisions of an attendance record; the contracts and the final status rule share
+// this one list.
+export const RECORD_DECISIONS = ['PRESENT', 'PENDING', 'IN_REVIEW', 'REJECTED'] as const;
+export type RecordDecision = (typeof RECORD_DECISIONS)[number];
 const RECORD_FLAGS = ['counted', 'selfDeclared', 'approved', 'excludedFromCount'] as const;
 
 // One record of the student in the session. counted marks the record the attendance
@@ -16,7 +19,7 @@ const RECORD_FLAGS = ['counted', 'selfDeclared', 'approved', 'excludedFromCount'
 // is not a boolean, throws FinalStatusInputError, whether or not the record is counted.
 export type FinalStatusRecord = {
   counted: boolean;
-  decision: (typeof RECORD_DECISIONS)[number];
+  decision: RecordDecision;
   selfDeclared: boolean;
   approved: boolean;
   excludedFromCount: boolean;

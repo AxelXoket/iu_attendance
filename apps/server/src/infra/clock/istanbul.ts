@@ -7,14 +7,15 @@ import { dateSchema, localTimeSchema } from '@iu-attendance/contracts/shared/tim
 // tz data; the D04 contract test checks that both agree, and istanbul.test.ts checks
 // the ICU data against a frozen copy of the zone's history.
 
+export const ISTANBUL_TIME_ZONE = 'Europe/Istanbul';
 const SECOND_MS = 1000;
-const MINUTE_MS = 60 * SECOND_MS;
-const DAY_MS = 24 * 60 * MINUTE_MS;
+export const MINUTE_MS = 60 * SECOND_MS;
+export const DAY_MS = 24 * 60 * MINUTE_MS;
 
 // The Istanbul wall clock to the second. hourCycle h23 writes midnight as 00, never as
 // 24. The era is requested because Intl counts years from 1 AD: year 0000 is 1 BC.
 const WALL_CLOCK = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'Europe/Istanbul',
+  timeZone: ISTANBUL_TIME_ZONE,
   era: 'short',
   year: 'numeric',
   month: 'numeric',

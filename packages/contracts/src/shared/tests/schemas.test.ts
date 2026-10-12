@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { ok } from '../../tests/helpers.ts';
 import { EXTENSIBLE_ENUM_MAX_LENGTH, extensibleEnum } from '../enum.ts';
 import {
   API_ERROR_CODES,
@@ -31,8 +32,6 @@ import {
   localTimeSchema,
   perMilleSchema,
 } from '../time.ts';
-
-const ok = (schema: z.ZodType, value: unknown) => schema.safeParse(value).success;
 
 type JsonNode = { readonly [key: string]: unknown };
 

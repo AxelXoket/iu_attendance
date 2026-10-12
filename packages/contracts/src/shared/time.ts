@@ -4,10 +4,12 @@ import { z } from 'zod';
 // document bounds every request text (D13-B24).
 
 // An instant: UTC ISO 8601 with milliseconds and Z (2026-03-02T07:00:00.000Z).
-export const instantSchema = z.iso.datetime({ precision: 3 }).max(24);
+export const INSTANT_LENGTH = 24;
+export const instantSchema = z.iso.datetime({ precision: 3 }).max(INSTANT_LENGTH);
 
 // A calendar day YYYY-MM-DD (an Istanbul day); report ranges use this form.
-export const dateSchema = z.iso.date().max(10);
+export const DATE_LENGTH = 10;
+export const dateSchema = z.iso.date().max(DATE_LENGTH);
 
 // A lesson time HH:MM in Istanbul local time.
 export const localTimeSchema = z

@@ -1,4 +1,5 @@
 import { decodeBase64Url, encodeBase64Url } from '../shared/base64url.ts';
+import { KEY_ID } from '../shared/formats.ts';
 import { equalBytes, hmacSha256 } from '../shared/hmac-sha256.ts';
 import { utf8Bytes } from '../shared/utf8.ts';
 import { uuidBytes } from '../shared/uuid.ts';
@@ -19,7 +20,6 @@ export const RECEIPT_MAC_LABEL = 'esitleme.ulasma.1';
 /** At most 50 bytes, so at most 67 letters: under the request's limit of 128. */
 export const RECEIPT_MAX_BYTES = 50;
 
-const KID = /^[a-z0-9-]{1,8}$/;
 const MAC_LENGTH = 32;
 const DIGEST_LENGTH = 32;
 const HALF = 0x100000000;
@@ -105,7 +105,7 @@ export function issueArrivalReceipt(
   subject: ReceiptSubject,
   acceptedAtMs: number,
 ): string {
-  if (typeof key.kid !== 'string' || !KID.test(key.kid) || key.secret.length === 0) {
+  if (typeof key.kid !== 'string' || !KEY_ID.test(key.kid) || key.secret.length === 0) {
     throw new RangeError('issueArrivalReceipt expects a kid of 1 to 8 letters and a secret');
   }
   if (!isTime(acceptedAtMs)) {
@@ -138,7 +138,7 @@ export function readArrivalReceipt(text: unknown): ReceiptContent | null {
   if (bytes.length !== 2 + kidLength + 8 + MAC_LENGTH) return null;
   let kid = '';
   for (const byte of bytes.subarray(2, 2 + kidLength)) kid += String.fromCharCode(byte);
-  if (!KID.test(kid)) return null;
+  if (!KEY_ID.test(kid)) return null;
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const high = view.getUint32(2 + kidLength);
   if (high >= HIGH_HALF_LIMIT) return null;

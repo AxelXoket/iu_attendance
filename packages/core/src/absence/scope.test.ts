@@ -1,5 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import { LATE_CHOICES } from '../rosters/late-choice.ts';
 import {
   coveringRow,
   firstRow,
@@ -240,12 +241,6 @@ describe('Public scope predicate and session hours', () => {
 // a twin added at the same instant in another section, mostly trimmed to zero length: the
 // tie a same-millisecond section change or a revival leaves behind (D03).
 const SECTIONS = ['s1', 's2', 's3'];
-// Every choice exactly once: the satisfies check stops compiling if the type gains a choice.
-const CHOICE_SET = {
-  PREVIOUS_NOT_COUNTED: true,
-  PREVIOUS_ABSENT: true,
-} satisfies Record<Choice, true>;
-const CHOICES = Object.keys(CHOICE_SET) as Choice[];
 const MAX_ADDED = 12;
 const MAX_LENGTH = 10;
 const MAX_START = 20;
@@ -262,7 +257,7 @@ const rowArb: fc.Arbitrary<ScopeRow> = fc
     sectionId: fc.constantFrom(...SECTIONS),
     addedAtMs: fc.integer({ min: 0, max: MAX_ADDED }),
     length: lengthArb,
-    lateEnrollmentChoice: fc.constantFrom(...CHOICES),
+    lateEnrollmentChoice: fc.constantFrom(...LATE_CHOICES),
   })
   .map(({ length, ...fields }) => ({
     ...fields,

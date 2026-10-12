@@ -12,10 +12,11 @@ export type ErrorHttpStatus = (typeof ERROR_HTTP_STATUSES)[number];
 // server picks from at random, or a value the thrower supplies.
 export type Retry = { fixed: number } | { range: readonly [number, number] } | 'caller';
 
-// One code of a catalog. http null marks an operational code (startup codes, codes
-// raised only in the worker): its texts may be null, no route may list it, and if it
-// is thrown during a request the root handler answers 500 API_SERVER_ERROR. With http
-// set, the lecturer and student texts exist in every language and carry no personal
+// One code of a catalog. http null marks a code that never answers an HTTP request, and no
+// route lists it: either an item code, whose texts reach the client inside an item result,
+// or an operational code (startup, worker, CI), with no texts at all (OPERATIONAL_CODE);
+// thrown during a request, either becomes 500 API_SERVER_ERROR at the root handler. With
+// http set, the lecturer and student texts exist in every language and carry no personal
 // data or placeholders. The lecturer text is the staff text: lecturers and admins,
 // projection browsers and anonymous routes without a student audience read it; the
 // student text goes to student sessions and student devices (D13-B03). details is the
@@ -119,6 +120,15 @@ export function defineErrorCodes<const K extends Record<string, ErrorDefinition>
   }
   return codes;
 }
+
+/** One text for staff and students alike, in both languages. */
+export function sameText(tr: string, en: string) {
+  const text = { tr, en };
+  return { lecturer: text, student: text };
+}
+
+/** A code that never reaches a client: no status and no text. */
+export const OPERATIONAL_CODE = { http: null, lecturer: null, student: null } as const;
 
 // errors.ts (which merges every catalog) extends this registry, so the details type
 // of a code is known here without importing errors.ts.
@@ -244,8 +254,8 @@ export const TRANSIENT_SQLSTATES: Readonly<Record<string, TransientKind>> = Obje
   '25P04': 'timeout',
 });
 
-// A well-formed SQLSTATE: five digits or upper-case ASCII letters.
-const SQLSTATE = /^[0-9A-Z]{5}$/;
+/** A well-formed SQLSTATE: five digits or upper-case ASCII letters. */
+export const SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/;
 
 // The kind of a database error code, or null. Takes unknown because the root handler
 // passes the code of any raw error. Only own keys of the table count, and only a
@@ -254,7 +264,7 @@ const SQLSTATE = /^[0-9A-Z]{5}$/;
 export function transientKind(sqlstate: unknown): TransientKind | null {
   // Only a five-character SQLSTATE is looked up: the class key '08' alone is not a code.
   // No such code names an Object.prototype member, so Object.hasOwn is a guard only.
-  if (typeof sqlstate !== 'string' || !SQLSTATE.test(sqlstate)) return null;
+  if (typeof sqlstate !== 'string' || !SQLSTATE_PATTERN.test(sqlstate)) return null;
   for (const key of [sqlstate, sqlstate.slice(0, 2)]) {
     if (Object.hasOwn(TRANSIENT_SQLSTATES, key)) return TRANSIENT_SQLSTATES[key] ?? null;
   }

@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { uuidBytes } from './uuid.ts';
+import { uuidBytes, uuidText } from './uuid.ts';
 
 const hex = (bytes: Uint8Array | null) =>
   bytes === null ? null : Buffer.from(bytes).toString('hex');
@@ -36,5 +36,26 @@ describe('uuidBytes', () => {
 
   it('refuses a value that is not text', () => {
     expect(uuidBytes(42 as unknown as string)).toBeNull();
+  });
+});
+
+describe('uuidText', () => {
+  it('writes the lowercase canonical text that uuidBytes reads back', () => {
+    fc.assert(
+      fc.property(fc.uint8Array({ minLength: 16, maxLength: 16 }), (bytes) => {
+        const text = uuidText(bytes);
+        expect(text).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+        expect(uuidBytes(text)).toEqual(bytes);
+      }),
+    );
+    expect(uuidText(new Uint8Array(16).fill(0xab))).toBe('abababab-abab-abab-abab-abababababab');
+    expect(uuidText(Uint8Array.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15))).toBe(
+      '00010203-0405-0607-0809-0a0b0c0d0e0f',
+    );
+  });
+
+  it('rejects any length other than 16 bytes', () => {
+    expect(() => uuidText(new Uint8Array(15))).toThrow(RangeError);
+    expect(() => uuidText(new Uint8Array(17))).toThrow(RangeError);
   });
 });

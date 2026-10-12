@@ -7,16 +7,30 @@ export type AuthSessionId = Id<'AuthSession'>;
 export type DeviceId = Id<'Device'>;
 export type ProjectionId = Id<'Projection'>;
 export type UnitId = Id<'Unit'>;
+export type RosterRowId = Id<'RosterRow'>;
 
 // The length of a UUID in text form (8-4-4-4-12 hex digits and four dashes). The
 // bound goes into the OpenAPI document: every request text has a maxLength (D13-B24).
-const UUID_LENGTH = 36;
+export const UUID_LENGTH = 36;
 
-// A branded UUID schema; the brand matches the Id types above, so course, session
-// and student ids never mix.
+// A branded UUID schema of any version, for an id whose version this system does not
+// fix; the brand matches the Id types above, so ids of two kinds never mix.
 export function idSchema<const Name extends string>(_name: Name): z.ZodType<Id<Name>, string> {
   return z.uuid().max(UUID_LENGTH) as unknown as z.ZodType<Id<Name>, string>;
 }
+
+// The same for a row id that is always a UUIDv7 (made by the client or by uuidv7() in the
+// database): a reference of another version is a malformed request (400), not an unknown
+// row (404).
+export function v7IdSchema<const Name extends string>(_name: Name): z.ZodType<Id<Name>, string> {
+  return z.uuidv7().max(UUID_LENGTH) as unknown as z.ZodType<Id<Name>, string>;
+}
+
+// The rows several modules refer to: a person (the identity module), a unit (the courses
+// module; roles are scoped to it) and a roster row (the rosters module).
+export const personIdSchema = v7IdSchema('Person');
+export const unitIdSchema = v7IdSchema('Unit');
+export const rosterRowIdSchema = v7IdSchema('RosterRow');
 
 // The replay key of a create operation (D13-B12): a UUIDv7 the client generates once
 // per form or queue item, so a retried create finds its first write. It is neither an
@@ -61,11 +75,11 @@ const CLIENT_BY_SOURCE = {
 
 const roleGrantSchema = z.strictObject({
   role: z.enum(PERSON_ROLES),
-  scopeUnitId: idSchema('Unit').nullable(),
+  scopeUnitId: unitIdSchema.nullable(),
 });
 
 const identityShape = z.strictObject({
-  personId: idSchema('Person').nullable(),
+  personId: personIdSchema.nullable(),
   authSessionId: idSchema('AuthSession').nullable(),
   sessionScope: z.enum(['full', 'change_pending']).nullable(),
   source: z.enum(['bearer', 'cookie', 'signature', 'projection']),
