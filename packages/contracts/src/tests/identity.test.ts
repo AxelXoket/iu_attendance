@@ -1,7 +1,9 @@
+import { DEVICE_STATUSES as CORE_DEVICE_STATUSES } from '@iu-attendance/core/identity/device-status';
 import { encodeBase64Url } from '@iu-attendance/core/shared/base64url';
 import { utf8Bytes } from '@iu-attendance/core/shared/utf8';
 import { describe, expect, it } from 'vitest';
 import {
+  DEVICE_STATUSES,
   EVIDENCE_LIMITS,
   IDENTITY_AUDIT_EVENTS,
   IDENTITY_CONSTANTS,
@@ -13,10 +15,12 @@ import {
 } from '../identity.ts';
 import { BODY_LIMIT_DEFAULT_BYTES } from '../shared/index.ts';
 import { id, ok } from './helpers.ts';
+import { extensibleEnumsIn } from './schema-walk.ts';
 
 const {
   approveChangeRequest,
   deleteStudentAccount,
+  getMe,
   grantRole,
   issueRegistrationCode,
   listAccounts,
@@ -45,6 +49,14 @@ const registers = (body: object) => ok(registerStudent.request.body, body);
 const char = (codePoint: number) => String.fromCodePoint(codePoint);
 
 describe('identity contract', () => {
+  it("takes the device status list from core and shows it in the student's own answer", () => {
+    expect(DEVICE_STATUSES).toBe(CORE_DEVICE_STATUSES);
+    const lists = extensibleEnumsIn(getMe.response.schema).map(
+      (node) => node.meta()?.['x-extensible-enum'],
+    );
+    expect(lists).toContainEqual([...CORE_DEVICE_STATUSES]);
+  });
+
   it('keeps the numeric rules of the spec', () => {
     expect(IDENTITY_CONSTANTS).toEqual({
       codeValiditySeconds: 300,

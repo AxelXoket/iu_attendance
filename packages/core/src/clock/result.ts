@@ -196,13 +196,13 @@ export function clockResult(input: {
   readonly second: SecondAnchorInput;
   readonly expectedSubject: ClockSubject;
   readonly phoneClockMs: number | null;
-  readonly arrivalMs: number;
+  readonly arrivedAtMs: number;
   readonly syncHealthy: boolean;
 }): ClockResult {
-  const { first, second, expectedSubject, phoneClockMs, arrivalMs, syncHealthy } = input;
+  const { first, second, expectedSubject, phoneClockMs, arrivedAtMs, syncHealthy } = input;
   if (
     (phoneClockMs !== null && !Number.isSafeInteger(phoneClockMs)) ||
-    !Number.isSafeInteger(arrivalMs)
+    !Number.isSafeInteger(arrivedAtMs)
   ) {
     throw new RangeError('clockResult expects integer milliseconds for the clocks');
   }
@@ -223,7 +223,7 @@ export function clockResult(input: {
     ...clock,
     firstAnchorStatus: firstCheck.status,
     secondAnchorStatus: secondCheck.status,
-    startsAfterArrival: clock.marginMs !== null && clock.range.lowMs > arrivalMs,
+    startsAfterArrival: clock.marginMs !== null && clock.range.lowMs > arrivedAtMs,
     arrivedWhileSyncBroken: !syncHealthy,
   };
 }

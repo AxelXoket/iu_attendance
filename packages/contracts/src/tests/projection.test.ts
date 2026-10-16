@@ -1,4 +1,8 @@
-import { QR_PARSE_ERRORS } from '@iu-attendance/core/projection/constants';
+import {
+  DISPLAY_SOURCES as CORE_DISPLAY_SOURCES,
+  EVIDENCE_KINDS as CORE_EVIDENCE_KINDS,
+  QR_PARSE_ERRORS,
+} from '@iu-attendance/core/projection/constants';
 import { projectionLockKeys } from '@iu-attendance/core/projection/lock-keys';
 import fc from 'fast-check';
 import ts from 'typescript';
@@ -9,6 +13,8 @@ import {
   CODES_REQUEST,
   DISPLAY_RECORD_ITEM,
   DISPLAY_SLICE_MS,
+  DISPLAY_SOURCES,
+  EVIDENCE_KINDS,
   PROJECTION_AUDIT_EVENTS,
   PROJECTION_ERROR_CODES,
   PROJECTION_ROUTES,
@@ -277,6 +283,11 @@ describe('projection result dictionaries', () => {
       extensibleEnumsIn(schema)[0]?.meta()?.['x-extensible-enum'];
     expect(known(qrResultSchema.shape.verification)).toEqual([...QR_VERIFICATION_RESULTS]);
     expect(known(qrResultSchema.shape.delay)).toEqual([...QR_DELAY_RESULTS]);
+    // The evidence kinds and display sources are core's lists, re-exported, not copies.
+    expect(EVIDENCE_KINDS).toBe(CORE_EVIDENCE_KINDS);
+    expect(DISPLAY_SOURCES).toBe(CORE_DISPLAY_SOURCES);
+    expect(known(qrResultSchema.shape.evidenceKind)).toEqual([...CORE_EVIDENCE_KINDS]);
+    expect(known(qrResultSchema.shape.source)).toEqual([...CORE_DISPLAY_SOURCES]);
   });
 
   it('never imports the verification contract: the dictionary runs one way', () => {

@@ -4,13 +4,16 @@
 // defaults and the codes request form. This file never imports the verification contract:
 // the verification module maps the result lists in its own code (one-way dictionary).
 // Request and answer objects drop unknown keys (D13-B24); the audit schemas are strict.
-// The QR layout, the slice, the QR verification and delay result lists and the lectern
-// states are core's (core/projection), where the phone and the server compute codes with
-// one function and the core rules read the lists; this file re-exports the lists.
+// The QR layout, the slice, the QR verification and delay result lists, the evidence
+// kinds, the display sources and the lectern states are core's (core/projection), where
+// the phone and the server compute codes with one function and the core rules read the
+// lists; this file re-exports the lists.
 import {
   BLUETOOTH_STATUSES,
   DELAY_LIMIT_DEFAULTS_MS,
   DISPLAY_SLICE_MS,
+  DISPLAY_SOURCES,
+  EVIDENCE_KINDS,
   LECTERN_CODE_SLICES,
   LECTERN_STATUSES,
   PROJECTION_SLOT,
@@ -41,8 +44,6 @@ import {
   v7IdSchema,
 } from './shared/index.ts';
 
-export const EVIDENCE_KINDS = ['QR', 'BACKUP_CODE', 'NONE'] as const;
-export const DISPLAY_SOURCES = ['PROJECTION', 'LECTURER_PHONE'] as const;
 export const DISPLAY_KINDS = ['QR', 'BACKUP_CODE', 'BLUETOOTH'] as const;
 export const LOCATION_STATUSES = ['RECEIVED', 'NO_LOCATION', 'APPROXIMATE_PERMISSION'] as const;
 const BLUETOOTH_RESULTS = ['SEEN', 'NOT_SEEN', 'NO_BLUETOOTH', 'PENDING'] as const;
@@ -79,6 +80,8 @@ const pairingCodeRowIdSchema = v7IdSchema('PairingCode');
 export {
   BLUETOOTH_STATUSES,
   DISPLAY_SLICE_MS,
+  DISPLAY_SOURCES,
+  EVIDENCE_KINDS,
   LECTERN_STATUSES,
   QR_DELAY_RESULTS,
   QR_VERIFICATION_RESULTS,
@@ -194,10 +197,10 @@ export type QrResult = z.infer<typeof qrResultSchema>;
 // (projectionSettingsSchema.parse({})); the stage 2 switch is not here.
 const setting = (value: number) => z.number().int().positive().default(value);
 export const projectionSettingsSchema = z.object({
-  normalLimitMs: setting(DELAY_LIMIT_DEFAULTS_MS.normal),
-  backupCodeNormalLimitMs: setting(DELAY_LIMIT_DEFAULTS_MS.backupCodeNormal),
-  rejectLimitMs: setting(DELAY_LIMIT_DEFAULTS_MS.reject),
-  projectionToleranceMs: setting(DELAY_LIMIT_DEFAULTS_MS.projectionTolerance),
+  normalLimitMs: setting(DELAY_LIMIT_DEFAULTS_MS.normalLimitMs),
+  backupCodeNormalLimitMs: setting(DELAY_LIMIT_DEFAULTS_MS.backupCodeNormalLimitMs),
+  rejectLimitMs: setting(DELAY_LIMIT_DEFAULTS_MS.rejectLimitMs),
+  projectionToleranceMs: setting(DELAY_LIMIT_DEFAULTS_MS.projectionToleranceMs),
   pairingCodeLifetimeMs: setting(5 * 60_000),
   approvalLeadMs: setting(15 * 60_000),
   wrongPairingLimit: setting(5),

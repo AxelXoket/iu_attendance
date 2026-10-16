@@ -61,6 +61,15 @@ export const QR_DELAY_RESULTS = [
 ] as const;
 export type QrVerification = (typeof QR_VERIFICATION_RESULTS)[number];
 export type QrDelay = (typeof QR_DELAY_RESULTS)[number];
+/** What the record carries: a scanned QR code, a typed backup code or neither. */
+export const EVIDENCE_KINDS = ['QR', 'BACKUP_CODE', 'NONE'] as const;
+export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
+/** Where the scanned code was shown: the lectern projection (slot 0) or a lecturer's phone. */
+export const DISPLAY_SOURCES = ['PROJECTION', 'LECTURER_PHONE'] as const;
+export type DisplaySource = (typeof DISPLAY_SOURCES)[number];
+/** The lecturer's clock of a display record: verified, anchors that disagree, or none. */
+export const LECTURER_CLOCK_STATUSES = ['VERIFIED', 'ANCHORS_DISAGREE', 'NONE'] as const;
+export type LecturerClockStatus = (typeof LECTURER_CLOCK_STATUSES)[number];
 /** What the lectern page shows; an unknown value reads as waiting for the connection. */
 export const LECTERN_STATUSES = [
   'AWAITING_PAIRING',
@@ -71,18 +80,19 @@ export const LECTERN_STATUSES = [
   'SERVER_CLOCK_BROKEN',
   'CLOSED',
 ] as const;
+export type LecternStatus = (typeof LECTERN_STATUSES)[number];
 /** The lectern page holds the codes of the current slice and of up to six ahead. */
 export const LECTERN_CODE_SLICES = 7;
 /**
- * The delay rule's limits (D11 plan sentence), the projection settings' defaults: a scan is
- * normal within 10 s of its slice (20 s with a backup code) and rejected after 30 s, the
- * projection's own clock trusted to 1 s.
+ * The delay rule's limits (D11 plan sentence), the projection settings' defaults under the
+ * settings' own names: a scan is normal within 10 s of its slice (20 s with a backup code)
+ * and rejected after 30 s, the projection's own clock trusted to 1 s.
  */
 export const DELAY_LIMIT_DEFAULTS_MS = {
-  normal: 10_000,
-  backupCodeNormal: 20_000,
-  reject: 30_000,
-  projectionTolerance: 1_000,
+  normalLimitMs: 10_000,
+  backupCodeNormalLimitMs: 20_000,
+  rejectLimitMs: 30_000,
+  projectionToleranceMs: 1_000,
 } as const;
 /** The record's Bluetooth scan status (stage 3); the projection contract's record schema reads it. */
 export const BLUETOOTH_STATUSES = ['SCANNED', 'NO_BLUETOOTH'] as const;

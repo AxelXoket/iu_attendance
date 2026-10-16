@@ -105,6 +105,16 @@ export function istanbulDate(instantMs: number): string {
   return date;
 }
 
+// The Istanbul wall-clock time (HH:MM, the seconds dropped) of a UTC instant. The
+// instant must be whole milliseconds, otherwise RangeError.
+export function istanbulTime(instantMs: number): string {
+  if (!Number.isInteger(instantMs)) {
+    throw new RangeError(`Expected an instant in whole milliseconds, got ${instantMs}`);
+  }
+  const { hour, minute } = wallClockAt(instantMs);
+  return `${pad(hour, 2)}:${pad(minute, 2)}`;
+}
+
 // The UTC instant of an Istanbul date and HH:MM time. A time that did not exist or
 // occurred twice resolves as in PostgreSQL (localToInstantMs); Istanbul has been
 // +03:00 all year since 2016-09-07, so only older dates have such times.

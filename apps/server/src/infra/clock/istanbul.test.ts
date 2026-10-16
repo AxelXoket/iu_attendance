@@ -320,6 +320,22 @@ for (const zone of ZONES) {
       fc.assert(fc.property(instantIn(0, 10000), expectFixtureDate), { numRuns: 500 });
     });
 
+    it('times any instant like the frozen tz history, the seconds dropped', () => {
+      const expectFixtureTime = (instantMs: number) => {
+        expect(helpers.istanbulTime(instantMs)).toBe(
+          timeOf(instantMs + fixtureOffsetMs(instantMs)),
+        );
+      };
+      fc.assert(fc.property(instantIn(1870, 2100), expectFixtureTime), { numRuns: 2000 });
+      // 2015-11-08 04:00 went back to 03:00: the same wall time twice, an hour apart.
+      expect(helpers.istanbulTime(Date.UTC(2015, 10, 8, 0, 30))).toBe('03:30');
+      expect(helpers.istanbulTime(Date.UTC(2015, 10, 8, 1, 30))).toBe('03:30');
+      expect(helpers.istanbulTime(Date.UTC(2026, 9, 6, 6, 58, 59, 999))).toBe('09:58');
+      for (const instantMs of [Number.NaN, 0.5, Number.POSITIVE_INFINITY]) {
+        expect(() => helpers.istanbulTime(instantMs)).toThrow(RangeError);
+      }
+    });
+
     it('converts random local times like PostgreSQL over the frozen tz history', () => {
       const expectPostgresInstant = (localMs: number) => {
         const actual = helpers.istanbulInstant(dateOf(localMs), timeOf(localMs));
@@ -503,6 +519,7 @@ describe('clock entry (index.ts)', () => {
       'istanbulDate',
       'istanbulDayEndInstant',
       'istanbulInstant',
+      'istanbulTime',
       'systemClock',
       'wallClockOffsetMs',
     ]);
@@ -514,6 +531,7 @@ describe('clock entry (index.ts)', () => {
     expect(entry.istanbulDate).toBe(istanbul.istanbulDate);
     expect(entry.istanbulInstant).toBe(istanbul.istanbulInstant);
     expect(entry.istanbulDayEndInstant).toBe(istanbul.istanbulDayEndInstant);
+    expect(entry.istanbulTime).toBe(istanbul.istanbulTime);
     expect(entry.systemClock).toBe(system.systemClock);
     expect(entry.wallClockOffsetMs).toBe(system.wallClockOffsetMs);
   });

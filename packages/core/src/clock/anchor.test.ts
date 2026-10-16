@@ -1,9 +1,8 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { anchorRange } from './anchor.ts';
-import { DOCUMENT_MAX_AGE_MS, DOCUMENT_REQUEST_MAX_MS, DRIFT_PPM } from './constants.ts';
+import { DAY_MS, DOCUMENT_MAX_AGE_MS, DOCUMENT_REQUEST_MAX_MS, DRIFT_PPM } from './constants.ts';
 
-const DAY_MS = 86_400_000;
 const PPM = 1_000_000n;
 const PER_MILLE = 1000n;
 

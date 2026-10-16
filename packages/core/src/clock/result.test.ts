@@ -1,5 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import { clockDocument } from '../testing/clock.ts';
 import { anchorRange } from './anchor.ts';
 import {
   FIRST_ANCHOR_PHONE_REPORTS,
@@ -7,7 +8,7 @@ import {
   SECOND_ANCHOR_ABSENT_REASONS,
   SECOND_ANCHOR_STATUSES,
 } from './codes.ts';
-import { DOCUMENT_MAX_AGE_MS, DOCUMENT_REQUEST_MAX_MS } from './constants.ts';
+import { DAY_MS, DOCUMENT_MAX_AGE_MS, DOCUMENT_REQUEST_MAX_MS } from './constants.ts';
 import {
   type ClockResult,
   clockResult,
@@ -34,18 +35,9 @@ const OTHER_LECTURER = {
 } as const;
 
 const S = 1_792_000_000_000;
-const DAY_MS = 86_400_000;
 const document = (
   patch: Partial<{ serverTimeMs: number; subject: ClockSubject; keyCompromised: boolean }> = {},
-): DocumentVerification => ({
-  valid: true,
-  kid: 'k1',
-  subject: DEVICE_A,
-  value: 'AAAAAAAAAAAAAAAAAAAAAA',
-  serverTimeMs: S,
-  keyCompromised: false,
-  ...patch,
-});
+): DocumentVerification => clockDocument({ subject: DEVICE_A, serverTimeMs: S, ...patch });
 type FirstDocument = Extract<FirstAnchorInput, { document: unknown }>;
 type SecondDocument = Extract<SecondAnchorInput, { document: unknown }>;
 const first = (patch: Partial<FirstDocument> = {}): FirstAnchorInput => ({
@@ -67,7 +59,7 @@ const result = (input: Partial<Parameters<typeof clockResult>[0]> = {}): ClockRe
     second: second(),
     expectedSubject: DEVICE_A,
     phoneClockMs: S + 61_000,
-    arrivalMs: S + 400_000,
+    arrivedAtMs: S + 400_000,
     syncHealthy: true,
     ...input,
   });
@@ -309,12 +301,12 @@ describe('clock result: anchor statuses', () => {
 describe('clock result: arrival and sync', () => {
   it('checks an anchored range against the arrival', () => {
     const low = result().range?.lowMs ?? 0;
-    expect(result({ arrivalMs: low - 1 }).startsAfterArrival).toBe(true);
-    expect(result({ arrivalMs: low }).startsAfterArrival).toBe(false);
+    expect(result({ arrivedAtMs: low - 1 }).startsAfterArrival).toBe(true);
+    expect(result({ arrivedAtMs: low }).startsAfterArrival).toBe(false);
     // The phone clock is only a note: past the arrival, it is known to be wrong.
-    const fastPhone = result({ ...noAnchors, phoneClockMs: S + 1, arrivalMs: S });
+    const fastPhone = result({ ...noAnchors, phoneClockMs: S + 1, arrivedAtMs: S });
     expect(fastPhone.startsAfterArrival).toBe(false);
-    const nothing = result({ ...noAnchors, phoneClockMs: null, arrivalMs: 0 });
+    const nothing = result({ ...noAnchors, phoneClockMs: null, arrivedAtMs: 0 });
     expect(nothing.startsAfterArrival).toBe(false);
   });
 
@@ -328,7 +320,7 @@ describe('clock result: arrival and sync', () => {
   it('refuses a phone clock or an arrival that is not integer milliseconds', () => {
     for (const bad of [Number.NaN, 1.5, Number.POSITIVE_INFINITY]) {
       expect(() => result({ phoneClockMs: bad }), `${bad}`).toThrow(RangeError);
-      expect(() => result({ arrivalMs: bad }), `${bad}`).toThrow(RangeError);
+      expect(() => result({ arrivedAtMs: bad }), `${bad}`).toThrow(RangeError);
     }
   });
 });
@@ -385,7 +377,7 @@ describe('clock result: the estimate (I023)', () => {
             second: secondAnchor,
             expectedSubject: DEVICE_A,
             phoneClockMs,
-            arrivalMs: S,
+            arrivedAtMs: S,
             syncHealthy: true,
           });
           sources.add(clock.source);

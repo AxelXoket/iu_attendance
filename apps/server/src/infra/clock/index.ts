@@ -7,6 +7,7 @@ export {
   istanbulDate,
   istanbulDayEndInstant,
   istanbulInstant,
+  istanbulTime,
   MINUTE_MS,
 } from './istanbul.ts';
 export { systemClock, wallClockOffsetMs } from './system-clock.ts';

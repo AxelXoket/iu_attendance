@@ -6,3 +6,8 @@ import { DISPLAY_SLICE_MS } from './constants.ts';
 export function sliceOf(ms: number): number {
   return Math.floor(ms / DISPLAY_SLICE_MS);
 }
+
+/** The first millisecond of a slice: slice x 5 s. */
+export function sliceStartMs(slice: number): number {
+  return slice * DISPLAY_SLICE_MS;
+}

@@ -20,3 +20,9 @@ export const VALUE_BYTES = 16;
 
 /** One minute: window lengths are whole minutes. */
 export const MINUTE_MS = 60_000;
+
+/**
+ * One day, 24 hours. The calendar (D02-P02) and the server's Istanbul helpers (D04-P01)
+ * keep their own copy: their packages come before this file in the roadmap.
+ */
+export const DAY_MS = 86_400_000;

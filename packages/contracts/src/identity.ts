@@ -8,6 +8,7 @@
 // Apple's own base64 text of the key's digest and passes through unchanged.
 import { CONFIRMATION_STATUSES, MATCH_STATUSES } from '@iu-attendance/core/identity/confirmation';
 import { DEVICE_KEY_KINDS } from '@iu-attendance/core/identity/device-key';
+import { DEVICE_STATUSES } from '@iu-attendance/core/identity/device-status';
 import {
   CROCKFORD_ALPHABET,
   REGISTRATION_CODE_GROUP_LENGTH,
@@ -117,7 +118,6 @@ export const CONFIRMATION_REJECTION_REASONS = [
   'number_elsewhere',
   'other',
 ] as const;
-export const DEVICE_STATUSES = ['active', 'change_pending', 'closed'] as const;
 export const DEVICE_VERIFICATION_RESULTS = [
   'verified',
   'unverified',
@@ -141,7 +141,7 @@ export const DEVICE_CLOSE_REASONS = [
 ] as const;
 // An App Attest key is checked by D07 and gets its proof result.
 export const APP_ATTEST_RESULTS = PROOF_RESULTS;
-export { DEVICE_KEY_KINDS };
+export { DEVICE_KEY_KINDS, DEVICE_STATUSES };
 export const REGISTRATION_RESULTS = [
   'confirmation_pending',
   'confirmed',

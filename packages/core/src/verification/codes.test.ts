@@ -8,6 +8,8 @@ import {
   HISTORY_EVENTS,
   INTERNAL_REEVALUATION_REASONS,
   IOS_ANOMALY_KINDS,
+  type Labels,
+  labelList,
   PROOF_REASONS,
   RECORD_DECISIONS,
   RECORD_LABELS,
@@ -182,6 +184,20 @@ describe('verification lists', () => {
       'OUTAGE_CLOSED',
       'WAIT_EXPIRED',
     ]);
+  });
+
+  it("write a record's labels as the list of those set, in the list order", () => {
+    const none = Object.fromEntries(RECORD_LABELS.map((label) => [label, false])) as Labels;
+    expect(labelList(none)).toEqual([]);
+    expect(labelList({ ...none, VERIFIED: true, NO_QR: true })).toEqual(['NO_QR', 'VERIFIED']);
+    const all = Object.fromEntries(RECORD_LABELS.map((label) => [label, true])) as Labels;
+    expect(labelList(all)).toEqual(RECORD_LABELS);
+    // Labels read back from a row may come in another key order; the list order holds.
+    const reversed = Object.fromEntries(
+      [...RECORD_LABELS].reverse().map((label) => [label, true]),
+    ) as Labels;
+    expect(Object.keys(reversed)).not.toEqual(RECORD_LABELS);
+    expect(labelList(reversed)).toEqual(RECORD_LABELS);
   });
 
   it('lists every history event once: the arrival, then the reasons and the events', () => {

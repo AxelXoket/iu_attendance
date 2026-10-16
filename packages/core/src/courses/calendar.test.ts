@@ -104,6 +104,8 @@ describe('days', () => {
     ['9:00', false],
     ['09:60', false],
     ['09:00:00', false],
+    ['09:30\n', false],
+    [' 09:30', false],
   ])('isTime(%j) is %s', (text, expected) => {
     expect(isTime(text)).toBe(expected);
   });

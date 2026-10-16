@@ -36,7 +36,8 @@ describe('half-open intervals', () => {
           if (b === c) expect(halfOpenOverlap(a, b, c, d)).toBe(false);
         }
       }),
-      { numRuns: 500 },
+      // Seeded, so the ground control below counts the same runs every time.
+      { numRuns: 500, seed: 1 },
     );
     expect(touching).toBeGreaterThan(10);
   });

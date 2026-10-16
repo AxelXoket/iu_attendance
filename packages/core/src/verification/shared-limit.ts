@@ -38,6 +38,14 @@ export type SharedLimitResult = {
   readonly counter: SharedLimitCounter;
 };
 
+/**
+ * The labels that send a record to the shared limit when no other rule fits: the
+ * verification module also locks the counter row for every record that carries one.
+ */
+export function usesSharedLimit(labels: SharedLimitInput['labels']): boolean {
+  return labels.CLOCK_UNVERIFIED || labels.BACKUP_CODE;
+}
+
 /** RangeError for a counter the table cannot hold: used not the count of its sessions, or a session twice. */
 export function sharedLimitDecision(input: SharedLimitInput): SharedLimitResult {
   const { counter } = input;
@@ -46,7 +54,7 @@ export function sharedLimitDecision(input: SharedLimitInput): SharedLimitResult 
     throw new RangeError('the shared limit counter does not match its sessions');
   }
   const unchanged = { spendsRight: false, counter } as const;
-  if (!(input.labels.CLOCK_UNVERIFIED || input.labels.BACKUP_CODE) || input.otherRuleFits) {
+  if (!usesSharedLimit(input.labels) || input.otherRuleFits) {
     return { reason: null, ...unchanged };
   }
   // A session that holds a right accepts every record of it, also past the limit.

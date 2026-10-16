@@ -8,6 +8,9 @@ export default defineConfig({
   ssr: { resolve: { conditions: ['source'] } },
   test: {
     include: ['src/**/*.test.ts'],
+    // Property tests run thousands of cases; under coverage on a busy machine a few pass the
+    // 5 s default, though each takes about a second alone.
+    testTimeout: 30_000,
     coverage: {
       include: ['src/**/*.{ts,mts,cts,tsx}'],
       exclude: ['src/**/*.test.{ts,mts,cts,tsx}', 'src/testing/**'],

@@ -57,7 +57,8 @@ describe('counted record', () => {
     expect(() => chooseCounted([lower, again])).toThrow(RangeError);
   });
 
-  it('chooses the same record whatever order the records arrive in', () => {
+  // Every permutation of up to six records, 2,000 times: slow under coverage on a busy machine.
+  it('chooses the same record whatever order the records arrive in', { timeout: 60_000 }, () => {
     fc.assert(
       fc.property(recordSets, (records) => {
         const chosen = chooseCounted(records);

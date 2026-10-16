@@ -15,8 +15,8 @@ import type { ClockRange } from './types.ts';
 export type AnchorDirection = 'FORWARD' | 'BACKWARD';
 export type AnchorRange = ClockRange & { readonly estimateMs: number; readonly marginMs: number };
 
-/** True for a duration the phone may report: a safe integer of 0 ms or more. */
-const driftMs = (elapsedMs: number) => Math.ceil((elapsedMs * DRIFT_PPM) / 1_000_000);
+/** k(x): how far the phone's counter may drift over x ms it measured, rounded up. */
+export const driftMs = (elapsedMs: number) => Math.ceil((elapsedMs * DRIFT_PPM) / 1_000_000);
 
 /**
  * The range of one anchor. Throws RangeError for a time that is not a safe integer or a

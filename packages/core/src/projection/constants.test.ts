@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   DELAY_LIMIT_DEFAULTS_MS,
+  DISPLAY_SOURCES,
+  EVIDENCE_KINDS,
   LECTERN_CODE_SLICES,
   LECTERN_STATUSES,
+  LECTURER_CLOCK_STATUSES,
   QR_DELAY_RESULTS,
   QR_PARSE_ERRORS,
   QR_VERIFICATION_RESULTS,
@@ -52,16 +55,22 @@ describe('projection result dictionaries (D11 DOGRULAMA, GECIKME)', () => {
     ]);
   });
 
+  it('name the evidence kinds, the display sources and the lecturer clock statuses', () => {
+    expect(EVIDENCE_KINDS).toEqual(['QR', 'BACKUP_CODE', 'NONE']);
+    expect(DISPLAY_SOURCES).toEqual(['PROJECTION', 'LECTURER_PHONE']);
+    expect(LECTURER_CLOCK_STATUSES).toEqual(['VERIFIED', 'ANCHORS_DISAGREE', 'NONE']);
+  });
+
   it('let the lectern page hold the current slice and six ahead', () => {
     expect(LECTERN_CODE_SLICES).toBe(1 + 6);
   });
 
   it("hold the delay rule's limits as the plan states them", () => {
     expect(DELAY_LIMIT_DEFAULTS_MS).toEqual({
-      normal: 10_000,
-      backupCodeNormal: 20_000,
-      reject: 30_000,
-      projectionTolerance: 1_000,
+      normalLimitMs: 10_000,
+      backupCodeNormalLimitMs: 20_000,
+      rejectLimitMs: 30_000,
+      projectionToleranceMs: 1_000,
     });
   });
 });

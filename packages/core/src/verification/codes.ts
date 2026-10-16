@@ -126,6 +126,10 @@ export const RECORD_LABELS = [
 export type RecordLabel = (typeof RECORD_LABELS)[number];
 export type Labels = Readonly<Record<RecordLabel, boolean>>;
 
+/** The labels set on a record, in RECORD_LABELS order: the answers carry this list form. */
+export const labelList = (labels: Labels): RecordLabel[] =>
+  RECORD_LABELS.filter((label) => labels[label]);
+
 // A lecturer's decision events, for the corrections module's decisions; the verification
 // module derives the reason from the event. CHANGE_DECISION is the corrections module's
 // review context of the same name.

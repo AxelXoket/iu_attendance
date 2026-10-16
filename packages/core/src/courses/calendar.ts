@@ -1,8 +1,8 @@
 // Calendar rules of the courses module (D02): the last week, the lock day, the term break,
-// holidays and exam weeks. Pure and import-free; days are Istanbul calendar days written
-// YYYY-MM-DD, times are Istanbul HH:MM, and both compare as text because they are fixed
-// width. Day arithmetic uses UTC dates only, so it is the same in every time zone and under
-// Hermes (no Intl, no local-time Date methods).
+// holidays and exam weeks. Pure and import-free (the package comes first in the roadmap);
+// days are Istanbul calendar days written YYYY-MM-DD, times are Istanbul HH:MM, and both
+// compare as text because they are fixed width. Day arithmetic uses UTC dates only, so it
+// is the same in every time zone and under Hermes (no Intl, no local-time Date methods).
 
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
@@ -62,7 +62,8 @@ export function isInLastWeek(date: string, lastDay: string): boolean {
 
 /**
  * The lock day: the day after the last day. The term locks at 00:00 Istanbul time on it
- * (D02 resolved gap 14); the server turns that into an instant with its clock helpers.
+ * (D02 resolved gap 14); the database turns that into an instant in the statement that
+ * writes the calendar, (date + time) AT TIME ZONE 'Europe/Istanbul' (D02-B19, D02-B39).
  */
 export function lockDay(lastDay: string): string {
   return addDays(lastDay, 1);
