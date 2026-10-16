@@ -1,7 +1,7 @@
 // Final statuses, reason codes and issue report reasons: fixed tables that the
 // database CHECK lists, the Zod schemas and the client choices are derived from.
 
-import type { HourType } from '../absence/types.ts';
+import { HOUR_TYPES, type HourType } from '../absence/types.ts';
 
 // The hour types belong to the absence rules; re-exported for the correction callers.
 export type { HourType };
@@ -19,7 +19,7 @@ export const FINAL_STATUSES = [
 export type FinalStatus = (typeof FINAL_STATUSES)[number]['code'];
 export type FinalStatusDefinition = (typeof FINAL_STATUSES)[number];
 
-const BOTH: readonly HourType[] = ['THEORY', 'PRACTICE'];
+const BOTH: readonly HourType[] = HOUR_TYPES;
 
 export type ReasonCodeDefinition = {
   code: string;

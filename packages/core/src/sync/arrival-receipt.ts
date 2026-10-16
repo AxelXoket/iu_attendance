@@ -1,5 +1,5 @@
 import { decodeBase64Url, encodeBase64Url } from '../shared/base64url.ts';
-import { equalBytes } from '../shared/bytes.ts';
+import { equalBytes, readUint64, writeUint64 } from '../shared/bytes.ts';
 import { KEY_ID } from '../shared/formats.ts';
 import { hmacSha256 } from '../shared/hmac-sha256.ts';
 import { isWholeFromZero } from '../shared/number.ts';
@@ -24,9 +24,6 @@ export const RECEIPT_MAX_BYTES = 50;
 
 const MAC_LENGTH = 32;
 const DIGEST_LENGTH = 32;
-const HALF = 0x100000000;
-// The high half of a safe integer is below 2^21.
-const HIGH_HALF_LIMIT = 0x200000;
 
 /** States of a secret key (D15 state machine "Gizli anahtar"). */
 export type ReceiptKeyState =
@@ -57,11 +54,6 @@ export type ReceiptSubject = {
 
 /** Keys a receipt still proves an arrival with; a compromised or removed key does not. */
 const VERIFYING_STATES: ReadonlySet<ReceiptKeyState> = new Set(['READY', 'ACTIVE', 'VERIFY_ONLY']);
-
-function writeUint64(view: DataView, offset: number, value: number): void {
-  view.setUint32(offset, Math.floor(value / HALF));
-  view.setUint32(offset + 4, value % HALF);
-}
 
 // The MAC input; null when the subject is not well-formed.
 function macInput(subject: ReceiptSubject, acceptedAtMs: number): Uint8Array | null {
@@ -140,9 +132,8 @@ export function readArrivalReceipt(text: unknown): ReceiptContent | null {
   for (const byte of bytes.subarray(2, 2 + kidLength)) kid += String.fromCharCode(byte);
   if (!KEY_ID.test(kid)) return null;
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const high = view.getUint32(2 + kidLength);
-  if (high >= HIGH_HALF_LIMIT) return null;
-  const acceptedAtMs = high * HALF + view.getUint32(2 + kidLength + 4);
+  const acceptedAtMs = readUint64(view, 2 + kidLength);
+  if (acceptedAtMs === null) return null;
   return { kid, acceptedAtMs, mac: bytes.slice(2 + kidLength + 8) };
 }
 

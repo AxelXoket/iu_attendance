@@ -1,6 +1,10 @@
+import { QR_PARSE_ERRORS } from '@iu-attendance/core/projection/constants';
+import { projectionLockKeys } from '@iu-attendance/core/projection/lock-keys';
+import fc from 'fast-check';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { advisoryLayerOf } from '../database.ts';
 import {
   CODES_REQUEST,
   DISPLAY_RECORD_ITEM,
@@ -256,6 +260,11 @@ describe('projection error catalog', () => {
 });
 
 describe('projection result dictionaries', () => {
+  it("start with VALID, then core's QR parse errors", () => {
+    expect(QR_VERIFICATION_RESULTS[0]).toBe('VALID');
+    expect(QR_VERIFICATION_RESULTS.slice(1, 1 + QR_PARSE_ERRORS.length)).toEqual(QR_PARSE_ERRORS);
+  });
+
   it('are unique upper case codes, the source of the QR result values', () => {
     expect(QR_VERIFICATION_RESULTS).toHaveLength(12);
     expect(QR_DELAY_RESULTS).toHaveLength(11);
@@ -652,5 +661,36 @@ describe('projection audit events', () => {
     );
     expect(fields).toContain('pairingCodeRowId');
     for (const field of fields) expect(forbidden).not.toContain(field);
+  });
+});
+
+describe('projection lock keys (D11 qrKilitAnahtarlari)', () => {
+  it('take the record text fields as parsed, every key in layer 3 (5,000 runs)', () => {
+    const fieldsArbitrary = fc.record(
+      {
+        qr: fc.oneof(fc.stringMatching(/^[0-9]{41}$/), fc.string({ maxLength: 64 })),
+        backupCode: fc.string({ maxLength: 16 }),
+        bluetooth: fc.constantFrom(
+          { status: 'SCANNED', codes: [] },
+          { status: 'NO_BLUETOOTH', codes: [] },
+        ),
+        location: fc.constantFrom({ status: 'NO_LOCATION' }, { status: 'APPROXIMATE_PERMISSION' }),
+      },
+      { requiredKeys: [] },
+    );
+    let locked = 0;
+    fc.assert(
+      fc.property(fc.uuid(), fc.uuid(), fieldsArbitrary, (sessionId, studentId, sent) => {
+        const fields = recordEvidenceFieldsSchema.parse(sent);
+        const keys = projectionLockKeys({ sessionId, studentId, fields });
+        locked += keys.length;
+        for (const key of keys) {
+          expect(advisoryLayerOf(typeof key === 'string' ? key : key.key)).toBe(3);
+        }
+      }),
+      { numRuns: 5_000 },
+    );
+    // Ground control: the runs took keys at all.
+    expect(locked).toBeGreaterThan(0);
   });
 });

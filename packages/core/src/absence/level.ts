@@ -24,7 +24,18 @@ export const LEVEL_MESSAGES = [
   'ALLOWANCE_EXCEEDED',
 ] as const;
 export type LevelMessage = (typeof LEVEL_MESSAGES)[number];
-export type Level = 0 | 1 | 2 | 3 | 4;
+export const LEVELS = [0, 1, 2, 3, 4] as const;
+export type Level = (typeof LEVELS)[number];
+export const isLevel = (value: number): value is Level =>
+  (LEVELS as readonly number[]).includes(value);
+/** The level each message stands for; level 0 has no message. */
+export const MESSAGE_LEVELS = {
+  HALF_USED: 1,
+  ONE_MORE_ENDS_ALLOWANCE: 2,
+  ONE_MORE_MAKES_ABSENT: 2,
+  NO_ALLOWANCE_LEFT: 3,
+  ALLOWANCE_EXCEEDED: 4,
+} as const satisfies Record<LevelMessage, Level>;
 
 // What moved a displayed level: DATA (used hours, p, rate confirmation, exemption,
 // activity or the caller's other data), ESTIMATE (only the end-of-term estimate, which
@@ -126,27 +137,25 @@ export function computeLevel(input: LevelInput): ComputedLevel {
     remaining,
   };
   const warns = input.ratesConfirmed && ratePercent > 0 && !input.exempt && input.active;
-  const [level, message]: [Level, LevelMessage | null] = warns
+  const message = warns
     ? warning(remaining, nextSessionHours, usedHours, estimatedAllowance)
-    : [0, null];
-  return { ...figures, level, message };
+    : null;
+  return { ...figures, level: message === null ? 0 : MESSAGE_LEVELS[message], message };
 }
 
-// The highest level that holds; the rows below are checked from the top.
+// The message of the highest level that holds; the rows below are checked from the top.
 function warning(
   remaining: number,
   nextSessionHours: number | null,
   usedHours: number,
   estimatedAllowance: number,
-): [Level, LevelMessage | null] {
-  if (remaining < 0) return [4, 'ALLOWANCE_EXCEEDED'];
-  if (remaining === 0) return [3, 'NO_ALLOWANCE_LEFT'];
-  if (nextSessionHours !== null && remaining === nextSessionHours)
-    return [2, 'ONE_MORE_ENDS_ALLOWANCE'];
-  if (nextSessionHours !== null && remaining < nextSessionHours)
-    return [2, 'ONE_MORE_MAKES_ABSENT'];
-  if (2 * usedHours >= estimatedAllowance) return [1, 'HALF_USED'];
-  return [0, null];
+): LevelMessage | null {
+  if (remaining < 0) return 'ALLOWANCE_EXCEEDED';
+  if (remaining === 0) return 'NO_ALLOWANCE_LEFT';
+  if (nextSessionHours !== null && remaining === nextSessionHours) return 'ONE_MORE_ENDS_ALLOWANCE';
+  if (nextSessionHours !== null && remaining < nextSessionHours) return 'ONE_MORE_MAKES_ABSENT';
+  if (2 * usedHours >= estimatedAllowance) return 'HALF_USED';
+  return null;
 }
 
 const shown = (computed: ComputedLevel): DisplayedLevel => ({

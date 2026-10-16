@@ -22,7 +22,7 @@ import {
   type RouteDefinition,
 } from '../shared/index.ts';
 import { id, ok } from './helpers.ts';
-import { objectsIn, schemasIn, unknownKeys } from './schema-walk.ts';
+import { extensibleEnumsIn, objectsIn, schemasIn, unknownKeys } from './schema-walk.ts';
 
 const routes = Object.entries(CORRECTIONS_ROUTES) as [string, RouteDefinition][];
 
@@ -869,5 +869,14 @@ describe('corrections audit events', () => {
     // Ground control: the walk found the detail fields.
     expect(fields).toContain('reversedCorrectionId');
     for (const field of fields) expect(forbidden).not.toContain(field);
+  });
+});
+
+describe('later changes (D09 sonradan degisenler)', () => {
+  it('give a result change per hour type and overall, as the known values', () => {
+    const lists = extensibleEnumsIn(CORRECTIONS_ROUTES.listLaterChanges.response.schema).map(
+      (node) => node.meta()?.['x-extensible-enum'],
+    );
+    expect(lists).toContainEqual(['THEORY', 'PRACTICE', 'OVERALL']);
   });
 });

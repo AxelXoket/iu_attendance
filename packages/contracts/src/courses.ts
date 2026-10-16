@@ -1,12 +1,27 @@
 // Courses contract (D02): the 31 routes with their request and answer schemas, the
 // COURSES_ error catalog, the value lists the other modules import, the session
-// generation event, the audit event schemas and the two jsonb column schemas. It
-// imports only the shared contract parts. Request and answer objects drop unknown keys
-// (D13-B24); requests use closed enums, answers carry values that may grow as
-// extensible enums. Only the audit schemas are strict: the audit writer rejects an
-// unknown field.
+// generation event, the audit event schemas and the two jsonb column schemas. The session
+// value lists, the hour limit and the short code width are core's (core/courses/sessions.ts),
+// where D08's make-up rule and the QR layout read them too; this file re-exports the lists. Its other imports are core
+// helpers (course code, whitespace, ids) and the shared contract parts. Request and answer
+// objects drop unknown keys (D13-B24); requests use closed enums, answers carry values that
+// may grow as extensible enums. Only the audit schemas are strict: the audit writer
+// rejects an unknown field.
 
 import { normalizeCourseCode } from '@iu-attendance/core/courses/normalize';
+import {
+  areSessionHours,
+  CANCEL_REASONS,
+  type CancelReason,
+  HELD_STATUSES,
+  type HeldStatus,
+  SESSION_HOURS_MAX,
+  SESSION_KINDS,
+  SESSION_STATUSES,
+  type SessionKind,
+  type SessionStatus,
+  SHORT_CODE_DIGITS,
+} from '@iu-attendance/core/courses/sessions';
 import { collapseWhitespace } from '@iu-attendance/core/shared/text';
 import { idKey } from '@iu-attendance/core/shared/uuid';
 import { z } from 'zod';
@@ -37,22 +52,23 @@ import {
   v7IdSchema,
 } from './shared/index.ts';
 
+// The session short code, its width core's (zero-padded, as the QR content carries it).
+const SHORT_CODE_PATTERN = new RegExp(`^[0-9]{${SHORT_CODE_DIGITS}}$`);
+
 // Value lists. Other modules import these and keep no copy of their own.
 
-export const SESSION_KINDS = ['regular', 'makeup', 'trial'] as const;
-export const SESSION_STATUSES = ['planned', 'cancelled'] as const;
-// Telafi debt (absence) and the reports read the cancel reason.
-export const CANCEL_REASONS = [
-  'lecturer',
-  'moved',
-  'holiday',
-  'exam_week',
-  'calendar',
-  'schedule',
-  'archive',
-] as const;
-// "Was the class held?": the panel answer's held.status.
-export const HELD_STATUSES = ['unanswered', 'held', 'not_held', 'conflicting'] as const;
+// The session lists are defined in core (core/courses/sessions.ts), which the absence
+// rules read.
+export {
+  CANCEL_REASONS,
+  type CancelReason,
+  HELD_STATUSES,
+  type HeldStatus,
+  SESSION_KINDS,
+  SESSION_STATUSES,
+  type SessionKind,
+  type SessionStatus,
+};
 
 export const UNIT_KINDS = [
   'faculty',
@@ -104,10 +120,6 @@ const HELD_BATCH_RESULTS = [
 ] as const;
 const REGENERATION_REASONS = ['calendar', 'unit_term', 'time_zone'] as const;
 
-export type SessionKind = (typeof SESSION_KINDS)[number];
-export type SessionStatus = (typeof SESSION_STATUSES)[number];
-export type CancelReason = (typeof CANCEL_REASONS)[number];
-export type HeldStatus = (typeof HELD_STATUSES)[number];
 export type SessionGenerationReason = (typeof SESSION_GENERATION_REASONS)[number];
 
 // Identifiers. A brand keeps course, section and session ids apart.
@@ -435,7 +447,7 @@ const courseCodeSchema = z
     },
     { message: 'A course code has 1 to 20 characters once normalized' },
   );
-const hoursSchema = z.number().int().min(0).max(12);
+const hoursSchema = z.number().int().min(0).max(SESSION_HOURS_MAX);
 const windowMinutesSchema = z.number().int().min(1).max(240);
 const weekdaySchema = z.number().int().min(1).max(7);
 const academicYearSchema = z
@@ -456,8 +468,7 @@ const endsAfterStart = (value: { startTime?: string; endTime?: string }) =>
   value.startTime === undefined || value.endTime === undefined || value.endTime > value.startTime;
 const hoursTotalValid = (value: { theoryHours?: number; practiceHours?: number }) => {
   if (value.theoryHours === undefined || value.practiceHours === undefined) return true;
-  const total = value.theoryHours + value.practiceHours;
-  return total >= 1 && total <= 12;
+  return areSessionHours(value.theoryHours, value.practiceHours);
 };
 const END_AFTER_START = { message: 'endTime is after startTime', path: ['endTime'] };
 const HOURS_TOTAL = {
@@ -605,7 +616,7 @@ export const panelSessionSchema = z.object({
   qrAttendance: z.boolean(),
   status: extensibleEnum(SESSION_STATUSES),
   cancelReason: extensibleEnum(CANCEL_REASONS).nullable(),
-  shortCode: z.string().regex(/^\d{10}$/),
+  shortCode: z.string().regex(SHORT_CODE_PATTERN),
   sectionIds: z.array(sectionIdSchema),
   manuallyEdited: z.boolean(),
   makeupForSessionId: sessionIdSchema.nullable(),

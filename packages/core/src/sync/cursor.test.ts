@@ -68,6 +68,12 @@ describe('cursor encoding', () => {
     );
   });
 
+  it('takes the lowest timeline and structure version, 1 and 0', () => {
+    const lowest: Cursor = { ...sample, timeline: 1, structureVersion: 0 };
+    expect(encodeCursor(lowest)).toBe(raw(fieldsOf(lowest)));
+    expect(decodeCursor(raw(fieldsOf(lowest)))).toEqual({ ok: true, cursor: lowest });
+  });
+
   it('keeps 64-bit values above 2^53 exactly', () => {
     const cursor: Cursor = {
       ...sample,
@@ -154,7 +160,9 @@ describe('cursor encoding', () => {
 });
 
 describe('cursor decoding', () => {
-  const good = encodeCursor(sample);
+  // Built by the layout, not by encodeCursor, so a broken encoder fails a test instead of
+  // stopping this file from loading.
+  const good = raw(fieldsOf(sample));
 
   it.each<[string, unknown]>([
     ['null', null],

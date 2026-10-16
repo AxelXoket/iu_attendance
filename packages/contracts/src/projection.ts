@@ -1,10 +1,27 @@
 // Projection contract (D11): the seven routes of the lectern browser and the lecturer's
 // phone, the PROJECTION_ error catalog, the display record queue item, the record evidence
-// fields the attendance record text carries, the QR verification and delay result lists,
-// the QR result, the settings schema with its defaults and the codes request form. This
-// file never imports the verification contract: the verification module maps these result
-// lists in its own code (one-way dictionary). Request and answer objects drop unknown keys
-// (D13-B24); the audit schemas are strict.
+// fields the attendance record text carries, the QR result, the settings schema with its
+// defaults and the codes request form. This file never imports the verification contract:
+// the verification module maps the result lists in its own code (one-way dictionary).
+// Request and answer objects drop unknown keys (D13-B24); the audit schemas are strict.
+// The QR layout, the slice, the QR verification and delay result lists and the lectern
+// states are core's (core/projection), where the phone and the server compute codes with
+// one function and the core rules read the lists; this file re-exports the lists.
+import {
+  BLUETOOTH_STATUSES,
+  DELAY_LIMIT_DEFAULTS_MS,
+  DISPLAY_SLICE_MS,
+  LECTERN_CODE_SLICES,
+  LECTERN_STATUSES,
+  PROJECTION_SLOT,
+  QR_DELAY_RESULTS,
+  QR_DIGITS,
+  QR_VERIFICATION_RESULTS,
+  type QrDelay,
+  type QrVerification,
+  SLOT_MAX,
+} from '@iu-attendance/core/projection/constants';
+import { sliceOf } from '@iu-attendance/core/projection/slice';
 import { BASE64_32_BYTES, KEY_ID } from '@iu-attendance/core/shared/formats';
 import { z } from 'zod';
 import { sessionIdSchema } from './courses.ts';
@@ -24,58 +41,12 @@ import {
   v7IdSchema,
 } from './shared/index.ts';
 
-// Result dictionaries. The table CHECK lists, the result types and the documents'
-// x-extensible-enum values all come from these two lists.
-
-// How a QR or backup code verified.
-export const QR_VERIFICATION_RESULTS = [
-  'VALID',
-  'MALFORMED',
-  'VERSION_UNKNOWN',
-  'SESSION_MISMATCH',
-  'KEY_NOT_FOUND',
-  'KEY_RETIRED',
-  'KEY_COMPROMISED',
-  'NO_DOWNLOAD_RECORD',
-  'MAC_INVALID',
-  'BACKUP_CODE_MISMATCH',
-  'BACKUP_CODE_LIMIT',
-  'NONE',
-] as const;
-// How late a scan came after the code was shown.
-export const QR_DELAY_RESULTS = [
-  'NORMAL',
-  'IN_REVIEW',
-  'REJECTED',
-  'SCANNED_BEFORE',
-  'OUTSIDE_DISPLAY',
-  'PENDING',
-  'CLOCK_UNVERIFIED',
-  'NO_LECTURER_CLOCK',
-  'LECTURER_ANCHORS_DIVERGE',
-  'KEY_REVOKED',
-  'ANCHORS_STALE',
-] as const;
-export type QrVerification = (typeof QR_VERIFICATION_RESULTS)[number];
-export type QrDelay = (typeof QR_DELAY_RESULTS)[number];
-
 export const EVIDENCE_KINDS = ['QR', 'BACKUP_CODE', 'NONE'] as const;
 export const DISPLAY_SOURCES = ['PROJECTION', 'LECTURER_PHONE'] as const;
 export const DISPLAY_KINDS = ['QR', 'BACKUP_CODE', 'BLUETOOTH'] as const;
-export const BLUETOOTH_STATUSES = ['SCANNED', 'NO_BLUETOOTH'] as const;
 export const LOCATION_STATUSES = ['RECEIVED', 'NO_LOCATION', 'APPROXIMATE_PERMISSION'] as const;
 const BLUETOOTH_RESULTS = ['SEEN', 'NOT_SEEN', 'NO_BLUETOOTH', 'PENDING'] as const;
 const LOCATION_RESULTS = ['NEAR', 'FAR', 'NO_LOCATION', 'PENDING'] as const;
-// What the lectern page shows; an unknown value reads as waiting for the connection.
-export const LECTERN_STATUSES = [
-  'AWAITING_PAIRING',
-  'CODE_EXPIRED',
-  'ATTENDANCE_NOT_OPEN',
-  'CONNECTED',
-  'ATTENDANCE_CLOSED',
-  'SERVER_CLOCK_BROKEN',
-  'CLOSED',
-] as const;
 export const CONNECTION_STATUSES = ['OPEN', 'CLOSED'] as const;
 export const CONNECTION_END_REASONS = [
   'LECTURER_ENDED',
@@ -105,12 +76,24 @@ const pairingCodeRowIdSchema = v7IdSchema('PairingCode');
 
 // Shared parts.
 
-// A QR code shows a 5-second slice; slice numbers count from the Unix epoch.
-export const DISPLAY_SLICE_MS = 5_000;
+export {
+  BLUETOOTH_STATUSES,
+  DISPLAY_SLICE_MS,
+  LECTERN_STATUSES,
+  QR_DELAY_RESULTS,
+  QR_VERIFICATION_RESULTS,
+  type QrDelay,
+  type QrVerification,
+};
+
 // 9999-12-31T23:59:59.999Z, the last instant the date schema allows.
 const LAST_INSTANT_MS = 253_402_300_799_999;
-// A lecturer's QR key slot, one of nine digits.
-const slotSchema = z.number().int().min(1).max(9);
+// A lecturer's QR key slot: a digit other than the projection's.
+const slotSchema = z
+  .number()
+  .int()
+  .min(PROJECTION_SLOT + 1)
+  .max(SLOT_MAX);
 const PAIRING_CODE = /^[0-9]{6}$/;
 
 // A location as the phone measured it (stage 3), in ten-thousandths of a degree.
@@ -211,10 +194,10 @@ export type QrResult = z.infer<typeof qrResultSchema>;
 // (projectionSettingsSchema.parse({})); the stage 2 switch is not here.
 const setting = (value: number) => z.number().int().positive().default(value);
 export const projectionSettingsSchema = z.object({
-  normalLimitMs: setting(10_000),
-  backupCodeNormalLimitMs: setting(20_000),
-  rejectLimitMs: setting(30_000),
-  projectionToleranceMs: setting(1_000),
+  normalLimitMs: setting(DELAY_LIMIT_DEFAULTS_MS.normal),
+  backupCodeNormalLimitMs: setting(DELAY_LIMIT_DEFAULTS_MS.backupCodeNormal),
+  rejectLimitMs: setting(DELAY_LIMIT_DEFAULTS_MS.reject),
+  projectionToleranceMs: setting(DELAY_LIMIT_DEFAULTS_MS.projectionTolerance),
   pairingCodeLifetimeMs: setting(5 * 60_000),
   approvalLeadMs: setting(15 * 60_000),
   wrongPairingLimit: setting(5),
@@ -418,10 +401,10 @@ export const PROJECTION_ROUTES = {
             z.object({
               slice: z.number().int(),
               startAt: instantSchema,
-              content: z.string().regex(/^[0-9]{41}$/),
+              content: z.string().regex(QR_DIGITS),
             }),
           )
-          .max(7),
+          .max(LECTERN_CODE_SLICES),
       }),
     },
     errors: errors('PROJECTION_BROWSER_UNKNOWN'),
@@ -563,14 +546,12 @@ export const DISPLAY_RECORD_ITEM = defineItemType(
       bluetoothSliceSeconds: z.number().int().min(10).max(15).nullable(),
       reference: locationReferenceSchema.nullable(),
     })
+    .refine((display) => display.firstSlice === sliceOf(display.labelBaseMs), {
+      message: 'The first slice follows from the label base',
+      path: ['firstSlice'],
+    })
     .refine(
-      (display) => display.firstSlice === Math.floor(display.labelBaseMs / DISPLAY_SLICE_MS),
-      { message: 'The first slice follows from the label base', path: ['firstSlice'] },
-    )
-    .refine(
-      (display) =>
-        display.lastSlice ===
-        Math.floor((display.labelBaseMs + display.displayDurationMs) / DISPLAY_SLICE_MS),
+      (display) => display.lastSlice === sliceOf(display.labelBaseMs + display.displayDurationMs),
       { message: 'The last slice follows from the base and the duration', path: ['lastSlice'] },
     )
     .refine(

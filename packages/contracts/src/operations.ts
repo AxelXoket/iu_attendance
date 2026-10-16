@@ -295,7 +295,10 @@ export const OPERATIONS_ROUTES = {
 };
 
 // Status files: the only way between the machine and the containers, each written to a
-// temporary file and renamed.
+// temporary file and renamed. One folder, /var/lib/iu-attendance/status on the host and the
+// settings' statusDir (/status) in the containers: clock/ and machine/ hold the host
+// scripts' files, database/ the backup jobs', api/ each api container's measurement copy.
+// A container mounts only the subfolders it uses.
 
 // /status/clock/chrony.json, every thirty seconds.
 export const chronyStatusSchema = z.strictObject({
@@ -309,6 +312,8 @@ export const chronyStatusSchema = z.strictObject({
 });
 
 // /status/machine/machine.json, format 2.
+/** The Compose services the machine check reports; one missing is CRITICAL for the operations check. */
+export const MACHINE_SERVICES = ['caddy', 'api-1', 'api-2', 'worker', 'postgres', 'xprem'] as const;
 export const machineStatusSchema = z.strictObject({
   format: z.literal(2),
   measuredAt: instantSchema,

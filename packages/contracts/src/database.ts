@@ -2,6 +2,7 @@
 // advisory lock layers, the retention data classes, the table markers, the migration folder
 // tokens and the backup job status file. The single source of the module's constants and
 // CHECK lists; the server's database infrastructure imports them.
+import type { AdvisoryKey } from '@iu-attendance/core/shared/advisory-key';
 import { nonEmpty } from '@iu-attendance/core/shared/list';
 import { z } from 'zod';
 import { API_ERRORS } from './api.ts';
@@ -144,7 +145,8 @@ export const DATABASE_ROUTES = {
 // A module whose rules all share a layer is written '<module>:*'.
 
 export type AdvisoryLayer = 1 | 2 | 3 | 4 | 5;
-export type AdvisoryKey = string | { readonly key: string; readonly mode: 'shared' };
+// The key's type is core's, where the pure rules build keys.
+export type { AdvisoryKey };
 
 export const ADVISORY_LAYERS = {
   'verification:roster': 1,

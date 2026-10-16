@@ -5,7 +5,7 @@
 // catalog. Request and answer objects drop unknown keys (D13-B24); requests use closed
 // enums, answers extensible ones. The audit envelope and the audit schemas are strict.
 
-import { COURSE_RESULTS, type HourType } from '@iu-attendance/core/absence/types';
+import { COURSE_RESULTS, HOUR_TYPES } from '@iu-attendance/core/absence/types';
 import {
   CORRECTION_REASONS,
   FINAL_STATUSES,
@@ -95,10 +95,7 @@ export const LATER_CHANGE_PARTS = [
   'WOULD_CHANGE_IF_COUNTED',
 ] as const;
 const LATE_ARRIVAL_REASONS = ['ARRIVED_LATE', 'DECIDED_LATE'] as const;
-const RESULT_TYPES = ['THEORY', 'PRACTICE', 'OVERALL'] as const satisfies readonly (
-  | HourType
-  | 'OVERALL'
-)[];
+const RESULT_TYPES = [...HOUR_TYPES, 'OVERALL'] as const;
 const CHANGE_SOURCE_KINDS = ['CORRECTION', 'DECISION', 'LATE_RECORD'] as const;
 export const AUDIT_ACTOR_KINDS = ['PERSON', 'SYSTEM', 'COMMAND_LINE'] as const;
 // The identity's clients, plus the server for events no request caused.

@@ -1,7 +1,6 @@
 // Verification constants (D07), the spec's values in one place: code and tests import them
-// and never retype them. The ones nothing reads yet (the shared limit, the App Attest
-// renewals, the expired value clean-up, the head count item size) belong to the later D07
-// packages that use them.
+// and never retype them. The ones nothing reads yet (the App Attest renewals, the expired
+// value clean-up, the head count item size) belong to the later D07 packages that use them.
 
 /**
  * A student's shared allowance for unverified-clock or backup-code records, in sessions

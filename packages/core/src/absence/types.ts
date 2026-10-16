@@ -1,7 +1,13 @@
 // Shared types of the absence rules.
 
 // The one declaration of the hour types; corrections/catalog.ts re-exports it.
-export type HourType = 'THEORY' | 'PRACTICE';
+export const HOUR_TYPES = ['THEORY', 'PRACTICE'] as const;
+export type HourType = (typeof HOUR_TYPES)[number];
+
+// The version of the absence rules (D08 KURAL_SURUMU). Raise it when a rule in this
+// folder changes a figure: the nightly check recomputes the rows written under an older
+// one (devam_sonuclari.kural_surumu).
+export const RULE_VERSION = 1;
 
 // MET: the attendance requirement is met (DEVAMLI); NOT_MET: failed by absence
 // (DEVAMSIZ); MET_EXEMPT: exempt from attendance (DEVAMLI_MUAF).

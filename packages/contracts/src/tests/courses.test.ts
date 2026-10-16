@@ -556,6 +556,15 @@ describe('courses field bounds', () => {
     expect(ok(COURSES_ROUTES.addMakeup.request.body.shape.endTime, '24:00')).toBe(false);
   });
 
+  it('carries the short code in the 10 zero-padded digits the QR layout writes', () => {
+    const shortCode = panelSessionSchema.shape.shortCode;
+    expect(ok(shortCode, '0000000042')).toBe(true);
+    expect(ok(shortCode, '9999999999')).toBe(true);
+    for (const bad of ['000000042', '00000000042', '00000000a2', ' 000000042', '0000000042 ']) {
+      expect(ok(shortCode, bad), JSON.stringify(bad)).toBe(false);
+    }
+  });
+
   it('treats an id in upper case as the same id', () => {
     const upper = (n: number) => id(n).toUpperCase();
     const batch = COURSES_ROUTES.answerHeldBatch.request.body;

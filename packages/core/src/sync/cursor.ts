@@ -1,4 +1,5 @@
 import { decodeBase64Url, encodeBase64Url } from '../shared/base64url.ts';
+import { isWholeIn, UINT64_MAX_TEXT } from '../shared/number.ts';
 import { sha256 } from '../shared/sha256.ts';
 import { utf8Bytes } from '../shared/utf8.ts';
 import { compareDecimal, isCanonicalDecimal, isVersion } from './page.ts';
@@ -45,7 +46,6 @@ const SIGNED_DECIMAL = /^(?:0|-?[1-9][0-9]*)$/;
 // January 2038 prints a negative one; the unsigned print is accepted too. The value is
 // compared for equality only.
 const SYSTEM_ID_MIN_MAGNITUDE = '9223372036854775808';
-const SYSTEM_ID_MAX = '18446744073709551615';
 const TIMELINE_MAX = 4294967295;
 const STRUCTURE_VERSION_MAX = 2147483647;
 
@@ -53,11 +53,8 @@ function isSystemId(text: string): boolean {
   if (!SIGNED_DECIMAL.test(text)) return false;
   return text.startsWith('-')
     ? compareDecimal(text.slice(1), SYSTEM_ID_MIN_MAGNITUDE) <= 0
-    : compareDecimal(text, SYSTEM_ID_MAX) <= 0;
+    : compareDecimal(text, UINT64_MAX_TEXT) <= 0;
 }
-
-const isWholeIn = (value: number, min: number, max: number) =>
-  Number.isSafeInteger(value) && value >= min && value <= max;
 
 function isCursor(cursor: Cursor): boolean {
   return (

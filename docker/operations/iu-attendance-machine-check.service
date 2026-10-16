@@ -1,0 +1,12 @@
+[Unit]
+Description=IU attendance machine check: disks, memory and containers into the machine status file (D15)
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /opt/iu-attendance/operations/machine-check.sh
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+# systemd creates /var/lib/iu-attendance if it is missing and leaves it writable.
+StateDirectory=iu-attendance

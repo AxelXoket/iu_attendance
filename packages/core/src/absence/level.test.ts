@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   computeLevel,
   type DisplayedLevel,
+  isLevel,
+  LEVEL_MESSAGES,
+  LEVELS,
   type LevelInput,
+  MESSAGE_LEVELS,
   type NextSessionCandidate,
   nextDisplayedLevel,
   nextSessionHours,
@@ -34,6 +38,25 @@ const level = (...args: Parameters<typeof input>) => {
   const { level: value, message } = computeLevel(input(...args));
   return [value, message];
 };
+
+describe('levels and their messages (D08-B03)', () => {
+  it("hold the spec's table: five messages over levels 1 to 4, two of them at level 2", () => {
+    expect(LEVELS).toEqual([0, 1, 2, 3, 4]);
+    expect(MESSAGE_LEVELS).toEqual({
+      HALF_USED: 1,
+      ONE_MORE_ENDS_ALLOWANCE: 2,
+      ONE_MORE_MAKES_ABSENT: 2,
+      NO_ALLOWANCE_LEFT: 3,
+      ALLOWANCE_EXCEEDED: 4,
+    });
+    expect(Object.keys(MESSAGE_LEVELS)).toEqual([...LEVEL_MESSAGES]);
+  });
+
+  it('knows a level by its whole number from 0 to 4 only', () => {
+    for (const level of LEVELS) expect(isLevel(level)).toBe(true);
+    for (const other of [-1, 5, 1.5, Number.NaN]) expect(isLevel(other), String(other)).toBe(false);
+  });
+});
 
 describe('computeLevel: the explicit tables', () => {
   it('small allowance with one-hour sessions, p = 80', () => {

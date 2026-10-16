@@ -1,10 +1,12 @@
-// The two languages of the app and the default, in one place. Text that reaches a
-// person (error messages, e-mail templates, warnings) exists in each of them; codes,
-// keys and state values carry no language.
-export const LANGUAGES = ['tr', 'en'] as const;
-export const DEFAULT_LANGUAGE = 'tr' satisfies Language;
+// The two languages of the app and the default are core's (core/shared/language.ts).
+import {
+  DEFAULT_LANGUAGE,
+  isLanguage,
+  LANGUAGES,
+  type Language,
+} from '@iu-attendance/core/shared/language';
 
-export type Language = (typeof LANGUAGES)[number];
+export { DEFAULT_LANGUAGE, LANGUAGES, type Language };
 
 export const ACCEPT_LANGUAGE_MAX_LENGTH = 256;
 
@@ -16,9 +18,6 @@ const OWS_EDGES = /^[ \t]+|[ \t]+$/g;
 // one weight, OWS ";" OWS "q=" qvalue, with q in either case and nothing around "=".
 const ELEMENT =
   /^(\*|[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*)(?:[ \t]*;[ \t]*[qQ]=(0(?:\.\d{0,3})?|1(?:\.0{0,3})?))?$/;
-
-const isLanguage = (value: string): value is Language =>
-  (LANGUAGES as readonly string[]).includes(value);
 
 // q as an integer in thousandths ("0.8" is 800), so no floating point is involved.
 function qualityInThousandths(text: string): number {

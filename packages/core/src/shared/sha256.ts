@@ -2,6 +2,8 @@
 // which has no WebCrypto) give the same bytes. Users: the request digest (D09), the roster
 // bucket and the diff digest (D03), the cursor's account digest and the arrival receipt MAC (D06).
 
+import { writeUint64 } from './bytes.ts';
+
 // Round constants (FIPS 180-4, 4.2.2).
 const K = Uint32Array.from([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -24,8 +26,7 @@ export function sha256(message: Uint8Array): Uint8Array {
   data.set(message);
   data[message.length] = 0x80;
   const view = new DataView(data.buffer);
-  view.setUint32(paddedLength - 8, Math.floor(bitLength / 0x100000000));
-  view.setUint32(paddedLength - 4, bitLength >>> 0);
+  writeUint64(view, paddedLength - 8, bitLength);
   const hash = Uint32Array.from([
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
   ]);

@@ -12,3 +12,20 @@ export function equalBytes(a: Uint8Array, b: Uint8Array): boolean {
   }
   return difference === 0;
 }
+
+const TWO_TO_32 = 2 ** 32;
+// The high 32-bit word of a safe integer is below 2^21.
+const SAFE_HIGH_LIMIT = 2 ** 21;
+
+/** Writes a safe whole number from 0 as 8 big-endian bytes: its high and low 32-bit words. */
+export function writeUint64(view: DataView, offset: number, value: number): void {
+  view.setUint32(offset, Math.floor(value / TWO_TO_32));
+  view.setUint32(offset + 4, value % TWO_TO_32);
+}
+
+/** Reads 8 big-endian bytes as a number; null when the value is above the safe integers. */
+export function readUint64(view: DataView, offset: number): number | null {
+  const high = view.getUint32(offset);
+  if (high >= SAFE_HIGH_LIMIT) return null;
+  return high * TWO_TO_32 + view.getUint32(offset + 4);
+}

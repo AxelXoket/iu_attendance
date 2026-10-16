@@ -104,6 +104,15 @@ export const DECISION_REASONS = [
 export type DecisionReason = (typeof DECISION_REASONS)[number]['code'];
 export const DECISION_REASON_CODES = nonEmpty(DECISION_REASONS.map((entry) => entry.code));
 
+export type DecisionReasonDefinition = (typeof DECISION_REASONS)[number];
+
+/** A reason's catalog row. RangeError for a code not in the catalog. */
+export function reasonDefinition(code: DecisionReason): DecisionReasonDefinition {
+  const definition = DECISION_REASONS.find((entry) => entry.code === code);
+  if (definition === undefined) throw new RangeError(`unknown decision reason ${code}`);
+  return definition;
+}
+
 // The labels of a record: seven flags set once, when the record arrives.
 export const RECORD_LABELS = [
   'NO_QR',

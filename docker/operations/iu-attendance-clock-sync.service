@@ -1,0 +1,14 @@
+[Unit]
+Description=IU attendance clock sync monitor: chronyc tracking into the clock status file (D15)
+After=chrony.service
+
+[Service]
+Type=oneshot
+# CLOCK_SYNC_THRESHOLD_MS comes from the release settings, as the api's does.
+EnvironmentFile=-/opt/iu-attendance/release.env
+ExecStart=/bin/sh /opt/iu-attendance/operations/clock-sync-monitor.sh
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+# systemd creates /var/lib/iu-attendance if it is missing and leaves it writable.
+StateDirectory=iu-attendance

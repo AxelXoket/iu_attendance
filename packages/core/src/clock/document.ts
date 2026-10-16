@@ -11,6 +11,7 @@
 // server time back with decodeDocument. No Buffer or atob (Hermes).
 
 import { decodeBase64Url, encodeBase64Url } from '../shared/base64url.ts';
+import { readUint64, writeUint64 } from '../shared/bytes.ts';
 import { KEY_ID } from '../shared/formats.ts';
 import { uuidBytes, uuidText } from '../shared/uuid.ts';
 import { DOCUMENT_BYTES, VALUE_BYTES } from './constants.ts';
@@ -24,9 +25,6 @@ const KIND_BY_BYTE: Readonly<Record<number, ClockSubject['kind'] | undefined>> =
   1: 'STUDENT_DEVICE',
   2: 'STAFF',
 };
-const TWO_TO_32 = 0x1_0000_0000;
-// The high 32 bits of a safe integer stay below 2^21.
-const HIGH_LIMIT = 0x20_0000;
 
 export type DecodedDocument = DocumentFields & { readonly mac: Uint8Array };
 
@@ -57,12 +55,7 @@ export function documentSigningInput(fields: DocumentFields): Uint8Array {
   bytes[9] = kindByte;
   bytes.set(idBytes, 10);
   bytes.set(valueBytes, 26);
-  const high = Math.floor(serverTimeMs / TWO_TO_32);
-  const low = serverTimeMs - high * TWO_TO_32;
-  for (let index = 0; index < 4; index += 1) {
-    bytes[42 + index] = (high >>> (24 - 8 * index)) & 0xff;
-    bytes[46 + index] = (low >>> (24 - 8 * index)) & 0xff;
-  }
+  writeUint64(new DataView(bytes.buffer), 42, serverTimeMs);
   return bytes;
 }
 
@@ -80,11 +73,6 @@ function readKid(bytes: Uint8Array): string | null {
   return KEY_ID.test(kid) ? kid : null;
 }
 
-function readUint32(bytes: Uint8Array, offset: number): number {
-  const [a = 0, b = 0, c = 0, d = 0] = bytes.subarray(offset, offset + 4);
-  return ((a << 24) | (b << 16) | (c << 8) | d) >>> 0;
-}
-
 /**
  * Reads a document. VERSION: the version byte is not 1. FORMAT: anything else wrong, such as
  * text that is not canonical base64url, a length other than 82 bytes, a kid outside
@@ -97,9 +85,12 @@ export function decodeDocument(text: string): DecodedDocument | { error: 'FORMAT
   if (bytes[0] !== VERSION) return { error: 'VERSION' };
   if (bytes.length !== DOCUMENT_BYTES) return { error: 'FORMAT' };
   const kid = readKid(bytes);
-  const high = readUint32(bytes, 42);
+  const serverTimeMs = readUint64(
+    new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength),
+    42,
+  );
   const kind = KIND_BY_BYTE[bytes[9] as number];
-  if (kid === null || kind === undefined || high >= HIGH_LIMIT) return { error: 'FORMAT' };
+  if (kid === null || kind === undefined || serverTimeMs === null) return { error: 'FORMAT' };
   const id = uuidText(bytes.slice(10, 26));
   const subject: ClockSubject =
     kind === 'STAFF' ? { kind, personId: id as PersonId } : { kind, deviceId: id as DeviceId };
@@ -107,7 +98,7 @@ export function decodeDocument(text: string): DecodedDocument | { error: 'FORMAT
     kid,
     subject,
     value: encodeBase64Url(bytes.slice(26, 26 + VALUE_BYTES)),
-    serverTimeMs: high * TWO_TO_32 + readUint32(bytes, 46),
+    serverTimeMs,
     mac: bytes.slice(SIGNED_BYTES),
   };
 }

@@ -1,3 +1,4 @@
+import { projectionDisplayKey } from '@iu-attendance/core/projection/lock-keys';
 import { rosterBucketKey } from '@iu-attendance/core/rosters/bucket';
 import { describe, expect, it } from 'vitest';
 import { API_ERRORS } from '../api.ts';
@@ -96,7 +97,7 @@ describe('advisory lock layers', () => {
     expect(advisoryLayerOf(attendancePairKey(id(1), id(2)))).toBe(3);
     expect(advisoryLayerOf(rosterBucketKey(17))).toBe(2);
     expect(advisoryLayerOf(`corrections:chain:${id(1)}:${id(2)}`)).toBe(3);
-    expect(advisoryLayerOf(`projection:display:${id(1)}`)).toBe(3);
+    expect(advisoryLayerOf(projectionDisplayKey(id(1)))).toBe(3);
     expect(advisoryLayerOf('operations:anything:1')).toBe(1);
     expect(advisoryLayerOf('verification:flag:x')).toBe(5);
     for (const unknown of ['attendance:other:1', 'unknown:pair:1', 'attendance', '']) {

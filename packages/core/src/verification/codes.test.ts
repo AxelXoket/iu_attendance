@@ -4,6 +4,7 @@ import {
   DECISION_PRIORITY,
   DECISION_REASON_CODES,
   DECISION_REASONS,
+  type DecisionReason,
   HISTORY_EVENTS,
   INTERNAL_REEVALUATION_REASONS,
   IOS_ANOMALY_KINDS,
@@ -12,6 +13,7 @@ import {
   RECORD_LABELS,
   REEVALUATION_REASONS,
   REVOCATION_STATUSES,
+  reasonDefinition,
   SESSION_FLAG_KINDS,
   VERIFICATION_PURPOSES,
 } from './codes.ts';
@@ -72,6 +74,13 @@ const CATALOG = {
 } as const;
 
 describe('decision reason catalog', () => {
+  it('finds each reason row by its code, and refuses a code it does not have', () => {
+    for (const entry of DECISION_REASONS) expect(reasonDefinition(entry.code)).toBe(entry);
+    expect(() => reasonDefinition('LATER_REASON' as DecisionReason)).toThrow(
+      'unknown decision reason LATER_REASON',
+    );
+  });
+
   it("holds the module page's rows, each decision in priority order", () => {
     expect([...DECISION_PRIORITY].sort()).toEqual([...RECORD_DECISIONS].sort());
     expect(Object.keys(CATALOG)).toEqual([...DECISION_PRIORITY]);
