@@ -134,6 +134,8 @@ describe('the operations routes', () => {
   it('lock the screen time cap per person and day in layer 1', () => {
     expect(screenCapKey(id(5), '2026-10-12')).toBe(`operations:screen_cap:${id(5)}:2026-10-12`);
     expect(advisoryLayerOf(screenCapKey(id(5), '2026-10-12'))).toBe(1);
+    // An id in upper case takes the same lock.
+    expect(screenCapKey(id(5).toUpperCase(), '2026-10-12')).toBe(screenCapKey(id(5), '2026-10-12'));
     expect(SCREEN_TIME_CAP).toEqual({ rows: 500, sources: 5 });
     expect(SCREEN_KINDS).toHaveLength(6);
   });

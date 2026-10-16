@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowance, percentTenths, typeDecision } from './allowance.ts';
+import { allowance, attendedPerMille, typeDecision } from './allowance.ts';
 
 // The definition, independent of the formula: the largest k with (T - k) * 100 >= p * T.
 function allowanceByDefinition(total: number, rate: number): number {
@@ -58,13 +58,13 @@ describe('Decimal calculation counter example', () => {
 });
 
 describe('Percentage and decision agree', () => {
-  it('NOT_MET exactly when the percentage in tenths is below 10 x p, for T 1..400, every p and every absence', () => {
+  it('NOT_MET exactly when the attended share per mille is below 10 x p, for T 1..400, every p and every absence', () => {
     let checked = 0;
     let mismatches = 0;
     for (let total = 1; total <= 400; total += 1) {
       for (let rate = 0; rate <= 100; rate += 1) {
         for (let absent = 0; absent <= total; absent += 1) {
-          const percent = percentTenths(total, absent) as number;
+          const percent = attendedPerMille(total, absent) as number;
           if ((typeDecision(total, rate, absent) === 'NOT_MET') !== percent < 10 * rate)
             mismatches += 1;
           checked += 1;
@@ -76,13 +76,13 @@ describe('Percentage and decision agree', () => {
   });
 
   it('gives 695 and NOT_MET for T = 200, p = 70 with 61 absent hours', () => {
-    expect(percentTenths(200, 61)).toBe(695);
+    expect(attendedPerMille(200, 61)).toBe(695);
     expect(typeDecision(200, 70, 61)).toBe('NOT_MET');
     expect(typeDecision(200, 70, 60)).toBe('MET');
   });
 
   it('gives no percentage and MET when there are no hours', () => {
-    expect(percentTenths(0, 0)).toBeNull();
+    expect(attendedPerMille(0, 0)).toBeNull();
     expect(typeDecision(0, 70, 0)).toBe('MET');
   });
 

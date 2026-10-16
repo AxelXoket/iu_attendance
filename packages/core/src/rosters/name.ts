@@ -3,6 +3,12 @@
 // No Intl, no locale, no SQL lower(). Letters are never simplified (Ş is not S) and
 // punctuation stays.
 
+import {
+  collapseWhitespace,
+  INVISIBLE_CHARACTERS,
+  WHITE_SPACE_CHARACTERS,
+} from '../shared/text.ts';
+
 /**
  * Upper and lower case pairs of the Turkish alphabet and of the circumflexed vowels
  * used in Turkish names. I and İ are where Turkish differs from the Unicode default,
@@ -43,38 +49,6 @@ export const TURKISH_CASE_PAIRS: ReadonlyArray<readonly [upper: string, lower: s
   ['Z', 'z'],
 ];
 
-/** Unicode White_Space, written out so every engine uses the same set. Each becomes a space. */
-export const WHITE_SPACE_CHARACTERS: readonly string[] = [
-  '\t',
-  '\n',
-  '\v',
-  '\f',
-  '\r',
-  ' ',
-  '\u0085',
-  '\u00a0',
-  '\u1680',
-  '\u2000',
-  '\u2001',
-  '\u2002',
-  '\u2003',
-  '\u2004',
-  '\u2005',
-  '\u2006',
-  '\u2007',
-  '\u2008',
-  '\u2009',
-  '\u200a',
-  '\u2028',
-  '\u2029',
-  '\u202f',
-  '\u205f',
-  '\u3000',
-];
-
-/** Zero width space, non-joiner and joiner, and the byte order mark. These are dropped. */
-export const INVISIBLE_CHARACTERS: readonly string[] = ['\u200b', '\u200c', '\u200d', '\ufeff'];
-
 const SPACES: ReadonlySet<string> = new Set(WHITE_SPACE_CHARACTERS);
 const INVISIBLES: ReadonlySet<string> = new Set(INVISIBLE_CHARACTERS);
 const LOWER_BY_UPPER: ReadonlyMap<string, string> = new Map(TURKISH_CASE_PAIRS);
@@ -107,6 +81,16 @@ export function nameKey(name: string): string {
     .normalize('NFC')
     .replace(SPACE_RUN, ' ')
     .replace(EDGE_SPACE, '');
+}
+
+/**
+ * A name as the roster shows and stores it: invisible characters dropped, then the space
+ * rule (NFC, ends trimmed, inner white space one space). Its key is the name's own key.
+ */
+export function rosterName(name: string): string {
+  let visible = '';
+  for (const character of name) if (!INVISIBLES.has(character)) visible += character;
+  return collapseWhitespace(visible);
 }
 
 /** Whether two spellings are the same name under the Turkish rule. Reflexive and symmetric. */

@@ -1,10 +1,11 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import { permutations } from '../testing/orders.ts';
 import {
+  CORRECTION_REASONS,
   type FinalStatus,
   finalStatusDefinition,
   type HourClass,
-  REASON_CODES,
   type ReasonCode,
   reasonCodeDefinition,
 } from './catalog.ts';
@@ -119,17 +120,6 @@ function expectChainError(fn: () => unknown, fragment: string) {
   const error = thrown(fn);
   expect(error).toBeInstanceOf(CorrectionChainError);
   expect((error as Error).message).toContain(fragment);
-}
-
-// Every order of a short list.
-function permutations<T>(items: readonly T[]): T[][] {
-  if (items.length <= 1) return [[...items]];
-  return items.flatMap((item, index) =>
-    permutations([...items.slice(0, index), ...items.slice(index + 1)]).map((rest) => [
-      item,
-      ...rest,
-    ]),
-  );
 }
 
 describe('Final status precedence is single and complete: fixed cases', () => {
@@ -1077,7 +1067,7 @@ function chainArb(theory: number, practice: number, prefix: string) {
   if (theory + practice === 0) return fc.constant<FinalStatusCorrection[]>([]);
   const step = fc.record({
     op: fc.constantFrom('write', 'reverse'),
-    code: fc.constantFrom(...REASON_CODES.map((entry) => entry.code)),
+    code: fc.constantFrom(...CORRECTION_REASONS.map((entry) => entry.code)),
     theoryHours: fc.integer({ min: 0, max: theory }),
     practiceHours: fc.integer({ min: 0, max: practice }),
   });

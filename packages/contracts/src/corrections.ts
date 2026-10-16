@@ -4,18 +4,18 @@
 // bodies of the two phone queue items. Reason and issue reason codes derive from the core
 // catalog. Request and answer objects drop unknown keys (D13-B24); requests use closed
 // enums, answers extensible ones. The audit envelope and the audit schemas are strict.
-import type { CourseResult, HourType } from '@iu-attendance/core/absence/types';
+
+import { COURSE_RESULTS, type HourType } from '@iu-attendance/core/absence/types';
 import {
+  CORRECTION_REASONS,
   FINAL_STATUSES,
-  ISSUE_REASON_CODES,
-  REASON_CODES,
+  ISSUE_REASONS,
 } from '@iu-attendance/core/corrections/catalog';
 import { DOCUMENT_NUMBER_MAX_LENGTH } from '@iu-attendance/core/corrections/document-number';
-import {
-  type FinalStatusCorrection,
-  RECORD_DECISIONS,
-  type RecordDecision,
-} from '@iu-attendance/core/corrections/final-status';
+import type { FinalStatusCorrection } from '@iu-attendance/core/corrections/final-status';
+import { nonEmpty } from '@iu-attendance/core/shared/list';
+import { idKey } from '@iu-attendance/core/shared/uuid';
+import { RECORD_DECISIONS, type RecordDecision } from '@iu-attendance/core/verification/codes';
 import { z } from 'zod';
 import { recordIdSchema, recordKeySchema } from './attendance.ts';
 import { PRESSED_AT_SOURCES } from './clock.ts';
@@ -32,11 +32,11 @@ import {
   type Id,
   type Identity,
   ITEM_RESULTS,
-  idSchema,
   instantSchema,
   isUnique,
   itemResultsSchema,
   MODULES,
+  noDetailsSchema,
   PERSON_ROLES,
   pageQuerySchema,
   pageSchema,
@@ -44,24 +44,26 @@ import {
   REQUEST_ITEMS_MAX,
   rosterRowIdSchema,
   sameText,
+  sessionAccess,
   unitIdSchema,
   v7IdSchema,
 } from './shared/index.ts';
+import { sessionFlagIdSchema } from './verification.ts';
 
 // Value lists.
 
 const codesOf = <const C extends string>(entries: readonly { code: C }[]) =>
-  entries.map(({ code }) => code) as [C, ...C[]];
+  nonEmpty(entries.map(({ code }) => code));
 
-export const REASON_CODE_LIST = codesOf(REASON_CODES);
-export const ISSUE_REASON_CODE_LIST = codesOf(ISSUE_REASON_CODES);
+export const CORRECTION_REASON_CODES = codesOf(CORRECTION_REASONS);
+export const ISSUE_REASON_CODES = codesOf(ISSUE_REASONS);
 // The codes a lecturer's phone may queue as a manual add (selectableInQueue).
-export const QUEUE_REASON_CODE_LIST = codesOf(
-  REASON_CODES.filter((entry) => entry.selectableInQueue),
+export const QUEUE_REASON_CODES = codesOf(
+  CORRECTION_REASONS.filter((entry) => entry.selectableInQueue),
 );
 const FINAL_STATUS_CODES = codesOf(FINAL_STATUSES);
-export const reasonCodeSchema = z.enum(REASON_CODE_LIST);
-export const issueReasonCodeSchema = z.enum(ISSUE_REASON_CODE_LIST);
+export const reasonCodeSchema = z.enum(CORRECTION_REASON_CODES);
+export const issueReasonCodeSchema = z.enum(ISSUE_REASON_CODES);
 
 export const CORRECTION_KINDS = [
   'CORRECTION',
@@ -97,7 +99,6 @@ const RESULT_TYPES = ['THEORY', 'PRACTICE', 'OVERALL'] as const satisfies readon
   | HourType
   | 'OVERALL'
 )[];
-const COURSE_RESULTS = ['MET', 'NOT_MET', 'MET_EXEMPT'] as const satisfies readonly CourseResult[];
 const CHANGE_SOURCE_KINDS = ['CORRECTION', 'DECISION', 'LATE_RECORD'] as const;
 export const AUDIT_ACTOR_KINDS = ['PERSON', 'SYSTEM', 'COMMAND_LINE'] as const;
 // The identity's clients, plus the server for events no request caused.
@@ -117,7 +118,6 @@ export type CorrectionId = Id<'Correction'>;
 export type IssueReportId = Id<'IssueReport'>;
 export const correctionIdSchema = v7IdSchema('Correction');
 export const issueReportIdSchema = v7IdSchema('IssueReport');
-const flagIdSchema = idSchema('Flag');
 
 // Error catalog. The codes with http null are item codes: they come back in a result of
 // a multi-item route or of a queue item, never as an error answer.
@@ -376,7 +376,7 @@ export const correctionSchema = z.object({
   operationId: clientIdSchema,
   kind: extensibleEnum(CORRECTION_KINDS),
   // Both null on a reversal.
-  reasonCode: extensibleEnum(REASON_CODE_LIST).nullable(),
+  reasonCode: extensibleEnum(CORRECTION_REASON_CODES).nullable(),
   finalStatus: extensibleEnum(FINAL_STATUS_CODES).nullable(),
   unitId: unitIdSchema.nullable(),
   courseId: courseIdSchema,
@@ -406,7 +406,7 @@ export const issueReportSchema = z.object({
   // Null when the student had no row in the session's sections (a record in a wrong course).
   rosterRowId: rosterRowIdSchema.nullable(),
   record: recordKeySchema.nullable(),
-  issueReasonCode: extensibleEnum(ISSUE_REASON_CODE_LIST),
+  issueReasonCode: extensibleEnum(ISSUE_REASON_CODES),
   status: extensibleEnum(ISSUE_REPORT_STATUSES),
   clientLowerAt: instantSchema,
   arrivedAt: instantSchema,
@@ -422,7 +422,7 @@ const issueReportListItemSchema = issueReportSchema.extend({
   studentFullName: z.string(),
   // Null, like record, while the session waits for its head count.
   recordDecision: extensibleEnum(RECORD_DECISIONS).nullable(),
-  suggestedReasonCode: extensibleEnum(REASON_CODE_LIST).nullable(),
+  suggestedReasonCode: extensibleEnum(CORRECTION_REASON_CODES).nullable(),
   batchPosition: batchPositionSchema,
   critical: z.boolean().nullable(),
 });
@@ -467,7 +467,7 @@ const knownLaterChangeSchema = z.discriminatedUnion('part', [
     sources: z.array(
       z.object({
         kind: extensibleEnum(CHANGE_SOURCE_KINDS),
-        reasonCode: extensibleEnum(REASON_CODE_LIST).nullable(),
+        reasonCode: extensibleEnum(CORRECTION_REASON_CODES).nullable(),
         correctionId: correctionIdSchema.nullable(),
         record: recordKeySchema.nullable(),
         at: instantSchema,
@@ -483,7 +483,7 @@ const knownLaterChangeSchema = z.discriminatedUnion('part', [
     // The suggested action: a correction on this record (D09-A06).
     action: z.object({
       route: z.string(),
-      suggestedReasonCode: extensibleEnum(REASON_CODE_LIST),
+      suggestedReasonCode: extensibleEnum(CORRECTION_REASON_CODES),
       record: recordKeySchema,
     }),
   }),
@@ -505,7 +505,7 @@ const jsonObjectSchema = z.record(z.string(), z.unknown());
 
 // An audit event as the audit list shows it.
 export const auditEventSchema = z.object({
-  id: idSchema('AuditEvent'),
+  id: v7IdSchema('AuditEvent'),
   eventType: z.string(),
   at: instantSchema,
   actor: z.object({
@@ -567,9 +567,9 @@ const CONFIRMATION_RULE = {
 // A decision request names each record or student once: a repeat would be answered as
 // already written although its own decision was never applied. UUIDs compare without case.
 const eachRecordOnce = (items: readonly { record: { recordId: string } }[]) =>
-  isUnique(items.map(({ record }) => record.recordId.toLowerCase()));
+  isUnique(items.map(({ record }) => idKey(record.recordId)));
 const eachStudentOnce = (items: readonly { studentId: string }[]) =>
-  isUnique(items.map(({ studentId }) => studentId.toLowerCase()));
+  isUnique(items.map(({ studentId }) => idKey(studentId)));
 const UNIQUE_ITEMS = { message: 'Each record or student comes once' };
 
 const isReviewValid = (item: {
@@ -585,7 +585,7 @@ const REVIEW_RULE = {
     'A review decides a record in review; a change turns present into rejected or the reverse',
 };
 
-const lecturer = { auth: ['session'], roles: ['lecturer'], rate: 'session' } as const;
+const lecturer = sessionAccess('lecturer');
 const lecturerOrAdmin = {
   auth: ['session'],
   roles: ['lecturer', 'admin'],
@@ -909,7 +909,7 @@ export const CORRECTIONS_ROUTES = {
         items: z.array(
           z.object({
             sessionId: sessionIdSchema,
-            flagId: flagIdSchema,
+            flagId: sessionFlagIdSchema,
             courseId: courseIdSchema,
             courseName: z.string(),
             startAt: instantSchema,
@@ -940,7 +940,7 @@ export const CORRECTIONS_ROUTES = {
       statuses: [200],
       schema: z.object({
         sessionId: sessionIdSchema,
-        flagId: flagIdSchema,
+        flagId: sessionFlagIdSchema,
         reviewedAt: instantSchema,
       }),
     },
@@ -1114,7 +1114,7 @@ export const MANUAL_ADD_ITEM = defineItemType(
     id: correctionIdSchema,
     sessionId: sessionIdSchema,
     rosterRowId: rosterRowIdSchema,
-    reasonCode: z.enum(QUEUE_REASON_CODE_LIST),
+    reasonCode: z.enum(QUEUE_REASON_CODES),
     theoryHours: hoursSchema.nullable(),
     practiceHours: hoursSchema.nullable(),
   }),
@@ -1144,6 +1144,9 @@ export const ISSUE_REPORT_ITEM = defineItemType(
 // with the event type's registered schema, upper-cases code and target.kind, and refuses
 // details over 8 KB. The actor's role is the role of the route that allowed the action.
 // An event that names a course names its unit too: null for a course without a unit (I045).
+
+/** The largest audit event details, as UTF-8 JSON. */
+export const AUDIT_DETAILS_MAX_BYTES = 8 * 1024;
 
 // The bounds of the audit table's CHECKs, so a wrong value fails here, not at INSERT.
 const AUDIT_EVENT_NAME = /^[a-z][a-z0-9_]{1,62}$/;
@@ -1205,12 +1208,10 @@ export type AuditEventInput = z.input<typeof auditEventInputSchema>;
 // after schemas of each type (null: the event has none). No detail carries a student
 // number, a name or a document number.
 
-const nothing = z.strictObject({});
-
 export const CORRECTIONS_AUDIT_EVENTS = {
   // A new chain head, or the first row after a reversal; target CORRECTION, code the
   // reason code.
-  'corrections.correction_added': nothing,
+  'corrections.correction_added': noDetailsSchema,
   // A new row in place of the active one; target the new row.
   'corrections.correction_replaced': z.strictObject({ previousCorrectionId: correctionIdSchema }),
   // Target the reversal row.
@@ -1225,12 +1226,12 @@ export const CORRECTIONS_AUDIT_EVENTS = {
     activeCorrectionId: correctionIdSchema,
   }),
   // code APPROVE or REJECT.
-  'corrections.self_declared_decided': nothing,
+  'corrections.self_declared_decided': noDetailsSchema,
   // code APPROVE or REJECT; counted only on an approval.
   'corrections.review_decided': z.strictObject({ counted: z.boolean().nullable() }),
   'corrections.decision_changed': z.strictObject({ decisionReason: z.string().max(64) }),
   // The close of a bulk review; target FLAG.
-  'corrections.flagged_session_reviewed': nothing,
+  'corrections.flagged_session_reviewed': noDetailsSchema,
   // code the issue reason code.
   'corrections.issue_report_received': z.strictObject({
     status: z.enum(['OPEN', 'EXPIRED']),
@@ -1238,7 +1239,7 @@ export const CORRECTIONS_AUDIT_EVENTS = {
     clientDecisionVersion: decisionVersionSchema.nullable(),
   }),
   // code CORRECTED or NO_CHANGE.
-  'corrections.issue_report_closed': nothing,
+  'corrections.issue_report_closed': noDetailsSchema,
   // The correction that closed the report was undone.
   'corrections.issue_report_reopened': z.strictObject({ reversedCorrectionId: correctionIdSchema }),
 } as const satisfies Readonly<Record<string, z.ZodObject>>;

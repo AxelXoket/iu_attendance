@@ -6,7 +6,7 @@ import {
   ABSENCE_DIFF_KINDS,
   ABSENCE_ERROR_CODES,
   ABSENCE_FINAL_STATUSES,
-  ABSENCE_REASON_LIST,
+  ABSENCE_REASON_CODES,
   ABSENCE_REASONS,
   ABSENCE_ROUTES,
   ABSENCE_TRIGGER_KINDS,
@@ -18,8 +18,8 @@ import { id, issueCodes } from './helpers.ts';
 describe('absence value lists', () => {
   it('name each reason by itself, thirteen in all, and keep the other lists unique', () => {
     for (const [key, value] of Object.entries(ABSENCE_REASONS)) expect(value).toBe(key);
-    expect(ABSENCE_REASON_LIST).toHaveLength(13);
-    for (const values of [ABSENCE_REASON_LIST, ABSENCE_TRIGGER_KINDS, ABSENCE_DIFF_KINDS]) {
+    expect(ABSENCE_REASON_CODES).toHaveLength(13);
+    for (const values of [ABSENCE_REASON_CODES, ABSENCE_TRIGGER_KINDS, ABSENCE_DIFF_KINDS]) {
       expect(new Set(values).size).toBe(values.length);
       for (const value of values) expect(value).toMatch(/^[A-Z]+(?:_[A-Z]+)*$/);
     }
@@ -129,7 +129,7 @@ describe('absence routes', () => {
       reasons: ['NO_CONNECTION'],
       result: 'NOT_MET',
       lastContactAt: null,
-      pendingAtLastContact: false,
+      unsentAtLastContact: false,
       singleRecordSessions: [],
       openFlags: [],
     };

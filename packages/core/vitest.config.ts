@@ -10,7 +10,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     coverage: {
       include: ['src/**/*.{ts,mts,cts,tsx}'],
-      exclude: ['src/**/*.test.{ts,mts,cts,tsx}'],
+      exclude: ['src/**/*.test.{ts,mts,cts,tsx}', 'src/testing/**'],
     },
   },
 });

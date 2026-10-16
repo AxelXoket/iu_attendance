@@ -3,82 +3,49 @@
 // catalog, the audit event detail schemas, the two routes and the two phone queue item
 // bodies. Request and answer objects drop unknown keys (D13-B24); the audit schemas are
 // strict. The document layout and its constants live in core (clock/document.ts).
-import { DOCUMENT_CHARS, VALUE_CHARS } from '@iu-attendance/core/clock/constants';
-import { decodeBase64Url } from '@iu-attendance/core/shared/base64url';
-import { AFTER_RESTART } from '@iu-attendance/core/sync/second-anchor-text';
+
+import { CHANGE_KINDS, type ChangeKind } from '@iu-attendance/core/clock/codes';
+import { DOCUMENT_BYTES, VALUE_BYTES } from '@iu-attendance/core/clock/constants';
 import { z } from 'zod';
 import { courseIdSchema, sessionIdSchema, termIdSchema } from './courses.ts';
 import {
+  base64UrlBytesSchema,
   defineErrorCodes,
   defineItemType,
   defineRoute,
   extensibleEnum,
+  idSchema,
   instantSchema,
   OPERATIONAL_CODE,
   personIdSchema,
   sameText,
+  sessionAccess,
   unitIdSchema,
   v7IdSchema,
 } from './shared/index.ts';
 
 // Code lists. The CHECK constraints of the window change and record tables are made from
-// these; the neighbours import them and keep no copy.
-
-export const FIRST_ANCHOR_STATUSES = [
-  'VALID',
-  'BEFORE_RESTART',
-  'DOCUMENT_OVER_7_DAYS',
-  'NO_DOCUMENT',
-  'DOCUMENT_INVALID',
-  'KEY_COMPROMISED',
-  'SUBJECT_MISMATCH',
-  'REQUEST_TOO_SLOW',
-  'DURATION_INVALID',
-] as const;
-
-// Why the second anchor could not be set: AFTER_RESTART is the same value the second
-// anchor text carries; OTHER_DEVICE_SENT: another device sent the record's package;
-// SCAN_PATH: the record came through a scan. There is no "not set" value.
-export const SECOND_ANCHOR_ABSENT_REASONS = [
-  AFTER_RESTART,
-  'PACKAGE_UNSIGNED',
-  'SCAN_PATH',
-  'OTHER_DEVICE_SENT',
-  'SYNC_BROKEN',
-  'NOT_SENT',
-] as const;
-
-export const SECOND_ANCHOR_STATUSES = [
-  'VALID',
-  ...SECOND_ANCHOR_ABSENT_REASONS,
-  'RECORD_OVER_7_DAYS',
-  'DOCUMENT_INVALID',
-  'KEY_COMPROMISED',
-  'SUBJECT_MISMATCH',
-  'REQUEST_TOO_SLOW',
-  'DURATION_INVALID',
-] as const;
-
-// What the phone itself reports for the first anchor in the record text; a subset of
-// FIRST_ANCHOR_STATUSES.
-export const FIRST_ANCHOR_PHONE_REPORTS = [
-  'BEFORE_RESTART',
-  'DOCUMENT_OVER_7_DAYS',
-  'NO_DOCUMENT',
-] as const;
-
-export const CLOCK_STATUSES = ['VERIFIED', 'ANCHORS_DISAGREE', 'UNVERIFIED'] as const;
-// NONE: no interval and no estimate.
-export const CLOCK_SOURCES = [
-  'BOTH_ANCHORS',
-  'FIRST_ANCHOR',
-  'SECOND_ANCHOR',
-  'PHONE_CLOCK',
-  'NONE',
-] as const;
-export const WINDOW_RESULTS = ['INSIDE', 'CHANGE_SLICE', 'OLD_SCHEDULE', 'OUTSIDE'] as const;
+// these; the neighbours import them and keep no copy. The anchor, clock and window lists
+// live in core, next to the rules that use them.
+export {
+  CHANGE_KINDS,
+  type ChangeKind,
+  CLOCK_SOURCES,
+  CLOCK_STATUSES,
+  type ClockSource,
+  type ClockStatus,
+  FIRST_ANCHOR_PHONE_REPORTS,
+  FIRST_ANCHOR_STATUSES,
+  type FirstAnchorPhoneReport,
+  type FirstAnchorStatus,
+  SECOND_ANCHOR_ABSENT_REASONS,
+  SECOND_ANCHOR_STATUSES,
+  type SecondAnchorAbsentReason,
+  type SecondAnchorStatus,
+  WINDOW_RESULTS,
+  type WindowResult,
+} from '@iu-attendance/core/clock/codes';
 export const CLOSE_REASONS = ['TIME_UP', 'EARLY_CLOSE', 'WINDOW_LENGTH'] as const;
-export const CHANGE_KINDS = ['WINDOW_LENGTH', 'EARLY_CLOSE'] as const;
 // Where the press instant of a window change comes from; ARRIVAL: no anchor could be set.
 export const PRESSED_AT_SOURCES = [
   'BOTH_ANCHORS',
@@ -92,15 +59,7 @@ export const NOT_APPLIED_REASONS = ['LAST_DAY_PASSED', 'TERM_LOCKED'] as const;
 // COURSE: the window length comes from the course setting; SESSION: a window change set it.
 export const WINDOW_SOURCES = ['COURSE', 'SESSION'] as const;
 
-export type FirstAnchorStatus = (typeof FIRST_ANCHOR_STATUSES)[number];
-export type SecondAnchorStatus = (typeof SECOND_ANCHOR_STATUSES)[number];
-export type SecondAnchorAbsentReason = (typeof SECOND_ANCHOR_ABSENT_REASONS)[number];
-export type FirstAnchorPhoneReport = (typeof FIRST_ANCHOR_PHONE_REPORTS)[number];
-export type ClockStatus = (typeof CLOCK_STATUSES)[number];
-export type ClockSource = (typeof CLOCK_SOURCES)[number];
-export type WindowResult = (typeof WINDOW_RESULTS)[number];
 export type CloseReason = (typeof CLOSE_REASONS)[number];
-export type ChangeKind = (typeof CHANGE_KINDS)[number];
 
 // Phone queue items. The sync module parses the text body with these schemas; the window
 // length's upper bound is the class length, checked by the handler (CLOCK_DURATION_INVALID).
@@ -193,12 +152,7 @@ const errors = (...codes: ClockErrorCode[]) => codes;
 
 // Routes.
 
-// 22 characters carry 16 bytes and four spare bits; canonical text keeps those bits zero.
-const documentValueSchema = z
-  .string()
-  .max(VALUE_CHARS)
-  .regex(new RegExp(`^[A-Za-z0-9_-]{${VALUE_CHARS}}$`))
-  .refine((value) => decodeBase64Url(value) !== null, { message: 'value is canonical base64url' });
+const documentValueSchema = base64UrlBytesSchema(VALUE_BYTES);
 
 const changeSchema = z.object({
   id: v7IdSchema('WindowChange'),
@@ -235,7 +189,7 @@ export const CLOCK_ROUTES = {
     response: {
       statuses: [200],
       schema: z.object({
-        document: z.string().regex(new RegExp(`^[A-Za-z0-9_-]{${DOCUMENT_CHARS}}$`)),
+        document: base64UrlBytesSchema(DOCUMENT_BYTES),
       }),
     },
     errors: errors('CLOCK_SYNC_BROKEN'),
@@ -246,9 +200,7 @@ export const CLOCK_ROUTES = {
     name: 'getWindow',
     method: 'GET',
     path: '/v1/clock/windows/{sessionId}',
-    auth: ['session'],
-    roles: ['staff'],
-    rate: 'session',
+    ...sessionAccess('staff'),
     request: { params: z.object({ sessionId: sessionIdSchema }) },
     response: {
       statuses: [200],
@@ -310,11 +262,11 @@ export const CLOCK_AUDIT_EVENTS = {
   'clock.item_id_conflict': z.strictObject({
     ...sessionContext,
     changeId: v7IdSchema('WindowChange'),
-    installId: v7IdSchema('Installation'),
+    installId: idSchema('Installation'),
   }),
   'clock.unauthorized_window_change': z.strictObject({
     ...sessionContext,
     kind: z.enum(CHANGE_KINDS),
-    installId: v7IdSchema('Installation'),
+    installId: idSchema('Installation'),
   }),
 } as const satisfies Readonly<Record<string, z.ZodObject>>;

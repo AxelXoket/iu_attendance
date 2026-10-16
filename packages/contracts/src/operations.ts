@@ -4,11 +4,14 @@
 // kinds, countSchema names, alert kinds, check inputs, thresholds, the screen time cap, the
 // secret log fields, the counted log events and the secret matrix. Files our own jobs
 // write are strict; request and item bodies drop unknown fields.
+
 import { BASE64_32_BYTES, KEY_ID } from '@iu-attendance/core/shared/formats';
+import { idKey } from '@iu-attendance/core/shared/uuid';
 import { z } from 'zod';
 import { httpsUrlSchema, PLATFORMS } from './api.ts';
 import { BACKUP_JOBS } from './database.ts';
 import {
+  ANONYMOUS_ACCESS,
   clientIdSchema,
   countSchema,
   dateSchema,
@@ -20,6 +23,7 @@ import {
   OPERATIONAL_CODE,
   runtimeVersionSchema,
   sameText,
+  sessionAccess,
   UUID_LENGTH,
   versionSchema,
 } from './shared/index.ts';
@@ -104,8 +108,9 @@ export const SCREEN_TIME_CAP = { rows: 500, sources: 5 } as const;
 const SECONDS_IN_DAY = 86_400;
 const secondsSchema = z.number().int().min(1).max(SECONDS_IN_DAY);
 // The panel and the phone name a session the same way. D15 types it with D13's
-// idSchema('Session'), a UUID of any version, while the courses contract takes its own
-// session ids as UUIDv7 only; the two differ in the spec itself.
+// kimlikSemasi, which the spec leaves to either form; this takes every version, as D15's
+// row does, so one odd id cannot cost the phone its whole counter body. The courses
+// contract's own session ids are UUIDv7 only.
 const sessionIdSchema = idSchema('Session');
 
 // A repeated (session, screen) pair, a total over a day and the cap are the handler's
@@ -133,7 +138,7 @@ export const screenTimesAnswerSchema = z.object({
 
 /** The advisory lock key of a person's screen time cap on a day, layer 1. */
 export function screenCapKey(personId: string, day: string): string {
-  return `operations:screen_cap:${personId}:${day}`;
+  return `operations:screen_cap:${idKey(personId)}:${day}`;
 }
 
 // The phone countSchema item body, format 1. The phone sends a day unless isDaySkippable says
@@ -235,8 +240,7 @@ export const OPERATIONS_ROUTES = {
     name: 'live',
     method: 'GET',
     path: '/health/live',
-    auth: ['anonymous'],
-    rate: 'anonymous',
+    ...ANONYMOUS_ACCESS,
     pressureExempt: true,
     clockAttestation: false,
     request: {},
@@ -249,8 +253,7 @@ export const OPERATIONS_ROUTES = {
     name: 'ready',
     method: 'GET',
     path: '/health/ready',
-    auth: ['anonymous'],
-    rate: 'anonymous',
+    ...ANONYMOUS_ACCESS,
     pressureExempt: false,
     request: {},
     response: { statuses: [204], schema: null },
@@ -266,8 +269,7 @@ export const OPERATIONS_ROUTES = {
     name: 'status',
     method: 'GET',
     path: '/v1/status',
-    auth: ['anonymous'],
-    rate: 'anonymous',
+    ...ANONYMOUS_ACCESS,
     pressureExempt: true,
     clockAttestation: false,
     request: {},
@@ -280,9 +282,7 @@ export const OPERATIONS_ROUTES = {
     name: 'saveScreenTimes',
     method: 'POST',
     path: '/v1/operations/screen-times',
-    auth: ['session'],
-    roles: ['staff'],
-    rate: 'session',
+    ...sessionAccess('staff'),
     // The largest valid body is about 20 KB.
     bodyLimit: 32_768,
     pressureExempt: false,

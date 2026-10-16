@@ -3,13 +3,17 @@
 // exemption overlay. Hours and final statuses come from the corrections module's
 // resolveFinalStatus; this layer writes no second split rule.
 
-import type { FinalStatus } from '../corrections/catalog.ts';
+import { chooseCounted } from '../attendance/counted.ts';
+import { FINAL_STATUSES, type FinalStatus } from '../corrections/catalog.ts';
 import {
   type FinalStatusCorrection,
   type FinalStatusRecord,
   resolveFinalStatus,
   type SessionFinalStatus,
 } from '../corrections/final-status.ts';
+import { isLockedAt } from '../courses/calendar.ts';
+import { nonEmpty } from '../shared/list.ts';
+import { idKey } from '../shared/uuid.ts';
 import { coveringRow, type ScopeRow } from './scope.ts';
 
 /** A final status of the absence module: the corrections module's, or EXEMPT. */
@@ -17,6 +21,16 @@ export type AbsenceFinalStatus = FinalStatus | 'EXEMPT';
 
 /** The cell letter of an exempt student (the reports' M cell). */
 export const EXEMPT_LETTER = 'M';
+
+/** The absence module's final statuses and cell letters: the corrections module's, then EXEMPT. */
+export const ABSENCE_FINAL_STATUSES = [
+  ...FINAL_STATUSES.map(({ code, letter }) => ({ code, letter })),
+  { code: 'EXEMPT', letter: EXEMPT_LETTER },
+] as const satisfies ReadonlyArray<{ code: AbsenceFinalStatus; letter: string }>;
+/** Their codes, in the same order. */
+export const ABSENCE_FINAL_STATUS_CODES = nonEmpty(
+  ABSENCE_FINAL_STATUSES.map(({ code }): AbsenceFinalStatus => code),
+);
 
 /**
  * A record as stored: its account, its arrival and whether it came past the last day
@@ -78,20 +92,6 @@ export type LayerRow = {
   readonly status: AbsenceSessionStatus;
 };
 
-// The attendance module's order among records: decision, then arrival, then id.
-const DECISION_RANK: Readonly<Record<FinalStatusRecord['decision'], number>> = {
-  PRESENT: 0,
-  PENDING: 1,
-  IN_REVIEW: 2,
-  REJECTED: 3,
-};
-const comesFirst = (a: LayerRecord, b: LayerRecord) =>
-  DECISION_RANK[a.decision] !== DECISION_RANK[b.decision]
-    ? DECISION_RANK[a.decision] < DECISION_RANK[b.decision]
-    : a.arrivedAtMs !== b.arrivedAtMs
-      ? a.arrivedAtMs < b.arrivedAtMs
-      : a.recordId < b.recordId;
-
 // Which account's records count (D08-B12): with a confirmed account only its records,
 // the others neither count nor raise a flag; without one, the first counted record in
 // the attendance module's order counts for the session and the other accounts' do not.
@@ -100,12 +100,14 @@ function accountRecords(
   confirmedAccountId: string | null,
 ): readonly LayerRecord[] {
   if (confirmedAccountId !== null) {
-    return records.filter((record) => record.accountId === confirmedAccountId);
+    const confirmed = idKey(confirmedAccountId);
+    return records.filter((record) => idKey(record.accountId) === confirmed);
   }
-  let chosen: LayerRecord | null = null;
-  for (const record of records) {
-    if (record.counted && (chosen === null || comesFirst(record, chosen))) chosen = record;
-  }
+  const candidates = records
+    .filter((record) => record.counted)
+    .map((record) => ({ ...record, id: record.recordId }));
+  const chosenId = chooseCounted(candidates)?.recordId ?? null;
+  const chosen = records.find((record) => record.recordId === chosenId) ?? null;
   return records.map((record) =>
     record.counted && record !== chosen ? { ...record, counted: false } : record,
   );
@@ -140,14 +142,14 @@ function exemptOverlay(status: SessionFinalStatus, session: LayerSession): Absen
  */
 export function sessionLayer(input: LayerInput): LayerRow[] {
   const { rows, exempt, lockAtMs, nowMs } = input;
-  const locked = lockAtMs !== null && nowMs >= lockAtMs;
+  const locked = isLockedAt(lockAtMs, nowMs);
   const result: LayerRow[] = [];
   for (const session of input.sessions) {
     if (session.held !== true) continue;
     const records = accountRecords(session.records, input.confirmedAccountId).map(
       ({ recordId: _id, accountId: _account, arrivedAtMs, afterLastDay, ...record }) => ({
         ...record,
-        excludedFromCount: afterLastDay || (lockAtMs !== null && arrivedAtMs >= lockAtMs),
+        excludedFromCount: afterLastDay || isLockedAt(lockAtMs, arrivedAtMs),
       }),
     );
     const status = resolveFinalStatus(records, session.corrections, {

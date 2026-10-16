@@ -6,7 +6,10 @@ import {
   SIGNATURE_KINDS,
   scanBodyOf,
 } from '@iu-attendance/core/attendance/envelope';
+import { panelCounts } from '@iu-attendance/core/attendance/panel-counts';
+import { ITEM_REASONS } from '@iu-attendance/core/attendance/reasons';
 import { DOCUMENT_CHARS } from '@iu-attendance/core/clock/constants';
+import { CONTEXT_CHANGING_CODE } from '@iu-attendance/core/verification/codes';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
@@ -19,11 +22,10 @@ import {
   ATTENDANCE_ROUTES,
   attendancePairKey,
   RECEIPT_SCAN_ITEM,
-  RECORD_LABELS,
   recordItemDetailsSchema,
   recordTextSchema,
   SCAN_RESULTS,
-  SIGNATURE_KIND_LIST,
+  SIGNATURE_KIND_CODES,
   scanItemDetailsSchema,
   studentRecordSchema,
   TIME_ZONE_MAX_LENGTH,
@@ -97,14 +99,10 @@ describe('the attendance route', () => {
       rawRecordCount: 1,
       finalStatus: 'PRESENT',
     };
-    const counts = {
-      students: 1,
-      present: 1,
-      absent: 0,
-      rejectedRecords: 0,
-      inReviewAndPending: { total: 0, inReview: 0, pending: 0 },
-      correctionsAndExempt: 0,
-    };
+    // The counts are the core panel rule's answer, field for field.
+    const counts = panelCounts([
+      { rowStatus: 'ACTIVE', exempt: false, countedDecision: 'PRESENT', finalStatus: 'PRESENT' },
+    ]);
     const base = {
       sessionId: id(4),
       held: true,
@@ -120,6 +118,8 @@ describe('the attendance route', () => {
       counts,
     };
     expect(ok(answer, visible)).toBe(true);
+    const parsedCounts = answer.parse(visible).counts;
+    expect(parsedCounts).toEqual(counts);
     const pending = {
       ...base,
       held: null,
@@ -278,8 +278,8 @@ describe('the record text', () => {
       kind: fc.constant('record'),
       v: fc.constant(1),
       id: fc.uuid({ version: 7 }),
-      device: fc.uuid(),
-      key: fc.uuid(),
+      device: fc.uuid({ version: 7 }),
+      key: fc.uuid({ version: 7 }),
       sequence: fc.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }),
       session: fc.uuid({ version: 7 }),
       student: fc.uuid({ version: 7 }),
@@ -304,7 +304,7 @@ describe('the record text', () => {
     fc.assert(
       fc.property(
         validRecords,
-        fc.constantFrom(...SIGNATURE_KIND_LIST),
+        fc.constantFrom(...SIGNATURE_KIND_CODES),
         fc.uint8Array({ minLength: 1, maxLength: 142 }),
         fc.oneof(fc.integer(), fc.boolean(), fc.string({ maxLength: 8 })),
         (record, kind, signature, later) => {
@@ -345,7 +345,7 @@ describe('the record text', () => {
     // Ground control: the schema takes this record, and its version is the longest one.
     expect(recordTextSchema.parse(largest)).toEqual(largest);
     expect(largest.appVersion).toHaveLength(VERSION_MAX_LENGTH);
-    for (const kind of SIGNATURE_KIND_LIST) {
+    for (const kind of SIGNATURE_KIND_CODES) {
       const signature = new Uint8Array(signatureMaxBytes[kind]).fill(255);
       const length =
         `IUY1.${recordTextOf(largest)}.i.`.length + Math.ceil((signature.length * 4) / 3);
@@ -412,6 +412,10 @@ describe('the attendance queue items', () => {
       itemCodes.sort(),
     );
     expect(ATTENDANCE_REJECT_CODES).not.toContain('ATTENDANCE_NOT_FOUND');
+    // The core reason table names no code outside this catalog but the verification one.
+    expect(Object.keys(ITEM_REASONS).filter((code) => !itemCodes.includes(code))).toEqual([
+      CONTEXT_CHANGING_CODE,
+    ]);
     // A retry writes no scan row, so the row results are the other three.
     expect(SCAN_RESULTS).toEqual(ITEM_RESULTS.filter((result) => result !== 'RETRY'));
   });
@@ -443,10 +447,8 @@ describe('the attendance queue items', () => {
 });
 
 describe('attendance lists, key and audit events', () => {
-  it('name the signature kinds of the core codec and seven labels', () => {
-    expect(SIGNATURE_KIND_LIST).toEqual(Object.values(SIGNATURE_KINDS));
-    expect(RECORD_LABELS).toHaveLength(7);
-    expect(new Set(RECORD_LABELS).size).toBe(7);
+  it('name the signature kinds of the core codec', () => {
+    expect(SIGNATURE_KIND_CODES).toEqual(Object.values(SIGNATURE_KINDS));
   });
 
   it('write the pair lock key in one place', () => {
@@ -466,6 +468,7 @@ describe('attendance lists, key and audit events', () => {
       expect(ok(schema, sample), type).toBe(true);
       expect(ok(schema, { ...sample, studentNumber: '0123456789' }), type).toBe(false);
       expect(ok(schema, { ...sample, envelopeDigest: 'A'.repeat(42) }), type).toBe(false);
+      expect(ok(schema, { ...sample, envelopeDigest: `${'A'.repeat(42)}B` }), type).toBe(false);
     }
   });
 });

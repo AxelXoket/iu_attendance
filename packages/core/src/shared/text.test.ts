@@ -1,13 +1,18 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { collapseWhitespace } from './text.ts';
+import { collapseWhitespace, hasControlCharacter, WHITE_SPACE_CHARACTERS } from './text.ts';
 
 // Built at run time: Biome would write the escapes as invisible characters.
 const NO_BREAK_SPACE = String.fromCodePoint(0xa0);
 const EM_SPACE = String.fromCodePoint(0x2003);
 const BYTE_ORDER_MARK = String.fromCodePoint(0xfeff);
 const COMBINING_CEDILLA = String.fromCodePoint(0x327);
-const WHITE_SPACE = [' ', '\t', '\n', '\r', NO_BREAK_SPACE, EM_SPACE, BYTE_ORDER_MARK];
+// Every character trim removes: Unicode white space but U+0085 (a control character),
+// and the BOM.
+const WHITE_SPACE = [
+  ...WHITE_SPACE_CHARACTERS.filter((character) => character !== String.fromCodePoint(0x85)),
+  BYTE_ORDER_MARK,
+];
 
 describe('collapseWhitespace', () => {
   it('trims the ends and makes every inner run of white space one space', () => {
@@ -49,5 +54,21 @@ describe('collapseWhitespace', () => {
     );
     // Ground control: most inputs had white space to trim or collapse.
     expect(collapsed).toBeGreaterThan(1000);
+  });
+});
+
+describe('hasControlCharacter', () => {
+  it('refuses C0, DEL and C1 control characters and nothing else', () => {
+    for (const unit of [0x00, 0x09, 0x0a, 0x1f, 0x7f, 0x80, 0x9f]) {
+      const control = String.fromCodePoint(unit);
+      // At the start, inside and at the end.
+      for (const text of [`${control}ab`, `a${control}b`, `ab${control}`]) {
+        expect(hasControlCharacter(text), unit.toString(16)).toBe(true);
+      }
+    }
+    // Ground control: the neighbours of the ranges and Turkish letters pass.
+    for (const text of [' ', '~', NO_BREAK_SPACE, 'Ğüşiöç İÇÖŞÜ', '']) {
+      expect(hasControlCharacter(text), text).toBe(false);
+    }
   });
 });

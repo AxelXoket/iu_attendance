@@ -9,7 +9,8 @@ import { pnpmCommand } from './workspace-check.ts';
 // Runs the real root "dev" script through pnpm in a fixture workspace. The fixture
 // server package resolves one of its own exports from each Node process the chain
 // starts (db:migrate and dev), so the log shows whether that process got the
-// "source" condition and whether the developer's own NODE_OPTIONS survived.
+// "source" condition and TZ=UTC (the server refuses any other time zone) and whether
+// the developer's own NODE_OPTIONS survived.
 // The docker step starts no Node process and is left out: no stand-in executable is
 // put on PATH (security software may treat that as a hijacked command).
 
@@ -23,8 +24,9 @@ const PROBE = [
   `const target = import.meta.resolve('${SERVER_NAME}/probe-target');`,
   "const condition = target.endsWith('target-source.js') ? 'source' : 'default';",
   `const own = (process.env.NODE_OPTIONS ?? '').includes('${OWN_FLAG}') ? ' +own' : '';`,
+  "const utc = process.env.TZ === 'UTC' ? ' utc' : '';",
   // biome-ignore lint/suspicious/noTemplateCurlyInString: fixture source with a template literal
-  'appendFileSync(process.env.PROBE_LOG, `${process.argv[2]} ${condition}${own}\\n`);',
+  'appendFileSync(process.env.PROBE_LOG, `${process.argv[2]} ${condition}${own}${utc}\\n`);',
 ].join('\n');
 
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
@@ -42,13 +44,23 @@ beforeAll(async () => {
   fixture = await mkdtemp(path.join(os.tmpdir(), 'dev-script-'));
   const rootManifest = JSON.parse(await readFile(path.join(REPO_ROOT, 'package.json'), 'utf8'));
   steps = String(rootManifest.scripts.dev).split(' && ');
+  // The real workspace settings (the shell emulator among them), with only the fixture's
+  // package list.
+  const realWorkspace = await readFile(path.join(REPO_ROOT, 'pnpm-workspace.yaml'), 'utf8');
+  const workspace = realWorkspace.replace(
+    /^packages:\n(?: {2}- .*\n)+/m,
+    'packages:\n  - apps/*\n',
+  );
+  if (!workspace.includes('  - apps/*\n') || workspace.includes('packages/*')) {
+    throw new Error('the fixture workspace keeps the real package list');
+  }
   const files: Record<string, string> = {
     'package.json': json({
       name: 'fixture',
       private: true,
       scripts: { dev: steps.filter((step) => !isDocker(step)).join(' && ') },
     }),
-    'pnpm-workspace.yaml': 'packages:\n  - apps/*\nshellEmulator: true\n',
+    'pnpm-workspace.yaml': workspace,
     'apps/server/package.json': json({
       name: SERVER_NAME,
       private: true,
@@ -68,12 +80,12 @@ beforeAll(async () => {
   }
   await mkdir(path.join(fixture, 'xdg'));
 
-  // No npm_* or pnpm_config_* variables and no NODE_OPTIONS from the process running
-  // this test (PNPM_HOME stays, so pnpm finds its own home), and an empty global
+  // No npm_* or pnpm_config_* variables and no NODE_OPTIONS or TZ from the process
+  // running this test (PNPM_HOME stays, so pnpm finds its own home), and an empty global
   // pnpm config.
   env = {};
   for (const [key, value] of Object.entries(process.env)) {
-    if (!/^npm_|^pnpm_config_|^NODE_OPTIONS$/i.test(key)) env[key] = value;
+    if (!/^npm_|^pnpm_config_|^NODE_OPTIONS$|^TZ$/i.test(key)) env[key] = value;
   }
   env.XDG_CONFIG_HOME = path.join(fixture, 'xdg');
 }, 60_000);
@@ -124,33 +136,35 @@ describe('The root dev script', { timeout: 120_000 }, () => {
 
   it('the probe tells the conditions and the own flag apart (control)', async () => {
     const controlLog = path.join(fixture, 'control.log');
-    const probe = (nodeArgs: string[], label: string, nodeOptions = '') =>
+    const probe = (nodeArgs: string[], label: string, nodeOptions = '', zone = {}) =>
       spawnSync(process.execPath, [...nodeArgs, 'probe.mjs', label], {
         cwd: path.join(fixture, 'apps/server'),
-        env: { ...env, PROBE_LOG: controlLog, NODE_OPTIONS: nodeOptions },
+        env: { ...env, PROBE_LOG: controlLog, NODE_OPTIONS: nodeOptions, ...zone },
         windowsHide: true,
       }).status;
     expect([
       probe([], 'plain'),
       probe(['--conditions=source'], 'flag'),
       probe([], 'own', OWN_FLAG),
-    ]).toEqual([0, 0, 0]);
+      probe([], 'zone', '', { TZ: 'UTC' }),
+    ]).toEqual([0, 0, 0, 0]);
     expect(await logLines(controlLog)).toEqual([
       'plain default',
       'flag source',
       'own default +own',
+      'zone default utc',
     ]);
   });
 
-  it('starts every Node process with the source condition', async () => {
+  it('starts every Node process with the source condition and TZ=UTC', async () => {
     const { status, output, lines } = await runDev('unset');
     expect(status, output).toBe(0);
-    expect(lines).toEqual(['migrate source', 'dev source']);
+    expect(lines).toEqual(['migrate source utc', 'dev source utc']);
   });
 
   it("adds the condition to the developer's own NODE_OPTIONS instead of replacing it", async () => {
     const { status, output, lines } = await runDev('own', OWN_FLAG);
     expect(status, output).toBe(0);
-    expect(lines).toEqual(['migrate source +own', 'dev source +own']);
+    expect(lines).toEqual(['migrate source +own utc', 'dev source +own utc']);
   });
 });

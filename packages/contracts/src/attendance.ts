@@ -14,8 +14,21 @@ import {
   SIGNATURE_KINDS,
   type SignatureKind,
 } from '@iu-attendance/core/attendance/envelope';
-import { RECORD_DECISIONS } from '@iu-attendance/core/corrections/final-status';
-import { SHA256_BASE64URL } from '@iu-attendance/core/shared/formats';
+import {
+  ITEM_REASONS,
+  type ItemReason,
+  type RejectReason,
+  type RetryReason,
+} from '@iu-attendance/core/attendance/reasons';
+import { ROW_STATUSES } from '@iu-attendance/core/rosters/row-status';
+import { nonEmpty } from '@iu-attendance/core/shared/list';
+import { idKey } from '@iu-attendance/core/shared/uuid';
+import {
+  DECISION_REASON_CODES,
+  DECISION_SOURCES,
+  RECORD_DECISIONS,
+  RECORD_LABELS,
+} from '@iu-attendance/core/verification/codes';
 import { z } from 'zod';
 import { absenceFinalStatusSchema } from './absence.ts';
 import { CLOCK_SOURCES, CLOCK_STATUSES, FIRST_ANCHOR_PHONE_REPORTS } from './clock.ts';
@@ -26,17 +39,19 @@ import {
   defineErrorCodes,
   defineItemType,
   defineRoute,
-  EXTENSIBLE_ENUM_MAX_LENGTH,
+  deviceIdSchema,
+  deviceKeyIdSchema,
   extensibleEnum,
   type Id,
   type ItemResult,
-  idSchema,
   instantSchema,
   personIdSchema,
   printableAsciiSchema,
   rosterRowIdSchema,
   runtimeVersionSchema,
   sameText,
+  sessionAccess,
+  sha256DigestSchema,
   UUID_LENGTH,
   v7IdSchema,
   versionSchema,
@@ -45,37 +60,19 @@ import {
 // Value lists.
 
 export type { SignatureKind };
-export const SIGNATURE_KIND_LIST = Object.values(SIGNATURE_KINDS) as [
-  SignatureKind,
-  ...SignatureKind[],
-];
+export const SIGNATURE_KIND_CODES = nonEmpty(Object.values(SIGNATURE_KINDS));
 // How a record reached the server: the student's phone, or the lecturer scanning its receipt.
 export const ARRIVAL_PATHS = ['PHONE', 'SCAN'] as const;
-// Who set a record's decision: the verification module's calculation or a lecturer.
-export const DECISION_SOURCES = ['AUTOMATIC', 'LECTURER'] as const;
 // A scan row's result. RETRY writes no row: the item comes again.
 export const SCAN_RESULTS = [
   'ACCEPTED',
   'ALREADY_EXISTS',
   'REJECTED',
 ] as const satisfies readonly ItemResult[];
-// The labels of a record, as flags in storage and as a list in answers.
-export const RECORD_LABELS = [
-  'NO_QR',
-  'SELF_DECLARED',
-  'CLOCK_UNVERIFIED',
-  'DEVICE_UNVERIFIED',
-  'SECOND_PROFILE',
-  'BACKUP_CODE',
-  'VERIFIED',
-] as const;
 // A session's records show once its head count or held answer is in.
 export const RECORD_VISIBILITIES = ['VISIBLE', 'HEAD_COUNT_PENDING'] as const;
-const ROW_STATUSES = ['ACTIVE', 'INACTIVE'] as const;
 
 export type ArrivalPath = (typeof ARRIVAL_PATHS)[number];
-export type RecordLabel = (typeof RECORD_LABELS)[number];
-export type Labels = Readonly<Record<RecordLabel, boolean>>;
 
 // Identifiers. A record's id is the UUIDv7 its phone made; the term partitions the table.
 
@@ -84,9 +81,9 @@ export const recordIdSchema = v7IdSchema('Record');
 export const recordKeySchema = z.object({ termId: termIdSchema, recordId: recordIdSchema });
 export type RecordKey = z.infer<typeof recordKeySchema>;
 
-/** The advisory lock key of a (session, student) pair, layer 3; the one place it is written. */
+/** The advisory lock key of a (session, student) pair, layer 3, ids in lower case; written only here. */
 export function attendancePairKey(sessionId: string, studentId: string): string {
-  return `attendance:pair:${sessionId}:${studentId}`;
+  return `attendance:pair:${idKey(sessionId)}:${idKey(studentId)}`;
 }
 
 export const TIME_ZONE_MAX_LENGTH = 64;
@@ -100,9 +97,9 @@ export const recordTextSchema = z.object({
   kind: z.literal('record'),
   v: z.literal(RECORD_TEXT_VERSION),
   id: recordIdSchema,
-  device: idSchema('Device'),
+  device: deviceIdSchema,
   // The signing key's id, the device key row of the identity module.
-  key: idSchema('DeviceKey'),
+  key: deviceKeyIdSchema,
   sequence: z.number().int().min(1),
   session: sessionIdSchema,
   // The student's internal id: no student number and no name.
@@ -146,7 +143,7 @@ export const RECEIPT_SCAN_ITEM = defineItemType(
 
 // Item result details and the student's own records, values extensible. The decision
 // reason is the verification module's code, a growing value of at most 64 characters.
-const decisionReasonSchema = z.string().max(EXTENSIBLE_ENUM_MAX_LENGTH).nullable();
+const decisionReasonSchema = extensibleEnum(DECISION_REASON_CODES).nullable();
 const decisionFields = {
   decision: extensibleEnum(RECORD_DECISIONS),
   decisionReason: decisionReasonSchema,
@@ -345,22 +342,21 @@ export const ATTENDANCE_ITEM_CODES = {
   ),
 } as const;
 
-// The item codes that answer RETRY: the item stays on the phone and comes again. Every
-// other item code answers REJECTED, and those are the reasons a scan row may store.
-export const ATTENDANCE_RETRY_CODES = [
-  'ATTENDANCE_FORMAT_VERSION_UNKNOWN',
-  'ATTENDANCE_SECOND_ANCHOR_REQUIRED',
-] as const satisfies readonly AttendanceErrorCode[];
-export type AttendanceRejectCode = Exclude<
-  AttendanceErrorCode,
-  'ATTENDANCE_NOT_FOUND' | (typeof ATTENDANCE_RETRY_CODES)[number]
->;
-const retryCodes: readonly string[] = ATTENDANCE_RETRY_CODES;
-export const ATTENDANCE_REJECT_CODES = (
-  Object.keys(ATTENDANCE_ERROR_CODES) as AttendanceErrorCode[]
-).filter(
-  (code): code is AttendanceRejectCode =>
-    ATTENDANCE_ERROR_CODES[code].http === null && !retryCodes.includes(code),
+// The item codes that answer RETRY (the item stays on the phone and comes again) and
+// those that answer REJECTED (the reasons a scan row may store), from the one reason
+// table in core (D05).
+const itemCodes = (Object.keys(ATTENDANCE_ERROR_CODES) as AttendanceErrorCode[]).filter(
+  (code) => ATTENDANCE_ERROR_CODES[code].http === null,
+);
+const reasonOf = (code: AttendanceErrorCode) =>
+  Object.hasOwn(ITEM_REASONS, code) ? ITEM_REASONS[code as ItemReason] : null;
+export type AttendanceRetryCode = Extract<AttendanceErrorCode, RetryReason>;
+export type AttendanceRejectCode = Extract<AttendanceErrorCode, RejectReason>;
+export const ATTENDANCE_RETRY_CODES = itemCodes.filter(
+  (code): code is AttendanceRetryCode => reasonOf(code)?.result === 'RETRY',
+);
+export const ATTENDANCE_REJECT_CODES = itemCodes.filter(
+  (code): code is AttendanceRejectCode => reasonOf(code)?.result === 'REJECTED',
 );
 
 // Routes.
@@ -387,10 +383,8 @@ export const ATTENDANCE_ROUTES = {
     name: 'listSessionRecords',
     method: 'GET',
     path: '/v1/attendance/sessions/{sessionId}/records',
-    auth: ['session'],
-    roles: ['lecturer'],
     // Joins thousands of roster rows with several modules' reads.
-    rate: 'heavy',
+    ...sessionAccess('lecturer', 'heavy'),
     request: { params: z.object({ sessionId: sessionIdSchema }) },
     response: {
       statuses: [200],
@@ -449,10 +443,10 @@ export const ATTENDANCE_ROUTES = {
 // envelope names the session, the student and, with the course, its unit.
 
 // base64url SHA-256 of the envelope bytes.
-const envelopeDigestSchema = z.string().max(43).regex(SHA256_BASE64URL);
+const envelopeDigestSchema = sha256DigestSchema;
 const signedEnvelope = {
   recordId: recordIdSchema,
-  deviceId: idSchema('Device'),
+  deviceId: deviceIdSchema,
   envelopeDigest: envelopeDigestSchema,
 };
 

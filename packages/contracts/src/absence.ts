@@ -3,8 +3,18 @@
 // audit event schemas, the four routes and the ABSENCE_ error catalog. The module's four
 // tables import these lists for their CHECK constraints. Request and answer objects drop
 // unknown keys (D13-B24); the audit schemas are strict.
-import { type AbsenceFinalStatus, EXEMPT_LETTER } from '@iu-attendance/core/absence/session-layer';
-import { FINAL_STATUSES } from '@iu-attendance/core/corrections/catalog';
+
+import {
+  DECISION_PENDING_REASONS,
+  OPEN_FLAG_KINDS,
+} from '@iu-attendance/core/absence/decision-pending';
+import {
+  ABSENCE_FINAL_STATUS_CODES,
+  ABSENCE_FINAL_STATUSES,
+  type AbsenceFinalStatus,
+} from '@iu-attendance/core/absence/session-layer';
+import type { CourseResult } from '@iu-attendance/core/absence/types';
+import { nonEmpty } from '@iu-attendance/core/shared/list';
 import { z } from 'zod';
 import { courseIdSchema, sectionIdSchema, sessionIdSchema } from './courses.ts';
 import {
@@ -17,6 +27,7 @@ import {
   percentSchema,
   rosterRowIdSchema,
   sameText,
+  sessionAccess,
 } from './shared/index.ts';
 
 // Why an absence calculation runs: the job data's enum and the level history CHECK list.
@@ -37,10 +48,7 @@ export const ABSENCE_REASONS = {
   RULE: 'RULE',
 } as const;
 export type AbsenceReason = (typeof ABSENCE_REASONS)[keyof typeof ABSENCE_REASONS];
-export const ABSENCE_REASON_LIST = Object.values(ABSENCE_REASONS) as [
-  AbsenceReason,
-  ...AbsenceReason[],
-];
+export const ABSENCE_REASON_CODES = nonEmpty(Object.values(ABSENCE_REASONS));
 
 // What triggered a calculation; a term id travels only with RECORD and ROSTER_ROW.
 export const ABSENCE_TRIGGER_KINDS = [
@@ -68,14 +76,12 @@ export type AbsenceDiffKind = (typeof ABSENCE_DIFF_KINDS)[number];
 // A session's final status in the absence module (core's AbsenceFinalStatus): the
 // corrections module's statuses and letters, plus EXEMPT (letter M) for an exempt student.
 export type { AbsenceFinalStatus };
-export const ABSENCE_FINAL_STATUSES = [
-  ...FINAL_STATUSES.map(({ code, letter }) => ({ code, letter })),
-  { code: 'EXEMPT', letter: EXEMPT_LETTER },
-] as const satisfies ReadonlyArray<{ code: AbsenceFinalStatus; letter: string }>;
-const finalStatusCodes = ABSENCE_FINAL_STATUSES.map(({ code }) => code) as [
-  AbsenceFinalStatus,
-  ...AbsenceFinalStatus[],
-];
+export {
+  ABSENCE_FINAL_STATUS_CODES,
+  ABSENCE_FINAL_STATUSES,
+  DECISION_PENDING_REASONS,
+  OPEN_FLAG_KINDS,
+};
 
 // Error catalog. These codes reach only staff routes, so the student text repeats the
 // staff text.
@@ -134,10 +140,8 @@ export const ABSENCE_ROUTES = {
     name: 'listPendingDecisions',
     method: 'GET',
     path: '/v1/absence/courses/{courseId}/pending-decisions',
-    auth: ['session'],
-    roles: ['lecturer'],
     // Calculates every section of the course live.
-    rate: 'heavy',
+    ...sessionAccess('lecturer', 'heavy'),
     request: { params: courseParams },
     response: {
       statuses: [200],
@@ -155,10 +159,11 @@ export const ABSENCE_ROUTES = {
             sectionId: sectionIdSchema,
             studentNumber: z.string(),
             fullName: z.string(),
-            reasons: z.array(extensibleEnum(['NO_CONNECTION', 'OPEN_FLAG'])),
-            result: extensibleEnum(['MET', 'NOT_MET']),
+            reasons: z.array(extensibleEnum(DECISION_PENDING_REASONS)),
+            result: extensibleEnum(['MET', 'NOT_MET'] as const satisfies readonly CourseResult[]),
             lastContactAt: instantSchema.nullable(),
-            pendingAtLastContact: z.boolean(),
+            // Some phone of the person reported unsent records at its last contact.
+            unsentAtLastContact: z.boolean(),
             singleRecordSessions: z.array(
               z.object({
                 sessionId: sessionIdSchema,
@@ -170,12 +175,7 @@ export const ABSENCE_ROUTES = {
             openFlags: z.array(
               z.object({
                 sessionId: sessionIdSchema,
-                kind: extensibleEnum([
-                  'PENDING',
-                  'IN_REVIEW',
-                  'SELF_DECLARED_APPROVAL',
-                  'ISSUE_REPORT',
-                ]),
+                kind: extensibleEnum(OPEN_FLAG_KINDS),
               }),
             ),
           }),
@@ -190,9 +190,7 @@ export const ABSENCE_ROUTES = {
     name: 'setExempt',
     method: 'PUT',
     path: '/v1/absence/courses/{courseId}/students/{rowId}/exempt',
-    auth: ['session'],
-    roles: ['lecturer'],
-    rate: 'session',
+    ...sessionAccess('lecturer'),
     request: {
       params: z.object({ courseId: courseIdSchema, rowId: rosterRowIdSchema }),
       body: z.object({ exempt: z.boolean() }),
@@ -219,9 +217,7 @@ export const ABSENCE_ROUTES = {
     name: 'setRates',
     method: 'PUT',
     path: '/v1/absence/courses/{courseId}/rates',
-    auth: ['session'],
-    roles: ['lecturer'],
-    rate: 'session',
+    ...sessionAccess('lecturer'),
     request: { params: courseParams, body: ratesBody },
     response: { statuses: [200], schema: ratesAnswer },
     errors: rateErrors,
@@ -232,9 +228,7 @@ export const ABSENCE_ROUTES = {
     name: 'adminSetRates',
     method: 'PUT',
     path: '/v1/absence/admin/courses/{courseId}/rates',
-    auth: ['session'],
-    roles: ['admin'],
-    rate: 'session',
+    ...sessionAccess('admin'),
     request: { params: courseParams, body: ratesBody },
     response: { statuses: [200], schema: ratesAnswer },
     errors: rateErrors,
@@ -266,4 +260,4 @@ export const ABSENCE_AUDIT_CHANGES = {
 >;
 
 // The final status of a session as answers carry it.
-export const absenceFinalStatusSchema = extensibleEnum(finalStatusCodes);
+export const absenceFinalStatusSchema = extensibleEnum(ABSENCE_FINAL_STATUS_CODES);

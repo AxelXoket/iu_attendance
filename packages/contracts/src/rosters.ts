@@ -6,7 +6,8 @@
 // (D13-B24); requests use closed enums, answers carry growing codes as extensible
 // enums. Only the audit detail schemas are strict.
 import { LATE_CHOICES, type LateChoice } from '@iu-attendance/core/rosters/late-choice';
-import { SHA256_BASE64URL } from '@iu-attendance/core/shared/formats';
+import { checkName, FINDING_CODES, FINDING_LEVELS } from '@iu-attendance/core/rosters/row-check';
+import { ROW_STATUSES } from '@iu-attendance/core/rosters/row-status';
 import { z } from 'zod';
 import { courseIdSchema, sectionIdSchema } from './courses.ts';
 import {
@@ -26,6 +27,8 @@ import {
   personIdSchema,
   rosterRowIdSchema,
   sameText,
+  sessionAccess,
+  sha256DigestSchema,
   studentNumberSchema,
   v7IdSchema,
 } from './shared/index.ts';
@@ -34,29 +37,12 @@ import {
 // schema test imports them.
 export const ROW_SOURCES = ['FILE', 'MANUAL', 'SYSTEM'] as const;
 // How a late-enrolled student's earlier sessions count (D03-B12), from core.
-export { LATE_CHOICES, type LateChoice };
+export { FINDING_CODES, FINDING_LEVELS, LATE_CHOICES, type LateChoice, ROW_STATUSES };
 export const FILE_TYPES = ['XLSX', 'XLS', 'HTML_XML', 'CSV'] as const;
 export const ENCODINGS = ['UTF_8', 'UTF_16LE', 'UTF_16BE', 'WINDOWS_1254'] as const;
 export const SEPARATORS = ['COMMA', 'SEMICOLON', 'TAB'] as const;
 
-const LIST_PARTS = ['ACTIVE', 'INACTIVE'] as const;
 const LOCK_REASONS = ['TERM_LOCK', 'COURSE_ARCHIVED', 'SECTION_INACTIVE', 'TRIAL_COURSE'] as const;
-const FINDING_LEVELS = ['ERROR', 'WARNING', 'INFO'] as const;
-const FINDING_CODES = [
-  'NUMBER_FORMAT',
-  'NUMBER_SHORT_NUMERIC_CELL',
-  'MIXED_LENGTH',
-  'NUMBER_REPEATED_SAME_NAME',
-  'NUMBER_REPEATED_OTHER_NAME',
-  'NAME_EMPTY',
-  'NAME_TOO_LONG',
-  'NAME_CONTROL_CHARACTER',
-  'SECTION_MISMATCH',
-  'NO_SECTION_ROWS',
-  // An Excel number cell: 9 digits may have lost a leading zero (warning), 10 cannot (info).
-  'NUMERIC_CELL_9_DIGITS',
-  'NUMERIC_CELL_10_DIGITS',
-] as const;
 const APPLY_RESULTS = ['APPLIED', 'ALREADY_APPLIED'] as const;
 const ADD_RESULTS = ['ADDED', 'REACTIVATED', 'ALREADY_LISTED'] as const;
 const ROW_CHANGE_REASONS = ['FILE', 'MANUAL', 'SECTION_CHANGE', 'SYSTEM'] as const;
@@ -157,15 +143,6 @@ const errors = (...codes: RostersErrorCode[]) => codes;
 
 // Field schemas.
 
-// Control characters: C0, DEL and C1.
-const hasNoControlCharacter = (text: string) => {
-  for (let index = 0; index < text.length; index += 1) {
-    const unit = text.charCodeAt(index);
-    if (unit < 0x20 || (unit >= 0x7f && unit < 0xa0)) return false;
-  }
-  return true;
-};
-
 // The file the panel read: encoding and separator are set for CSV and null otherwise.
 const fileSchema = z
   .object({
@@ -183,12 +160,14 @@ const fileSchema = z
 
 // Rows as read from the file, raw: the server applies the number and name rules and
 // reports findings. A file with a section column arrives filtered to the section.
+// A name cell as read: the name rule (checkName) runs on it after collapsing.
+const NAME_CELL_MAX_LENGTH = 300;
 const fileRowsSchema = z
   .array(
     z.object({
       fileRowNumber: z.number().int().positive(),
       studentNumber: z.string().max(32),
-      fullName: z.string().max(300),
+      fullName: z.string().max(NAME_CELL_MAX_LENGTH),
       sectionLabel: z.string().max(40).nullable(),
       numberCell: z.boolean(),
     }),
@@ -200,7 +179,7 @@ const fileRowsSchema = z
   });
 
 // base64url SHA-256 of the canonical diff.
-const diffDigestSchema = z.string().max(43).regex(SHA256_BASE64URL);
+const diffDigestSchema = sha256DigestSchema;
 
 const rowSchema = z.object({
   rowId: rosterRowIdSchema,
@@ -231,7 +210,7 @@ const summarySchema = z.object({
   leftOut: countSchema,
 });
 
-const lecturer = { auth: ['session'], roles: ['lecturer'], rate: 'session' } as const;
+const lecturer = sessionAccess('lecturer');
 const sectionParams = z.object({ sectionId: sectionIdSchema });
 const FILE_BODY_LIMIT = BODY_LIMIT_MAX_BYTES;
 const ROW_BODY_LIMIT = 64 * 1024;
@@ -247,7 +226,7 @@ export const ROSTERS_ROUTES = {
       params: sectionParams,
       // cursor and limit page the inactive part; the active part comes whole.
       query: z.object({
-        part: z.enum(LIST_PARTS).default('ACTIVE'),
+        part: z.enum(ROW_STATUSES).default('ACTIVE'),
         ...pageQuerySchema.shape,
       }),
     },
@@ -424,9 +403,13 @@ export const ROSTERS_ROUTES = {
       params: sectionParams,
       body: z.object({
         studentNumber: studentNumberSchema,
-        fullName: z.string().min(1).max(200).refine(hasNoControlCharacter, {
-          message: 'fullName has a control character',
-        }),
+        // The same name rule as a file row (D03-B17); the handler stores rosterName.
+        fullName: z
+          .string()
+          .max(NAME_CELL_MAX_LENGTH)
+          .refine((name) => checkName(name).length === 0, {
+            message: 'fullName breaks the roster name rule',
+          }),
         expectedListVersion: expectedVersionSchema,
         lateChoice: z.enum(LATE_CHOICES).nullable(),
         sectionChangeConfirmed: z.boolean().default(false),

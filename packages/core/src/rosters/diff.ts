@@ -4,6 +4,7 @@
 // row is ever deleted: a student missing from the file becomes inactive, and one who
 // comes back reactivates the same row with its original start.
 
+import { idKey } from '../shared/uuid.ts';
 import { trimmedInactiveAtMs } from './interval.ts';
 import { namesMatch } from './name.ts';
 
@@ -94,7 +95,7 @@ function rowsByNumber(input: DiffInput): Map<string, RosterRow[]> {
   const byNumber = new Map<string, RosterRow[]>();
   for (const row of input.courseRows) {
     const rows = byNumber.get(row.studentNumber) ?? [];
-    if (rows.some((other) => other.sectionId === row.sectionId)) {
+    if (rows.some((other) => idKey(other.sectionId) === idKey(row.sectionId))) {
       throw new RangeError('rosterDiff expects at most one row per section and number');
     }
     if (row.inactiveAtMs === null && rows.some((other) => other.inactiveAtMs === null)) {
@@ -175,9 +176,9 @@ export function rosterDiff(input: DiffInput): RosterDiff {
   entries.forEach((entry, index) => {
     const placement = { ...entry, order: index + 1 };
     const rows = byNumber.get(entry.studentNumber) ?? [];
-    const here = rows.find((row) => row.sectionId === sectionId);
+    const here = rows.find((row) => idKey(row.sectionId) === idKey(sectionId));
     const activeElsewhere = rows.find(
-      (row) => row.inactiveAtMs === null && row.sectionId !== sectionId,
+      (row) => row.inactiveAtMs === null && idKey(row.sectionId) !== idKey(sectionId),
     );
 
     if (here !== undefined && here.inactiveAtMs === null) {
@@ -219,7 +220,7 @@ export function rosterDiff(input: DiffInput): RosterDiff {
   for (const rows of byNumber.values()) {
     for (const row of rows) {
       if (
-        row.sectionId === sectionId &&
+        idKey(row.sectionId) === idKey(sectionId) &&
         row.inactiveAtMs === null &&
         !fileNumbers.has(row.studentNumber)
       ) {

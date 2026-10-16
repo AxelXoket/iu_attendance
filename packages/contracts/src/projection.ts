@@ -9,6 +9,7 @@ import { BASE64_32_BYTES, KEY_ID } from '@iu-attendance/core/shared/formats';
 import { z } from 'zod';
 import { sessionIdSchema } from './courses.ts';
 import {
+  authSessionIdSchema,
   COOKIES,
   countSchema,
   defineErrorCodes,
@@ -16,9 +17,10 @@ import {
   defineRoute,
   durationMsSchema,
   extensibleEnum,
-  idSchema,
   instantSchema,
+  projectionIdSchema,
   sameText,
+  sessionAccess,
   v7IdSchema,
 } from './shared/index.ts';
 
@@ -97,10 +99,9 @@ export const OPERATING_SYSTEMS = [
 // Identifiers.
 
 const connectionIdSchema = v7IdSchema('ProjectionConnection');
-const browserIdSchema = v7IdSchema('ProjectionBrowser');
+const browserIdSchema = projectionIdSchema;
 const slotIdSchema = v7IdSchema('QrKeySlot');
 const pairingCodeRowIdSchema = v7IdSchema('PairingCode');
-const authSessionIdSchema = idSchema('AuthSession');
 
 // Shared parts.
 
@@ -353,7 +354,7 @@ const connectionSummarySchema = z.object({
 });
 
 const lectern = { auth: ['projection'], rate: 'projection' } as const;
-const lecturer = { auth: ['session'], roles: ['lecturer'], rate: 'session' } as const;
+const lecturer = sessionAccess('lecturer');
 
 export const PROJECTION_ROUTES = {
   requestPairingCode: defineRoute({

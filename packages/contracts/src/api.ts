@@ -6,12 +6,14 @@
 // source check rather than be dropped.
 import { z } from 'zod';
 import {
+  addressedText,
   compareVersions,
   defineErrorCodes,
   defineRoute,
   HEADERS,
   instantSchema,
   parseVersion,
+  percentSchema,
   sameText,
   UUID_LENGTH,
   versionSchema,
@@ -38,19 +40,25 @@ export const API_ERRORS = defineErrorCodes('api', {
   },
   API_ROLE_FORBIDDEN: {
     http: 403,
-    ...sameText('Bu işlem için yetkiniz yok.', 'You are not allowed to do this.'),
+    ...addressedText(
+      'Bu işlem için yetkiniz yok.',
+      'Bu işlem için yetkin yok.',
+      'You are not allowed to do this.',
+    ),
   },
   API_INVALID_ORIGIN: {
     http: 403,
-    ...sameText(
+    ...addressedText(
       'İstek bu panelden gelmedi; sayfayı yenileyip yeniden deneyin.',
+      'İstek bu panelden gelmedi; sayfayı yenileyip yeniden dene.',
       'This request did not come from this panel; refresh the page and try again.',
     ),
   },
   API_ENDPOINT_NOT_FOUND: {
     http: 404,
-    ...sameText(
+    ...addressedText(
       'İstenen adres bulunamadı; sayfayı yenileyin.',
+      'İstenen adres bulunamadı; sayfayı yenile.',
       'The requested address was not found; refresh the page.',
     ),
   },
@@ -64,13 +72,18 @@ export const API_ERRORS = defineErrorCodes('api', {
   },
   API_RESULT_TOO_LARGE: {
     http: 422,
-    ...sameText('Sonuç çok büyük; aralığı daraltın.', 'The result is too large; narrow the range.'),
+    ...addressedText(
+      'Sonuç çok büyük; aralığı daraltın.',
+      'Sonuç çok büyük; aralığı daralt.',
+      'The result is too large; narrow the range.',
+    ),
   },
   // The rest of the rate window, which the thrower supplies.
   API_RATE_LIMIT: {
     http: 429,
-    ...sameText(
+    ...addressedText(
       'Çok sık istek gönderildi; biraz sonra yeniden deneyin.',
+      'Çok sık istek gönderildi; biraz sonra yeniden dene.',
       'Too many requests were sent; try again shortly.',
     ),
     retry: 'caller',
@@ -89,8 +102,9 @@ export const API_ERRORS = defineErrorCodes('api', {
   },
   API_QUERY_TIMEOUT: {
     http: 503,
-    ...sameText(
+    ...addressedText(
       'İşlem çok uzun sürdü; aralığı daraltıp yeniden deneyin.',
+      'İşlem çok uzun sürdü; aralığı daraltıp yeniden dene.',
       'The operation took too long; narrow the range and try again.',
     ),
     retry: BUSY,
@@ -193,7 +207,7 @@ export const API_ROUTES = {
 
 const stageSchema = z.strictObject({
   start: instantSchema,
-  percent: z.number().int().min(0).max(100),
+  percent: percentSchema,
 });
 
 const channelEntrySchema = z

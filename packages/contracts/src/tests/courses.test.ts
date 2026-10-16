@@ -515,6 +515,27 @@ describe('courses request rules', () => {
 });
 
 describe('courses field bounds', () => {
+  it('counts the unanswered sessions of a unit term, a whole number from 0', () => {
+    const schema = COURSES_ROUTES.adminListLocks.response.schema as z.ZodType;
+    const unitTerm = {
+      unitId: id(1),
+      unitName: 'Unit',
+      termId: id(2),
+      academicYear: '2026-2027',
+      semester: 'fall',
+      calendarId: id(3),
+      lastDay: '2027-01-15',
+      lockAt: '2027-01-20T21:00:00.000Z',
+      locked: false,
+      lockAppliedAt: null,
+      unansweredSessionCount: 1,
+    };
+    const answer = (row: object) => ({ termBreak: false, unitTerms: [row] });
+    expect(schema.parse(answer(unitTerm))).toEqual(answer(unitTerm));
+    expect(ok(schema, answer({ ...unitTerm, unansweredSessionCount: -1 }))).toBe(false);
+    expect(ok(schema, answer({ ...unitTerm, unansweredSessionCount: 1.5 }))).toBe(false);
+  });
+
   const createCourse = COURSES_ROUTES.createCourse.request.body;
   const course = {
     id: id(1),

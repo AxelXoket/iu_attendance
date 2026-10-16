@@ -1,3 +1,5 @@
+import { compareText } from '../shared/text.ts';
+
 export const CORRECTIONS_BATCH_SIZE = 20;
 
 export const BATCH_ITEM_KINDS = ['REVIEW', 'ISSUE_REPORT', 'FLAGGED_SESSION'] as const;
@@ -12,8 +14,6 @@ export type BatchCandidate = {
   sessionStartAt: number;
   waitingSince: number;
 };
-
-const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 const TIME_FIELDS = ['sessionStartAt', 'waitingSince'] as const;
 

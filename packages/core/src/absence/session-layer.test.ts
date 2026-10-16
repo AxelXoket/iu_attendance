@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { FINAL_STATUSES } from '../corrections/catalog.ts';
 import type { ScopeRow } from './scope.ts';
 import {
+  ABSENCE_FINAL_STATUS_CODES,
+  ABSENCE_FINAL_STATUSES,
   EXEMPT_LETTER,
   type LayerInput,
   type LayerRecord,
@@ -56,6 +59,17 @@ const layer = (patch: Partial<LayerInput>) =>
   });
 
 const ids = (rows: ReturnType<typeof sessionLayer>) => rows.map((entry) => entry.sessionId);
+
+describe('absence final statuses', () => {
+  it("are the corrections module's statuses with their letters, then EXEMPT as M", () => {
+    expect(ABSENCE_FINAL_STATUSES).toEqual([
+      ...FINAL_STATUSES.map(({ code, letter }) => ({ code, letter })),
+      { code: 'EXEMPT', letter: 'M' },
+    ]);
+    expect(EXEMPT_LETTER).toBe('M');
+    expect(ABSENCE_FINAL_STATUS_CODES).toEqual(ABSENCE_FINAL_STATUSES.map(({ code }) => code));
+  });
+});
 
 describe('sessionLayer: scope', () => {
   it('leaves out sessions before the addition when earlier ones do not count', () => {
@@ -133,6 +147,8 @@ describe('sessionLayer: which account counts (D08-B12)', () => {
     expect(statusWith(twoAccounts, 'a1')?.theory).toMatchObject({ open: 2, present: 0 });
     expect(statusWith(twoAccounts, 'a2')?.finalStatus).toBe('PRESENT');
     expect(statusWith(twoAccounts, 'a3')?.finalStatus).toBe('ABSENT');
+    // The confirmed account named in the other case is the same account.
+    expect(statusWith(twoAccounts, 'A2')?.finalStatus).toBe('PRESENT');
   });
 
   it('without a confirmed account, counts the first record by decision, arrival and id', () => {

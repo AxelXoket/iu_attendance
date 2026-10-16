@@ -3,6 +3,8 @@
 // active correction is the last row, none when the last row is a REVERSAL. A student
 // with several roster rows in the session (D09-A08) has one chain per roster row.
 
+import { idKey } from '../shared/uuid.ts';
+
 export type ChainRow = {
   id: string;
   kind: 'CORRECTION' | 'REVERSAL';
@@ -25,8 +27,8 @@ export type ResolvedChain<R extends ChainRow> = {
 function indexRows<R extends ChainRow>(rows: readonly R[]): Map<string, R> {
   const byId = new Map<string, R>();
   for (const row of rows) {
-    if (byId.has(row.id)) throw new CorrectionChainError(`row ${row.id} appears twice`);
-    byId.set(row.id, row);
+    if (byId.has(idKey(row.id))) throw new CorrectionChainError(`row ${row.id} appears twice`);
+    byId.set(idKey(row.id), row);
   }
   return byId;
 }
@@ -44,30 +46,30 @@ export function resolveChain<R extends ChainRow>(rows: readonly R[]): ResolvedCh
       heads.push(row);
       continue;
     }
-    if (row.previousCorrectionId === row.id) {
+    if (idKey(row.previousCorrectionId) === idKey(row.id)) {
       throw new CorrectionChainError(`row ${row.id} points at itself`);
     }
-    const previous = byId.get(row.previousCorrectionId);
+    const previous = byId.get(idKey(row.previousCorrectionId));
     if (previous === undefined) {
       throw new CorrectionChainError(
         `row ${row.id} points at unknown row ${row.previousCorrectionId}`,
       );
     }
-    if (successor.has(previous.id)) {
+    if (successor.has(idKey(previous.id))) {
       throw new CorrectionChainError(`row ${previous.id} has two successors`);
     }
     // Only a correction can be reversed; a new correction may follow a reversal.
     if (row.kind === 'REVERSAL' && previous.kind !== 'CORRECTION') {
       throw new CorrectionChainError(`reversal ${row.id} does not follow a correction`);
     }
-    successor.set(previous.id, row);
+    successor.set(idKey(previous.id), row);
   }
   if (heads.length !== 1) throw new CorrectionChainError(`chain has ${heads.length} heads`);
   const head = heads[0] as R;
   if (head.kind === 'REVERSAL')
     throw new CorrectionChainError('a chain cannot start with a reversal');
   const ordered: R[] = [];
-  for (let row: R | undefined = head; row !== undefined; row = successor.get(row.id)) {
+  for (let row: R | undefined = head; row !== undefined; row = successor.get(idKey(row.id))) {
     ordered.push(row);
   }
   // Rows that are not reachable from the head sit on a cycle.
@@ -93,7 +95,7 @@ export function splitChains<R extends ChainRow>(rows: readonly R[]): R[][] {
       chains.push([row]);
       continue;
     }
-    if (!byId.has(row.previousCorrectionId)) {
+    if (!byId.has(idKey(row.previousCorrectionId))) {
       throw new CorrectionChainError(
         `row ${row.id} points at unknown row ${row.previousCorrectionId}`,
       );

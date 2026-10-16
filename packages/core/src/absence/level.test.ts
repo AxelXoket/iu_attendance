@@ -10,7 +10,8 @@ import {
 } from './level.ts';
 import type { ScopeRow } from './scope.ts';
 
-// T is the whole estimate (no planned hours); used hours equal absent hours.
+// T is the whole estimate, all of it in the base (no planned hours); used hours equal absent
+// hours.
 const input = (
   ratePercent: number,
   total: number,
@@ -21,8 +22,8 @@ const input = (
   ratesConfirmed: true,
   exempt: false,
   active: true,
-  baseHours: 0,
-  plannedRemainingHours: total,
+  baseHours: total,
+  plannedRemainingHours: 0,
   absentHours,
   pendingHours: 0,
   nextSessionHours,
@@ -79,17 +80,17 @@ describe('computeLevel: the explicit tables', () => {
       remaining: 1,
       level: 1,
     });
-    expect(computed.typeDecision).toBe('NOT_MET');
+    expect(computed.decision).toBe('NOT_MET');
   });
 });
 
 describe('computeLevel: properties', () => {
-  it('returns the highest level that holds, over the whole grid (40,260 cases)', () => {
+  it('returns the highest level that holds, over the whole grid (37,800 cases)', () => {
     let cases = 0;
     let warned = 0;
     for (const p of [0, 50, 70, 80, 100]) {
-      for (let total = 0; total <= 60; total += 1) {
-        for (let absent = 0; absent <= total + 2; absent += 1) {
+      for (let total = 1; total <= 60; total += 1) {
+        for (let absent = 0; absent <= total; absent += 1) {
           for (const next of [null, 1, 2, 3]) {
             cases += 1;
             const computed = computeLevel(input(p, total, absent, next));
@@ -112,7 +113,7 @@ describe('computeLevel: properties', () => {
         }
       }
     }
-    expect(cases).toBe(40_260);
+    expect(cases).toBe(37_800);
     expect(warned).toBeGreaterThan(10_000);
   });
 
@@ -127,6 +128,7 @@ describe('computeLevel: properties', () => {
     let raised = 0;
     fc.assert(
       fc.property(arbitrary, ({ base, planned, absentShare, next, p }) => {
+        fc.pre(base + planned > 0);
         const confirmed: LevelInput = {
           ...input(p, 0, Math.floor(absentShare * base), next),
           baseHours: base,
@@ -141,13 +143,38 @@ describe('computeLevel: properties', () => {
           level: 0,
           message: null,
           allowance: base,
-          typeDecision: 'MET',
+          decision: 'MET',
         });
       }),
       { numRuns: 2000 },
     );
     // Ground control: the same inputs with confirmed rates do warn.
     expect(raised).toBeGreaterThan(0);
+  });
+
+  it("refuses what D08's row cannot hold: a rate or hours out of form, absent beyond the base, pending beyond absent, a type without hours", () => {
+    const ok = input(70, 20, 4, 2);
+    const bad: Partial<LevelInput>[] = [
+      { ratePercent: 101 },
+      { ratePercent: 69.5 },
+      { ratePercent: Number.NaN },
+      { baseHours: -1 },
+      { plannedRemainingHours: 1.5 },
+      { absentHours: Number.POSITIVE_INFINITY },
+      { pendingHours: 5 },
+      { pendingHours: -1 },
+      { pendingHours: 0.5 },
+      { absentHours: 21 },
+      { baseHours: 0, plannedRemainingHours: 0, absentHours: 0, pendingHours: 0 },
+      { nextSessionHours: 0 },
+      { nextSessionHours: 1.5 },
+    ];
+    for (const patch of bad) {
+      expect(() => computeLevel({ ...ok, ...patch }), JSON.stringify(patch)).toThrow(RangeError);
+    }
+    // Ground control: the valid input, with pending equal to absent and no next session.
+    expect(computeLevel({ ...ok, pendingHours: 4, nextSessionHours: null }).level).toBe(0);
+    expect(computeLevel(ok).level).toBeGreaterThan(0);
   });
 
   it('gives no warning to an exempt or an inactive student', () => {
@@ -194,8 +221,8 @@ describe('nextDisplayedLevel', () => {
   });
 
   it('lowers the level when only the next session gets shorter', () => {
-    // p = 70, T = 42, 10 hours used: remaining 2.
-    const before = at({ absentHours: 10, plannedRemainingHours: 42, nextSessionHours: 3 });
+    // p = 70, T = 20 + 22 = 42, 10 hours used: remaining 2.
+    const before = at({ absentHours: 10, plannedRemainingHours: 22, nextSessionHours: 3 });
     const displayed = nextDisplayedLevel(null, before).displayed;
     expect(displayed.level).toBe(2);
     expect(
@@ -219,9 +246,10 @@ describe('nextDisplayedLevel', () => {
       displayed: { level: 2 },
       cause: 'NEXT_SESSION',
     });
+    // The estimate shrinks to the 3 hours held, all absent.
     const raisedByEstimate = nextDisplayedLevel(
       { input: before, displayed },
-      at({ absentHours: 3, plannedRemainingHours: 0 }),
+      at({ absentHours: 3, baseHours: 3 }),
     );
     expect(raisedByEstimate).toMatchObject({ displayed: { level: 4 }, cause: 'ESTIMATE' });
     expect(nextDisplayedLevel({ input: before, displayed }, before)).toEqual({
@@ -267,10 +295,11 @@ describe('nextDisplayedLevel', () => {
       planned: fc.integer({ min: 0, max: 40 }),
       absent: fc.integer({ min: 0, max: 30 }),
     });
+    // A data step's absent hours stay within the base (D08: absent <= T).
     fc.assert(
       fc.property(start, fc.array(step, { minLength: 1, maxLength: 8 }), (first, steps) => {
         let current: LevelInput = {
-          ...input(first.p, 0, first.absent, null),
+          ...input(first.p, 0, Math.min(first.absent, first.base), null),
           baseHours: first.base,
           plannedRemainingHours: first.planned,
         };
@@ -280,7 +309,7 @@ describe('nextDisplayedLevel', () => {
             change.kind === 'ESTIMATE'
               ? { ...current, plannedRemainingHours: change.planned }
               : change.kind === 'DATA'
-                ? { ...current, absentHours: change.absent }
+                ? { ...current, absentHours: Math.min(change.absent, current.baseHours) }
                 : { ...current, nextSessionHours: change.next };
           const result = nextDisplayedLevel({ input: current, displayed }, next);
           const computed = computeLevel(next);
@@ -289,7 +318,7 @@ describe('nextDisplayedLevel', () => {
             expect(result.displayed.level).toBeGreaterThanOrEqual(displayed.level);
             if (computed.level <= displayed.level) expect(result.displayed).toBe(displayed);
           }
-          if (change.kind === 'DATA' && change.absent !== current.absentHours) {
+          if (change.kind === 'DATA' && next.absentHours !== current.absentHours) {
             expect(result.displayed.level).toBe(computed.level);
           }
           // Only the next session changed: recalculated freely, in both directions.
@@ -337,6 +366,9 @@ describe('nextSessionHours (D08-B04)', () => {
     ];
     expect(nextSessionHours(sessions, rows, 'THEORY', NOW)).toBe(1);
     expect(nextSessionHours(sessions.slice(0, 2), rows, 'THEORY', NOW)).toBe(2);
+    // The id tie reads ids in lower case: 's-a' comes before 'S-B'.
+    const mixed = [candidate('S-B', 2_000, { theoryHours: 3 }), candidate('s-a', 2_000)];
+    expect(nextSessionHours(mixed, rows, 'THEORY', NOW)).toBe(1);
   });
 
   it('skips a running, cancelled, out of scope or other-type session, and gives null without one', () => {

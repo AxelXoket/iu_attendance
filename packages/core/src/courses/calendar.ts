@@ -68,6 +68,14 @@ export function lockDay(lastDay: string): string {
   return addDays(lastDay, 1);
 }
 
+/**
+ * Whether a unit's term is locked at nowMs: from its lock instant on. A unit without a
+ * calendar has no lock instant and never locks.
+ */
+export function isLockedAt(lockAtMs: number | null, nowMs: number): boolean {
+  return lockAtMs !== null && nowMs >= lockAtMs;
+}
+
 /** A unit's term as the term-break rule reads it. */
 export type UnitTermState = {
   /** ders_baslangic: the first day of classes. */
@@ -98,7 +106,7 @@ export function isTermBreak(
       !term.reviewTerm &&
       term.hasActiveCourse &&
       term.classesStart <= today &&
-      nowMs < term.lockAtMs,
+      !isLockedAt(term.lockAtMs, nowMs),
   );
 }
 

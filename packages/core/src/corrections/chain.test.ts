@@ -39,6 +39,18 @@ const shuffledChainArb = chainArb.chain((rows) =>
 );
 
 describe('Correction chain stays linear', () => {
+  it('follows a link written in the other case, and sees one id in two cases as a repeat', () => {
+    const first = { id: 'c-a', kind: 'CORRECTION', previousCorrectionId: null } as const;
+    const second = { id: 'c-b', kind: 'CORRECTION', previousCorrectionId: 'C-A' } as const;
+    expect(resolveChain([second, first]).ordered).toEqual([first, second]);
+    // The exact error: read raw, the two rows would fail later as two heads, the self link
+    // as a chain with no head.
+    expect(() => resolveChain([first, { ...first, id: 'C-A' }])).toThrow('row C-A appears twice');
+    expect(() => resolveChain([{ ...first, previousCorrectionId: 'C-A' }])).toThrow(
+      'row c-a points at itself',
+    );
+  });
+
   it('orders any permutation of a valid chain back into its build order', () => {
     fc.assert(
       fc.property(shuffledChainArb, ([rows, shuffled]) => {

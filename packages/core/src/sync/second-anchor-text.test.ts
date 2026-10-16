@@ -1,10 +1,10 @@
 import { generateKeyPairSync, sign, verify } from 'node:crypto';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import { AFTER_RESTART } from '../clock/codes.ts';
+import { DEVICE_KEY_KINDS, type DeviceKeyKind } from '../identity/device-key.ts';
 import {
-  AFTER_RESTART,
   buildSecondAnchorText,
-  type DeviceKeyType,
   parseSecondAnchorText,
   SECOND_ANCHOR_TEXT_MAX_LENGTH,
   type SecondAnchorFields,
@@ -95,9 +95,9 @@ describe('second anchor text', () => {
   });
 
   it('checks a signature only with the matching key type', () => {
-    const pairs: [SignatureType, DeviceKeyType][] = [];
+    const pairs: [SignatureType, DeviceKeyKind][] = [];
     for (const signatureType of ['a', 's', 'o'] as const) {
-      for (const keyType of ['android_p256', 'app_attest', 'secure_enclave'] as const) {
+      for (const keyType of DEVICE_KEY_KINDS) {
         pairs.push([signatureType, keyType]);
       }
     }

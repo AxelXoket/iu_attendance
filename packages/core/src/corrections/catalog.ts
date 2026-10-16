@@ -48,7 +48,7 @@ const reason = <const C extends string>(
   ...flags,
 });
 
-export const REASON_CODES = [
+export const CORRECTION_REASONS = [
   reason('OFFICIAL_DUTY', 'ON_DUTY', { documentRequired: true }),
   reason('STUDENT_AFFAIRS_LETTER', 'DOCUMENTED', {
     documentRequired: true,
@@ -75,18 +75,18 @@ export const REASON_CODES = [
   reason('NOT_IN_CLASS_AT_CHECK', 'ABSENT', { onlyWithOpenFlag: true }),
 ] as const satisfies readonly ReasonCodeDefinition[];
 
-export type ReasonCode = (typeof REASON_CODES)[number]['code'];
+export type ReasonCode = (typeof CORRECTION_REASONS)[number]['code'];
 
-export const ISSUE_REASON_CODES = [
+export const ISSUE_REASONS = [
   { code: 'PHONE_MISSING_OR_BROKEN', suggestedReasonCode: 'PHONE_MISSING_OR_BROKEN' },
   { code: 'QR_SCAN_FAILED', suggestedReasonCode: 'QR_SCAN_FAILED' },
   { code: 'RECORD_IN_WRONG_COURSE', suggestedReasonCode: null },
 ] as const satisfies readonly { code: string; suggestedReasonCode: ReasonCode | null }[];
 
-export type IssueReasonCode = (typeof ISSUE_REASON_CODES)[number]['code'];
+export type IssueReasonCode = (typeof ISSUE_REASONS)[number]['code'];
 
 export function reasonCodeDefinition(code: ReasonCode): ReasonCodeDefinition {
-  const definition = REASON_CODES.find((entry) => entry.code === code);
+  const definition = CORRECTION_REASONS.find((entry) => entry.code === code);
   if (definition === undefined) throw new Error(`Unknown reason code ${code}`);
   return definition;
 }

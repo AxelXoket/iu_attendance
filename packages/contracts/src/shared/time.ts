@@ -21,7 +21,7 @@ export const localTimeSchema = z
 // safe integers, so the document carries minimum 0 and maximum 2^53 - 1.
 export const durationMsSchema = z.number().int().nonnegative();
 
-// A percentage in tenths (695 = 69.5 percent); field names end with PerMille.
+// A share per mille (695 = 69.5 percent); field names end with PerMille.
 export const perMilleSchema = z.number().int().min(0).max(1000);
 
 const INT64_MAX = '9223372036854775807';

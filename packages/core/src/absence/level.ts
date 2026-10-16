@@ -10,9 +10,11 @@
 // confirmed, where p is 0, for an exempt student and for an inactive one; the allowance
 // figures are computed all the same.
 
-import { allowance, typeDecision } from './allowance.ts';
+import { compareText } from '../shared/text.ts';
+import { idKey } from '../shared/uuid.ts';
+import { allowance, isHours, isRatePercent, typeDecision } from './allowance.ts';
 import { isInScope, type ScopeRow, type ScopeSession, sessionHours } from './scope.ts';
-import type { HourType, TypeDecision } from './types.ts';
+import type { HourType, RatePercent, TypeDecision } from './types.ts';
 
 export const LEVEL_MESSAGES = [
   'HALF_USED',
@@ -31,7 +33,7 @@ export const LEVEL_CAUSES = ['DATA', 'ESTIMATE', 'NEXT_SESSION', 'FIRST'] as con
 export type LevelCause = (typeof LEVEL_CAUSES)[number];
 
 export type LevelInput = {
-  readonly ratePercent: number;
+  readonly ratePercent: RatePercent;
   readonly ratesConfirmed: boolean;
   readonly exempt: boolean;
   readonly active: boolean;
@@ -50,7 +52,7 @@ export type LevelInput = {
 
 export type ComputedLevel = {
   readonly allowance: number;
-  readonly typeDecision: TypeDecision;
+  readonly decision: TypeDecision;
   readonly estimatedAllowance: number;
   readonly usedHours: number;
   readonly remaining: number;
@@ -91,7 +93,8 @@ export function nextSessionHours(
     const earlier =
       next === null ||
       session.startAtMs < next.startAtMs ||
-      (session.startAtMs === next.startAtMs && session.sessionId < next.sessionId);
+      (session.startAtMs === next.startAtMs &&
+        compareText(idKey(session.sessionId), idKey(next.sessionId)) < 0);
     if (earlier) next = session;
   }
   return next === null ? null : sessionHours(next)[type];
@@ -99,12 +102,25 @@ export function nextSessionHours(
 
 export function computeLevel(input: LevelInput): ComputedLevel {
   const { ratePercent, baseHours, absentHours, nextSessionHours } = input;
+  if (!isRatePercent(ratePercent)) throw new RangeError('the rate is not a whole percent');
+  // D08's row: absent hours lie within the base (absent = T - attended - excused), pending
+  // within absent, and a type has hours in the base or still planned (saat_ck).
+  const hours = [baseHours, input.plannedRemainingHours, absentHours, input.pendingHours];
+  if (
+    !hours.every(isHours) ||
+    absentHours > baseHours ||
+    input.pendingHours > absentHours ||
+    baseHours + input.plannedRemainingHours === 0 ||
+    (nextSessionHours !== null && !(isHours(nextSessionHours) && nextSessionHours > 0))
+  ) {
+    throw new RangeError('the hours are not whole numbers within their base, or the type has none');
+  }
   const estimatedAllowance = allowance(baseHours + input.plannedRemainingHours, ratePercent);
   const usedHours = absentHours - input.pendingHours;
   const remaining = estimatedAllowance - usedHours;
   const figures = {
     allowance: allowance(baseHours, ratePercent),
-    typeDecision: typeDecision(baseHours, ratePercent, absentHours),
+    decision: typeDecision(baseHours, ratePercent, absentHours),
     estimatedAllowance,
     usedHours,
     remaining,

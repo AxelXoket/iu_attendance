@@ -8,5 +8,8 @@ export const countSchema = z.number().int().nonnegative();
 /** A whole percent from 0 to 100. */
 export const percentSchema = z.number().int().min(0).max(100);
 
+/** The details of an audit event that carries none. */
+export const noDetailsSchema = z.strictObject({});
+
 /** True when no value repeats. */
 export const isUnique = (values: readonly unknown[]) => new Set(values).size === values.length;

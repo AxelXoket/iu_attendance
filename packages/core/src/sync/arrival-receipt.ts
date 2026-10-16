@@ -1,6 +1,8 @@
 import { decodeBase64Url, encodeBase64Url } from '../shared/base64url.ts';
+import { equalBytes } from '../shared/bytes.ts';
 import { KEY_ID } from '../shared/formats.ts';
-import { equalBytes, hmacSha256 } from '../shared/hmac-sha256.ts';
+import { hmacSha256 } from '../shared/hmac-sha256.ts';
+import { isWholeFromZero } from '../shared/number.ts';
 import { utf8Bytes } from '../shared/utf8.ts';
 import { uuidBytes } from '../shared/uuid.ts';
 
@@ -56,8 +58,6 @@ export type ReceiptSubject = {
 /** Keys a receipt still proves an arrival with; a compromised or removed key does not. */
 const VERIFYING_STATES: ReadonlySet<ReceiptKeyState> = new Set(['READY', 'ACTIVE', 'VERIFY_ONLY']);
 
-const isTime = (value: number) => Number.isSafeInteger(value) && value >= 0;
-
 function writeUint64(view: DataView, offset: number, value: number): void {
   view.setUint32(offset, Math.floor(value / HALF));
   view.setUint32(offset + 4, value % HALF);
@@ -108,7 +108,7 @@ export function issueArrivalReceipt(
   if (typeof key.kid !== 'string' || !KEY_ID.test(key.kid) || key.secret.length === 0) {
     throw new RangeError('issueArrivalReceipt expects a kid of 1 to 8 letters and a secret');
   }
-  if (!isTime(acceptedAtMs)) {
+  if (!isWholeFromZero(acceptedAtMs)) {
     throw new RangeError('issueArrivalReceipt expects the time as whole milliseconds from 0');
   }
   const input = macInput(subject, acceptedAtMs);

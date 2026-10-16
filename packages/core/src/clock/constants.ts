@@ -18,5 +18,5 @@ export const DOCUMENT_CHARS = 110;
 /** Length of the phone's one-time value (22 base64url characters). */
 export const VALUE_BYTES = 16;
 
-/** Length of the one-time value as unpadded base64url. */
-export const VALUE_CHARS = 22;
+/** One minute: window lengths are whole minutes. */
+export const MINUTE_MS = 60_000;

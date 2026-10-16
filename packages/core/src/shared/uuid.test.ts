@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { uuidBytes, uuidText } from './uuid.ts';
+import { idKey, uuidBytes, uuidText } from './uuid.ts';
 
 const hex = (bytes: Uint8Array | null) =>
   bytes === null ? null : Buffer.from(bytes).toString('hex');
@@ -57,5 +57,18 @@ describe('uuidText', () => {
   it('rejects any length other than 16 bytes', () => {
     expect(() => uuidText(new Uint8Array(15))).toThrow(RangeError);
     expect(() => uuidText(new Uint8Array(17))).toThrow(RangeError);
+  });
+});
+
+describe('idKey', () => {
+  it('gives one key for the two spellings of an id, and two keys for two ids', () => {
+    fc.assert(
+      fc.property(fc.uuid(), fc.uuid(), (a, b) => {
+        expect(idKey(a.toUpperCase())).toBe(idKey(a));
+        // The key is the canonical text the database writes.
+        expect(idKey(a.toUpperCase())).toBe(uuidText(uuidBytes(a) as Uint8Array));
+        expect(idKey(a) === idKey(b)).toBe(a.toLowerCase() === b.toLowerCase());
+      }),
+    );
   });
 });

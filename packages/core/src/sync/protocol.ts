@@ -1,3 +1,4 @@
+import { isWholeFromZero } from '../shared/number.ts';
 import { uuidBytes } from '../shared/uuid.ts';
 
 // The phone's queue protocol (D06 phone contract T1 to T12, state machine "Telefondaki
@@ -56,8 +57,6 @@ export type BatchChoice = {
   readonly localRejects: readonly number[];
 };
 
-const isWhole = (value: number) => Number.isSafeInteger(value) && value >= 0;
-
 /**
  * The next batch of one installation, or null when there is nothing to send now. Nothing
  * goes while the installation waits, is stopped, or has a batch in flight. Items go in
@@ -104,7 +103,8 @@ function checkRandom(random: number): void {
 /** The wait before the first send of a check-in: 0 to N seconds, so a class does not send at once. */
 export function firstSendDelayMs(random: number, maxSeconds = FIRST_SEND_MAX_SECONDS): number {
   checkRandom(random);
-  if (!isWhole(maxSeconds)) throw new RangeError('maxSeconds must be a whole number from 0');
+  if (!isWholeFromZero(maxSeconds))
+    throw new RangeError('maxSeconds must be a whole number from 0');
   return Math.floor(random * maxSeconds * 1000);
 }
 
@@ -124,7 +124,7 @@ export function backoffDelayMs(
   random: number,
   serverWaitSeconds: number | null = null,
 ): number {
-  if (!isWhole(attempt)) throw new RangeError('attempt must be a whole number from 0');
+  if (!isWholeFromZero(attempt)) throw new RangeError('attempt must be a whole number from 0');
   checkRandom(random);
   const serverMs =
     serverWaitSeconds !== null && serverWaitSeconds > 0
@@ -270,7 +270,7 @@ export function observeLastSequence(
   storedMax: number,
   lastSequence: number,
 ): { readonly storedMax: number; readonly rewound: boolean } {
-  if (!isWhole(storedMax) || !isWhole(lastSequence)) {
+  if (!isWholeFromZero(storedMax) || !isWholeFromZero(lastSequence)) {
     throw new RangeError('observeLastSequence expects whole numbers from 0');
   }
   return { storedMax: lastSequence, rewound: lastSequence < storedMax };
@@ -308,7 +308,7 @@ export function applyDownloadPage(
   current: number | null,
   page: { readonly startOver: boolean; readonly hasMore: boolean },
 ): { readonly fullDownloadNumber: number; readonly deleteOthers: boolean } {
-  if (current !== null && !isWhole(current)) {
+  if (current !== null && !isWholeFromZero(current)) {
     throw new RangeError('applyDownloadPage expects a whole number or null');
   }
   if (!page.startOver && current === null) {

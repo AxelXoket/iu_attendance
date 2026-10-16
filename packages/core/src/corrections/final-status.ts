@@ -1,16 +1,13 @@
+import { RECORD_DECISIONS, type RecordDecision } from '../verification/codes.ts';
 import {
+  CORRECTION_REASONS,
   type FinalStatus,
   finalStatusDefinition,
-  REASON_CODES,
   type ReasonCode,
   reasonCodeDefinition,
 } from './catalog.ts';
 import { resolveChain, splitChains } from './chain.ts';
 
-// The decisions of an attendance record; the contracts and the final status rule share
-// this one list.
-export const RECORD_DECISIONS = ['PRESENT', 'PENDING', 'IN_REVIEW', 'REJECTED'] as const;
-export type RecordDecision = (typeof RECORD_DECISIONS)[number];
 const RECORD_FLAGS = ['counted', 'selfDeclared', 'approved', 'excludedFromCount'] as const;
 
 // One record of the student in the session. counted marks the record the attendance
@@ -129,7 +126,7 @@ function checkRecord(record: FinalStatusRecord, index: number): void {
 }
 
 function checkCorrectionRow(row: CorrectionRow, session: FinalStatusSession): void {
-  const definition = REASON_CODES.find((entry) => entry.code === row.reasonCode);
+  const definition = CORRECTION_REASONS.find((entry) => entry.code === row.reasonCode);
   if (definition === undefined) {
     throw new FinalStatusInputError(`correction ${row.id} has an unknown reason code`);
   }

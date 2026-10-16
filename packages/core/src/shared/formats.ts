@@ -6,6 +6,3 @@ export const KEY_ID = /^[a-z0-9-]{1,8}$/;
 
 /** A 32-byte key as standard base64 with its padding: 43 letters and '='. */
 export const BASE64_32_BYTES = /^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$/;
-
-/** A SHA-256 digest as unpadded base64url: 43 letters. */
-export const SHA256_BASE64URL = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/;

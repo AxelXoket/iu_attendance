@@ -212,6 +212,30 @@ describe('rosterDiff: rows that stay or leave', () => {
     expect(diff.toDeactivate).toEqual([{ rowId: 'S-100000001', source: 'MANUAL' }]);
   });
 
+  it('reads the section id in either case', () => {
+    const here = row({ sectionId: 's', studentNumber: '100000001' });
+    const elsewhere = row({ sectionId: 't', studentNumber: '100000002' });
+    const upper = rosterDiff({
+      sectionId: 'S',
+      courseRows: [here, elsewhere],
+      entries: [entry('100000002')],
+      nowMs: NOW,
+      firstHeldAtMs: null,
+    });
+    // A student whose row is in this section, named in the other case, stays as they are.
+    const own = rosterDiff({
+      sectionId: 'S',
+      courseRows: [here],
+      entries: [entry('100000001')],
+      nowMs: NOW,
+      firstHeldAtMs: null,
+    });
+    expect([own.unchanged, own.toAdd.length, own.toDeactivate.length]).toEqual([1, 0, 0]);
+    // The row of this section leaves, the student of the other section moves in.
+    expect(upper.toDeactivate).toEqual([{ rowId: 's-100000001', source: UPLOAD_SOURCE }]);
+    expect(upper.sectionChanges.map((move) => move.oldRowId)).toEqual(['t-100000002']);
+  });
+
   it('tells a real name change from a spelling fix', () => {
     const staying = row({ sectionId: 'S', studentNumber: '100000001', fullName: 'Ada Yılmaz' });
     const spelled = diffOf([staying], [entry('100000001', 'ADA  YILMAZ')]);

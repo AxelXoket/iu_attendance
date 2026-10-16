@@ -1,3 +1,4 @@
+import { nonEmpty } from '@iu-attendance/core/shared/list';
 import { z } from 'zod';
 
 // Signed content inside a JSON body (D13-B32): an opaque text carried as is, the kind of
@@ -20,10 +21,10 @@ export function signedTextSchema<
   extra?: Extra;
 }) {
   const signed: readonly string[] = options.signedKinds;
-  const kinds = [...options.signedKinds, ...(options.unsignedKinds ?? [])] as [
-    Signed[number] | Unsigned[number],
-    ...(Signed[number] | Unsigned[number])[],
-  ];
+  const kinds = nonEmpty<Signed[number] | Unsigned[number]>([
+    ...options.signedKinds,
+    ...(options.unsignedKinds ?? []),
+  ]);
   if (new Set(kinds).size !== kinds.length) {
     throw new Error(`Signature kinds must be unique: ${kinds.join(', ')}`);
   }

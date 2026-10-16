@@ -1,6 +1,6 @@
 // SHA-256 for shared code. Plain integer arithmetic, so the server and the phone (Hermes,
 // which has no WebCrypto) give the same bytes. Users: the request digest (D09), the roster
-// bucket (D03), the cursor's account digest and the arrival receipt MAC (D06).
+// bucket and the diff digest (D03), the cursor's account digest and the arrival receipt MAC (D06).
 
 // Round constants (FIPS 180-4, 4.2.2).
 const K = Uint32Array.from([

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { REASON_CODES } from './catalog.ts';
+import { CORRECTION_REASONS } from './catalog.ts';
 import { DocumentNumberError } from './document-number.ts';
 import {
   DIGEST_DOCUMENT_NUMBER_FIELD,
@@ -36,7 +36,7 @@ const reverseKeys = (value: DigestValue): DigestValue => {
 const fieldsArb = fc.record({
   id: fc.uuid(),
   sessionId: fc.uuid(),
-  reasonCode: fc.constantFrom(...REASON_CODES.map((entry) => entry.code)),
+  reasonCode: fc.constantFrom(...CORRECTION_REASONS.map((entry) => entry.code)),
   theoryHours: fc.option(fc.integer({ min: 0, max: 24 }), { nil: null }),
   practiceHours: fc.option(fc.integer({ min: 0, max: 24 }), { nil: null }),
   [DIGEST_DOCUMENT_NUMBER_FIELD]: fc.option(fc.constantFrom('Şube Kararı 12', 'ÖİŞ 2026/7'), {
@@ -89,7 +89,7 @@ describe('Request digest is deterministic', () => {
     fc.assert(
       fc.property(
         fieldsArb,
-        fc.constantFrom(...REASON_CODES.map((entry) => entry.code)),
+        fc.constantFrom(...CORRECTION_REASONS.map((entry) => entry.code)),
         (fields, other) => {
           fc.pre(other !== fields.reasonCode);
           expect(requestDigest({ ...fields, reasonCode: other })).not.toEqual(
@@ -171,6 +171,27 @@ describe('Request digest canonical form', () => {
     );
     expect(requestDigest({ note: ' A  B ' })).not.toEqual(requestDigest({ note: 'A B' }));
     expect(requestDigest({ documentNumber: null })).not.toEqual(requestDigest({}));
+  });
+
+  it('normalises the document number inside the walk: key order and the object check first', () => {
+    const control = String.fromCodePoint(1);
+    // courseId sorts before documentNumber, so its error comes first.
+    expect(() =>
+      requestDigest({ courseId: 1.5, documentNumber: control } as unknown as DigestFields),
+    ).toThrow('digest value item.courseId must be a safe integer');
+    expect(() => requestDigest({ documentNumber: control })).toThrow(DocumentNumberError);
+    // An item that is not a plain object is refused before its document number is read.
+    const inherited = Object.create({ documentNumber: ' P ' }) as DigestFields;
+    expect(() => requestDigest(inherited)).toThrow('digest value item is not JSON');
+    class Item {
+      documentNumber = ' P ';
+    }
+    expect(() => requestDigest(new Item() as unknown as DigestFields)).toThrow(
+      'digest value item is not JSON',
+    );
+    // A document number that is not an own enumerable field is not part of the item.
+    const hidden = Object.defineProperty({}, 'documentNumber', { value: ' P ', enumerable: false });
+    expect(requestDigest(hidden as DigestFields)).toEqual(requestDigest({}));
   });
 
   it('gives a no-break space in the document number the digest of a plain space', () => {

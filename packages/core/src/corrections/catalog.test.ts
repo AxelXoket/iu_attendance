@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CORRECTION_REASONS,
   FINAL_STATUSES,
   type FinalStatus,
   finalStatusDefinition,
-  ISSUE_REASON_CODES,
-  REASON_CODES,
+  ISSUE_REASONS,
   type ReasonCode,
   reasonCodeDefinition,
 } from './catalog.ts';
@@ -46,7 +46,7 @@ const counts = ({ present, absent, excused, open }: HourTypeFinalStatus) => ({
 
 describe('correction catalog', () => {
   it('has unique UPPER_SNAKE ASCII codes and one letter per final status', () => {
-    for (const list of [REASON_CODES, FINAL_STATUSES, ISSUE_REASON_CODES]) {
+    for (const list of [CORRECTION_REASONS, FINAL_STATUSES, ISSUE_REASONS]) {
       expect(new Set(codes(list)).size).toBe(list.length);
       for (const code of codes(list)) expect(code).toMatch(/^[A-Z]+(?:_[A-Z]+)*$/);
     }
@@ -54,7 +54,7 @@ describe('correction catalog', () => {
   });
 
   it('requires a document exactly for on-duty and documented corrections', () => {
-    for (const entry of REASON_CODES) {
+    for (const entry of CORRECTION_REASONS) {
       expect(entry.documentRequired).toBe(
         entry.finalStatus === 'ON_DUTY' || entry.finalStatus === 'DOCUMENTED',
       );
@@ -67,10 +67,10 @@ describe('correction catalog', () => {
   });
 
   it('counts only manually added codes as unjustified absence and offers three of them in the queue', () => {
-    for (const entry of REASON_CODES) {
+    for (const entry of CORRECTION_REASONS) {
       expect(entry.countsAsUnjustifiedAbsence).toBe(entry.finalStatus === 'MANUALLY_ADDED');
     }
-    expect(codes(REASON_CODES.filter((entry) => entry.selectableInQueue))).toEqual([
+    expect(codes(CORRECTION_REASONS.filter((entry) => entry.selectableInQueue))).toEqual([
       'PHONE_MISSING_OR_BROKEN',
       'QR_SCAN_FAILED',
       'MAKEUP_NOT_ON_PHONE',
@@ -78,26 +78,25 @@ describe('correction catalog', () => {
   });
 
   it('marks the two codes with a precondition', () => {
-    expect(codes(REASON_CODES.filter((entry) => entry.onlyOnCountedPresentRecord))).toEqual([
+    expect(codes(CORRECTION_REASONS.filter((entry) => entry.onlyOnCountedPresentRecord))).toEqual([
       'PARTIAL_ATTENDANCE',
     ]);
-    expect(codes(REASON_CODES.filter((entry) => entry.onlyWithOpenFlag))).toEqual([
+    expect(codes(CORRECTION_REASONS.filter((entry) => entry.onlyWithOpenFlag))).toEqual([
       'NOT_IN_CLASS_AT_CHECK',
     ]);
   });
 
   it('suggests a reason code only for the phone and QR issue reasons', () => {
-    for (const entry of ISSUE_REASON_CODES) {
+    for (const entry of ISSUE_REASONS) {
       if (entry.suggestedReasonCode !== null)
-        expect(codes(REASON_CODES)).toContain(entry.suggestedReasonCode);
+        expect(codes(CORRECTION_REASONS)).toContain(entry.suggestedReasonCode);
     }
     expect(
-      ISSUE_REASON_CODES.find((entry) => entry.code === 'RECORD_IN_WRONG_COURSE')
-        ?.suggestedReasonCode,
+      ISSUE_REASONS.find((entry) => entry.code === 'RECORD_IN_WRONG_COURSE')?.suggestedReasonCode,
     ).toBeNull();
     // Positive control (resolved_gaps.17): the first two turn into the reason code of
     // the same name with one tap.
-    expect(ISSUE_REASON_CODES.map((entry) => [entry.code, entry.suggestedReasonCode])).toEqual([
+    expect(ISSUE_REASONS.map((entry) => [entry.code, entry.suggestedReasonCode])).toEqual([
       ['PHONE_MISSING_OR_BROKEN', 'PHONE_MISSING_OR_BROKEN'],
       ['QR_SCAN_FAILED', 'QR_SCAN_FAILED'],
       ['RECORD_IN_WRONG_COURSE', null],
@@ -105,14 +104,14 @@ describe('correction catalog', () => {
   });
 
   it('allows practice hours for every code but the student affairs letter', () => {
-    for (const entry of REASON_CODES) {
+    for (const entry of CORRECTION_REASONS) {
       expect(entry.allowedHourTypes).toEqual(
         CODE_EFFECTS[entry.code].practice ? ['THEORY', 'PRACTICE'] : ['THEORY'],
       );
     }
   });
 
-  it.each(REASON_CODES.map((entry) => [entry.code] as const))(
+  it.each(CORRECTION_REASONS.map((entry) => [entry.code] as const))(
     'gives the covered hours of %s its letter and hour class',
     (code) => {
       const effect = CODE_EFFECTS[code];

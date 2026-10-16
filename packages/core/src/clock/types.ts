@@ -24,3 +24,21 @@ export type DocumentFields = {
   /** Server time when the document was made, UTC epoch milliseconds. */
   readonly serverTimeMs: number;
 };
+
+/** A closed range of instants, UTC epoch milliseconds, low at most high. */
+export type ClockRange = { readonly lowMs: number; readonly highMs: number };
+
+/**
+ * What the server's document check gives (D04 saatBelgesiDogrula): the signed fields and
+ * whether the key it was signed with is marked compromised, or why it fails.
+ */
+export type DocumentVerification =
+  | {
+      readonly valid: true;
+      readonly kid: string;
+      readonly subject: ClockSubject;
+      readonly value: string;
+      readonly serverTimeMs: number;
+      readonly keyCompromised: boolean;
+    }
+  | { readonly valid: false; readonly reason: 'FORMAT' | 'VERSION' | 'UNKNOWN_KID' | 'MAC' };

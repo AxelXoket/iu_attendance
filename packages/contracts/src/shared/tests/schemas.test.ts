@@ -32,6 +32,7 @@ import {
   localTimeSchema,
   perMilleSchema,
 } from '../time.ts';
+import { percentSchema } from '../value.ts';
 
 type JsonNode = { readonly [key: string]: unknown };
 
@@ -299,6 +300,7 @@ describe('Shared request helpers carry the bounds of D13-B24', () => {
   it.each([
     ['durationMsSchema', durationMsSchema, 0, Number.MAX_SAFE_INTEGER],
     ['perMilleSchema', perMilleSchema, 0, 1000],
+    ['percentSchema', percentSchema, 0, 100],
     ['expectedVersionSchema', expectedVersionSchema, 0, 2_147_483_647],
     ['pageQuerySchema.limit', pageQuerySchema.shape.limit, 1, PAGE_LIMIT_MAX],
   ] as Array<[string, z.ZodType, number, number]>)(

@@ -164,6 +164,13 @@ describe('rosters field bounds', () => {
     expect(add.safeParse({ ...person, fullName: 'x'.repeat(200) }).success).toBe(true);
     expect(add.safeParse({ ...person, fullName: 'x'.repeat(201) }).success).toBe(false);
     expect(add.safeParse({ ...person, fullName: '' }).success).toBe(false);
+    // The rule of a file row: on the collapsed name, so spaces around do not count and
+    // a name of spaces alone is empty.
+    expect(add.safeParse({ ...person, fullName: `  ${'x'.repeat(200)}  ` }).success).toBe(true);
+    expect(add.safeParse({ ...person, fullName: '   ' }).success).toBe(false);
+    expect(add.safeParse({ ...person, fullName: `Ada${String.fromCodePoint(1)}` }).success).toBe(
+      false,
+    );
   });
 
   it('take at most 2,000 late choices, and answer at most 2,000 active rows', () => {

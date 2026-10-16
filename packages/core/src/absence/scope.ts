@@ -1,5 +1,7 @@
 import { isEmptySpan, isMemberAt } from '../rosters/interval.ts';
 import type { LateChoice } from '../rosters/late-choice.ts';
+import { compareText } from '../shared/text.ts';
+import { idKey } from '../shared/uuid.ts';
 import type { HourType } from './types.ts';
 
 // Hours of a session per hour type. The spec makes this the one hours function of the
@@ -34,7 +36,9 @@ export type ScopeSession = { sectionIds: readonly string[]; startAtMs: number };
 function precedes(a: ScopeRow, b: ScopeRow): boolean {
   if (a.addedAtMs !== b.addedAtMs) return a.addedAtMs < b.addedAtMs;
   if (isEmptySpan(a) !== isEmptySpan(b)) return isEmptySpan(b);
-  if (a.sectionId !== b.sectionId) return a.sectionId < b.sectionId;
+  if (idKey(a.sectionId) !== idKey(b.sectionId)) {
+    return compareText(idKey(a.sectionId), idKey(b.sectionId)) < 0;
+  }
   const aEnd = a.inactiveAtMs ?? Number.POSITIVE_INFINITY;
   const bEnd = b.inactiveAtMs ?? Number.POSITIVE_INFINITY;
   if (aEnd !== bEnd) return aEnd < bEnd;
@@ -70,14 +74,15 @@ export function coveringRow<R extends ScopeRow>(
   session: ScopeSession,
   participated: boolean,
 ): R | null {
-  const ofSession = rows.filter((row) => session.sectionIds.includes(row.sectionId));
+  const sections = new Set(session.sectionIds.map(idKey));
+  const ofSession = rows.filter((row) => sections.has(idKey(row.sectionId)));
   const member = earliest(ofSession.filter((row) => isMemberAt(row, session.startAtMs)));
   if (member !== null) return member;
   const first = firstRow(rows);
   if (
     first !== null &&
     first.lateEnrollmentChoice === 'PREVIOUS_ABSENT' &&
-    session.sectionIds.includes(first.sectionId) &&
+    sections.has(idKey(first.sectionId)) &&
     session.startAtMs < first.addedAtMs
   ) {
     return first;

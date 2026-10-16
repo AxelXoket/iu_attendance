@@ -4,6 +4,14 @@
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * The text an id is compared, grouped and keyed by: lower case, so the two spellings a
+ * client may send of one UUID are one id (the database writes UUIDs in lower case).
+ */
+export function idKey(id: string): string {
+  return id.toLowerCase();
+}
+
 /** The 16 bytes of a UUID text, or null for any other text. */
 export function uuidBytes(text: string): Uint8Array | null {
   if (typeof text !== 'string' || !UUID.test(text)) return null;

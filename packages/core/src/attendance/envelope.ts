@@ -7,6 +7,7 @@
 // canonical, so equal envelopes are equal bytes. The record's fields are the attendance
 // contract's to check; this file only frames them. No Buffer, atob or TextDecoder (Hermes).
 
+import type { DeviceKeyKind } from '../identity/device-key.ts';
 import { decodeBase64Url, encodeBase64Url } from '../shared/base64url.ts';
 import { decodeUtf8, utf8Bytes } from '../shared/utf8.ts';
 
@@ -19,6 +20,14 @@ export const SIGNATURE_KINDS = { a: 'ANDROID_P256', s: 'SECURE_ENCLAVE', i: 'APP
 
 export type SignatureLetter = keyof typeof SIGNATURE_KINDS;
 export type SignatureKind = (typeof SIGNATURE_KINDS)[SignatureLetter];
+
+// The device key kind each signature kind is checked with: a stored key of another kind
+// is ATTENDANCE_SIGNATURE_KIND_MISMATCH.
+export const KEY_KIND_OF_SIGNATURE = {
+  ANDROID_P256: 'android_p256',
+  SECURE_ENCLAVE: 'secure_enclave',
+  APP_ATTEST: 'app_attest',
+} as const satisfies Record<SignatureKind, DeviceKeyKind>;
 
 export type ParsedEnvelope = {
   /** The record text as signed: base64url of the JSON. */

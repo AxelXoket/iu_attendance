@@ -1,10 +1,12 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import { DEVICE_KEY_KINDS } from '../identity/device-key.ts';
 import { encodeBase64Url } from '../shared/base64url.ts';
 import { utf8Bytes } from '../shared/utf8.ts';
 import {
   buildEnvelope,
   ENVELOPE_MAX_BYTES,
+  KEY_KIND_OF_SIGNATURE,
   parseEnvelope,
   recordTextOf,
   SIGNATURE_KINDS,
@@ -94,6 +96,16 @@ describe('envelope round trip', () => {
     }
   });
 
+  it('checks each signature kind with its own device key kind, one to one', () => {
+    expect(KEY_KIND_OF_SIGNATURE).toEqual({
+      ANDROID_P256: 'android_p256',
+      SECURE_ENCLAVE: 'secure_enclave',
+      APP_ATTEST: 'app_attest',
+    });
+    expect(Object.keys(KEY_KIND_OF_SIGNATURE).sort()).toEqual([...KINDS].sort());
+    expect(Object.values(KEY_KIND_OF_SIGNATURE).sort()).toEqual([...DEVICE_KEY_KINDS].sort());
+  });
+
   it('signs the ASCII bytes of the record text', () => {
     const text = recordTextOf(record);
     expect(signedBytesOf(text)).toEqual(utf8Bytes(text));
@@ -177,6 +189,14 @@ describe('envelope refusals', () => {
       `IUY1.${text}.a.${sig}.more`,
       `IUY1.${text}.a`,
       `IUY01.${text}.a.${sig}`,
+      // A leading zero is no newer version, nor is a version without its dot.
+      `IUY02.${text}.a.${sig}`,
+      `IUY2${text}.a.${sig}`,
+      // Version 0, a letter as the version and a lower-case prefix are broken frames, not
+      // a newer version.
+      `IUY0.${text}.a.${sig}`,
+      `IUYX.${text}.a.${sig}`,
+      `iuy1.${text}.a.${sig}`,
       `IUY1.${text}.a.${sig} `,
       `IUY1.${text}.a.${sig}ı`,
       '',

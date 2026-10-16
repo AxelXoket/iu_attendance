@@ -1,19 +1,19 @@
-import { ISSUE_REASON_CODES, REASON_CODES } from '@iu-attendance/core/corrections/catalog';
+import { CORRECTION_REASONS, ISSUE_REASONS } from '@iu-attendance/core/corrections/catalog';
 import { DIGEST_DOCUMENT_NUMBER_FIELD } from '@iu-attendance/core/corrections/request-digest';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
   auditEventInputSchema,
+  CORRECTION_REASON_CODES,
   CORRECTIONS_AUDIT_CHANGES,
   CORRECTIONS_AUDIT_EVENTS,
   CORRECTIONS_ERROR_CODES,
   CORRECTIONS_ITEM_CODES,
   CORRECTIONS_ROUTES,
-  ISSUE_REASON_CODE_LIST,
+  ISSUE_REASON_CODES,
   ISSUE_REPORT_ITEM,
   MANUAL_ADD_ITEM,
-  QUEUE_REASON_CODE_LIST,
-  REASON_CODE_LIST,
+  QUEUE_REASON_CODES,
 } from '../corrections.ts';
 import {
   defineRoute,
@@ -242,12 +242,12 @@ describe('corrections error catalog', () => {
 
 describe('corrections reason codes', () => {
   it('derive from the core catalog, the queue list from selectableInQueue', () => {
-    expect(REASON_CODE_LIST).toEqual(REASON_CODES.map(({ code }) => code));
-    expect(ISSUE_REASON_CODE_LIST).toEqual(ISSUE_REASON_CODES.map(({ code }) => code));
-    expect(QUEUE_REASON_CODE_LIST).toEqual(
-      REASON_CODES.filter((entry) => entry.selectableInQueue).map(({ code }) => code),
+    expect(CORRECTION_REASON_CODES).toEqual(CORRECTION_REASONS.map(({ code }) => code));
+    expect(ISSUE_REASON_CODES).toEqual(ISSUE_REASONS.map(({ code }) => code));
+    expect(QUEUE_REASON_CODES).toEqual(
+      CORRECTION_REASONS.filter((entry) => entry.selectableInQueue).map(({ code }) => code),
     );
-    expect(QUEUE_REASON_CODE_LIST).toEqual([
+    expect(QUEUE_REASON_CODES).toEqual([
       'PHONE_MISSING_OR_BROKEN',
       'QR_SCAN_FAILED',
       'MAKEUP_NOT_ON_PHONE',
@@ -623,7 +623,7 @@ describe('corrections answers, one valid sample each', () => {
       headCountPendingSessions: [],
       total: 1,
     });
-    check('markFlaggedSessionReviewed', { sessionId: id(14), flagId: V4_ID, reviewedAt: at });
+    check('markFlaggedSessionReviewed', { sessionId: id(14), flagId: id(19), reviewedAt: at });
     const listed = {
       ...issueReport,
       courseName: 'Fizik',
@@ -641,7 +641,7 @@ describe('corrections answers, one valid sample each', () => {
     check('listAuditEvents', {
       items: [
         {
-          id: V4_ID,
+          id: id(18),
           eventType: 'corrections.correction_added',
           at,
           actor: { kind: 'SYSTEM', personId: null, role: null, fullName: null },

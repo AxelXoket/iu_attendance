@@ -127,6 +127,14 @@ export function sameText(tr: string, en: string) {
   return { lecturer: text, student: text };
 }
 
+/**
+ * One English text and the Turkish in each reader's form of address: "siz" to staff, "sen"
+ * to a student (tasarim, open point 11), for a code both can meet.
+ */
+export function addressedText(lecturerTr: string, studentTr: string, en: string) {
+  return { lecturer: { tr: lecturerTr, en }, student: { tr: studentTr, en } };
+}
+
 /** A code that never reaches a client: no status and no text. */
 export const OPERATIONAL_CODE = { http: null, lecturer: null, student: null } as const;
 

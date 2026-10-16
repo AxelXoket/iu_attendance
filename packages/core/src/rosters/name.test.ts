@@ -1,12 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import {
-  INVISIBLE_CHARACTERS,
-  nameKey,
-  namesMatch,
-  TURKISH_CASE_PAIRS,
-  WHITE_SPACE_CHARACTERS,
-} from './name.ts';
+import { INVISIBLE_CHARACTERS, WHITE_SPACE_CHARACTERS } from '../shared/text.ts';
+import { nameKey, namesMatch, TURKISH_CASE_PAIRS } from './name.ts';
 
 const RUNS = { numRuns: 1000 };
 

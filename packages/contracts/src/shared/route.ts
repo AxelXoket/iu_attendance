@@ -31,7 +31,21 @@ export type SuccessStatus = (typeof SUCCESS_STATUSES)[number];
 // Paths outside the /v1/<module> prefix.
 export const ROOT_PATHS = ['/health/live', '/health/ready', '/v1/status', '/v1/version'] as const;
 
+// A route without a bodyLimit takes at most 64 KiB; a declared limit is at most 2 MiB.
+export const BODY_LIMIT_DEFAULT_BYTES = 64 * 1024;
 export const BODY_LIMIT_MAX_BYTES = 2 * 1024 * 1024;
+
+// The access of most routes: a signed-in caller of one role, at a rate class (the session
+// rate unless named). Route files spread it into defineRoute.
+export function sessionAccess<
+  const Role extends (typeof ROUTE_ROLES)[number],
+  const Rate extends RateClassName = 'session',
+>(role: Role, rate: Rate = 'session' as Rate) {
+  return { auth: ['session'], roles: [role], rate } as const;
+}
+
+// The access of a route anyone may call, at the anonymous rate.
+export const ANONYMOUS_ACCESS = { auth: ['anonymous'], rate: 'anonymous' } as const;
 
 // One row of the route table. Every module writes its routes in its own contract
 // file in this form; the same object goes to route registration on the server and

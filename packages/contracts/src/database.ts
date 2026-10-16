@@ -2,6 +2,7 @@
 // advisory lock layers, the retention data classes, the table markers, the migration folder
 // tokens and the backup job status file. The single source of the module's constants and
 // CHECK lists; the server's database infrastructure imports them.
+import { nonEmpty } from '@iu-attendance/core/shared/list';
 import { z } from 'zod';
 import { API_ERRORS } from './api.ts';
 import {
@@ -275,10 +276,7 @@ export const BACKUP_JOBS = [
 ] as const;
 export const BACKUP_RESULTS = ['succeeded', 'failed', 'skipped'] as const;
 
-const DATABASE_ERROR_CODE_LIST = Object.keys(DATABASE_ERROR_CODES) as [
-  DatabaseErrorCode,
-  ...DatabaseErrorCode[],
-];
+const DATABASE_ERROR_CODE_LIST = nonEmpty(Object.keys(DATABASE_ERROR_CODES) as DatabaseErrorCode[]);
 export const backupJobStatusSchema = z
   .strictObject({
     format: z.literal(1),

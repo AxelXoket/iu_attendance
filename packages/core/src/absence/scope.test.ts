@@ -45,6 +45,11 @@ describe('Public scope predicate and session hours', () => {
       const rows = [row('s2', 0, null)];
       expect(coveringRow(rows, sessionAt(5, 's1', 's2'), false)).toBe(rows[0]);
       expect(isInScope(rows, sessionAt(5, 's1', 's3'))).toBe(false);
+      // A section id in the other case is the same section.
+      expect(coveringRow(rows, sessionAt(5, 'S2'), false)).toBe(rows[0]);
+      // Two rows covering a joint session: the smaller section id in lower case first.
+      const joint = [row('S-B', 0, null), row('s-a', 0, null)];
+      expect(coveringRow(joint, sessionAt(5, 's-a', 's-b'), false)).toBe(joint[1]);
     });
 
     it('a row trimmed to zero length covers no session', () => {

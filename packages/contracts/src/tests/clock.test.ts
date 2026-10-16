@@ -1,4 +1,4 @@
-import { AFTER_RESTART } from '@iu-attendance/core/sync/second-anchor-text';
+import { AFTER_RESTART } from '@iu-attendance/core/clock/codes';
 import { describe, expect, it } from 'vitest';
 import {
   CHANGE_KINDS,
