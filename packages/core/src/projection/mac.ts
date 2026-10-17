@@ -37,12 +37,20 @@ export function codeMessage(purpose: MessagePurpose, fields: CodeFields): Uint8A
   return message;
 }
 
+/**
+ * The first 8 digest bytes, the source of each code of one key (the QR verification code,
+ * the backup code and the Bluetooth code). RangeError, naming the code, for a shorter digest.
+ */
+export function codeSourceBytes(digest: Uint8Array, code: string): Uint8Array {
+  if (digest.length < VERIFICATION_CODE_BYTES) {
+    throw new RangeError(`the digest is shorter than the ${code}`);
+  }
+  return digest.subarray(0, VERIFICATION_CODE_BYTES);
+}
+
 /** The first 8 digest bytes in 20 digits; RangeError for a digest under 8 bytes. */
 export function verificationCode(digest: Uint8Array): string {
-  if (digest.length < VERIFICATION_CODE_BYTES) {
-    throw new RangeError('the digest is shorter than the verification code');
-  }
-  const bytes = Array.from(digest.subarray(0, VERIFICATION_CODE_BYTES));
+  const bytes = Array.from(codeSourceBytes(digest, 'verification code'));
   let digits = '';
   for (let n = 0; n < VERIFICATION_CODE_DIGITS; n += 1) {
     let remainder = 0;

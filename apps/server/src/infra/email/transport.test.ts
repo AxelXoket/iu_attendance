@@ -26,6 +26,7 @@ import {
   type EmailData,
   type EmailTransport,
   type EmailType,
+  isSingleLine,
   type LimitedEmailType,
   type OutgoingEmail,
   PLAIN_TEXT_CONTENT_TYPE,
@@ -1371,7 +1372,16 @@ describe('E-mail types', () => {
       expect(accepts('sign_in_notification', notification(label))).toBe(true);
       expect(accepts('sign_in_notification', notification('Edge, Windows', label))).toBe(true);
     }
-    for (const label of ['a'.repeat(61), '', 'Edge\nWindows', 'Edge\r\nWindows', 'Edge\tWindows']) {
+    // U+2028 and U+2029 are line and paragraph separators, not control characters.
+    const separators = [0x2028, 0x2029].map((code) => `Edge${String.fromCharCode(code)}Windows`);
+    for (const label of [
+      'a'.repeat(61),
+      '',
+      'Edge\nWindows',
+      'Edge\r\nWindows',
+      'Edge\tWindows',
+      ...separators,
+    ]) {
       expect(accepts('sign_in_notification', notification(label))).toBe(false);
       expect(accepts('sign_in_notification', notification('Edge, Windows', label))).toBe(false);
     }
@@ -1404,14 +1414,14 @@ describe('E-mail types', () => {
     }
   });
 
-  it('operations e-mails hold a subject of up to 200 characters and up to 1,000 lines of up to 1,000', () => {
+  it('operations e-mails hold a subject of up to 200 characters and up to 200 lines of up to 1,000', () => {
     const lines = (count: number, length: number) =>
       Array.from({ length: count }, () => 'y'.repeat(length));
     for (const type of ['operations_warning', 'operations_summary'] as const) {
-      expect(accepts(type, { subject: 'x'.repeat(200), lines: lines(1000, 1000) })).toBe(true);
+      expect(accepts(type, { subject: 'x'.repeat(200), lines: lines(200, 1000) })).toBe(true);
       expect(accepts(type, { subject: 'x'.repeat(201), lines: [] })).toBe(false);
       expect(accepts(type, { subject: 'Disk', lines: lines(1, 1001) })).toBe(false);
-      expect(accepts(type, { subject: 'Disk', lines: lines(1001, 0) })).toBe(false);
+      expect(accepts(type, { subject: 'Disk', lines: lines(201, 0) })).toBe(false);
     }
   });
 });
@@ -1515,7 +1525,7 @@ describe('Fixed sentences', () => {
         const sentence = text[language];
         expect(sentence.length).toBeGreaterThan(0);
         expect(sentence.trim()).toBe(sentence);
-        expect(sentence).toMatch(/^\P{Cc}+$/u);
+        expect(isSingleLine(sentence)).toBe(true);
         expect(sentence.endsWith('.')).toBe(true);
         expect(looksLikeLink(sentence)).toBe(false);
       }

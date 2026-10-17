@@ -72,6 +72,33 @@ describe('checkLinks (D14 Baglanti denetimi)', () => {
     }
   });
 
+  it('catches a host spelled with look-alike dots, full-width letters or invisible characters', () => {
+    // Written with code points: a raw invisible character in the source cannot be reviewed.
+    const at = (...codes: number[]) => String.fromCodePoint(...codes);
+    const hosts = [
+      `evil${at(0xff0e)}com`, // full-width full stop
+      `evil${at(0x3002)}com`, // ideographic full stop
+      `evil${at(0xff61)}com`, // half-width ideographic full stop
+      `evil${at(0xad)}.com`, // soft hyphen
+      `evil.${at(0x200b)}com`, // zero-width space
+      `${at(0xff45, 0xff56, 0xff49, 0xff4c)}.com`, // full-width letters
+      `www${at(0xff0e)}x${at(0xff0e)}com`,
+      `a${at(0xff20)}b.co`, // full-width commercial at
+    ];
+    for (const host of hosts) {
+      expect(checkLinks(host), host).toEqual({ linkCount: 1, cleanText: '[adres]' });
+      expect(checkLinks(`(${host}).`), host).toEqual({ linkCount: 1, cleanText: '([adres]).' });
+    }
+    // Ground control: folding makes no link of a name that is none.
+    for (const text of [
+      `chrony${at(0xff0e)}json`,
+      `isletim${at(0x3002)}wal_arsivi`,
+      `12${at(0xff0e)}37`,
+    ]) {
+      expect(checkLinks(text), text).toEqual({ linkCount: 0, cleanText: text });
+    }
+  });
+
   it('takes a host name only when its last label is a top-level domain, in any case', () => {
     // .sh is a top-level domain, so a script name counts (an operations e-mail gets [adres]).
     expect(checkLinks('kur.sh').linkCount).toBe(1);

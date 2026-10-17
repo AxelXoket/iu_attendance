@@ -4,24 +4,31 @@
 // defaults and the codes request form. This file never imports the verification contract:
 // the verification module maps the result lists in its own code (one-way dictionary).
 // Request and answer objects drop unknown keys (D13-B24); the audit schemas are strict.
-// The QR layout, the slice, the QR verification and delay result lists, the evidence
-// kinds, the display sources and the lectern states are core's (core/projection), where
-// the phone and the server compute codes with one function and the core rules read the
-// lists; this file re-exports the lists.
+// The QR layout, the slice, the QR verification, delay, Bluetooth and location result
+// lists, the evidence kinds, the display sources and the lectern states are core's
+// (core/projection), where the phone and the server compute codes with one function and
+// the core rules read the lists; this file re-exports the lists.
 import {
+  BLUETOOTH_CODE,
+  BLUETOOTH_CODE_HEX_DIGITS,
+  BLUETOOTH_RESULTS,
   BLUETOOTH_STATUSES,
   DELAY_LIMIT_DEFAULTS_MS,
   DISPLAY_SLICE_MS,
   DISPLAY_SOURCES,
   EVIDENCE_KINDS,
+  LATITUDE_E4_MAX,
   LECTERN_CODE_SLICES,
   LECTERN_STATUSES,
+  LOCATION_RESULTS,
+  LONGITUDE_E4_MAX,
   PROJECTION_SLOT,
   QR_DELAY_RESULTS,
   QR_DIGITS,
   QR_VERIFICATION_RESULTS,
   type QrDelay,
   type QrVerification,
+  RADIUS_M_MAX,
   SLOT_MAX,
 } from '@iu-attendance/core/projection/constants';
 import { sliceOf } from '@iu-attendance/core/projection/slice';
@@ -46,8 +53,6 @@ import {
 
 export const DISPLAY_KINDS = ['QR', 'BACKUP_CODE', 'BLUETOOTH'] as const;
 export const LOCATION_STATUSES = ['RECEIVED', 'NO_LOCATION', 'APPROXIMATE_PERMISSION'] as const;
-const BLUETOOTH_RESULTS = ['SEEN', 'NOT_SEEN', 'NO_BLUETOOTH', 'PENDING'] as const;
-const LOCATION_RESULTS = ['NEAR', 'FAR', 'NO_LOCATION', 'PENDING'] as const;
 export const CONNECTION_STATUSES = ['OPEN', 'CLOSED'] as const;
 export const CONNECTION_END_REASONS = [
   'LECTURER_ENDED',
@@ -78,11 +83,13 @@ const pairingCodeRowIdSchema = v7IdSchema('PairingCode');
 // Shared parts.
 
 export {
+  BLUETOOTH_RESULTS,
   BLUETOOTH_STATUSES,
   DISPLAY_SLICE_MS,
   DISPLAY_SOURCES,
   EVIDENCE_KINDS,
   LECTERN_STATUSES,
+  LOCATION_RESULTS,
   QR_DELAY_RESULTS,
   QR_VERIFICATION_RESULTS,
   type QrDelay,
@@ -99,11 +106,12 @@ const slotSchema = z
   .max(SLOT_MAX);
 const PAIRING_CODE = /^[0-9]{6}$/;
 
-// A location as the phone measured it (stage 3), in ten-thousandths of a degree.
+// A location as the phone measured it (stage 3), in ten-thousandths of a degree; the
+// bounds are core's, which the location rule checks too.
 const coordinates = {
-  latitudeE4: z.number().int().min(-900_000).max(900_000),
-  longitudeE4: z.number().int().min(-1_800_000).max(1_800_000),
-  radiusM: z.number().int().min(0).max(100_000),
+  latitudeE4: z.number().int().min(-LATITUDE_E4_MAX).max(LATITUDE_E4_MAX),
+  longitudeE4: z.number().int().min(-LONGITUDE_E4_MAX).max(LONGITUDE_E4_MAX),
+  radiusM: z.number().int().min(0).max(RADIUS_M_MAX),
 };
 const locationFlags = {
   mockLocation: z.boolean(),
@@ -133,10 +141,7 @@ export const recordEvidenceFieldsSchema = z.object({
       codes: z
         .array(
           z.object({
-            code: z
-              .string()
-              .max(16)
-              .regex(/^[0-9a-f]{16}$/),
+            code: z.string().max(BLUETOOTH_CODE_HEX_DIGITS).regex(BLUETOOTH_CODE),
             rssi: z.number().int().min(-127).max(20),
           }),
         )

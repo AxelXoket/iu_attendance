@@ -61,6 +61,7 @@ describe('identity contract', () => {
     expect(IDENTITY_CONSTANTS).toEqual({
       codeValiditySeconds: 300,
       codeWrongLimit: 3,
+      backoffStartWrong: 3,
       backoffFirstSeconds: 30,
       backoffMaxSeconds: 900,
       fixedAnswerMs: 400,
@@ -232,7 +233,9 @@ describe('identity contract', () => {
 
   it('takes the verification value as 32 canonical base64url bytes', () => {
     expect(registers({ ...androidBody, challenge: bytes(32, 255) })).toBe(true);
-    expect(registers({ ...androidBody, challenge: bytes(31) })).toBe(false);
+    for (const length of [31, 33]) {
+      expect(registers({ ...androidBody, challenge: bytes(length) }), String(length)).toBe(false);
+    }
     expect(registers({ ...androidBody, challenge: `${bytes(32).slice(0, 42)}B` })).toBe(false);
   });
 

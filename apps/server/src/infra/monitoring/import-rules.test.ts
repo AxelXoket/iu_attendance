@@ -64,6 +64,9 @@ const REJECTED: Case[] = [
   // Every TypeScript extension tsc can pull into the program, not only .ts.
   ['packages/core/src/sync/h.mts', 'node:fs'],
   ['packages/contracts/src/h.cts', 'node:crypto'],
+  // Only core's own test support folder is left out, no folder of that name elsewhere.
+  ['packages/contracts/src/testing/g.ts', 'node:crypto'],
+  ['packages/core/src/sync/testing/g.ts', 'node:fs'],
 ];
 
 const ALLOWED: Case[] = [
@@ -73,6 +76,8 @@ const ALLOWED: Case[] = [
   ['packages/core/src/sync/g.test.ts', 'node:fs'],
   ['packages/contracts/src/g.test.ts', 'node:crypto'],
   ['packages/core/src/sync/h.test.mts', 'node:fs'],
+  // Core's test support: out of its build, its coverage and its exports.
+  ['packages/core/src/testing/g.ts', 'node:fs'],
 ];
 
 // The usual way to load dotenv is a side-effect import of its subpath.

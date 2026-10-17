@@ -1,6 +1,8 @@
 import {
+  BLUETOOTH_RESULTS as CORE_BLUETOOTH_RESULTS,
   DISPLAY_SOURCES as CORE_DISPLAY_SOURCES,
   EVIDENCE_KINDS as CORE_EVIDENCE_KINDS,
+  LOCATION_RESULTS as CORE_LOCATION_RESULTS,
   QR_PARSE_ERRORS,
 } from '@iu-attendance/core/projection/constants';
 import { projectionLockKeys } from '@iu-attendance/core/projection/lock-keys';
@@ -10,11 +12,13 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { advisoryLayerOf } from '../database.ts';
 import {
+  BLUETOOTH_RESULTS,
   CODES_REQUEST,
   DISPLAY_RECORD_ITEM,
   DISPLAY_SLICE_MS,
   DISPLAY_SOURCES,
   EVIDENCE_KINDS,
+  LOCATION_RESULTS,
   PROJECTION_AUDIT_EVENTS,
   PROJECTION_ERROR_CODES,
   PROJECTION_ROUTES,
@@ -288,6 +292,11 @@ describe('projection result dictionaries', () => {
     expect(DISPLAY_SOURCES).toBe(CORE_DISPLAY_SOURCES);
     expect(known(qrResultSchema.shape.evidenceKind)).toEqual([...CORE_EVIDENCE_KINDS]);
     expect(known(qrResultSchema.shape.source)).toEqual([...CORE_DISPLAY_SOURCES]);
+    // So are the stage 3 result lists the Bluetooth and location rules give.
+    expect(BLUETOOTH_RESULTS).toBe(CORE_BLUETOOTH_RESULTS);
+    expect(LOCATION_RESULTS).toBe(CORE_LOCATION_RESULTS);
+    expect(known(qrResultSchema.shape.bluetooth)).toEqual([...CORE_BLUETOOTH_RESULTS]);
+    expect(known(qrResultSchema.shape.location)).toEqual([...CORE_LOCATION_RESULTS]);
   });
 
   it('never imports the verification contract: the dictionary runs one way', () => {

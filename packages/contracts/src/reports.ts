@@ -132,7 +132,8 @@ const rosterPlace = {
   studentNumber: studentNumberSchema.nullable(),
   fullName: z.string().nullable(),
   retentionExpired: z.boolean(),
-  order: countSchema,
+  // From 1, as the roster row's own order (liste_satirlari.sira > 0).
+  order: z.number().int().min(1),
   source: extensibleEnum(ROW_SOURCES),
   exempt: z.boolean(),
 };

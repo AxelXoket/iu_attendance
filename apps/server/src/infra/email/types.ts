@@ -10,8 +10,11 @@ export const PRODUCT_RECIPIENT_DOMAIN = 'istanbul.edu.tr';
 export const DEVICE_LABEL_MAX_LENGTH = 60;
 
 const SIX_DIGIT_CODE = /^[0-9]{6}$/;
-// No control character, so no line break either.
-const SINGLE_LINE = /^\P{Cc}*$/u;
+// No control character and no line or paragraph separator, so no line break either.
+const SINGLE_LINE = /^[^\p{Cc}\u2028\u2029]*$/u;
+
+/** True for one line of text by the rule every header and label here keeps. */
+export const isSingleLine = (text: string) => SINGLE_LINE.test(text);
 
 const SIGN_IN_CLIENTS = ['phone', 'panel'] as const satisfies readonly Identity['client'][];
 
@@ -25,17 +28,30 @@ const noData = z.strictObject({});
 // One line of any characters: a label that carries a link passes here, and the template
 // writes 'Bilinmeyen cihaz' / 'Unknown device' in its place.
 const deviceLabel = z.string().min(1).max(DEVICE_LABEL_MAX_LENGTH).regex(SINGLE_LINE);
+// The instants the e-mail's time phrase can write: a sign-in is never before 1970, and the
+// phrase stops at the year 9999 (the bound leaves 21 hours before Istanbul's year 10000).
+// In Unix milliseconds, since a Date can be changed in place.
+export const SIGN_IN_INSTANT_RANGE_MS = Object.freeze({
+  earliest: 0,
+  latest: Date.UTC(9999, 11, 31),
+});
 const signInNotificationData = z.strictObject({
-  signedInAt: z.date(),
+  signedInAt: z
+    .date()
+    .min(new Date(SIGN_IN_INSTANT_RANGE_MS.earliest))
+    .max(new Date(SIGN_IN_INSTANT_RANGE_MS.latest)),
   client: z.enum(SIGN_IN_CLIENTS),
   deviceLabel,
   closedSessionLabel: deviceLabel.nullable(),
 });
 // The subject goes into a header and stays on one line; body lines are text and may hold
-// tabs and line breaks.
+// tabs and line breaks. At most OPERATIONS_LINE_LIMIT lines, so the body fits a transport
+// even when every link grows to [adres]: a line of 1,000 characters renders at most 3,999
+// ('@ @ ...' becomes '[adres] [adres] ...'), 200 of them under 800,000.
+export const OPERATIONS_LINE_LIMIT = 200;
 const operationsData = z.strictObject({
   subject: z.string().min(1).max(200).regex(SINGLE_LINE),
-  lines: z.array(z.string().max(1000)).max(1000),
+  lines: z.array(z.string().max(1000)).max(OPERATIONS_LINE_LIMIT),
 });
 
 type EmailTypeDefinition = {
@@ -69,6 +85,7 @@ export type LimitedEmailType = {
 export type ProductEmailType = {
   [K in EmailType]: (typeof EMAIL_TYPES)[K]['product'] extends true ? K : never;
 }[EmailType];
+export type OperationsEmailType = Exclude<EmailType, ProductEmailType>;
 export type EmailData = { [K in EmailType]: z.output<(typeof EMAIL_TYPES)[K]['data']> };
 
 // deliveryAttempted: an SMTP delivery attempt finished with this failure; such a send

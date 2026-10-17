@@ -221,6 +221,8 @@ describe('reports value lists', () => {
       ['getAksisSummary', '.rows[].theory.attendedPerMille', 1000, 1001],
       ['getTermEndReport', '.totals.excusedReturnsPerMille', 1000, 1001],
       ['getAksisSummary', '.rates.theoryPercent', 100, 101],
+      ['getAksisSummary', '.rows[].order', 1, 0],
+      ['getCourseReport', '.sections[].students[].order', 1, 0],
       ['getCourseReport', '.sections[].students[].cells[].theory.presentHours', 0, -1],
     ] as const;
     for (const [route, path, good, bad] of cases) {

@@ -97,3 +97,19 @@ export const DELAY_LIMIT_DEFAULTS_MS = {
 /** The record's Bluetooth scan status (stage 3); the projection contract's record schema reads it. */
 export const BLUETOOTH_STATUSES = ['SCANNED', 'NO_BLUETOOTH'] as const;
 export type BluetoothStatus = (typeof BLUETOOTH_STATUSES)[number];
+// The stage 3 result dictionaries (D11 BLUETOOTH_SONUCLARI and KONUM_SONUCLARI): the
+// Bluetooth and location rules give these, the evidence table's CHECK lists and the QR
+// result's x-extensible-enum values come from them; the projection contract re-exports them.
+/** Whether a lecturer's Bluetooth code was seen in the record's scan. */
+export const BLUETOOTH_RESULTS = ['SEEN', 'NOT_SEEN', 'NO_BLUETOOTH', 'PENDING'] as const;
+export type BluetoothResult = (typeof BLUETOOTH_RESULTS)[number];
+/** How far the student's location was from the lecturer's reference. */
+export const LOCATION_RESULTS = ['NEAR', 'FAR', 'NO_LOCATION', 'PENDING'] as const;
+export type LocationResult = (typeof LOCATION_RESULTS)[number];
+/** The Bluetooth code: the first 8 HMAC bytes in 16 lower-case hex digits; the record schema reads it. */
+export const BLUETOOTH_CODE_HEX_DIGITS = 2 * VERIFICATION_CODE_BYTES;
+export const BLUETOOTH_CODE = new RegExp(`^[0-9a-f]{${BLUETOOTH_CODE_HEX_DIGITS}}$`);
+/** A location's bounds (stage 3): degrees times 10,000 either way, an accuracy radius in metres. */
+export const LATITUDE_E4_MAX = 900_000;
+export const LONGITUDE_E4_MAX = 1_800_000;
+export const RADIUS_M_MAX = 100_000;

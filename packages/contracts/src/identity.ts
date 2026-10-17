@@ -176,6 +176,8 @@ export const IDENTITY_CONSTANTS = {
   codeValiditySeconds: 300,
   // Wrong tries shared by a person's candidate open codes before they die.
   codeWrongLimit: 3,
+  // The wrong code in a row, per address, that starts the backoff (D01-B07).
+  backoffStartWrong: 3,
   backoffFirstSeconds: 30,
   backoffMaxSeconds: 900,
   // The least time these answers take: a code, application or deletion code request, and a
@@ -497,6 +499,8 @@ const groupedRegistrationCodeSchema = z
     ),
   );
 // The value the verification module handed out for this registration (D07).
+// VERIFICATION_VALUE_BYTES of core verification/constants.ts, a pinned copy: that file's
+// package (D07-P01) shares this file's phase. identity-rules.test.ts binds the two.
 const challengeSchema = base64UrlBytesSchema(32);
 const sessionTokenSchema = base64UrlBytesSchema(32);
 const qrValueSchema = base64UrlBytesSchema(16);
@@ -881,8 +885,11 @@ export const IDENTITY_ROUTES = {
         challenge: challengeSchema,
         attestation: appAttestEvidenceSchema,
         appAttestKeyId: appAttestKeyIdSchema,
-        // Over the SHA-256 of the value and the new key id, with the account's Secure
-        // Enclave key.
+        // The binding signature (D07): over the binding text of purpose app_attest_renewal
+        // with the account's student number and Secure Enclave key, by that key. The new
+        // key id needs no line of its own: the verifier checks it is the SHA-256 of the
+        // attested key and the credential id (App Attest steps 5 and 9), and the
+        // attestation's nonce covers challenge(fields) as its clientDataHash.
         secureEnclaveSignature: signatureSchema,
       }),
     },
